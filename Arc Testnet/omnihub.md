@@ -6,7 +6,31 @@ OmniHub — это платформа для минтинга NFT и участ�
 ## Основная ссылка
 - [OmniHub](https://omnihub.xyz)
 
+---
+
 ## Мои NFT
-- NFT #1: 
-- NFT #2: 
-- NFT #3: 
+
+### Oddlings
+![Oddlings](https://ipfs.io/ipfs/bafybeicdkvj4gdjjdk4fvirygpwt7vc2zkosqc3ewgb3j4ewpln4mu6lc4/2.png)  
+[Oddlings NFT](https://omnihub.xyz/collection/arc-testnet/0x1373d649eA8611a5F000F1c02023122d126A9157)  
+- Коллекция: Oddlings  
+- Особенности: каждая NFT уникальна, создана как часть дропа.  
+- Количество: ограниченное число токенов в коллекции
+
+---
+
+### ARC_NET
+![ARC_NET](https://omnihub-v2.fra1.digitaloceanspaces.com/media/2082359/bathfv9ac9xmuwchj9d1nu6a_lg.webp)  
+[ARC_NET NFT](https://omnihub.xyz/collection/arc-testnet/0x4a457f2d436A8e89FbC660ABF624c764717C8342)  
+- Коллекция: ARC_NET  
+- Особенности: коллекция может содержать повторяющиеся изображения, но каждый токен уникален по метаданным.  
+- Количество: 10000
+
+---
+
+### Arc Mecha Guardians
+![Arc Mecha Guardians](https://ipfs.io/ipfs/bafybeihi662bk7ltgocu4joq663cnarqayryua3reqdpwtoj34behlnyfe/1.jpg)  
+[Arc Mecha Guardians NFT](https://omnihub.xyz/collection/arc-testnet/0xf4B112762D0bB14b91D5E5195de07334375BA36e)  
+- Коллекция: Arc Mecha Guardians  
+- Особенности: 40 уникальных NFT, каждая со своей историей и редкостью (Legendary, Epic, Rare, Common).  
+- Количество: 40 токенов в коллекции
