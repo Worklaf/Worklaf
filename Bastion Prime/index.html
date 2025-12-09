@@ -1,0 +1,1394 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Collection Viewer</title>
+<style>
+  body { font-family: Inter, system-ui, Arial; background:#0b0f16; color:#e6eef8; margin:20px; }
+  .controls { display:flex; gap:8px; flex-wrap:wrap; margin-bottom:16px; align-items:center; }
+  .btn { background:#1f2937; color:#fff; border:0; padding:8px 12px; border-radius:8px; cursor:pointer; }
+  .btn.active { box-shadow:0 4px 18px rgba(0,0,0,.6); transform:translateY(-1px); }
+  .search { padding:8px 12px; border-radius:8px; border:1px solid #2b3440; background:#071022; color:#dbeafe; }
+  .list { display:grid; grid-template-columns:repeat(auto-fill,minmax(420px,1fr)); gap:12px; }
+  .card { background:linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01)); border-radius:12px; padding:12px; border:1px solid rgba(255,255,255,0.03); display:flex; gap:12px; align-items:flex-start; }
+  .thumb { width:120px; height:120px; border-radius:8px; background:#071022; display:flex; align-items:center; justify-content:center; overflow:hidden; flex-shrink:0; }
+  .thumb img { width:100%; height:100%; object-fit:cover; display:block; }
+  .meta { flex:1; }
+  .heading { display:flex; gap:8px; align-items:center; margin-bottom:6px; padding:8px; border-radius:8px; }
+  .title { font-weight:700; font-size:16px; }
+  .rarity-tag { font-weight:700; padding:6px 10px; border-radius:999px; font-size:13px; color:#071022; }
+  .rarity-Mythic .heading { background:#2b0f3a; }
+  .rarity-Mythic .rarity-tag { background:#8A2BE2; color:#fff; }
+  .rarity-Legendary .heading { background:#2b2608; }
+  .rarity-Legendary .rarity-tag { background:#FFD700; color:#000; }
+  .rarity-Epic .heading { background:#2b1208; }
+  .rarity-Epic .rarity-tag { background:#FF4500; color:#fff; }
+  .rarity-Rare .heading { background:#08162b; }
+  .rarity-Rare .rarity-tag { background:#1E90FF; color:#fff; }
+  .rarity-Common .heading { background:#111214; }
+  .rarity-Common .rarity-tag { background:#808080; color:#fff; }
+  .attrs { font-size:13px; color:#bcd3ee; margin-top:6px; white-space:pre-wrap; }
+  .footer { margin-top:8px; display:flex; gap:8px; align-items:center; }
+  .badge { height:20px; }
+  .hidden { display:none !important; }
+  .topbar { display:flex; gap:12px; align-items:center; margin-bottom:12px; flex-wrap:wrap; }
+  .sort-select { padding:8px 10px; border-radius:8px; background:#071022; color:#dbeafe; border:1px solid #2b3440; }
+  a.link-btn { background:#0b5cff; color:#fff; padding:6px 10px; border-radius:8px; text-decoration:none; font-size:13px; }
+</style>
+</head>
+<body>
+<h2 style="margin-top:0">Collection Viewer</h2>
+
+<div class="topbar">
+  <div class="controls" id="filters">
+    <button class="btn active" data-filter="All">All</button>
+    <button class="btn" data-filter="Mythic">Mythic</button>
+    <button class="btn" data-filter="Legendary">Legendary</button>
+    <button class="btn" data-filter="Epic">Epic</button>
+    <button class="btn" data-filter="Rare">Rare</button>
+    <button class="btn" data-filter="Common">Common</button>
+  </div>
+
+  <input id="search" class="search" placeholder="Search title or number" />
+  <select id="sort" class="sort-select">
+    <option value="num-asc">Sort: Number ↑</option>
+    <option value="num-desc">Sort: Number ↓</option>
+    <option value="rarity">Sort: Rarity</option>
+  </select>
+</div>
+
+<div class="list" id="list"></div>
+
+<script>
+const items = [
+  {
+    "num": 1,
+    "title": "Mystic Leviathan",
+    "rarity": "Common",
+    "image": "https://bafybeietsfs2vi3ip2h4llfc52hvff7wg4eo45irs33ldxbshp2oyqcxp4.ipfs.w3s.link/1.jpg",
+    "description": "Ancient chronicles tell of Mystic Leviathan. Mystic Leviathan — a magical entity encircled by floating runes and shimmering glyphs, crackling with volatile, raw power. A notable specimen among its kin. its eyes mirror distant constellations."
+  },
+  {
+    "num": 2,
+    "title": "Arcane Djinn",
+    "rarity": "Epic",
+    "image": "https://bafybeietsfs2vi3ip2h4llfc52hvff7wg4eo45irs33ldxbshp2oyqcxp4.ipfs.w3s.link/2.jpg",
+    "description": "Bards murmur the story of Arcane Djinn. Arcane Djinn — a magical entity with a halo of sigils and soft spellfire, bearing an ancient, patient calm. An epic artifact whose presence commands attention. it leaves a faint trail of luminescent motes."
+  },
+  {
+    "num": 3,
+    "title": "Nova Harbinger",
+    "rarity": "Common",
+    "image": "https://bafybeietsfs2vi3ip2h4llfc52hvff7wg4eo45irs33ldxbshp2oyqcxp4.ipfs.w3s.link/3.jpg",
+    "description": "Bards murmur the story of Nova Harbinger. Nova Harbinger — a cyberpunk entity with chrome augmentations and flickering holo-tattoos, crackling with volatile, raw power. A notable specimen among its kin. it leaves a faint trail of luminescent motes."
+  },
+  {
+    "num": 4,
+    "title": "Runestone Seraph",
+    "rarity": "Legendary",
+    "image": "https://bafybeietsfs2vi3ip2h4llfc52hvff7wg4eo45irs33ldxbshp2oyqcxp4.ipfs.w3s.link/4.jpg",
+    "description": "Ancient chronicles tell of Runestone Seraph. Runestone Seraph — a magical entity with a halo of sigils and soft spellfire, bearing an ancient, patient calm. A legendary figure sung about in many worlds. its core pulses with a slow, primeval glow."
+  },
+  {
+    "num": 5,
+    "title": "Mystic Chimera",
+    "rarity": "Common",
+    "image": "https://bafybeietsfs2vi3ip2h4llfc52hvff7wg4eo45irs33ldxbshp2oyqcxp4.ipfs.w3s.link/5.jpg",
+    "description": "Across the void, tales are told of Mystic Chimera. Mystic Chimera — a magical entity encircled by floating runes and shimmering glyphs, bearing an ancient, patient calm. A notable specimen among its kin. it bends gravity in subtle, precise arcs."
+  },
+  {
+    "num": 6,
+    "title": "Lightning elemental",
+    "rarity": "Rare",
+    "image": "https://bafybeietsfs2vi3ip2h4llfc52hvff7wg4eo45irs33ldxbshp2oyqcxp4.ipfs.w3s.link/6.jpg",
+    "description": "Legends whisper that Lightning elemental. Lightning elemental — a cosmic entity bathed in the cold glow of interstellar dust and auroras, exuding quiet dominion. A rare variant whose features stand apart. it hums with a low, mechanical resonance that echoes."
+  },
+  {
+    "num": 7,
+    "title": "Neon Harbinger",
+    "rarity": "Common",
+    "image": "https://bafybeietsfs2vi3ip2h4llfc52hvff7wg4eo45irs33ldxbshp2oyqcxp4.ipfs.w3s.link/7.jpg",
+    "description": "In forgotten tomes it is written that Neon Harbinger. Neon Harbinger — a magical entity wreathed in arcane motes and levitating crystals, crackling with volatile, raw power. A notable specimen among its kin. its eyes mirror distant constellations."
+  },
+  {
+    "num": 8,
+    "title": "Radiant oracle",
+    "rarity": "Common",
+    "image": "https://bafybeietsfs2vi3ip2h4llfc52hvff7wg4eo45irs33ldxbshp2oyqcxp4.ipfs.w3s.link/8.jpg",
+    "description": "Legends whisper that Radiant oracle. Radiant oracle — a cosmic entity surrounded by drifting starfields and luminous nebulae, bearing an ancient, patient calm. A notable specimen among its kin. it leaves a faint trail of luminescent motes."
+  },
+  {
+    "num": 9,
+    "title": "Ethereal Phoenix",
+    "rarity": "Common",
+    "image": "https://bafybeietsfs2vi3ip2h4llfc52hvff7wg4eo45irs33ldxbshp2oyqcxp4.ipfs.w3s.link/9.jpg",
+    "description": "Across the void, tales are told of Ethereal Phoenix. Ethereal Phoenix — a magical entity with a halo of sigils and soft spellfire, moving with uncanny, predatory grace. A notable specimen among its kin. it leaves a faint trail of luminescent motes."
+  },
+  {
+    "num": 10,
+    "title": "Circuit Golem",
+    "rarity": "Common",
+    "image": "https://bafybeietsfs2vi3ip2h4llfc52hvff7wg4eo45irs33ldxbshp2oyqcxp4.ipfs.w3s.link/10.jpg",
+    "description": "Across the void, tales are told of Circuit Golem. Circuit Golem — a magical entity encircled by floating runes and shimmering glyphs, moving with uncanny, predatory grace. A notable specimen among its kin. it bends gravity in subtle, precise arcs."
+  },
+  {
+    "num": 11,
+    "title": "Dimensional phantom",
+    "rarity": "Legendary",
+    "image": "https://bafybeietsfs2vi3ip2h4llfc52hvff7wg4eo45irs33ldxbshp2oyqcxp4.ipfs.w3s.link/11.jpg",
+    "description": "Ancient chronicles tell of Dimensional phantom. Dimensional phantom — a cosmic entity surrounded by drifting starfields and luminous nebulae, radiating restless, electric energy. A legendary figure sung about in many worlds. it bends gravity in subtle, precise arcs."
+  },
+  {
+    "num": 12,
+    "title": "Holo Mage",
+    "rarity": "Rare",
+    "image": "https://bafybeietsfs2vi3ip2h4llfc52hvff7wg4eo45irs33ldxbshp2oyqcxp4.ipfs.w3s.link/12.jpg",
+    "description": "Ancient chronicles tell of Holo Mage. Holo Mage — a magical entity wreathed in arcane motes and levitating crystals, exuding quiet dominion. A rare variant whose features stand apart. it bends gravity in subtle, precise arcs."
+  },
+  {
+    "num": 13,
+    "title": "Solar titan",
+    "rarity": "Mythic",
+    "image": "https://bafybeietsfs2vi3ip2h4llfc52hvff7wg4eo45irs33ldxbshp2oyqcxp4.ipfs.w3s.link/13.jpg",
+    "description": "Legends whisper that Solar titan. Solar titan — a cosmic entity with orbiting shards of starlight and distant planets, exuding quiet dominion. A mythic entity whose renown transcends realms. its eyes mirror distant constellations."
+  },
+  {
+    "num": 14,
+    "title": "Stellar beast",
+    "rarity": "Epic",
+    "image": "https://bafybeietsfs2vi3ip2h4llfc52hvff7wg4eo45irs33ldxbshp2oyqcxp4.ipfs.w3s.link/14.jpg",
+    "description": "In forgotten tomes it is written that Stellar beast. Stellar beast — a cosmic entity with orbiting shards of starlight and distant planets, radiating restless, electric energy. An epic artifact whose presence commands attention. its core pulses with a slow, primeval glow."
+  },
+  {
+    "num": 15,
+    "title": "Mystic Oracle",
+    "rarity": "Legendary",
+    "image": "https://bafybeietsfs2vi3ip2h4llfc52hvff7wg4eo45irs33ldxbshp2oyqcxp4.ipfs.w3s.link/15.jpg",
+    "description": "Ancient chronicles tell of Mystic Oracle. Mystic Oracle — a biomechanical entity with exposed gears and bioluminescent veins, moving with uncanny, predatory grace. A legendary figure sung about in many worlds. it leaves a faint trail of luminescent motes."
+  },
+  {
+    "num": 16,
+    "title": "Spellbound Titan",
+    "rarity": "Epic",
+    "image": "https://bafybeietsfs2vi3ip2h4llfc52hvff7wg4eo45irs33ldxbshp2oyqcxp4.ipfs.w3s.link/16.jpg",
+    "description": "Legends whisper that Spellbound Titan. Spellbound Titan — a magical entity encircled by floating runes and shimmering glyphs, bearing an ancient, patient calm. An epic artifact whose presence commands attention. its core pulses with a slow, primeval glow."
+  },
+  {
+    "num": 17,
+    "title": "Biomech Hydra",
+    "rarity": "Rare",
+    "image": "https://bafybeietsfs2vi3ip2h4llfc52hvff7wg4eo45irs33ldxbshp2oyqcxp4.ipfs.w3s.link/17.jpg",
+    "description": "Ancient chronicles tell of Biomech Hydra. Biomech Hydra — a cyberpunk entity with chrome augmentations and flickering holo-tattoos, crackling with volatile, raw power. A rare variant whose features stand apart. it leaves a faint trail of luminescent motes."
+  },
+  {
+    "num": 18,
+    "title": "Mystic Serpent",
+    "rarity": "Common",
+    "image": "https://bafybeietsfs2vi3ip2h4llfc52hvff7wg4eo45irs33ldxbshp2oyqcxp4.ipfs.w3s.link/18.jpg",
+    "description": "Bards murmur the story of Mystic Serpent. Mystic Serpent — a cyberpunk entity with chrome augmentations and flickering holo-tattoos, crackling with volatile, raw power. A notable specimen among its kin. it hums with a low, mechanical resonance that echoes."
+  },
+  {
+    "num": 19,
+    "title": "Runic Angel",
+    "rarity": "Common",
+    "image": "https://bafybeietsfs2vi3ip2h4llfc52hvff7wg4eo45irs33ldxbshp2oyqcxp4.ipfs.w3s.link/19.jpg",
+    "description": "Across the void, tales are told of Runic Angel. Runic Angel — a magical entity encircled by floating runes and shimmering glyphs, crackling with volatile, raw power. A notable specimen among its kin. it bends gravity in subtle, precise arcs."
+  },
+  {
+    "num": 20,
+    "title": "Ethereal Spirit",
+    "rarity": "Common",
+    "image": "https://bafybeietsfs2vi3ip2h4llfc52hvff7wg4eo45irs33ldxbshp2oyqcxp4.ipfs.w3s.link/20.jpg",
+    "description": "In forgotten tomes it is written that Ethereal Spirit. Ethereal Spirit — a magical entity with a halo of sigils and soft spellfire, bearing an ancient, patient calm. A notable specimen among its kin. its core pulses with a slow, primeval glow."
+  },
+  {
+    "num": 21,
+    "title": "Aurora dragon",
+    "rarity": "Common",
+    "image": "https://bafybeietsfs2vi3ip2h4llfc52hvff7wg4eo45irs33ldxbshp2oyqcxp4.ipfs.w3s.link/21.jpg",
+    "description": "In forgotten tomes it is written that Aurora dragon. Aurora dragon — a cosmic entity surrounded by drifting starfields and luminous nebulae, radiating restless, electric energy. A notable specimen among its kin. its eyes mirror distant constellations."
+  },
+  {
+    "num": 22,
+    "title": "Void phantom",
+    "rarity": "Legendary",
+    "image": "https://bafybeietsfs2vi3ip2h4llfc52hvff7wg4eo45irs33ldxbshp2oyqcxp4.ipfs.w3s.link/22.jpg",
+    "description": "In forgotten tomes it is written that Void phantom. Void phantom — a cosmic entity surrounded by drifting starfields and luminous nebulae, radiating restless, electric energy. A legendary figure sung about in many worlds. it leaves a faint trail of luminescent motes."
+  },
+  {
+    "num": 23,
+    "title": "Nano Serpent",
+    "rarity": "Common",
+    "image": "https://bafybeietsfs2vi3ip2h4llfc52hvff7wg4eo45irs33ldxbshp2oyqcxp4.ipfs.w3s.link/23.jpg",
+    "description": "Across the void, tales are told of Nano Serpent. Nano Serpent — a cyberpunk entity with chrome augmentations and flickering holo-tattoos, crackling with volatile, raw power. A notable specimen among its kin. it hums with a low, mechanical resonance that echoes."
+  },
+  {
+    "num": 24,
+    "title": "Neon Lich",
+    "rarity": "Epic",
+    "image": "https://bafybeietsfs2vi3ip2h4llfc52hvff7wg4eo45irs33ldxbshp2oyqcxp4.ipfs.w3s.link/24.jpg",
+    "description": "Ancient chronicles tell of Neon Lich. Neon Lich — a cyberpunk entity lit by neon sigils and reflected in rain-slick streets, crackling with volatile, raw power. An epic artifact whose presence commands attention. it hums with a low, mechanical resonance that echoes."
+  },
+  {
+    "num": 25,
+    "title": "Circuit Djinn",
+    "rarity": "Epic",
+    "image": "https://bafybeietsfs2vi3ip2h4llfc52hvff7wg4eo45irs33ldxbshp2oyqcxp4.ipfs.w3s.link/25.jpg",
+    "description": "Bards murmur the story of Circuit Djinn. Circuit Djinn — a magical entity encircled by floating runes and shimmering glyphs, radiating restless, electric energy. An epic artifact whose presence commands attention. its eyes mirror distant constellations."
+  },
+  {
+    "num": 26,
+    "title": "Nano Colossus",
+    "rarity": "Common",
+    "image": "https://bafybeietsfs2vi3ip2h4llfc52hvff7wg4eo45irs33ldxbshp2oyqcxp4.ipfs.w3s.link/26.jpg",
+    "description": "Ancient chronicles tell of Nano Colossus. Nano Colossus — a cyberpunk entity with chrome augmentations and flickering holo-tattoos, exuding quiet dominion. A notable specimen among its kin. its core pulses with a slow, primeval glow."
+  },
+  {
+    "num": 27,
+    "title": "Galactic Oracle",
+    "rarity": "Rare",
+    "image": "https://bafybeietsfs2vi3ip2h4llfc52hvff7wg4eo45irs33ldxbshp2oyqcxp4.ipfs.w3s.link/27.jpg",
+    "description": "In forgotten tomes it is written that Galactic Oracle. Galactic Oracle — a cyberpunk entity lit by neon sigils and reflected in rain-slick streets, exuding quiet dominion. A rare variant whose features stand apart. it hums with a low, mechanical resonance that echoes."
+  },
+  {
+    "num": 28,
+    "title": "Nebula priestess",
+    "rarity": "Common",
+    "image": "https://bafybeietsfs2vi3ip2h4llfc52hvff7wg4eo45irs33ldxbshp2oyqcxp4.ipfs.w3s.link/28.jpg",
+    "description": "Legends whisper that Nebula priestess. Nebula priestess — a cosmic entity with orbiting shards of starlight and distant planets, radiating restless, electric energy. A notable specimen among its kin. it hums with a low, mechanical resonance that echoes."
+  },
+  {
+    "num": 29,
+    "title": "Matrix Titan",
+    "rarity": "Rare",
+    "image": "https://bafybeietsfs2vi3ip2h4llfc52hvff7wg4eo45irs33ldxbshp2oyqcxp4.ipfs.w3s.link/29.jpg",
+    "description": "Across the void, tales are told of Matrix Titan. Matrix Titan — a cyberpunk entity lit by neon sigils and reflected in rain-slick streets, bearing an ancient, patient calm. A rare variant whose features stand apart. its core pulses with a slow, primeval glow."
+  },
+  {
+    "num": 30,
+    "title": "Synth Dragon",
+    "rarity": "Common",
+    "image": "https://bafybeietsfs2vi3ip2h4llfc52hvff7wg4eo45irs33ldxbshp2oyqcxp4.ipfs.w3s.link/30.jpg",
+    "description": "Bards murmur the story of Synth Dragon. Synth Dragon — a cyberpunk entity with chrome augmentations and flickering holo-tattoos, moving with uncanny, predatory grace. A notable specimen among its kin. its eyes mirror distant constellations."
+  },
+  {
+    "num": 31,
+    "title": "Arcane Wizard",
+    "rarity": "Rare",
+    "image": "https://bafybeietsfs2vi3ip2h4llfc52hvff7wg4eo45irs33ldxbshp2oyqcxp4.ipfs.w3s.link/31.jpg",
+    "description": "Legends whisper that Arcane Wizard. Arcane Wizard — a magical entity encircled by floating runes and shimmering glyphs, bearing an ancient, patient calm. A rare variant whose features stand apart. its core pulses with a slow, primeval glow."
+  },
+  {
+    "num": 32,
+    "title": "Neon Warlord",
+    "rarity": "Common",
+    "image": "https://bafybeietsfs2vi3ip2h4llfc52hvff7wg4eo45irs33ldxbshp2oyqcxp4.ipfs.w3s.link/32.jpg",
+    "description": "In forgotten tomes it is written that Neon Warlord. Neon Warlord — a cyberpunk entity lit by neon sigils and reflected in rain-slick streets, radiating restless, electric energy. A notable specimen among its kin. its core pulses with a slow, primeval glow."
+  },
+  {
+    "num": 33,
+    "title": "Code Phoenix",
+    "rarity": "Epic",
+    "image": "https://bafybeietsfs2vi3ip2h4llfc52hvff7wg4eo45irs33ldxbshp2oyqcxp4.ipfs.w3s.link/33.jpg",
+    "description": "In forgotten tomes it is written that Code Phoenix. Code Phoenix — a magical entity wreathed in arcane motes and levitating crystals, moving with uncanny, predatory grace. An epic artifact whose presence commands attention. it hums with a low, mechanical resonance that echoes."
+  },
+  {
+    "num": 34,
+    "title": "Cyber Warlord",
+    "rarity": "Common",
+    "image": "https://bafybeietsfs2vi3ip2h4llfc52hvff7wg4eo45irs33ldxbshp2oyqcxp4.ipfs.w3s.link/34.jpg",
+    "description": "Legends whisper that Cyber Warlord. Cyber Warlord — a cyberpunk entity with chrome augmentations and flickering holo-tattoos, crackling with volatile, raw power. A notable specimen among its kin. its eyes mirror distant constellations."
+  },
+  {
+    "num": 35,
+    "title": "Spellbound Titan",
+    "rarity": "Rare",
+    "image": "https://bafybeietsfs2vi3ip2h4llfc52hvff7wg4eo45irs33ldxbshp2oyqcxp4.ipfs.w3s.link/35.jpg",
+    "description": "Across the void, tales are told of Spellbound Titan. Spellbound Titan — a cyberpunk entity lit by neon sigils and reflected in rain-slick streets, moving with uncanny, predatory grace. A rare variant whose features stand apart. its core pulses with a slow, primeval glow."
+  },
+  {
+    "num": 36,
+    "title": "Ice giant",
+    "rarity": "Common",
+    "image": "https://bafybeietsfs2vi3ip2h4llfc52hvff7wg4eo45irs33ldxbshp2oyqcxp4.ipfs.w3s.link/36.jpg",
+    "description": "Bards murmur the story of Ice giant. Ice giant — a cosmic entity bathed in the cold glow of interstellar dust and auroras, exuding quiet dominion. A notable specimen among its kin. it bends gravity in subtle, precise arcs."
+  },
+  {
+    "num": 37,
+    "title": "Pixel Dragon",
+    "rarity": "Common",
+    "image": "https://bafybeietsfs2vi3ip2h4llfc52hvff7wg4eo45irs33ldxbshp2oyqcxp4.ipfs.w3s.link/37.jpg",
+    "description": "In forgotten tomes it is written that Pixel Dragon. Pixel Dragon — a cosmic entity surrounded by drifting starfields and luminous nebulae, crackling with volatile, raw power. A notable specimen among its kin. it leaves a faint trail of luminescent motes."
+  },
+  {
+    "num": 38,
+    "title": "Neon Sentinel",
+    "rarity": "Common",
+    "image": "https://bafybeietsfs2vi3ip2h4llfc52hvff7wg4eo45irs33ldxbshp2oyqcxp4.ipfs.w3s.link/38.jpg",
+    "description": "In forgotten tomes it is written that Neon Sentinel. Neon Sentinel — a cyberpunk entity against a skyline of towering neon spires and data-stream banners, crackling with volatile, raw power. A notable specimen among its kin. its core pulses with a slow, primeval glow."
+  },
+  {
+    "num": 39,
+    "title": "Crystal Witch",
+    "rarity": "Common",
+    "image": "https://bafybeietsfs2vi3ip2h4llfc52hvff7wg4eo45irs33ldxbshp2oyqcxp4.ipfs.w3s.link/39.jpg",
+    "description": "Across the void, tales are told of Crystal Witch. Crystal Witch — a cyberpunk entity against a skyline of towering neon spires and data-stream banners, moving with uncanny, predatory grace. A notable specimen among its kin. its eyes mirror distant constellations."
+  },
+  {
+    "num": 40,
+    "title": "Spellbound Spirit",
+    "rarity": "Epic",
+    "image": "https://bafybeietsfs2vi3ip2h4llfc52hvff7wg4eo45irs33ldxbshp2oyqcxp4.ipfs.w3s.link/40.jpg",
+    "description": "Bards murmur the story of Spellbound Spirit. Spellbound Spirit — a biomechanical entity with exposed gears and bioluminescent veins, exuding quiet dominion. An epic artifact whose presence commands attention. its core pulses with a slow, primeval glow."
+  },
+  {
+    "num": 41,
+    "title": "Steel Phoenix",
+    "rarity": "Common",
+    "image": "https://bafybeietsfs2vi3ip2h4llfc52hvff7wg4eo45irs33ldxbshp2oyqcxp4.ipfs.w3s.link/41.jpg",
+    "description": "In forgotten tomes it is written that Steel Phoenix. Steel Phoenix — a cyberpunk entity against a skyline of towering neon spires and data-stream banners, radiating restless, electric energy. A notable specimen among its kin. it hums with a low, mechanical resonance that echoes."
+  },
+  {
+    "num": 42,
+    "title": "Arcane Harbinger",
+    "rarity": "Epic",
+    "image": "https://bafybeietsfs2vi3ip2h4llfc52hvff7wg4eo45irs33ldxbshp2oyqcxp4.ipfs.w3s.link/42.jpg",
+    "description": "Bards murmur the story of Arcane Harbinger. Arcane Harbinger — a magical entity with a halo of sigils and soft spellfire, radiating restless, electric energy. An epic artifact whose presence commands attention. its core pulses with a slow, primeval glow."
+  },
+  {
+    "num": 43,
+    "title": "Crystal Hydra",
+    "rarity": "Common",
+    "image": "https://bafybeietsfs2vi3ip2h4llfc52hvff7wg4eo45irs33ldxbshp2oyqcxp4.ipfs.w3s.link/43.jpg",
+    "description": "In forgotten tomes it is written that Crystal Hydra. Crystal Hydra — a biomechanical entity where living tissue intertwines with polished machinery, crackling with volatile, raw power. A notable specimen among its kin. it leaves a faint trail of luminescent motes."
+  },
+  {
+    "num": 44,
+    "title": "Bioforge Chimera",
+    "rarity": "Rare",
+    "image": "https://bafybeietsfs2vi3ip2h4llfc52hvff7wg4eo45irs33ldxbshp2oyqcxp4.ipfs.w3s.link/44.jpg",
+    "description": "In forgotten tomes it is written that Bioforge Chimera. Bioforge Chimera — a cyberpunk entity with chrome augmentations and flickering holo-tattoos, bearing an ancient, patient calm. A rare variant whose features stand apart. it bends gravity in subtle, precise arcs."
+  },
+  {
+    "num": 45,
+    "title": "Solar Leviathan",
+    "rarity": "Rare",
+    "image": "https://bafybeietsfs2vi3ip2h4llfc52hvff7wg4eo45irs33ldxbshp2oyqcxp4.ipfs.w3s.link/45.jpg",
+    "description": "Legends whisper that Solar Leviathan. Solar Leviathan — a cyberpunk entity lit by neon sigils and reflected in rain-slick streets, exuding quiet dominion. A rare variant whose features stand apart. it bends gravity in subtle, precise arcs."
+  },
+  {
+    "num": 46,
+    "title": "Crystal Beast",
+    "rarity": "Common",
+    "image": "https://bafybeietsfs2vi3ip2h4llfc52hvff7wg4eo45irs33ldxbshp2oyqcxp4.ipfs.w3s.link/46.jpg",
+    "description": "Bards murmur the story of Crystal Beast. Crystal Beast — a magical entity wreathed in arcane motes and levitating crystals, crackling with volatile, raw power. A notable specimen among its kin. it leaves a faint trail of luminescent motes."
+  },
+  {
+    "num": 47,
+    "title": "Runic Beast",
+    "rarity": "Common",
+    "image": "https://bafybeietsfs2vi3ip2h4llfc52hvff7wg4eo45irs33ldxbshp2oyqcxp4.ipfs.w3s.link/47.jpg",
+    "description": "In forgotten tomes it is written that Runic Beast. Runic Beast — a magical entity wreathed in arcane motes and levitating crystals, bearing an ancient, patient calm. A notable specimen among its kin. it leaves a faint trail of luminescent motes."
+  },
+  {
+    "num": 48,
+    "title": "Synth Dragon",
+    "rarity": "Rare",
+    "image": "https://bafybeietsfs2vi3ip2h4llfc52hvff7wg4eo45irs33ldxbshp2oyqcxp4.ipfs.w3s.link/48.jpg",
+    "description": "Ancient chronicles tell of Synth Dragon. Synth Dragon — a cyberpunk entity with chrome augmentations and flickering holo-tattoos, moving with uncanny, predatory grace. A rare variant whose features stand apart. it bends gravity in subtle, precise arcs."
+  },
+  {
+    "num": 49,
+    "title": "Crystal Witch",
+    "rarity": "Common",
+    "image": "https://bafybeietsfs2vi3ip2h4llfc52hvff7wg4eo45irs33ldxbshp2oyqcxp4.ipfs.w3s.link/49.jpg",
+    "description": "In forgotten tomes it is written that Crystal Witch. Crystal Witch — a magical entity encircled by floating runes and shimmering glyphs, crackling with volatile, raw power. A notable specimen among its kin. its eyes mirror distant constellations."
+  },
+  {
+    "num": 50,
+    "title": "Neon Wizard",
+    "rarity": "Common",
+    "image": "https://bafybeietsfs2vi3ip2h4llfc52hvff7wg4eo45irs33ldxbshp2oyqcxp4.ipfs.w3s.link/50.jpg",
+    "description": "Legends whisper that Neon Wizard. Neon Wizard — a magical entity with a halo of sigils and soft spellfire, bearing an ancient, patient calm. A notable specimen among its kin. it leaves a faint trail of luminescent motes."
+  },
+  {
+    "num": 51,
+    "title": "Galactic architect",
+    "rarity": "Rare",
+    "image": "https://bafybeietsfs2vi3ip2h4llfc52hvff7wg4eo45irs33ldxbshp2oyqcxp4.ipfs.w3s.link/51.jpg",
+    "description": "In forgotten tomes it is written that Galactic architect. Galactic architect — a cosmic entity surrounded by drifting starfields and luminous nebulae, moving with uncanny, predatory grace. A rare variant whose features stand apart. it bends gravity in subtle, precise arcs."
+  },
+  {
+    "num": 52,
+    "title": "Neon Hydra",
+    "rarity": "Rare",
+    "image": "https://bafybeietsfs2vi3ip2h4llfc52hvff7wg4eo45irs33ldxbshp2oyqcxp4.ipfs.w3s.link/52.jpg",
+    "description": "In forgotten tomes it is written that Neon Hydra. Neon Hydra — a magical entity encircled by floating runes and shimmering glyphs, radiating restless, electric energy. A rare variant whose features stand apart. it bends gravity in subtle, precise arcs."
+  },
+  {
+    "num": 53,
+    "title": "Runestone Guardian",
+    "rarity": "Common",
+    "image": "https://bafybeietsfs2vi3ip2h4llfc52hvff7wg4eo45irs33ldxbshp2oyqcxp4.ipfs.w3s.link/53.jpg",
+    "description": "Bards murmur the story of Runestone Guardian. Runestone Guardian — a cyberpunk entity lit by neon sigils and reflected in rain-slick streets, exuding quiet dominion. A notable specimen among its kin. it leaves a faint trail of luminescent motes."
+  },
+  {
+    "num": 54,
+    "title": "Celestial serpent",
+    "rarity": "Rare",
+    "image": "https://bafybeietsfs2vi3ip2h4llfc52hvff7wg4eo45irs33ldxbshp2oyqcxp4.ipfs.w3s.link/54.jpg",
+    "description": "In forgotten tomes it is written that Celestial serpent. Celestial serpent — a cosmic entity bathed in the cold glow of interstellar dust and auroras, moving with uncanny, predatory grace. A rare variant whose features stand apart. it leaves a faint trail of luminescent motes."
+  },
+  {
+    "num": 55,
+    "title": "Stellar Beast",
+    "rarity": "Rare",
+    "image": "https://bafybeietsfs2vi3ip2h4llfc52hvff7wg4eo45irs33ldxbshp2oyqcxp4.ipfs.w3s.link/55.jpg",
+    "description": "In forgotten tomes it is written that Stellar Beast. Stellar Beast — a cyberpunk entity with chrome augmentations and flickering holo-tattoos, exuding quiet dominion. A rare variant whose features stand apart. it hums with a low, mechanical resonance that echoes."
+  },
+  {
+    "num": 56,
+    "title": "Solar emperor",
+    "rarity": "Mythic",
+    "image": "https://bafybeietsfs2vi3ip2h4llfc52hvff7wg4eo45irs33ldxbshp2oyqcxp4.ipfs.w3s.link/56.jpg",
+    "description": "In forgotten tomes it is written that Solar emperor. Solar emperor — a cosmic entity with orbiting shards of starlight and distant planets, moving with uncanny, predatory grace. A mythic entity whose renown transcends realms. it bends gravity in subtle, precise arcs."
+  },
+  {
+    "num": 57,
+    "title": "Circuit Phantom",
+    "rarity": "Rare",
+    "image": "https://bafybeietsfs2vi3ip2h4llfc52hvff7wg4eo45irs33ldxbshp2oyqcxp4.ipfs.w3s.link/57.jpg",
+    "description": "Bards murmur the story of Circuit Phantom. Circuit Phantom — a cyberpunk entity lit by neon sigils and reflected in rain-slick streets, crackling with volatile, raw power. A rare variant whose features stand apart. it hums with a low, mechanical resonance that echoes."
+  },
+  {
+    "num": 58,
+    "title": "Mystic Dragon",
+    "rarity": "Common",
+    "image": "https://bafybeietsfs2vi3ip2h4llfc52hvff7wg4eo45irs33ldxbshp2oyqcxp4.ipfs.w3s.link/58.jpg",
+    "description": "Legends whisper that Mystic Dragon. Mystic Dragon — a magical entity wreathed in arcane motes and levitating crystals, moving with uncanny, predatory grace. A notable specimen among its kin. its eyes mirror distant constellations."
+  },
+  {
+    "num": 59,
+    "title": "Code Serpent",
+    "rarity": "Common",
+    "image": "https://bafybeietsfs2vi3ip2h4llfc52hvff7wg4eo45irs33ldxbshp2oyqcxp4.ipfs.w3s.link/59.jpg",
+    "description": "Across the void, tales are told of Code Serpent. Code Serpent — a cyberpunk entity against a skyline of towering neon spires and data-stream banners, moving with uncanny, predatory grace. A notable specimen among its kin. it bends gravity in subtle, precise arcs."
+  },
+  {
+    "num": 60,
+    "title": "Cyber Serpent",
+    "rarity": "Rare",
+    "image": "https://bafybeietsfs2vi3ip2h4llfc52hvff7wg4eo45irs33ldxbshp2oyqcxp4.ipfs.w3s.link/60.jpg",
+    "description": "Legends whisper that Cyber Serpent. Cyber Serpent — a magical entity encircled by floating runes and shimmering glyphs, radiating restless, electric energy. A rare variant whose features stand apart. it bends gravity in subtle, precise arcs."
+  },
+  {
+    "num": 61,
+    "title": "Pixel Oracle",
+    "rarity": "Common",
+    "image": "https://bafybeietsfs2vi3ip2h4llfc52hvff7wg4eo45irs33ldxbshp2oyqcxp4.ipfs.w3s.link/61.jpg",
+    "description": "Legends whisper that Pixel Oracle. Pixel Oracle — a magical entity with a halo of sigils and soft spellfire, radiating restless, electric energy. A notable specimen among its kin. its core pulses with a slow, primeval glow."
+  },
+  {
+    "num": 62,
+    "title": "Arcane Beast",
+    "rarity": "Legendary",
+    "image": "https://bafybeietsfs2vi3ip2h4llfc52hvff7wg4eo45irs33ldxbshp2oyqcxp4.ipfs.w3s.link/62.jpg",
+    "description": "Ancient chronicles tell of Arcane Beast. Arcane Beast — a biomechanical entity with exposed gears and bioluminescent veins, bearing an ancient, patient calm. A legendary figure sung about in many worlds. its core pulses with a slow, primeval glow."
+  },
+  {
+    "num": 63,
+    "title": "Galactic warlord",
+    "rarity": "Rare",
+    "image": "https://bafybeietsfs2vi3ip2h4llfc52hvff7wg4eo45irs33ldxbshp2oyqcxp4.ipfs.w3s.link/63.jpg",
+    "description": "Legends whisper that Galactic warlord. Galactic warlord — a cosmic entity surrounded by drifting starfields and luminous nebulae, moving with uncanny, predatory grace. A rare variant whose features stand apart. it bends gravity in subtle, precise arcs."
+  },
+  {
+    "num": 64,
+    "title": "Gravity warper",
+    "rarity": "Mythic",
+    "image": "https://bafybeietsfs2vi3ip2h4llfc52hvff7wg4eo45irs33ldxbshp2oyqcxp4.ipfs.w3s.link/64.jpg",
+    "description": "Across the void, tales are told of Gravity warper. Gravity warper — a cosmic entity with orbiting shards of starlight and distant planets, moving with uncanny, predatory grace. A mythic entity whose renown transcends realms. it bends gravity in subtle, precise arcs."
+  },
+  {
+    "num": 65,
+    "title": "Gravity Sage",
+    "rarity": "Common",
+    "image": "https://bafybeietsfs2vi3ip2h4llfc52hvff7wg4eo45irs33ldxbshp2oyqcxp4.ipfs.w3s.link/65.jpg",
+    "description": "Legends whisper that Gravity Sage. Gravity Sage — a cyberpunk entity lit by neon sigils and reflected in rain-slick streets, bearing an ancient, patient calm. A notable specimen among its kin. its core pulses with a slow, primeval glow."
+  },
+  {
+    "num": 66,
+    "title": "Golden guardian",
+    "rarity": "Mythic",
+    "image": "https://bafybeietsfs2vi3ip2h4llfc52hvff7wg4eo45irs33ldxbshp2oyqcxp4.ipfs.w3s.link/66.jpg",
+    "description": "Across the void, tales are told of Golden guardian. Golden guardian — a cosmic entity with orbiting shards of starlight and distant planets, crackling with volatile, raw power. A mythic entity whose renown transcends realms. its core pulses with a slow, primeval glow."
+  },
+  {
+    "num": 67,
+    "title": "Entropy mage",
+    "rarity": "Common",
+    "image": "https://bafybeietsfs2vi3ip2h4llfc52hvff7wg4eo45irs33ldxbshp2oyqcxp4.ipfs.w3s.link/67.jpg",
+    "description": "Ancient chronicles tell of Entropy mage. Entropy mage — a cosmic entity surrounded by drifting starfields and luminous nebulae, exuding quiet dominion. A notable specimen among its kin. it hums with a low, mechanical resonance that echoes."
+  },
+  {
+    "num": 68,
+    "title": "Data Phoenix",
+    "rarity": "Common",
+    "image": "https://bafybeietsfs2vi3ip2h4llfc52hvff7wg4eo45irs33ldxbshp2oyqcxp4.ipfs.w3s.link/68.jpg",
+    "description": "Legends whisper that Data Phoenix. Data Phoenix — a cyberpunk entity lit by neon sigils and reflected in rain-slick streets, moving with uncanny, predatory grace. A notable specimen among its kin. it hums with a low, mechanical resonance that echoes."
+  },
+  {
+    "num": 69,
+    "title": "Chrono serpent",
+    "rarity": "Epic",
+    "image": "https://bafybeietsfs2vi3ip2h4llfc52hvff7wg4eo45irs33ldxbshp2oyqcxp4.ipfs.w3s.link/69.jpg",
+    "description": "In forgotten tomes it is written that Chrono serpent. Chrono serpent — a cosmic entity bathed in the cold glow of interstellar dust and auroras, exuding quiet dominion. An epic artifact whose presence commands attention. it hums with a low, mechanical resonance that echoes."
+  },
+  {
+    "num": 70,
+    "title": "Quantum Wraith",
+    "rarity": "Common",
+    "image": "https://bafybeietsfs2vi3ip2h4llfc52hvff7wg4eo45irs33ldxbshp2oyqcxp4.ipfs.w3s.link/70.jpg",
+    "description": "In forgotten tomes it is written that Quantum Wraith. Quantum Wraith — a cosmic entity surrounded by drifting starfields and luminous nebulae, moving with uncanny, predatory grace. A notable specimen among its kin. it leaves a faint trail of luminescent motes."
+  },
+  {
+    "num": 71,
+    "title": "Crystal Mage",
+    "rarity": "Common",
+    "image": "https://bafybeietsfs2vi3ip2h4llfc52hvff7wg4eo45irs33ldxbshp2oyqcxp4.ipfs.w3s.link/71.jpg",
+    "description": "In forgotten tomes it is written that Crystal Mage. Crystal Mage — a magical entity wreathed in arcane motes and levitating crystals, bearing an ancient, patient calm. A notable specimen among its kin. it hums with a low, mechanical resonance that echoes."
+  },
+  {
+    "num": 72,
+    "title": "Angel with",
+    "rarity": "Common",
+    "image": "https://bafybeietsfs2vi3ip2h4llfc52hvff7wg4eo45irs33ldxbshp2oyqcxp4.ipfs.w3s.link/72.jpg",
+    "description": "Bards murmur the story of Angel with. Angel with — a cosmic entity bathed in the cold glow of interstellar dust and auroras, radiating restless, electric energy. A notable specimen among its kin. it hums with a low, mechanical resonance that echoes."
+  },
+  {
+    "num": 73,
+    "title": "Runestone Lich",
+    "rarity": "Common",
+    "image": "https://bafybeietsfs2vi3ip2h4llfc52hvff7wg4eo45irs33ldxbshp2oyqcxp4.ipfs.w3s.link/73.jpg",
+    "description": "Ancient chronicles tell of Runestone Lich. Runestone Lich — a biomechanical entity with exposed gears and bioluminescent veins, exuding quiet dominion. A notable specimen among its kin. it leaves a faint trail of luminescent motes."
+  },
+  {
+    "num": 74,
+    "title": "Holo Leviathan",
+    "rarity": "Common",
+    "image": "https://bafybeietsfs2vi3ip2h4llfc52hvff7wg4eo45irs33ldxbshp2oyqcxp4.ipfs.w3s.link/74.jpg",
+    "description": "Ancient chronicles tell of Holo Leviathan. Holo Leviathan — a magical entity encircled by floating runes and shimmering glyphs, radiating restless, electric energy. A notable specimen among its kin. it hums with a low, mechanical resonance that echoes."
+  },
+  {
+    "num": 75,
+    "title": "Mystic Serpent",
+    "rarity": "Epic",
+    "image": "https://bafybeietsfs2vi3ip2h4llfc52hvff7wg4eo45irs33ldxbshp2oyqcxp4.ipfs.w3s.link/75.jpg",
+    "description": "Across the void, tales are told of Mystic Serpent. Mystic Serpent — a magical entity wreathed in arcane motes and levitating crystals, radiating restless, electric energy. An epic artifact whose presence commands attention. its core pulses with a slow, primeval glow."
+  },
+  {
+    "num": 76,
+    "title": "Obsidian sentinel",
+    "rarity": "Mythic",
+    "image": "https://bafybeietsfs2vi3ip2h4llfc52hvff7wg4eo45irs33ldxbshp2oyqcxp4.ipfs.w3s.link/76.jpg",
+    "description": "Bards murmur the story of Obsidian sentinel. Obsidian sentinel — a cosmic entity surrounded by drifting starfields and luminous nebulae, bearing an ancient, patient calm. A mythic entity whose renown transcends realms. its eyes mirror distant constellations."
+  },
+  {
+    "num": 77,
+    "title": "Ghostly figure",
+    "rarity": "Rare",
+    "image": "https://bafybeietsfs2vi3ip2h4llfc52hvff7wg4eo45irs33ldxbshp2oyqcxp4.ipfs.w3s.link/77.jpg",
+    "description": "Legends whisper that Ghostly figure. Ghostly figure — a cosmic entity with orbiting shards of starlight and distant planets, radiating restless, electric energy. A rare variant whose features stand apart. it leaves a faint trail of luminescent motes."
+  },
+  {
+    "num": 78,
+    "title": "Matrix Angel",
+    "rarity": "Rare",
+    "image": "https://bafybeietsfs2vi3ip2h4llfc52hvff7wg4eo45irs33ldxbshp2oyqcxp4.ipfs.w3s.link/78.jpg",
+    "description": "Bards murmur the story of Matrix Angel. Matrix Angel — a cyberpunk entity with chrome augmentations and flickering holo-tattoos, moving with uncanny, predatory grace. A rare variant whose features stand apart. it bends gravity in subtle, precise arcs."
+  },
+  {
+    "num": 79,
+    "title": "Starborn Titan",
+    "rarity": "Rare",
+    "image": "https://bafybeietsfs2vi3ip2h4llfc52hvff7wg4eo45irs33ldxbshp2oyqcxp4.ipfs.w3s.link/79.jpg",
+    "description": "Legends whisper that Starborn Titan. Starborn Titan — a cosmic entity surrounded by drifting starfields and luminous nebulae, crackling with volatile, raw power. A rare variant whose features stand apart. it leaves a faint trail of luminescent motes."
+  },
+  {
+    "num": 80,
+    "title": "Colossus of",
+    "rarity": "Common",
+    "image": "https://bafybeietsfs2vi3ip2h4llfc52hvff7wg4eo45irs33ldxbshp2oyqcxp4.ipfs.w3s.link/80.jpg",
+    "description": "Bards murmur the story of Colossus of. Colossus of — a cosmic entity bathed in the cold glow of interstellar dust and auroras, moving with uncanny, predatory grace. A notable specimen among its kin. its core pulses with a slow, primeval glow."
+  },
+  {
+    "num": 81,
+    "title": "Arcane Sentinel",
+    "rarity": "Epic",
+    "image": "https://bafybeietsfs2vi3ip2h4llfc52hvff7wg4eo45irs33ldxbshp2oyqcxp4.ipfs.w3s.link/81.jpg",
+    "description": "In forgotten tomes it is written that Arcane Sentinel. Arcane Sentinel — a magical entity wreathed in arcane motes and levitating crystals, exuding quiet dominion. An epic artifact whose presence commands attention. its core pulses with a slow, primeval glow."
+  },
+  {
+    "num": 82,
+    "title": "Ether elemental",
+    "rarity": "Rare",
+    "image": "https://bafybeietsfs2vi3ip2h4llfc52hvff7wg4eo45irs33ldxbshp2oyqcxp4.ipfs.w3s.link/82.jpg",
+    "description": "Legends whisper that Ether elemental. Ether elemental — a cosmic entity with orbiting shards of starlight and distant planets, radiating restless, electric energy. A rare variant whose features stand apart. it bends gravity in subtle, precise arcs."
+  },
+  {
+    "num": 83,
+    "title": "Lunar priest",
+    "rarity": "Common",
+    "image": "https://bafybeietsfs2vi3ip2h4llfc52hvff7wg4eo45irs33ldxbshp2oyqcxp4.ipfs.w3s.link/83.jpg",
+    "description": "Across the void, tales are told of Lunar priest. Lunar priest — a cosmic entity surrounded by drifting starfields and luminous nebulae, radiating restless, electric energy. A notable specimen among its kin. its eyes mirror distant constellations."
+  },
+  {
+    "num": 84,
+    "title": "Bioforge Titan",
+    "rarity": "Epic",
+    "image": "https://bafybeietsfs2vi3ip2h4llfc52hvff7wg4eo45irs33ldxbshp2oyqcxp4.ipfs.w3s.link/84.jpg",
+    "description": "Across the void, tales are told of Bioforge Titan. Bioforge Titan — a cyberpunk entity lit by neon sigils and reflected in rain-slick streets, moving with uncanny, predatory grace. An epic artifact whose presence commands attention. its core pulses with a slow, primeval glow."
+  },
+  {
+    "num": 85,
+    "title": "Abyss leviathan",
+    "rarity": "Common",
+    "image": "https://bafybeietsfs2vi3ip2h4llfc52hvff7wg4eo45irs33ldxbshp2oyqcxp4.ipfs.w3s.link/85.jpg",
+    "description": "Bards murmur the story of Abyss leviathan. Abyss leviathan — a cosmic entity surrounded by drifting starfields and luminous nebulae, moving with uncanny, predatory grace. A notable specimen among its kin. it hums with a low, mechanical resonance that echoes."
+  },
+  {
+    "num": 86,
+    "title": "Ethereal Spirit",
+    "rarity": "Epic",
+    "image": "https://bafybeietsfs2vi3ip2h4llfc52hvff7wg4eo45irs33ldxbshp2oyqcxp4.ipfs.w3s.link/86.jpg",
+    "description": "Legends whisper that Ethereal Spirit. Ethereal Spirit — a cyberpunk entity against a skyline of towering neon spires and data-stream banners, moving with uncanny, predatory grace. An epic artifact whose presence commands attention. its core pulses with a slow, primeval glow."
+  },
+  {
+    "num": 87,
+    "title": "Matrix Beast",
+    "rarity": "Epic",
+    "image": "https://bafybeietsfs2vi3ip2h4llfc52hvff7wg4eo45irs33ldxbshp2oyqcxp4.ipfs.w3s.link/87.jpg",
+    "description": "Legends whisper that Matrix Beast. Matrix Beast — a magical entity encircled by floating runes and shimmering glyphs, bearing an ancient, patient calm. An epic artifact whose presence commands attention. it bends gravity in subtle, precise arcs."
+  },
+  {
+    "num": 88,
+    "title": "Runic Serpent",
+    "rarity": "Common",
+    "image": "https://bafybeietsfs2vi3ip2h4llfc52hvff7wg4eo45irs33ldxbshp2oyqcxp4.ipfs.w3s.link/88.jpg",
+    "description": "Ancient chronicles tell of Runic Serpent. Runic Serpent — a magical entity wreathed in arcane motes and levitating crystals, radiating restless, electric energy. A notable specimen among its kin. its eyes mirror distant constellations."
+  },
+  {
+    "num": 89,
+    "title": "Cosmic harbinger",
+    "rarity": "Common",
+    "image": "https://bafybeietsfs2vi3ip2h4llfc52hvff7wg4eo45irs33ldxbshp2oyqcxp4.ipfs.w3s.link/89.jpg",
+    "description": "In forgotten tomes it is written that Cosmic harbinger. Cosmic harbinger — a cosmic entity surrounded by drifting starfields and luminous nebulae, exuding quiet dominion. A notable specimen among its kin. it bends gravity in subtle, precise arcs."
+  },
+  {
+    "num": 90,
+    "title": "Quantum beast",
+    "rarity": "Rare",
+    "image": "https://bafybeietsfs2vi3ip2h4llfc52hvff7wg4eo45irs33ldxbshp2oyqcxp4.ipfs.w3s.link/90.jpg",
+    "description": "Legends whisper that Quantum beast. Quantum beast — a cosmic entity with orbiting shards of starlight and distant planets, exuding quiet dominion. A rare variant whose features stand apart. it bends gravity in subtle, precise arcs."
+  },
+  {
+    "num": 91,
+    "title": "Mecha Seraph",
+    "rarity": "Rare",
+    "image": "https://bafybeietsfs2vi3ip2h4llfc52hvff7wg4eo45irs33ldxbshp2oyqcxp4.ipfs.w3s.link/91.jpg",
+    "description": "Legends whisper that Mecha Seraph. Mecha Seraph — a cyberpunk entity against a skyline of towering neon spires and data-stream banners, exuding quiet dominion. A rare variant whose features stand apart. its core pulses with a slow, primeval glow."
+  },
+  {
+    "num": 92,
+    "title": "Cyberpunk Angel",
+    "rarity": "Rare",
+    "image": "https://bafybeietsfs2vi3ip2h4llfc52hvff7wg4eo45irs33ldxbshp2oyqcxp4.ipfs.w3s.link/92.jpg",
+    "description": "Legends whisper that Cyberpunk Angel. Cyberpunk Angel — a cyberpunk entity lit by neon sigils and reflected in rain-slick streets, moving with uncanny, predatory grace. A rare variant whose features stand apart. it bends gravity in subtle, precise arcs."
+  },
+  {
+    "num": 93,
+    "title": "Eclipse dragon",
+    "rarity": "Rare",
+    "image": "https://bafybeietsfs2vi3ip2h4llfc52hvff7wg4eo45irs33ldxbshp2oyqcxp4.ipfs.w3s.link/93.jpg",
+    "description": "In forgotten tomes it is written that Eclipse dragon. Eclipse dragon — a cosmic entity with orbiting shards of starlight and distant planets, radiating restless, electric energy. A rare variant whose features stand apart. it bends gravity in subtle, precise arcs."
+  },
+  {
+    "num": 94,
+    "title": "Quantum mage",
+    "rarity": "Common",
+    "image": "https://bafybeietsfs2vi3ip2h4llfc52hvff7wg4eo45irs33ldxbshp2oyqcxp4.ipfs.w3s.link/94.jpg",
+    "description": "Across the void, tales are told of Quantum mage. Quantum mage — a cosmic entity surrounded by drifting starfields and luminous nebulae, bearing an ancient, patient calm. A notable specimen among its kin. its eyes mirror distant constellations."
+  },
+  {
+    "num": 95,
+    "title": "Synth Chimera",
+    "rarity": "Common",
+    "image": "https://bafybeietsfs2vi3ip2h4llfc52hvff7wg4eo45irs33ldxbshp2oyqcxp4.ipfs.w3s.link/95.jpg",
+    "description": "Across the void, tales are told of Synth Chimera. Synth Chimera — a magical entity encircled by floating runes and shimmering glyphs, exuding quiet dominion. A notable specimen among its kin. its core pulses with a slow, primeval glow."
+  },
+  {
+    "num": 96,
+    "title": "Prism spirit",
+    "rarity": "Common",
+    "image": "https://bafybeietsfs2vi3ip2h4llfc52hvff7wg4eo45irs33ldxbshp2oyqcxp4.ipfs.w3s.link/96.jpg",
+    "description": "In forgotten tomes it is written that Prism spirit. Prism spirit — a cosmic entity bathed in the cold glow of interstellar dust and auroras, moving with uncanny, predatory grace. A notable specimen among its kin. it leaves a faint trail of luminescent motes."
+  },
+  {
+    "num": 97,
+    "title": "Cosmic sage",
+    "rarity": "Legendary",
+    "image": "https://bafybeietsfs2vi3ip2h4llfc52hvff7wg4eo45irs33ldxbshp2oyqcxp4.ipfs.w3s.link/97.jpg",
+    "description": "Across the void, tales are told of Cosmic sage. Cosmic sage — a cosmic entity surrounded by drifting starfields and luminous nebulae, bearing an ancient, patient calm. A legendary figure sung about in many worlds. its core pulses with a slow, primeval glow."
+  },
+  {
+    "num": 98,
+    "title": "Mystic Knight",
+    "rarity": "Common",
+    "image": "https://bafybeietsfs2vi3ip2h4llfc52hvff7wg4eo45irs33ldxbshp2oyqcxp4.ipfs.w3s.link/98.jpg",
+    "description": "In forgotten tomes it is written that Mystic Knight. Mystic Knight — a biomechanical entity fused with intricate mechanical filigree and organic plating, crackling with volatile, raw power. A notable specimen among its kin. it hums with a low, mechanical resonance that echoes."
+  },
+  {
+    "num": 99,
+    "title": "Shadow hunter",
+    "rarity": "Epic",
+    "image": "https://bafybeietsfs2vi3ip2h4llfc52hvff7wg4eo45irs33ldxbshp2oyqcxp4.ipfs.w3s.link/99.jpg",
+    "description": "In forgotten tomes it is written that Shadow hunter. Shadow hunter — a cosmic entity bathed in the cold glow of interstellar dust and auroras, exuding quiet dominion. An epic artifact whose presence commands attention. it hums with a low, mechanical resonance that echoes."
+  },
+  {
+    "num": 100,
+    "title": "Void angel",
+    "rarity": "Legendary",
+    "image": "https://bafybeietsfs2vi3ip2h4llfc52hvff7wg4eo45irs33ldxbshp2oyqcxp4.ipfs.w3s.link/100.jpg",
+    "description": "Ancient chronicles tell of Void angel. Void angel — a cosmic entity with orbiting shards of starlight and distant planets, radiating restless, electric energy. A legendary figure sung about in many worlds. it bends gravity in subtle, precise arcs."
+  },
+  {
+    "num": 101,
+    "title": "Crystal Djinn",
+    "rarity": "Rare",
+    "image": "https://bafybeietsfs2vi3ip2h4llfc52hvff7wg4eo45irs33ldxbshp2oyqcxp4.ipfs.w3s.link/101.jpg",
+    "description": "Bards murmur the story of Crystal Djinn. Crystal Djinn — a magical entity encircled by floating runes and shimmering glyphs, exuding quiet dominion. A rare variant whose features stand apart. it hums with a low, mechanical resonance that echoes."
+  },
+  {
+    "num": 102,
+    "title": "Data Chimera",
+    "rarity": "Rare",
+    "image": "https://bafybeietsfs2vi3ip2h4llfc52hvff7wg4eo45irs33ldxbshp2oyqcxp4.ipfs.w3s.link/102.jpg",
+    "description": "Ancient chronicles tell of Data Chimera. Data Chimera — a magical entity with a halo of sigils and soft spellfire, moving with uncanny, predatory grace. A rare variant whose features stand apart. its eyes mirror distant constellations."
+  },
+  {
+    "num": 103,
+    "title": "Code Chimera",
+    "rarity": "Rare",
+    "image": "https://bafybeietsfs2vi3ip2h4llfc52hvff7wg4eo45irs33ldxbshp2oyqcxp4.ipfs.w3s.link/103.jpg",
+    "description": "Legends whisper that Code Chimera. Code Chimera — a cyberpunk entity with chrome augmentations and flickering holo-tattoos, crackling with volatile, raw power. A rare variant whose features stand apart. it hums with a low, mechanical resonance that echoes."
+  },
+  {
+    "num": 104,
+    "title": "Code Lich",
+    "rarity": "Epic",
+    "image": "https://bafybeietsfs2vi3ip2h4llfc52hvff7wg4eo45irs33ldxbshp2oyqcxp4.ipfs.w3s.link/104.jpg",
+    "description": "Legends whisper that Code Lich. Code Lich — a magical entity encircled by floating runes and shimmering glyphs, moving with uncanny, predatory grace. An epic artifact whose presence commands attention. it leaves a faint trail of luminescent motes."
+  },
+  {
+    "num": 105,
+    "title": "shadow colossus",
+    "rarity": "Legendary",
+    "image": "https://bafybeietsfs2vi3ip2h4llfc52hvff7wg4eo45irs33ldxbshp2oyqcxp4.ipfs.w3s.link/105.jpg",
+    "description": "Ancient chronicles tell of shadow colossus. shadow colossus — a cosmic entity surrounded by drifting starfields and luminous nebulae, exuding quiet dominion. A legendary figure sung about in many worlds. it leaves a faint trail of luminescent motes."
+  },
+  {
+    "num": 106,
+    "title": "Celestial Knight",
+    "rarity": "Common",
+    "image": "https://bafybeietsfs2vi3ip2h4llfc52hvff7wg4eo45irs33ldxbshp2oyqcxp4.ipfs.w3s.link/106.jpg",
+    "description": "Bards murmur the story of Celestial Knight. Celestial Knight — a cosmic entity surrounded by drifting starfields and luminous nebulae, radiating restless, electric energy. A notable specimen among its kin. it bends gravity in subtle, precise arcs."
+  },
+  {
+    "num": 107,
+    "title": "Cyber Djinn",
+    "rarity": "Legendary",
+    "image": "https://bafybeietsfs2vi3ip2h4llfc52hvff7wg4eo45irs33ldxbshp2oyqcxp4.ipfs.w3s.link/107.jpg",
+    "description": "Across the void, tales are told of Cyber Djinn. Cyber Djinn — a cyberpunk entity against a skyline of towering neon spires and data-stream banners, radiating restless, electric energy. A legendary figure sung about in many worlds. it leaves a faint trail of luminescent motes."
+  },
+  {
+    "num": 108,
+    "title": "Titan of",
+    "rarity": "Common",
+    "image": "https://bafybeietsfs2vi3ip2h4llfc52hvff7wg4eo45irs33ldxbshp2oyqcxp4.ipfs.w3s.link/108.jpg",
+    "description": "Across the void, tales are told of Titan of. Titan of — a cosmic entity with orbiting shards of starlight and distant planets, exuding quiet dominion. A notable specimen among its kin. it leaves a faint trail of luminescent motes."
+  },
+  {
+    "num": 109,
+    "title": "Mystic Phoenix",
+    "rarity": "Legendary",
+    "image": "https://bafybeietsfs2vi3ip2h4llfc52hvff7wg4eo45irs33ldxbshp2oyqcxp4.ipfs.w3s.link/109.jpg",
+    "description": "Ancient chronicles tell of Mystic Phoenix. Mystic Phoenix — a cyberpunk entity against a skyline of towering neon spires and data-stream banners, bearing an ancient, patient calm. A legendary figure sung about in many worlds. it hums with a low, mechanical resonance that echoes."
+  },
+  {
+    "num": 110,
+    "title": "Spirit formed",
+    "rarity": "Rare",
+    "image": "https://bafybeietsfs2vi3ip2h4llfc52hvff7wg4eo45irs33ldxbshp2oyqcxp4.ipfs.w3s.link/110.jpg",
+    "description": "Legends whisper that Spirit formed. Spirit formed — a cosmic entity bathed in the cold glow of interstellar dust and auroras, bearing an ancient, patient calm. A rare variant whose features stand apart. it leaves a faint trail of luminescent motes."
+  },
+  {
+    "num": 111,
+    "title": "Celestial sentinel",
+    "rarity": "Epic",
+    "image": "https://bafybeietsfs2vi3ip2h4llfc52hvff7wg4eo45irs33ldxbshp2oyqcxp4.ipfs.w3s.link/111.jpg",
+    "description": "Ancient chronicles tell of Celestial sentinel. Celestial sentinel — a cosmic entity surrounded by drifting starfields and luminous nebulae, crackling with volatile, raw power. An epic artifact whose presence commands attention. it bends gravity in subtle, precise arcs."
+  },
+  {
+    "num": 112,
+    "title": "Mystic Phoenix",
+    "rarity": "Common",
+    "image": "https://bafybeietsfs2vi3ip2h4llfc52hvff7wg4eo45irs33ldxbshp2oyqcxp4.ipfs.w3s.link/112.jpg",
+    "description": "Legends whisper that Mystic Phoenix. Mystic Phoenix — a magical entity encircled by floating runes and shimmering glyphs, radiating restless, electric energy. A notable specimen among its kin. its eyes mirror distant constellations."
+  },
+  {
+    "num": 113,
+    "title": "Holographic AI",
+    "rarity": "Legendary",
+    "image": "https://bafybeietsfs2vi3ip2h4llfc52hvff7wg4eo45irs33ldxbshp2oyqcxp4.ipfs.w3s.link/113.jpg",
+    "description": "Across the void, tales are told of Holographic AI. Holographic AI — a cosmic entity bathed in the cold glow of interstellar dust and auroras, bearing an ancient, patient calm. A legendary figure sung about in many worlds. it hums with a low, mechanical resonance that echoes."
+  },
+  {
+    "num": 114,
+    "title": "Synth Wraith",
+    "rarity": "Epic",
+    "image": "https://bafybeietsfs2vi3ip2h4llfc52hvff7wg4eo45irs33ldxbshp2oyqcxp4.ipfs.w3s.link/114.jpg",
+    "description": "Legends whisper that Synth Wraith. Synth Wraith — a magical entity with a halo of sigils and soft spellfire, exuding quiet dominion. An epic artifact whose presence commands attention. it leaves a faint trail of luminescent motes."
+  },
+  {
+    "num": 115,
+    "title": "Neon Titan",
+    "rarity": "Epic",
+    "image": "https://bafybeietsfs2vi3ip2h4llfc52hvff7wg4eo45irs33ldxbshp2oyqcxp4.ipfs.w3s.link/115.jpg",
+    "description": "Ancient chronicles tell of Neon Titan. Neon Titan — a magical entity wreathed in arcane motes and levitating crystals, moving with uncanny, predatory grace. An epic artifact whose presence commands attention. it bends gravity in subtle, precise arcs."
+  },
+  {
+    "num": 116,
+    "title": "Mecha Oracle",
+    "rarity": "Common",
+    "image": "https://bafybeietsfs2vi3ip2h4llfc52hvff7wg4eo45irs33ldxbshp2oyqcxp4.ipfs.w3s.link/116.jpg",
+    "description": "Legends whisper that Mecha Oracle. Mecha Oracle — a cyberpunk entity against a skyline of towering neon spires and data-stream banners, exuding quiet dominion. A notable specimen among its kin. it leaves a faint trail of luminescent motes."
+  },
+  {
+    "num": 117,
+    "title": "Dragon with",
+    "rarity": "Rare",
+    "image": "https://bafybeietsfs2vi3ip2h4llfc52hvff7wg4eo45irs33ldxbshp2oyqcxp4.ipfs.w3s.link/117.jpg",
+    "description": "Bards murmur the story of Dragon with. Dragon with — a cosmic entity bathed in the cold glow of interstellar dust and auroras, exuding quiet dominion. A rare variant whose features stand apart. it bends gravity in subtle, precise arcs."
+  },
+  {
+    "num": 118,
+    "title": "Insectoid architect",
+    "rarity": "Common",
+    "image": "https://bafybeietsfs2vi3ip2h4llfc52hvff7wg4eo45irs33ldxbshp2oyqcxp4.ipfs.w3s.link/118.jpg",
+    "description": "In forgotten tomes it is written that Insectoid architect. Insectoid architect — a cosmic entity with orbiting shards of starlight and distant planets, bearing an ancient, patient calm. A notable specimen among its kin. its eyes mirror distant constellations."
+  },
+  {
+    "num": 119,
+    "title": "Runic Djinn",
+    "rarity": "Mythic",
+    "image": "https://bafybeietsfs2vi3ip2h4llfc52hvff7wg4eo45irs33ldxbshp2oyqcxp4.ipfs.w3s.link/119.jpg",
+    "description": "Bards murmur the story of Runic Djinn. Runic Djinn — a biomechanical entity fused with intricate mechanical filigree and organic plating, crackling with volatile, raw power. A mythic entity whose renown transcends realms. it leaves a faint trail of luminescent motes."
+  },
+  {
+    "num": 120,
+    "title": "Astral knight",
+    "rarity": "Common",
+    "image": "https://bafybeietsfs2vi3ip2h4llfc52hvff7wg4eo45irs33ldxbshp2oyqcxp4.ipfs.w3s.link/120.jpg",
+    "description": "Legends whisper that Astral knight. Astral knight — a cosmic entity surrounded by drifting starfields and luminous nebulae, radiating restless, electric energy. A notable specimen among its kin. its core pulses with a slow, primeval glow."
+  },
+  {
+    "num": 121,
+    "title": "Void sentinel",
+    "rarity": "Legendary",
+    "image": "https://bafybeietsfs2vi3ip2h4llfc52hvff7wg4eo45irs33ldxbshp2oyqcxp4.ipfs.w3s.link/121.jpg",
+    "description": "Legends whisper that Void sentinel. Void sentinel — a cosmic entity bathed in the cold glow of interstellar dust and auroras, moving with uncanny, predatory grace. A legendary figure sung about in many worlds. it leaves a faint trail of luminescent motes."
+  },
+  {
+    "num": 122,
+    "title": "Arcane Oracle",
+    "rarity": "Rare",
+    "image": "https://bafybeietsfs2vi3ip2h4llfc52hvff7wg4eo45irs33ldxbshp2oyqcxp4.ipfs.w3s.link/122.jpg",
+    "description": "Ancient chronicles tell of Arcane Oracle. Arcane Oracle — a magical entity encircled by floating runes and shimmering glyphs, exuding quiet dominion. A rare variant whose features stand apart. its eyes mirror distant constellations."
+  },
+  {
+    "num": 123,
+    "title": "Pixel Beast",
+    "rarity": "Common",
+    "image": "https://bafybeietsfs2vi3ip2h4llfc52hvff7wg4eo45irs33ldxbshp2oyqcxp4.ipfs.w3s.link/123.jpg",
+    "description": "Bards murmur the story of Pixel Beast. Pixel Beast — a cyberpunk entity with chrome augmentations and flickering holo-tattoos, bearing an ancient, patient calm. A notable specimen among its kin. it leaves a faint trail of luminescent motes."
+  },
+  {
+    "num": 124,
+    "title": "Phoenix made",
+    "rarity": "Common",
+    "image": "https://bafybeietsfs2vi3ip2h4llfc52hvff7wg4eo45irs33ldxbshp2oyqcxp4.ipfs.w3s.link/124.jpg",
+    "description": "Bards murmur the story of Phoenix made. Phoenix made — a cosmic entity with orbiting shards of starlight and distant planets, bearing an ancient, patient calm. A notable specimen among its kin. it bends gravity in subtle, precise arcs."
+  },
+  {
+    "num": 125,
+    "title": "Hypernova dragon",
+    "rarity": "Common",
+    "image": "https://bafybeietsfs2vi3ip2h4llfc52hvff7wg4eo45irs33ldxbshp2oyqcxp4.ipfs.w3s.link/125.jpg",
+    "description": "Legends whisper that Hypernova dragon. Hypernova dragon — a cosmic entity surrounded by drifting starfields and luminous nebulae, crackling with volatile, raw power. A notable specimen among its kin. it leaves a faint trail of luminescent motes."
+  },
+  {
+    "num": 126,
+    "title": "Biomech Dragon",
+    "rarity": "Rare",
+    "image": "https://bafybeietsfs2vi3ip2h4llfc52hvff7wg4eo45irs33ldxbshp2oyqcxp4.ipfs.w3s.link/126.jpg",
+    "description": "Bards murmur the story of Biomech Dragon. Biomech Dragon — a cyberpunk entity against a skyline of towering neon spires and data-stream banners, crackling with volatile, raw power. A rare variant whose features stand apart. it hums with a low, mechanical resonance that echoes."
+  },
+  {
+    "num": 127,
+    "title": "Aurora phoenix",
+    "rarity": "Common",
+    "image": "https://bafybeietsfs2vi3ip2h4llfc52hvff7wg4eo45irs33ldxbshp2oyqcxp4.ipfs.w3s.link/127.jpg",
+    "description": "Ancient chronicles tell of Aurora phoenix. Aurora phoenix — a cosmic entity with orbiting shards of starlight and distant planets, crackling with volatile, raw power. A notable specimen among its kin. it bends gravity in subtle, precise arcs."
+  },
+  {
+    "num": 128,
+    "title": "Arcane Mage",
+    "rarity": "Common",
+    "image": "https://bafybeietsfs2vi3ip2h4llfc52hvff7wg4eo45irs33ldxbshp2oyqcxp4.ipfs.w3s.link/128.jpg",
+    "description": "Ancient chronicles tell of Arcane Mage. Arcane Mage — a cyberpunk entity lit by neon sigils and reflected in rain-slick streets, bearing an ancient, patient calm. A notable specimen among its kin. its core pulses with a slow, primeval glow."
+  },
+  {
+    "num": 129,
+    "title": "Matrix Seraph",
+    "rarity": "Legendary",
+    "image": "https://bafybeietsfs2vi3ip2h4llfc52hvff7wg4eo45irs33ldxbshp2oyqcxp4.ipfs.w3s.link/129.jpg",
+    "description": "In forgotten tomes it is written that Matrix Seraph. Matrix Seraph — a magical entity wreathed in arcane motes and levitating crystals, exuding quiet dominion. A legendary figure sung about in many worlds. it hums with a low, mechanical resonance that echoes."
+  },
+  {
+    "num": 130,
+    "title": "Crystalline guardian",
+    "rarity": "Rare",
+    "image": "https://bafybeietsfs2vi3ip2h4llfc52hvff7wg4eo45irs33ldxbshp2oyqcxp4.ipfs.w3s.link/130.jpg",
+    "description": "Bards murmur the story of Crystalline guardian. Crystalline guardian — a cosmic entity surrounded by drifting starfields and luminous nebulae, moving with uncanny, predatory grace. A rare variant whose features stand apart. it leaves a faint trail of luminescent motes."
+  },
+  {
+    "num": 131,
+    "title": "Cyber Beast",
+    "rarity": "Common",
+    "image": "https://bafybeietsfs2vi3ip2h4llfc52hvff7wg4eo45irs33ldxbshp2oyqcxp4.ipfs.w3s.link/131.jpg",
+    "description": "Bards murmur the story of Cyber Beast. Cyber Beast — a magical entity with a halo of sigils and soft spellfire, exuding quiet dominion. A notable specimen among its kin. it bends gravity in subtle, precise arcs."
+  },
+  {
+    "num": 132,
+    "title": "Runic Beast",
+    "rarity": "Rare",
+    "image": "https://bafybeietsfs2vi3ip2h4llfc52hvff7wg4eo45irs33ldxbshp2oyqcxp4.ipfs.w3s.link/132.jpg",
+    "description": "Across the void, tales are told of Runic Beast. Runic Beast — a cyberpunk entity with chrome augmentations and flickering holo-tattoos, moving with uncanny, predatory grace. A rare variant whose features stand apart. it hums with a low, mechanical resonance that echoes."
+  },
+  {
+    "num": 133,
+    "title": "Neon Phantom",
+    "rarity": "Common",
+    "image": "https://bafybeietsfs2vi3ip2h4llfc52hvff7wg4eo45irs33ldxbshp2oyqcxp4.ipfs.w3s.link/133.jpg",
+    "description": "Across the void, tales are told of Neon Phantom. Neon Phantom — a cosmic entity with orbiting shards of starlight and distant planets, moving with uncanny, predatory grace. A notable specimen among its kin. its core pulses with a slow, primeval glow."
+  },
+  {
+    "num": 134,
+    "title": "Ethereal Dragon",
+    "rarity": "Common",
+    "image": "https://bafybeietsfs2vi3ip2h4llfc52hvff7wg4eo45irs33ldxbshp2oyqcxp4.ipfs.w3s.link/134.jpg",
+    "description": "Across the void, tales are told of Ethereal Dragon. Ethereal Dragon — a magical entity with a halo of sigils and soft spellfire, moving with uncanny, predatory grace. A notable specimen among its kin. it hums with a low, mechanical resonance that echoes."
+  },
+  {
+    "num": 135,
+    "title": "Forest spirit",
+    "rarity": "Mythic",
+    "image": "https://bafybeietsfs2vi3ip2h4llfc52hvff7wg4eo45irs33ldxbshp2oyqcxp4.ipfs.w3s.link/135.jpg",
+    "description": "Bards murmur the story of Forest spirit. Forest spirit — a cosmic entity with orbiting shards of starlight and distant planets, moving with uncanny, predatory grace. A mythic entity whose renown transcends realms. it hums with a low, mechanical resonance that echoes."
+  },
+  {
+    "num": 136,
+    "title": "Digital Lich",
+    "rarity": "Rare",
+    "image": "https://bafybeietsfs2vi3ip2h4llfc52hvff7wg4eo45irs33ldxbshp2oyqcxp4.ipfs.w3s.link/136.jpg",
+    "description": "Legends whisper that Digital Lich. Digital Lich — a cyberpunk entity against a skyline of towering neon spires and data-stream banners, moving with uncanny, predatory grace. A rare variant whose features stand apart. its eyes mirror distant constellations."
+  },
+  {
+    "num": 137,
+    "title": "Circuit Golem",
+    "rarity": "Common",
+    "image": "https://bafybeietsfs2vi3ip2h4llfc52hvff7wg4eo45irs33ldxbshp2oyqcxp4.ipfs.w3s.link/137.jpg",
+    "description": "Across the void, tales are told of Circuit Golem. Circuit Golem — a cosmic entity bathed in the cold glow of interstellar dust and auroras, exuding quiet dominion. A notable specimen among its kin. it bends gravity in subtle, precise arcs."
+  },
+  {
+    "num": 138,
+    "title": "Data Titan",
+    "rarity": "Epic",
+    "image": "https://bafybeietsfs2vi3ip2h4llfc52hvff7wg4eo45irs33ldxbshp2oyqcxp4.ipfs.w3s.link/138.jpg",
+    "description": "Bards murmur the story of Data Titan. Data Titan — a magical entity wreathed in arcane motes and levitating crystals, radiating restless, electric energy. An epic artifact whose presence commands attention. it bends gravity in subtle, precise arcs."
+  },
+  {
+    "num": 139,
+    "title": "Astral Wizard",
+    "rarity": "Common",
+    "image": "https://bafybeietsfs2vi3ip2h4llfc52hvff7wg4eo45irs33ldxbshp2oyqcxp4.ipfs.w3s.link/139.jpg",
+    "description": "Legends whisper that Astral Wizard. Astral Wizard — a cyberpunk entity against a skyline of towering neon spires and data-stream banners, crackling with volatile, raw power. A notable specimen among its kin. it leaves a faint trail of luminescent motes."
+  },
+  {
+    "num": 140,
+    "title": "Infinity titan",
+    "rarity": "Epic",
+    "image": "https://bafybeietsfs2vi3ip2h4llfc52hvff7wg4eo45irs33ldxbshp2oyqcxp4.ipfs.w3s.link/140.jpg",
+    "description": "Legends whisper that Infinity titan. Infinity titan — a cosmic entity surrounded by drifting starfields and luminous nebulae, radiating restless, electric energy. An epic artifact whose presence commands attention. it hums with a low, mechanical resonance that echoes."
+  },
+  {
+    "num": 141,
+    "title": "Void Serpent",
+    "rarity": "Common",
+    "image": "https://bafybeietsfs2vi3ip2h4llfc52hvff7wg4eo45irs33ldxbshp2oyqcxp4.ipfs.w3s.link/141.jpg",
+    "description": "In forgotten tomes it is written that Void Serpent. Void Serpent — a cosmic entity with orbiting shards of starlight and distant planets, bearing an ancient, patient calm. A notable specimen among its kin. its eyes mirror distant constellations."
+  },
+  {
+    "num": 142,
+    "title": "Arcane Titan",
+    "rarity": "Legendary",
+    "image": "https://bafybeietsfs2vi3ip2h4llfc52hvff7wg4eo45irs33ldxbshp2oyqcxp4.ipfs.w3s.link/142.jpg",
+    "description": "Across the void, tales are told of Arcane Titan. Arcane Titan — a biomechanical entity with exposed gears and bioluminescent veins, bearing an ancient, patient calm. A legendary figure sung about in many worlds. its core pulses with a slow, primeval glow."
+  },
+  {
+    "num": 143,
+    "title": "Spellbound Leviathan",
+    "rarity": "Common",
+    "image": "https://bafybeietsfs2vi3ip2h4llfc52hvff7wg4eo45irs33ldxbshp2oyqcxp4.ipfs.w3s.link/143.jpg",
+    "description": "In forgotten tomes it is written that Spellbound Leviathan. Spellbound Leviathan — a magical entity wreathed in arcane motes and levitating crystals, radiating restless, electric energy. A notable specimen among its kin. its core pulses with a slow, primeval glow."
+  },
+  {
+    "num": 144,
+    "title": "Timekeeper with",
+    "rarity": "Common",
+    "image": "https://bafybeietsfs2vi3ip2h4llfc52hvff7wg4eo45irs33ldxbshp2oyqcxp4.ipfs.w3s.link/144.jpg",
+    "description": "Across the void, tales are told of Timekeeper with. Timekeeper with — a cosmic entity surrounded by drifting starfields and luminous nebulae, moving with uncanny, predatory grace. A notable specimen among its kin. it hums with a low, mechanical resonance that echoes."
+  },
+  {
+    "num": 145,
+    "title": "Spellbound Chimera",
+    "rarity": "Common",
+    "image": "https://bafybeietsfs2vi3ip2h4llfc52hvff7wg4eo45irs33ldxbshp2oyqcxp4.ipfs.w3s.link/145.jpg",
+    "description": "Across the void, tales are told of Spellbound Chimera. Spellbound Chimera — a magical entity encircled by floating runes and shimmering glyphs, bearing an ancient, patient calm. A notable specimen among its kin. its core pulses with a slow, primeval glow."
+  },
+  {
+    "num": 146,
+    "title": "Synth Leviathan",
+    "rarity": "Common",
+    "image": "https://bafybeietsfs2vi3ip2h4llfc52hvff7wg4eo45irs33ldxbshp2oyqcxp4.ipfs.w3s.link/146.jpg",
+    "description": "Ancient chronicles tell of Synth Leviathan. Synth Leviathan — a cyberpunk entity with chrome augmentations and flickering holo-tattoos, radiating restless, electric energy. A notable specimen among its kin. its core pulses with a slow, primeval glow."
+  },
+  {
+    "num": 147,
+    "title": "Ethereal Leviathan",
+    "rarity": "Common",
+    "image": "https://bafybeietsfs2vi3ip2h4llfc52hvff7wg4eo45irs33ldxbshp2oyqcxp4.ipfs.w3s.link/147.jpg",
+    "description": "Legends whisper that Ethereal Leviathan. Ethereal Leviathan — a biomechanical entity where living tissue intertwines with polished machinery, moving with uncanny, predatory grace. A notable specimen among its kin. it bends gravity in subtle, precise arcs."
+  },
+  {
+    "num": 148,
+    "title": "Crystal Seraph",
+    "rarity": "Rare",
+    "image": "https://bafybeietsfs2vi3ip2h4llfc52hvff7wg4eo45irs33ldxbshp2oyqcxp4.ipfs.w3s.link/148.jpg",
+    "description": "Bards murmur the story of Crystal Seraph. Crystal Seraph — a magical entity wreathed in arcane motes and levitating crystals, radiating restless, electric energy. A rare variant whose features stand apart. its core pulses with a slow, primeval glow."
+  },
+  {
+    "num": 149,
+    "title": "Arcane Mage",
+    "rarity": "Common",
+    "image": "https://bafybeietsfs2vi3ip2h4llfc52hvff7wg4eo45irs33ldxbshp2oyqcxp4.ipfs.w3s.link/149.jpg",
+    "description": "Legends whisper that Arcane Mage. Arcane Mage — a magical entity encircled by floating runes and shimmering glyphs, moving with uncanny, predatory grace. A notable specimen among its kin. it leaves a faint trail of luminescent motes."
+  },
+  {
+    "num": 150,
+    "title": "Nebula Phoenix",
+    "rarity": "Common",
+    "image": "https://bafybeietsfs2vi3ip2h4llfc52hvff7wg4eo45irs33ldxbshp2oyqcxp4.ipfs.w3s.link/150.jpg",
+    "description": "Bards murmur the story of Nebula Phoenix. Nebula Phoenix — a cosmic entity with orbiting shards of starlight and distant planets, bearing an ancient, patient calm. A notable specimen among its kin. it bends gravity in subtle, precise arcs."
+  },
+  {
+    "num": 151,
+    "title": "Runestone Mage",
+    "rarity": "Rare",
+    "image": "https://bafybeietsfs2vi3ip2h4llfc52hvff7wg4eo45irs33ldxbshp2oyqcxp4.ipfs.w3s.link/151.jpg",
+    "description": "Bards murmur the story of Runestone Mage. Runestone Mage — a magical entity wreathed in arcane motes and levitating crystals, exuding quiet dominion. A rare variant whose features stand apart. its core pulses with a slow, primeval glow."
+  },
+  {
+    "num": 152,
+    "title": "Crystal Wizard",
+    "rarity": "Common",
+    "image": "https://bafybeietsfs2vi3ip2h4llfc52hvff7wg4eo45irs33ldxbshp2oyqcxp4.ipfs.w3s.link/152.jpg",
+    "description": "Legends whisper that Crystal Wizard. Crystal Wizard — a biomechanical entity with exposed gears and bioluminescent veins, crackling with volatile, raw power. A notable specimen among its kin. it hums with a low, mechanical resonance that echoes."
+  },
+  {
+    "num": 153,
+    "title": "Water guardian",
+    "rarity": "Common",
+    "image": "https://bafybeietsfs2vi3ip2h4llfc52hvff7wg4eo45irs33ldxbshp2oyqcxp4.ipfs.w3s.link/153.jpg",
+    "description": "In forgotten tomes it is written that Water guardian. Water guardian — a cosmic entity bathed in the cold glow of interstellar dust and auroras, moving with uncanny, predatory grace. A notable specimen among its kin. its core pulses with a slow, primeval glow."
+  },
+  {
+    "num": 154,
+    "title": "Nebula dragon",
+    "rarity": "Rare",
+    "image": "https://bafybeietsfs2vi3ip2h4llfc52hvff7wg4eo45irs33ldxbshp2oyqcxp4.ipfs.w3s.link/154.jpg",
+    "description": "Ancient chronicles tell of Nebula dragon. Nebula dragon — a cosmic entity surrounded by drifting starfields and luminous nebulae, crackling with volatile, raw power. A rare variant whose features stand apart. its eyes mirror distant constellations."
+  },
+  {
+    "num": 155,
+    "title": "Pixel Wraith",
+    "rarity": "Common",
+    "image": "https://bafybeietsfs2vi3ip2h4llfc52hvff7wg4eo45irs33ldxbshp2oyqcxp4.ipfs.w3s.link/155.jpg",
+    "description": "In forgotten tomes it is written that Pixel Wraith. Pixel Wraith — a cyberpunk entity against a skyline of towering neon spires and data-stream banners, moving with uncanny, predatory grace. A notable specimen among its kin. it bends gravity in subtle, precise arcs."
+  },
+  {
+    "num": 156,
+    "title": "Mechanical golem",
+    "rarity": "Rare",
+    "image": "https://bafybeietsfs2vi3ip2h4llfc52hvff7wg4eo45irs33ldxbshp2oyqcxp4.ipfs.w3s.link/156.jpg",
+    "description": "Ancient chronicles tell of Mechanical golem. Mechanical golem — a cosmic entity bathed in the cold glow of interstellar dust and auroras, bearing an ancient, patient calm. A rare variant whose features stand apart. its core pulses with a slow, primeval glow."
+  },
+  {
+    "num": 157,
+    "title": "Steel Chimera",
+    "rarity": "Common",
+    "image": "https://bafybeietsfs2vi3ip2h4llfc52hvff7wg4eo45irs33ldxbshp2oyqcxp4.ipfs.w3s.link/157.jpg",
+    "description": "Ancient chronicles tell of Steel Chimera. Steel Chimera — a cyberpunk entity against a skyline of towering neon spires and data-stream banners, moving with uncanny, predatory grace. A notable specimen among its kin. it leaves a faint trail of luminescent motes."
+  },
+  {
+    "num": 158,
+    "title": "Celestial monarch",
+    "rarity": "Common",
+    "image": "https://bafybeietsfs2vi3ip2h4llfc52hvff7wg4eo45irs33ldxbshp2oyqcxp4.ipfs.w3s.link/158.jpg",
+    "description": "Legends whisper that Celestial monarch. Celestial monarch — a cosmic entity surrounded by drifting starfields and luminous nebulae, bearing an ancient, patient calm. A notable specimen among its kin. it leaves a faint trail of luminescent motes."
+  },
+  {
+    "num": 159,
+    "title": "Cosmic lich",
+    "rarity": "Epic",
+    "image": "https://bafybeietsfs2vi3ip2h4llfc52hvff7wg4eo45irs33ldxbshp2oyqcxp4.ipfs.w3s.link/159.jpg",
+    "description": "Legends whisper that Cosmic lich. Cosmic lich — a cosmic entity with orbiting shards of starlight and distant planets, radiating restless, electric energy. An epic artifact whose presence commands attention. its eyes mirror distant constellations."
+  },
+  {
+    "num": 160,
+    "title": "Neon Samurai",
+    "rarity": "Rare",
+    "image": "https://bafybeietsfs2vi3ip2h4llfc52hvff7wg4eo45irs33ldxbshp2oyqcxp4.ipfs.w3s.link/160.jpg",
+    "description": "Bards murmur the story of Neon Samurai. Neon Samurai — a cyberpunk entity against a skyline of towering neon spires and data-stream banners, moving with uncanny, predatory grace. A rare variant whose features stand apart. it hums with a low, mechanical resonance that echoes."
+  },
+  {
+    "num": 161,
+    "title": "Plasma phoenix",
+    "rarity": "Common",
+    "image": "https://bafybeietsfs2vi3ip2h4llfc52hvff7wg4eo45irs33ldxbshp2oyqcxp4.ipfs.w3s.link/161.jpg",
+    "description": "In forgotten tomes it is written that Plasma phoenix. Plasma phoenix — a cosmic entity surrounded by drifting starfields and luminous nebulae, exuding quiet dominion. A notable specimen among its kin. it bends gravity in subtle, precise arcs."
+  },
+  {
+    "num": 162,
+    "title": "Singularity entity",
+    "rarity": "Legendary",
+    "image": "https://bafybeietsfs2vi3ip2h4llfc52hvff7wg4eo45irs33ldxbshp2oyqcxp4.ipfs.w3s.link/162.jpg",
+    "description": "Across the void, tales are told of Singularity entity. Singularity entity — a cosmic entity surrounded by drifting starfields and luminous nebulae, bearing an ancient, patient calm. A legendary figure sung about in many worlds. it leaves a faint trail of luminescent motes."
+  },
+  {
+    "num": 163,
+    "title": "Data Seraph",
+    "rarity": "Epic",
+    "image": "https://bafybeietsfs2vi3ip2h4llfc52hvff7wg4eo45irs33ldxbshp2oyqcxp4.ipfs.w3s.link/163.jpg",
+    "description": "Ancient chronicles tell of Data Seraph. Data Seraph — a cyberpunk entity against a skyline of towering neon spires and data-stream banners, crackling with volatile, raw power. An epic artifact whose presence commands attention. it leaves a faint trail of luminescent motes."
+  },
+  {
+    "num": 164,
+    "title": "Cyber Samurai",
+    "rarity": "Common",
+    "image": "https://bafybeietsfs2vi3ip2h4llfc52hvff7wg4eo45irs33ldxbshp2oyqcxp4.ipfs.w3s.link/164.jpg",
+    "description": "Bards murmur the story of Cyber Samurai. Cyber Samurai — a cosmic entity with orbiting shards of starlight and distant planets, crackling with volatile, raw power. A notable specimen among its kin. it hums with a low, mechanical resonance that echoes."
+  },
+  {
+    "num": 165,
+    "title": "Mystic Wraith",
+    "rarity": "Epic",
+    "image": "https://bafybeietsfs2vi3ip2h4llfc52hvff7wg4eo45irs33ldxbshp2oyqcxp4.ipfs.w3s.link/165.jpg",
+    "description": "Bards murmur the story of Mystic Wraith. Mystic Wraith — a magical entity with a halo of sigils and soft spellfire, bearing an ancient, patient calm. An epic artifact whose presence commands attention. it hums with a low, mechanical resonance that echoes."
+  },
+  {
+    "num": 166,
+    "title": "Circuit Mage",
+    "rarity": "Epic",
+    "image": "https://bafybeietsfs2vi3ip2h4llfc52hvff7wg4eo45irs33ldxbshp2oyqcxp4.ipfs.w3s.link/166.jpg",
+    "description": "Legends whisper that Circuit Mage. Circuit Mage — a cyberpunk entity against a skyline of towering neon spires and data-stream banners, bearing an ancient, patient calm. An epic artifact whose presence commands attention. its core pulses with a slow, primeval glow."
+  },
+  {
+    "num": 167,
+    "title": "Data Djinn",
+    "rarity": "Common",
+    "image": "https://bafybeietsfs2vi3ip2h4llfc52hvff7wg4eo45irs33ldxbshp2oyqcxp4.ipfs.w3s.link/167.jpg",
+    "description": "Bards murmur the story of Data Djinn. Data Djinn — a cosmic entity bathed in the cold glow of interstellar dust and auroras, moving with uncanny, predatory grace. A notable specimen among its kin. it bends gravity in subtle, precise arcs."
+  },
+  {
+    "num": 168,
+    "title": "Holo Dragon",
+    "rarity": "Rare",
+    "image": "https://bafybeietsfs2vi3ip2h4llfc52hvff7wg4eo45irs33ldxbshp2oyqcxp4.ipfs.w3s.link/168.jpg",
+    "description": "In forgotten tomes it is written that Holo Dragon. Holo Dragon — a cyberpunk entity lit by neon sigils and reflected in rain-slick streets, radiating restless, electric energy. A rare variant whose features stand apart. its eyes mirror distant constellations."
+  },
+  {
+    "num": 169,
+    "title": "Circuit Phantom",
+    "rarity": "Rare",
+    "image": "https://bafybeietsfs2vi3ip2h4llfc52hvff7wg4eo45irs33ldxbshp2oyqcxp4.ipfs.w3s.link/169.jpg",
+    "description": "In forgotten tomes it is written that Circuit Phantom. Circuit Phantom — a cyberpunk entity lit by neon sigils and reflected in rain-slick streets, exuding quiet dominion. A rare variant whose features stand apart. its eyes mirror distant constellations."
+  },
+  {
+    "num": 170,
+    "title": "Runestone Guardian",
+    "rarity": "Common",
+    "image": "https://bafybeietsfs2vi3ip2h4llfc52hvff7wg4eo45irs33ldxbshp2oyqcxp4.ipfs.w3s.link/170.jpg",
+    "description": "Bards murmur the story of Runestone Guardian. Runestone Guardian — a magical entity with a halo of sigils and soft spellfire, exuding quiet dominion. A notable specimen among its kin. its eyes mirror distant constellations."
+  },
+  {
+    "num": 171,
+    "title": "Arcane Sentinel",
+    "rarity": "Common",
+    "image": "https://bafybeietsfs2vi3ip2h4llfc52hvff7wg4eo45irs33ldxbshp2oyqcxp4.ipfs.w3s.link/171.jpg",
+    "description": "Legends whisper that Arcane Sentinel. Arcane Sentinel — a cyberpunk entity with chrome augmentations and flickering holo-tattoos, crackling with volatile, raw power. A notable specimen among its kin. its eyes mirror distant constellations."
+  },
+  {
+    "num": 172,
+    "title": "Serpent of",
+    "rarity": "Mythic",
+    "image": "https://bafybeietsfs2vi3ip2h4llfc52hvff7wg4eo45irs33ldxbshp2oyqcxp4.ipfs.w3s.link/172.jpg",
+    "description": "In forgotten tomes it is written that Serpent of. Serpent of — a cosmic entity with orbiting shards of starlight and distant planets, bearing an ancient, patient calm. A mythic entity whose renown transcends realms. it leaves a faint trail of luminescent motes."
+  },
+  {
+    "num": 173,
+    "title": "Chrono guardian",
+    "rarity": "Epic",
+    "image": "https://bafybeietsfs2vi3ip2h4llfc52hvff7wg4eo45irs33ldxbshp2oyqcxp4.ipfs.w3s.link/173.jpg",
+    "description": "Legends whisper that Chrono guardian. Chrono guardian — a cosmic entity surrounded by drifting starfields and luminous nebulae, crackling with volatile, raw power. An epic artifact whose presence commands attention. its eyes mirror distant constellations."
+  },
+  {
+    "num": 174,
+    "title": "Neon Oracle",
+    "rarity": "Legendary",
+    "image": "https://bafybeietsfs2vi3ip2h4llfc52hvff7wg4eo45irs33ldxbshp2oyqcxp4.ipfs.w3s.link/174.jpg",
+    "description": "In forgotten tomes it is written that Neon Oracle. Neon Oracle — a cyberpunk entity lit by neon sigils and reflected in rain-slick streets, radiating restless, electric energy. A legendary figure sung about in many worlds. it hums with a low, mechanical resonance that echoes."
+  },
+  {
+    "num": 175,
+    "title": "Fractal titan",
+    "rarity": "Epic",
+    "image": "https://bafybeietsfs2vi3ip2h4llfc52hvff7wg4eo45irs33ldxbshp2oyqcxp4.ipfs.w3s.link/175.jpg",
+    "description": "Ancient chronicles tell of Fractal titan. Fractal titan — a cosmic entity surrounded by drifting starfields and luminous nebulae, moving with uncanny, predatory grace. An epic artifact whose presence commands attention. it leaves a faint trail of luminescent motes."
+  },
+  {
+    "num": 176,
+    "title": "dimensional oracle",
+    "rarity": "Legendary",
+    "image": "https://bafybeietsfs2vi3ip2h4llfc52hvff7wg4eo45irs33ldxbshp2oyqcxp4.ipfs.w3s.link/176.jpg",
+    "description": "Bards murmur the story of dimensional oracle. dimensional oracle — a cosmic entity bathed in the cold glow of interstellar dust and auroras, bearing an ancient, patient calm. A legendary figure sung about in many worlds. its core pulses with a slow, primeval glow."
+  },
+  {
+    "num": 177,
+    "title": "Pixel Spirit",
+    "rarity": "Rare",
+    "image": "https://bafybeietsfs2vi3ip2h4llfc52hvff7wg4eo45irs33ldxbshp2oyqcxp4.ipfs.w3s.link/177.jpg",
+    "description": "Legends whisper that Pixel Spirit. Pixel Spirit — a magical entity encircled by floating runes and shimmering glyphs, moving with uncanny, predatory grace. A rare variant whose features stand apart. its eyes mirror distant constellations."
+  },
+  {
+    "num": 178,
+    "title": "Prismatic deity",
+    "rarity": "Rare",
+    "image": "https://bafybeietsfs2vi3ip2h4llfc52hvff7wg4eo45irs33ldxbshp2oyqcxp4.ipfs.w3s.link/178.jpg",
+    "description": "Ancient chronicles tell of Prismatic deity. Prismatic deity — a cosmic entity bathed in the cold glow of interstellar dust and auroras, moving with uncanny, predatory grace. A rare variant whose features stand apart. its core pulses with a slow, primeval glow."
+  },
+  {
+    "num": 179,
+    "title": "Crystal Titan",
+    "rarity": "Common",
+    "image": "https://bafybeietsfs2vi3ip2h4llfc52hvff7wg4eo45irs33ldxbshp2oyqcxp4.ipfs.w3s.link/179.jpg",
+    "description": "Bards murmur the story of Crystal Titan. Crystal Titan — a magical entity wreathed in arcane motes and levitating crystals, moving with uncanny, predatory grace. A notable specimen among its kin. its eyes mirror distant constellations."
+  },
+  {
+    "num": 180,
+    "title": "Holo Knight",
+    "rarity": "Rare",
+    "image": "https://bafybeietsfs2vi3ip2h4llfc52hvff7wg4eo45irs33ldxbshp2oyqcxp4.ipfs.w3s.link/180.jpg",
+    "description": "Across the void, tales are told of Holo Knight. Holo Knight — a cyberpunk entity lit by neon sigils and reflected in rain-slick streets, moving with uncanny, predatory grace. A rare variant whose features stand apart. it leaves a faint trail of luminescent motes."
+  }
+];
+const counts = {"Common": 83, "Epic": 27, "Legendary": 17, "Rare": 45, "Mythic": 8};
+
+function rarityColor(r){ const map = {'Mythic':'8A2BE2','Legendary':'FFD700','Epic':'FF4500','Rare':'1E90FF','Common':'808080'}; return map[r] || '808080'; }
+function esc_js(s){ return String(s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+
+function createCard(it){
+  const card = document.createElement('div');
+  card.className = 'card rarity-' + it.rarity;
+  card.dataset.rarity = it.rarity;
+  card.dataset.num = it.num;
+  const img = it.image || '';
+  const safeTitle = esc_js(it.title);
+  const desc = esc_js(it.description);
+  card.innerHTML = `
+    <div class="thumb"><img src="${esc_js(img)}" alt="${safeTitle}" onerror="this.style.opacity=.25; this.src='data:image/svg+xml;utf8,<svg xmlns=\'http://www.w3.org/2000/svg\' width=200 height=200><rect width=100% height=100% fill=%23071022/></svg>'" /></div>
+    <div class="meta">
+      <div class="heading">
+        <div class="title">#${it.num} — ${safeTitle}</div>
+        <div style="flex:1"></div>
+        <div class="rarity-tag">${it.rarity}</div>
+      </div>
+      <div class="attrs">${desc}</div>
+      <div class="footer">
+        <img class="badge" src="https://img.shields.io/badge/${it.rarity}-${counts[it.rarity] || 0}-${rarityColor(it.rarity)}" alt="${it.rarity}" />
+        <a class="link-btn" href="https://omnihub.xyz/collection/arc-testnet/0x48cce0BC5b6EC30420De74A75a1C66419db8F114" target="_blank" rel="noopener">Open collection</a>
+      </div>
+    </div>
+  `;
+  return card;
+}
+
+const listEl = document.getElementById('list');
+function render(arr){ listEl.innerHTML = ''; arr.forEach(i => listEl.appendChild(createCard(i))); }
+render(items);
+
+document.getElementById('filters').addEventListener('click', e=>{
+  if(!e.target.dataset) return;
+  const f = e.target.dataset.filter;
+  if(!f) return;
+  document.querySelectorAll('.btn').forEach(b=>b.classList.remove('active'));
+  e.target.classList.add('active');
+  applyFilters();
+});
+document.getElementById('search').addEventListener('input', applyFilters);
+document.getElementById('sort').addEventListener('change', applyFilters);
+
+function applyFilters(){
+  const active = document.querySelector('.btn.active').dataset.filter;
+  const q = document.getElementById('search').value.trim().toLowerCase();
+  const sort = document.getElementById('sort').value;
+  let filtered = items.filter(it=>{
+    if(active !== 'All' && it.rarity !== active) return false;
+    if(q){
+      return (String(it.num).includes(q) || it.title.toLowerCase().includes(q) || (it.description||'').toLowerCase().includes(q));
+    }
+    return true;
+  });
+  if(sort === 'num-asc') filtered.sort((a,b)=>a.num - b.num);
+  if(sort === 'num-desc') filtered.sort((a,b)=>b.num - a.num);
+  if(sort === 'rarity') {
+    const order = {'Mythic':1,'Legendary':2,'Epic':3,'Rare':4,'Common':5};
+    filtered.sort((a,b)=> (order[a.rarity]||9) - (order[b.rarity]||9) || a.num - b.num);
+  }
+  render(filtered);
+}
+</script>
+
+</body>
+</html>
