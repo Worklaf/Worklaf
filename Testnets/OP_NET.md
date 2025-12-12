@@ -68,9 +68,9 @@ The **OP_NET Portal** is the main dashboard for the Odyssey campaign, where user
 ---
 
 ### External Resources
-- **CryptoRank Guide for OP_NET Testnet**  
-  [https://cryptorank.io/ru/drophunting/diamante-activity1025](https://cryptorank.io/ru/drophunting/diamante-activity1025)  
-  Community guide explaining how to maximize activity and rewards.
+- **Incrypted Guide for OP_NET Testnet**  
+  [https://incrypted.com/op-net-testnet/](https://incrypted.com/op-net-testnet/)  
+  A detailed community guide (in Russian) explaining how to participate in OP_NET testnet, complete tasks, and maximize activity for potential rewards.
 
 ---
 
@@ -140,6 +140,6 @@ OP_NET — это **метапротокол на Bitcoin Layer‑1**, кото�
 ---
 
 ### Внешние ресурсы
-- **Гайд на CryptoRank по OP_NET Testnet**  
-  [https://cryptorank.io/ru/drophunting/diamante-activity1025](https://cryptorank.io/ru/drophunting/diamante-activity1025)  
-  Руководство от сообщества о том, как максимизировать активность и награды.
+- **Гайд от Incrypted по OP_NET Testnet**  
+  [https://incrypted.com/op-net-testnet/](https://incrypted.com/op-net-testnet/)  
+  Подробное руководство (на русском) о том, как участвовать в тестнете OP_NET, выполнять задания и повышать активность для потенциальных наград.
