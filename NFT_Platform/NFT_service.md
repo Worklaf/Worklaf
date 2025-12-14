@@ -16,6 +16,7 @@
 - Arc Girl (*NEW)
 
 ## [Draze](https://presale.draze.io/) 
+[Draze Club](https://www.draze.io/club)
 - AngelArc  
 - Senerity  
 - Reverie  
@@ -29,6 +30,7 @@
 - Skyline
 
 ## [Morkie](https://morkie.xyz/) 
+[Daily Spin](https://morkie.xyz/spin)
 - [Gravity warper](https://studio.morkie.xyz/mint/0x8c06F4DF66855A3540c09fa4bBB23Bc69d279c29)
 - Lady
 
