@@ -35,11 +35,12 @@ It offers **sub‑second finality**, **predictable fees in USDC/EURC**, configur
 5. **Interact with DeFi & dApps**  
    - [Curve Finance (Arc Testnet)](https://curve.finance/dex/arc/pools) — stablecoin swaps & liquidity pools  
    - [DeFi on Arc](https://defi-on-arc.netlify.app/swap) — decentralized exchange for swaps & LP management  
-   - [Synthra](https://synthra.io) (*NEW*) — synthetic assets on Arc  
-   - [InfinityName](https://infinityname.xyz) — domain service on Arc  
-   - [ZNS Domains](https://zns.domains) — blockchain naming system  
-   - [Onchain Daily](https://onchaindaily.xyz) — daily check‑in service  
-   - [RubyScore](https://rubyscore.xyz) (*NEW*) — wallet scoring & reputation  
+   - [Synthra](https://synthra.org/P6HFMQXW) (*NEW*) — synthetic assets on Arc  
+   - [InfinityName](https://infinityname.com?ref=0xc021F43DABfB021705646f412B8c9c3912219922z) — domain service on Arc
+   - [On-Chain Check-In](https://onchain-checkin.xyz?ref=3912219922) - 
+   - [Onchain Daily](https://onchaingm.com/) — blockchain naming system  
+   - [OnchainGM](https://onchaingm.com/) — daily check‑in service  
+   - [RubyScore](https://rubyscore.io/?ref=0xFdFab8e9) (*NEW*) — wallet scoring & reputation  
    - [SurfLayer](https://surflayer.xyz) — social & identity layer  
    - [zkCodex](https://zkcodex.com) — privacy toolkit with zero‑knowledge proofs
 
@@ -85,11 +86,12 @@ Arc — это **блокчейн уровня 1 от Circle (октябрь 202
 5. **Взаимодействуйте с DeFi и dApps**  
    - [Curve Finance (Arc Testnet)](https://curve.finance/dex/arc/pools) — обмен стейблкоинов и пулы ликвидности  
    - [DeFi on Arc](https://defi-on-arc.netlify.app/swap) — децентрализованная биржа для свапов и LP  
-   - [Synthra](https://synthra.io) (*NEW*) — синтетические активы в Arc  
-   - [InfinityName](https://infinityname.xyz) — сервис доменных имён  
-   - [ZNS Domains](https://zns.domains) — блокчейн‑система имён  
-   - [Onchain Daily](https://onchaindaily.xyz) — ежедневный чек‑ин  
-   - [RubyScore](https://rubyscore.xyz) (*NEW*) — рейтинг кошельков  
+   - [Synthra](https://synthra.org/P6HFMQXW) (*NEW*) — синтетические активы в Arc  
+   - [InfinityName](https://infinityname.com?ref=0xc021F43DABfB021705646f412B8c9c3912219922) — сервис доменных имён
+   - [On-Chain Check-In](https://onchain-checkin.xyz?ref=3912219922) - 
+   - [Onchain Daily](https://onchaingm.com/) — блокчейн‑система имён  
+   - [OnchainGM](https://onchaingm.com/) — ежедневный чек‑ин  
+   - [RubyScore](https://rubyscore.io/?ref=0xFdFab8e9) (*NEW*) — рейтинг кошельков  
    - [SurfLayer](https://surflayer.xyz) — социальный и идентификационный слой  
    - [zkCodex](https://zkcodex.com) — инструменты приватности на основе ZK‑доказательств
 
