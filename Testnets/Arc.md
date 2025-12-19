@@ -24,8 +24,8 @@ It offers **sub‑second finality**, **predictable fees in USDC/EURC**, configur
    Try [MemeBridge](https://memebridge.xyz) or [zkCodex](https://zkcodex.com) to deploy ERC‑20 or NFT contracts.
 
 4. **Mint NFTs**  
-   - [Alze](https://alze.xyz) → NeoArc, KyoKai, Ecliptica, Arc Boy (*NEW)  
-   - [Caset](https://caset.network) → ArcLyria, Aiko, Veloria, Arc Girl (*NEW)  
+   - [Alze](https://www.alze.xyz/nfts) → [NeoArc](https://www.alze.xyz/NeoArc), [KyoKai](https://www.alze.xyz/KyoKai), [Ecliptica](https://www.alze.xyz/Ecliptica), [Arc Boy](https://www.alze.xyz/Arcboy), [Arcane NFT](https://www.alze.xyz/Arcane), [Ingenium NFT](https://www.alze.xyz/Ingenium) (*NEW)  
+   - [Caset](https://caset.network) → [ArcLyria](https://www.caset.network/arclyria), [Aiko](https://www.caset.network/archicat), [Veloria](https://www.caset.network/veloria), [Arc Girl](https://www.caset.network/arcgirl), [DRAVEN](https://www.caset.network/draven), [ASHBORN](https://www.caset.network/ashborn), [ACREDITRON](https://www.caset.network/creditron), [ARCHICAT](https://www.caset.network/archicat) (*NEW)  
    - [Draze](https://draze.io) → AngelArc, Celestia, Arc Moon (*NEW)  
    - [MintAura](https://mintaura.io) → Camellia, Skyline  
    - [Morkie](https://morkie.xyz) → Dusk, Lady  
