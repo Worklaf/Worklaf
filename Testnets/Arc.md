@@ -38,7 +38,7 @@ It offers **sub‑second finality**, **predictable fees in USDC/EURC**, configur
    - [Synthra](https://synthra.org/P6HFMQXW) (*NEW*) — synthetic assets on Arc  
    - [InfinityName](https://infinityname.com?ref=0xc021F43DABfB021705646f412B8c9c3912219922z) — domain service on Arc
    - [On-Chain Check-In](https://onchain-checkin.xyz?ref=3912219922) - 
-   - [Onchain Daily](https://www.onchaindaily.io/) — blockchain naming system  
+   - [Onchain Daily](https://www.onchaindaily.io?ref=bT2YHTeW) — blockchain naming system  
    - [OnchainGM](https://onchaingm.com/) — daily check‑in service  
    - [RubyScore](https://rubyscore.io/?ref=0xFdFab8e9) (*NEW*) — wallet scoring & reputation  
    - [SurfLayer](https://surflayer.xyz) — social & identity layer  
@@ -89,7 +89,7 @@ Arc — это **блокчейн уровня 1 от Circle (октябрь 202
    - [Synthra](https://synthra.org/P6HFMQXW) (*NEW*) — синтетические активы в Arc  
    - [InfinityName](https://infinityname.com?ref=0xc021F43DABfB021705646f412B8c9c3912219922) — сервис доменных имён
    - [On-Chain Check-In](https://onchain-checkin.xyz?ref=3912219922) - 
-   - [Onchain Daily](https://www.onchaindaily.io/) — блокчейн‑система имён  
+   - [Onchain Daily](https://www.onchaindaily.io?ref=bT2YHTeW) — блокчейн‑система имён  
    - [OnchainGM](https://onchaingm.com/) — ежедневный чек‑ин  
    - [RubyScore](https://rubyscore.io/?ref=0xFdFab8e9) (*NEW*) — рейтинг кошельков  
    - [SurfLayer](https://surflayer.xyz) — социальный и идентификационный слой  
