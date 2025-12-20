@@ -26,7 +26,7 @@ It offers **sub‑second finality**, **predictable fees in USDC/EURC**, configur
 4. **Mint NFTs**  
    - [Alze](https://www.alze.xyz/nfts) → [NeoArc](https://www.alze.xyz/NeoArc), [KyoKai](https://www.alze.xyz/KyoKai), [Ecliptica](https://www.alze.xyz/Ecliptica), [Arc Boy](https://www.alze.xyz/Arcboy), [Arcane NFT](https://www.alze.xyz/Arcane), [Ingenium NFT](https://www.alze.xyz/Ingenium) (*NEW)  
    - [Caset](https://caset.network) → [ArcLyria](https://www.caset.network/arclyria), [Aiko](https://www.caset.network/archicat), [Veloria](https://www.caset.network/veloria), [Arc Girl](https://www.caset.network/arcgirl), [DRAVEN](https://www.caset.network/draven), [ASHBORN](https://www.caset.network/ashborn), [ACREDITRON](https://www.caset.network/creditron), [ARCHICAT](https://www.caset.network/archicat) (*NEW)  
-   - [Draze](https://draze.io) → AngelArc, Celestia, Arc Moon (*NEW)  
+   - [Draze](https://draze.io) → [AngelArc](https://www.draze.io/arc), [Celestia](https://www.draze.io/celestia), [Arc Moon](https://www.draze.io/moon), [ELORIA](https://www.draze.io/eloria), [FARM](https://www.draze.io/farm), [ARC BOY](https://www.draze.io/boy), [YUKI](https://www.draze.io/yuki), [MAELINA](https://www.draze.io/maelina), [REVERIE](https://www.draze.io/reverie), [SENERITY](https://www.draze.io/senerity)(*NEW)  
    - [MintAura](https://mintaura.io) → Camellia, Skyline  
    - [Morkie](https://morkie.xyz) → Dusk, Lady  
    - [NFTs2Me](https://nfts2me.com) → Arc Network  
@@ -75,9 +75,9 @@ Arc — это **блокчейн уровня 1 от Circle (октябрь 202
    Попробуйте [MemeBridge](https://memebridge.xyz) или [zkCodex](https://zkcodex.com) для деплоя ERC‑20/NFT.
 
 4. **Отчеканьте NFT**  
-   - [Alze](https://alze.xyz) → NeoArc, KyoKai, Ecliptica, Arc Boy (*NEW)  
-   - [Caset](https://caset.network) → ArcLyria, Aiko, Veloria, Arc Girl (*NEW)  
-   - [Draze](https://draze.io) → AngelArc, Celestia, Arc Moon (*NEW)  
+   - [Alze](https://www.alze.xyz/nfts) → [NeoArc](https://www.alze.xyz/NeoArc), [KyoKai](https://www.alze.xyz/KyoKai), [Ecliptica](https://www.alze.xyz/Ecliptica), [Arc Boy](https://www.alze.xyz/Arcboy), [Arcane NFT](https://www.alze.xyz/Arcane), [Ingenium NFT](https://www.alze.xyz/Ingenium) (*NEW)  
+   - [Caset](https://caset.network) → [ArcLyria](https://www.caset.network/arclyria), [Aiko](https://www.caset.network/archicat), [Veloria](https://www.caset.network/veloria), [Arc Girl](https://www.caset.network/arcgirl), [DRAVEN](https://www.caset.network/draven), [ASHBORN](https://www.caset.network/ashborn), [ACREDITRON](https://www.caset.network/creditron), [ARCHICAT](https://www.caset.network/archicat) (*NEW)  
+   - [Draze](https://draze.io) → [AngelArc](https://www.draze.io/arc), [Celestia](https://www.draze.io/celestia), [Arc Moon](https://www.draze.io/moon), [ELORIA](https://www.draze.io/eloria), [FARM](https://www.draze.io/farm), [ARC BOY](https://www.draze.io/boy), [YUKI](https://www.draze.io/yuki), [MAELINA](https://www.draze.io/maelina), [REVERIE](https://www.draze.io/reverie), [SENERITY](https://www.draze.io/senerity)(*NEW)  
    - [MintAura](https://mintaura.io) → Camellia, Skyline  
    - [Morkie](https://morkie.xyz) → Dusk, Lady  
    - [NFTs2Me](https://nfts2me.com) → Arc Network  
