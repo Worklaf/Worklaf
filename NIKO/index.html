@@ -677,7 +677,7 @@
       uploadTrack: "⬆ Upload Track",
       exportJson: "📦 Export JSON",
       loadingTracks: "⏳ Loading tracks...",
-      sequential: "Sequential ▶️",
+      sequential: "Sequential 🔁",
       random: "Random 🔀",
       volume: "Volume",
       text: "Text",
@@ -719,7 +719,7 @@
       uploadTrack: "⬆ Dodaj utwór",
       exportJson: "📦 Eksportuj JSON",
       loadingTracks: "⏳ Ładowanie utworów...",
-      sequential: "Kolejno ▶️",
+      sequential: "Kolejno 🔁",
       random: "Losowo 🔀",
       volume: "Głośność",
       text: "Tekst",
@@ -761,7 +761,7 @@
       uploadTrack: "⬆ Завантажити трек",
       exportJson: "📦 Експорт JSON",
       loadingTracks: "⏳ Завантаження треків...",
-      sequential: "По порядку ▶️",
+      sequential: "По порядку 🔁",
       random: "Випадково 🔀",
       volume: "Гучність",
       text: "Текст",
@@ -959,66 +959,90 @@
   }
 
   async function loadCommentsFromServer(trackSrc) {
-    if (!USE_JSONBIN) {
-      return JSON.parse(localStorage.getItem('comments:' + trackSrc) || '[]');
-    }
+  if (!USE_JSONBIN) {
+    const comments = JSON.parse(localStorage.getItem('comments:' + trackSrc) || '[]');
+    console.log('📦 Local comments:', comments.length);
+    return comments;
+  }
 
-    try {
-      const response = await fetch(`https://api.jsonbin.io/v3/b/${JSONBIN_BIN_ID}/latest`, {
-        headers: { 'X-Master-Key': JSONBIN_API_KEY }
-      });
-      
-      if (response.ok) {
-        const data = await response.json();
-        const allComments = data.record?.comments || {};
-        return allComments[trackSrc] || [];
-      }
-    } catch (e) {
-      console.error('❌ Load comments error:', e);
-    }
+  try {
+    console.log('🌐 Fetching comments from server...');
     
+    const response = await fetch(`https://api.jsonbin.io/v3/b/${JSONBIN_BIN_ID}/latest`, {
+      headers: { 
+        'X-Master-Key': JSONBIN_API_KEY,
+        'X-Bin-Meta': 'false'
+      }
+    });
+    
+    if (response.ok) {
+      const data = await response.json();
+      const allComments = data.record?.comments || {};
+      const trackComments = allComments[trackSrc] || [];
+      
+      console.log('✅ Server comments loaded:', trackComments.length);
+      return trackComments;
+    } else {
+      console.error('❌ Server response error:', response.status);
+      return [];
+    }
+  } catch (e) {
+    console.error('❌ Load comments error:', e);
     return [];
   }
+}
 
   async function saveCommentToServer(trackSrc, comment) {
-    if (!USE_JSONBIN) {
-      const key = 'comments:' + trackSrc;
-      const comments = JSON.parse(localStorage.getItem(key) || '[]');
-      comments.push(comment);
-      localStorage.setItem(key, JSON.stringify(comments));
-      return true;
-    }
+  if (!USE_JSONBIN) {
+    const key = 'comments:' + trackSrc;
+    const comments = JSON.parse(localStorage.getItem(key) || '[]');
+    comments.push(comment);
+    localStorage.setItem(key, JSON.stringify(comments));
+    console.log('💬 Comment saved locally:', comment);
+    return true;
+  }
 
-    try {
-      const response = await fetch(`https://api.jsonbin.io/v3/b/${JSONBIN_BIN_ID}/latest`, {
-        headers: { 'X-Master-Key': JSONBIN_API_KEY }
-      });
-      
-      let record = { comments: {}, counts: {} };
-      if (response.ok) {
-        const data = await response.json();
-        record = data.record || { comments: {}, counts: {} };
-      }
-      
-      if (!record.comments) record.comments = {};
-      if (!record.comments[trackSrc]) record.comments[trackSrc] = [];
-      record.comments[trackSrc].push(comment);
-      
-      const updateResponse = await fetch(`https://api.jsonbin.io/v3/b/${JSONBIN_BIN_ID}`, {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-          'X-Master-Key': JSONBIN_API_KEY
-        },
-        body: JSON.stringify(record)
-      });
-      
-      return updateResponse.ok;
-    } catch (e) {
-      console.error('❌ Save comment error:', e);
+  try {
+    console.log('📤 Saving comment to server...');
+    
+    const response = await fetch(`https://api.jsonbin.io/v3/b/${JSONBIN_BIN_ID}/latest`, {
+      headers: { 'X-Master-Key': JSONBIN_API_KEY }
+    });
+    
+    let record = { comments: {}, counts: {} };
+    if (response.ok) {
+      const data = await response.json();
+      record = data.record || { comments: {}, counts: {} };
+      console.log('✅ Current data loaded');
+    }
+    
+    if (!record.comments) record.comments = {};
+    if (!record.comments[trackSrc]) record.comments[trackSrc] = [];
+    record.comments[trackSrc].push(comment);
+    
+    console.log('📝 Adding comment:', comment);
+    
+    const updateResponse = await fetch(`https://api.jsonbin.io/v3/b/${JSONBIN_BIN_ID}`, {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-Master-Key': JSONBIN_API_KEY
+      },
+      body: JSON.stringify(record)
+    });
+    
+    if (updateResponse.ok) {
+      console.log('✅ Comment saved to server!');
+      return true;
+    } else {
+      console.error('❌ Server response error:', updateResponse.status);
       return false;
     }
+  } catch (e) {
+    console.error('❌ Save comment error:', e);
+    return false;
   }
+}
 
   async function deleteCommentFromServer(trackSrc, index) {
     if (!USE_JSONBIN) {
@@ -1337,20 +1361,20 @@
   let currentEditingSrc = '';
 
   function updateShuffleButton() {
-    const btn = document.getElementById('shuffle-btn');
-    const icon = document.getElementById('shuffle-icon');
-    if (!btn || !icon) return;
-    
-    btn.classList.toggle('active', isShuffleMode);
-    
-    if (isShuffleMode) {
-      btn.title = t('random');
-      icon.textContent = '🔀';
-    } else {
-      btn.title = t('sequential');
-      icon.textContent = '▶️';
-    }
+  const btn = document.getElementById('shuffle-btn');
+  const icon = document.getElementById('shuffle-icon');
+  if (!btn || !icon) return;
+  
+  btn.classList.toggle('active', isShuffleMode);
+  
+  if (isShuffleMode) {
+    btn.title = t('random');
+    icon.textContent = '🔀'; // Random/Shuffle
+  } else {
+    btn.title = t('sequential');
+    icon.textContent = '🔁'; // Repeat/Loop (более популярная иконка)
   }
+}
 
   function toggleShuffle() {
     isShuffleMode = !isShuffleMode;
@@ -1519,46 +1543,60 @@
   }
 
   async function loadComments(trackSrc) {
-    const list = document.getElementById('comments-list');
-    const comments = await loadCommentsFromServer(trackSrc);
-    
-    list.innerHTML = '';
-    
-    if (comments.length === 0) {
-      list.innerHTML = `<p style="color:#bfc3d6;text-align:center;padding:20px">${t('noComments')}</p>`;
-      return;
-    }
-    
-    comments.forEach((comment, index) => {
-      const div = document.createElement('div');
-      div.className = 'comment-item';
-      div.style.cssText = 'background:rgba(255,255,255,0.03);padding:12px;border-radius:8px;margin-bottom:8px;position:relative';
-      
-      div.innerHTML = `
-        ${isAdmin ? `<button class="delete-comment" data-index="${index}">✕</button>` : ''}
-        <div style="color:#ff4da6;font-size:12px;margin-bottom:4px">${comment.author || 'Anonymous'} · ${new Date(comment.timestamp).toLocaleString()}</div>
-        <div style="color:#eaeaf2">${comment.text}</div>
-      `;
-      
-      list.appendChild(div);
-    });
-    
-    if (isAdmin) {
-      document.querySelectorAll('.delete-comment').forEach(btn => {
-        btn.addEventListener('click', async () => {
-          const index = parseInt(btn.dataset.index);
-          if (confirm(t('deleteConfirm'))) {
-            const success = await deleteCommentFromServer(currentTrackSrc, index);
-            if (success) {
-              loadComments(currentTrackSrc);
-            } else {
-              alert(t('commentError'));
-            }
-          }
-        });
-      });
-    }
+  console.log('📥 Loading comments for:', trackSrc);
+  
+  const list = document.getElementById('comments-list');
+  list.innerHTML = '<p style="color:#bfc3d6;text-align:center;padding:20px">⏳ Loading...</p>';
+  
+  const comments = await loadCommentsFromServer(trackSrc);
+  
+  console.log('📋 Loaded comments:', comments.length);
+  
+  list.innerHTML = '';
+  
+  if (comments.length === 0) {
+    list.innerHTML = `<p style="color:#bfc3d6;text-align:center;padding:20px">${t('noComments')}</p>`;
+    return;
   }
+  
+  comments.forEach((comment, index) => {
+    const div = document.createElement('div');
+    div.className = 'comment-item';
+    div.style.cssText = 'background:rgba(255,255,255,0.03);padding:12px;border-radius:8px;margin-bottom:8px;position:relative';
+    
+    const date = new Date(comment.timestamp);
+    const dateStr = date.toLocaleDateString() + ' ' + date.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
+    
+    div.innerHTML = `
+      ${isAdmin ? `<button class="delete-comment" data-index="${index}">✕</button>` : ''}
+      <div style="color:#ff4da6;font-size:12px;margin-bottom:4px">${comment.author || 'Anonymous'} · ${dateStr}</div>
+      <div style="color:#eaeaf2;white-space:pre-wrap">${comment.text}</div>
+    `;
+    
+    list.appendChild(div);
+  });
+  
+  if (isAdmin) {
+    document.querySelectorAll('.delete-comment').forEach(btn => {
+      btn.addEventListener('click', async () => {
+        const index = parseInt(btn.dataset.index);
+        if (confirm(t('deleteConfirm'))) {
+          btn.textContent = '⏳';
+          btn.disabled = true;
+          
+          const success = await deleteCommentFromServer(trackSrc, index);
+          if (success) {
+            await loadComments(trackSrc);
+          } else {
+            alert(t('commentError'));
+            btn.textContent = '✕';
+            btn.disabled = false;
+          }
+        }
+      });
+    });
+  }
+}
 
   function openComments(trackSrc) {
     currentTrackSrc = trackSrc;
@@ -1806,27 +1844,49 @@
     });
 
     document.getElementById('comment-send').addEventListener('click', async () => {
-      const input = document.getElementById('comment-input');
-      const text = input.value.trim();
-      
-      if (!text) return;
-      
-      const comment = {
-        text: text,
-        author: 'User',
-        timestamp: Date.now()
-      };
-      
-      const success = await saveCommentToServer(currentTrackSrc, comment);
-      
-      if (success) {
-        input.value = '';
-        loadComments(currentTrackSrc);
-        console.log(t('commentSaved'));
-      } else {
-        alert(t('commentError'));
-      }
-    });
+  const input = document.getElementById('comment-input');
+  const text = input.value.trim();
+  
+  if (!text) {
+    alert('❌ ' + t('writeComment'));
+    return;
+  }
+  
+  const sendBtn = document.getElementById('comment-send');
+  const originalText = sendBtn.textContent;
+  sendBtn.textContent = '⏳...';
+  sendBtn.disabled = true;
+  
+  const comment = {
+    text: text,
+    author: 'User',
+    timestamp: Date.now()
+  };
+  
+  console.log('💬 Sending comment:', comment);
+  
+  const success = await saveCommentToServer(currentTrackSrc, comment);
+  
+  if (success) {
+    console.log('✅ Comment saved successfully!');
+    input.value = '';
+    
+    // ВАЖНО: Перезагрузить комментарии
+    await loadComments(currentTrackSrc);
+    
+    // Показать успех
+    sendBtn.textContent = '✅';
+    setTimeout(() => {
+      sendBtn.textContent = originalText;
+      sendBtn.disabled = false;
+    }, 1000);
+  } else {
+    console.error('❌ Failed to save comment');
+    alert(t('commentError'));
+    sendBtn.textContent = originalText;
+    sendBtn.disabled = false;
+  }
+});
 
     // === ADD TRACK (ADMIN) ===
     if (isAdmin) {
