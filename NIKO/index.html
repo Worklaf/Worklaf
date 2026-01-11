@@ -2209,59 +2209,133 @@ function initAudioVisualizer() {
     ctx.shadowBlur = 0;
   }
 
-  // 3. 🧠 NEURAL PULSE (AI / Технологичный стиль)
-  function drawNeuralPulse(ctx, centerX, centerY, canvas) {
-    const points = 20;
-    const norm = (dataArray[5] || 0) / 255;
+  // 2. 🧠 RADIAL SPECTRUM
+  function drawRadialSpectrum(ctx, centerX, centerY) {
+    const outerRadius = Math.min(canvas.width, canvas.height) * 0.4;
+    const innerRadius = outerRadius * 0.2;
+    const bars = 240;
     
-    ctx.shadowBlur = 15;
-    ctx.shadowColor = neonPalette.cyan;
+    // Черный фон
+    ctx.fillStyle = '#000000';
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
     
-    for (let i = 0; i < points; i++) {
-      const angle = (i / points) * Math.PI * 2 + rotation;
-      const r = 100 + Math.sin(rotation * 2 + i) * 50 + norm * 100;
-      const x = centerX + Math.cos(angle) * r;
-      const y = centerY + Math.sin(angle) * r;
+    // Центр
+    ctx.beginPath();
+    ctx.arc(centerX, centerY, innerRadius, 0, Math.PI * 2);
+    ctx.fillStyle = '#000000';
+    ctx.fill();
+    ctx.strokeStyle = 'rgba(255, 255, 255, 0.2)';
+    ctx.lineWidth = 1;
+    ctx.stroke();
+    
+    // Радиальные линии
+    for (let i = 0; i < bars; i++) {
+      const angle = (i / bars) * Math.PI * 2 + rotation;
       
-      // Рисуем узлы
-      ctx.fillStyle = neonPalette.white;
-      ctx.beginPath();
-      ctx.arc(x, y, 3 + norm * 5, 0, Math.PI * 2);
-      ctx.fill();
+      const freqIndex = Math.floor((i / bars) * dataArray.length * 0.8);
+      const value = dataArray[freqIndex] || 0;
+      const lineLength = innerRadius + (value / 255) * (outerRadius - innerRadius);
       
-      // Связи (Neural connections)
+      const x1 = centerX + Math.cos(angle) * innerRadius;
+      const y1 = centerY + Math.sin(angle) * innerRadius;
+      const x2 = centerX + Math.cos(angle) * lineLength;
+      const y2 = centerY + Math.sin(angle) * lineLength;
+      
+      const hue = (i / bars) * 360;
+      
       ctx.beginPath();
-      ctx.strokeStyle = `rgba(6, 182, 212, ${0.2 + norm * 0.5})`;
-      ctx.lineWidth = 1;
-      ctx.moveTo(centerX, centerY);
-      ctx.lineTo(x, y);
+      ctx.moveTo(x1, y1);
+      ctx.lineTo(x2, y2);
+      ctx.strokeStyle = `hsl(${hue}, 100%, 50%)`;
+      ctx.lineWidth = 1.5;
+      ctx.lineCap = 'round';
+      ctx.shadowBlur = 5;
+      ctx.shadowColor = `hsl(${hue}, 100%, 50%)`;
       ctx.stroke();
     }
+    
+    // Внешний круг
+    ctx.beginPath();
+    ctx.arc(centerX, centerY, outerRadius, 0, Math.PI * 2);
+    ctx.strokeStyle = 'rgba(255, 255, 255, 0.1)';
+    ctx.lineWidth = 1;
+    ctx.stroke();
+    
     ctx.shadowBlur = 0;
   }
 
   // 4. 🚀 CYBER TUNNEL (Эффект полета)
-  function drawCyberTunnel(ctx, centerX, centerY, canvas) {
-    const norm = (dataArray[10] || 0) / 255;
-    const count = 10;
+  function drawModernCircular(ctx, centerX, centerY) {
+    const radius = Math.min(canvas.width, canvas.height) * 0.3;
+    const bars = 180;
+    const barWidth = 3;
     
-    for (let i = 0; i < count; i++) {
-      const size = ((rotation * 100 + i * 50) % 500);
-      const alpha = 1 - (size / 500);
-      const pulseSize = size * (1 + norm * 0.5);
+    // Чёрный фон с градиентом
+    const bgGradient = ctx.createRadialGradient(centerX, centerY, 0, centerX, centerY, radius * 2);
+    bgGradient.addColorStop(0, 'rgba(0, 0, 0, 0.8)');
+    bgGradient.addColorStop(1, 'rgba(0, 0, 0, 0)');
+    
+    ctx.fillStyle = bgGradient;
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    
+    // Внутренний круг с пульсацией
+    const avgBass = dataArray.slice(0, 10).reduce((a, b) => a + b, 0) / 10;
+    const pulseRadius = radius * 0.25 + (avgBass / 255) * 20;
+    
+    ctx.beginPath();
+    ctx.arc(centerX, centerY, pulseRadius, 0, Math.PI * 2);
+    ctx.fillStyle = 'rgba(255, 255, 255, 0.05)';
+    ctx.fill();
+    
+    // Круговые полосы спектра
+    for (let i = 0; i < bars; i++) {
+      const angle = (i / bars) * Math.PI * 2;
       
+      // Анализ частот
+      const freqIndex = Math.floor(i / bars * dataArray.length * 0.8);
+      const value = dataArray[freqIndex] || 0;
+      const barHeight = (value / 255) * (radius * 0.7);
+      
+      // Цветовой градиент по спектру
+      const hue = (i / bars) * 360;
+      
+      const x1 = centerX + Math.cos(angle) * radius;
+      const y1 = centerY + Math.sin(angle) * radius;
+      const x2 = centerX + Math.cos(angle) * (radius + barHeight);
+      const y2 = centerY + Math.sin(angle) * (radius + barHeight);
+      
+      // Рисуем полоску спектра
       ctx.beginPath();
-      ctx.strokeStyle = i % 2 === 0 ? `rgba(6, 182, 212, ${alpha})` : `rgba(236, 72, 153, ${alpha})`;
-      ctx.lineWidth = 2 + norm * 10;
-      ctx.rect(centerX - pulseSize / 2, centerY - pulseSize / 2, pulseSize, pulseSize);
+      ctx.moveTo(x1, y1);
+      ctx.lineTo(x2, y2);
+      ctx.lineWidth = barWidth;
+      ctx.lineCap = 'round';
+      ctx.strokeStyle = `hsl(${hue}, 100%, 50%)`;
+      ctx.shadowBlur = 10;
+      ctx.shadowColor = `hsl(${hue}, 100%, 50%)`;
       ctx.stroke();
       
-      // Маленькие частицы внутри
-      if (norm > 0.6) {
-        ctx.fillStyle = neonPalette.white;
-        ctx.fillRect(centerX + (Math.random()-0.5)*size, centerY + (Math.random()-0.5)*size, 2, 2);
+      // Яркие точки на концах активных полос
+      if (value > 200) {
+        ctx.beginPath();
+        ctx.arc(x2, y2, barWidth + 1, 0, Math.PI * 2);
+        ctx.fillStyle = `hsl(${hue}, 100%, 80%)`;
+        ctx.shadowBlur = 15;
+        ctx.fill();
       }
     }
+    
+    // Кольца вокруг визуализатора
+    for (let ring = 0; ring < 3; ring++) {
+      const ringRadius = radius * (1 + ring * 0.1) + Math.sin(Date.now() * 0.001) * 5;
+      ctx.beginPath();
+      ctx.arc(centerX, centerY, ringRadius, 0, Math.PI * 2);
+      ctx.strokeStyle = `rgba(255, 255, 255, ${0.1 - ring * 0.03})`;
+      ctx.lineWidth = 1;
+      ctx.stroke();
+    }
+    
+    ctx.shadowBlur = 0;
   }
 
   draw();
