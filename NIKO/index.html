@@ -575,7 +575,16 @@ div[style*="overflow-x: auto"]::-webkit-scrollbar {
   opacity: 1;
   transform: translateY(-50%) scale(1.2);
 }
-
+@keyframes pulse {
+  0%, 100% {
+    transform: scale(1);
+    box-shadow: 0 0 0 0 rgba(255, 77, 166, 0.7);
+  }
+  50% {
+    transform: scale(1.05);
+    box-shadow: 0 0 0 10px rgba(255, 77, 166, 0);
+  }
+}
 /* Для мобильных устройств */
 @media (max-width: 768px) {
   #viz-prev-btn, #viz-next-btn {
@@ -647,7 +656,9 @@ div[style*="overflow-x: auto"]::-webkit-scrollbar {
   <div class="container">
   <header>
     <h1>N1K∅ — Tracks</h1>
-    
+    <button id="diagnosticBtn" class="btn" style="background:rgba(0,255,255,0.1);border-color:rgba(0,255,255,0.3)">
+  🔍 Диагностика
+</button>
     <div style="display:flex;gap:4px;margin-left:8px;flex-wrap:wrap">
       <button id="lang-en" class="btn icon" style="padding:4px 8px;font-size:11px;border-radius:6px" title="English">EN</button>
       <button id="lang-pl" class="btn icon" style="padding:4px 8px;font-size:11px;border-radius:6px" title="Polski">PL</button>
@@ -956,7 +967,49 @@ div[style*="overflow-x: auto"]::-webkit-scrollbar {
     if (el('mini-share')) el('mini-share').title = t('share');
     if (el('mini-download')) el('mini-download').title = t('download');
     if (el('mini-volume')) el('mini-volume').title = t('volume');
+    document.getElementById('diagnosticBtn').addEventListener('click', async () => {
+  console.log('🔍 DIAGNOSTICS START');
+  console.log('');
+  
+  console.log('📦 LocalStorage:');
+  console.log('  - draftTracks:', localStorage.getItem('draftTracks') ? 'EXISTS' : 'EMPTY');
+  console.log('  - cachedTracks:', localStorage.getItem('cachedTracks') ? 'EXISTS' : 'EMPTY');
+  console.log('');
+  
+  console.log('🎵 Global Tracks:', globalTracks.length, 'tracks');
+  globalTracks.forEach((track, i) => {
+    console.log(`  ${i + 1}. ${track.title}`);
+    console.log(`     Audio: ${track.audio}`);
+    console.log(`     Cover: ${track.cover}`);
+  });
+  console.log('');
+  
+  console.log('🌐 Testing file access...');
+  for (let i = 0; i < globalTracks.length; i++) {
+    const track = globalTracks[i];
     
+    // Проверяем аудио
+    try {
+      const audioRes = await fetch(track.audio, { method: 'HEAD' });
+      console.log(`  ✅ Audio ${i + 1}: ${audioRes.status} ${audioRes.statusText}`);
+    } catch (error) {
+      console.error(`  ❌ Audio ${i + 1}: ${error.message}`);
+    }
+    
+    // Проверяем обложку
+    try {
+      const coverRes = await fetch(track.cover, { method: 'HEAD' });
+      console.log(`  ✅ Cover ${i + 1}: ${coverRes.status} ${coverRes.statusText}`);
+    } catch (error) {
+      console.error(`  ❌ Cover ${i + 1}: ${error.message}`);
+    }
+  }
+  
+  console.log('');
+  console.log('🔍 DIAGNOSTICS END');
+  
+  alert('✅ Диагностика завершена!\n\nСмотрите консоль (F12) для подробностей');
+});
     document.querySelectorAll('.play-count').forEach(el => {
       const textNode = Array.from(el.childNodes).find(node => node.nodeType === 3 && node.textContent.trim());
       if (textNode) textNode.textContent = ' ' + t('plays');
@@ -1011,45 +1064,26 @@ div[style*="overflow-x: auto"]::-webkit-scrollbar {
   }
 
   async function getDraftTracks() {
-  // Сначала проверяем localStorage (draftTracks имеет приоритет)
-  const stored = localStorage.getItem('draftTracks');
-  if (stored && stored !== '[]') {
-    try {
-      const draftTracks = JSON.parse(stored);
-      if (draftTracks.length > 0) {
-        console.log('✅ Loaded', draftTracks.length, 'tracks from draftTracks');
-        globalTracks = draftTracks;
-        return draftTracks;
-      }
-    } catch (e) {
-      console.error('❌ Error parsing draftTracks:', e);
-    }
-  }
+  console.log('🔄 Forcing tracks.json load...');
   
-  // Затем пытаемся загрузить из tracks.json
+  // ПРИНУДИТЕЛЬНО загружаем из tracks.json
   const jsonTracks = await loadTracksFromJSON();
   
   if (jsonTracks && jsonTracks.length > 0) {
+    console.log('✅ Loaded', jsonTracks.length, 'tracks from tracks.json (FRESH)');
     globalTracks = jsonTracks;
+    
+    // ПОЛНОСТЬЮ ОЧИЩАЕМ старый кеш
+    localStorage.removeItem('draftTracks');
+    localStorage.removeItem('cachedTracks');
+    
+    // Сохраняем новые треки
     localStorage.setItem('cachedTracks', JSON.stringify(jsonTracks));
-    localStorage.setItem('draftTracks', JSON.stringify(jsonTracks));
-    console.log('✅ Loaded', jsonTracks.length, 'tracks from tracks.json');
+    
     return jsonTracks;
   }
   
-  // Затем проверяем кеш
-  const cached = localStorage.getItem('cachedTracks');
-  if (cached) {
-    try {
-      const cachedTracks = JSON.parse(cached);
-      globalTracks = cachedTracks;
-      console.log('✅ Loaded', cachedTracks.length, 'tracks from cache');
-      return cachedTracks;
-    } catch (e) {
-      console.error('❌ Error parsing cachedTracks:', e);
-    }
-  }
-  
+  console.error('❌ Failed to load tracks.json');
   return [];
 }
 
@@ -1572,17 +1606,50 @@ div[style*="overflow-x: auto"]::-webkit-scrollbar {
     wavesurfer.stop();
   }
   
-  setTimeout(() => {
-    console.log('⏳ Loading audio file...');
-    
-    wavesurfer.load(src);
-    
-    setTimeout(() => {
-      window.isLoadingTrack = false;
-      console.log('✅ Loading flag cleared');
-    }, 500);
-    
-  }, 150);
+  console.log('⏳ Loading audio file...');
+
+wavesurfer.load(src);
+
+// Обработка события ready (воспроизведение после загрузки)
+wavesurfer.once('ready', () => {
+  console.log('✅ Audio ready, attempting to play...');
+  
+  // Пытаемся воспроизвести
+  const playPromise = wavesurfer.play();
+  
+  if (playPromise !== undefined) {
+    playPromise
+      .then(() => {
+        console.log('✅ Playback started successfully');
+      })
+      .catch(error => {
+        console.error('❌ Autoplay blocked:', error);
+        
+        // Если автоплей заблокирован браузером
+        alert('🔊 Нажмите кнопку PLAY чтобы начать воспроизведение\n\n(Браузер заблокировал автоплей)');
+        
+        // Показываем кнопку play
+        const playBtn = document.getElementById('mini-play');
+        if (playBtn) {
+          playBtn.style.animation = 'pulse 1s infinite';
+        }
+      });
+  }
+});
+
+// Обработка ошибок загрузки
+wavesurfer.once('error', (error) => {
+  console.error('❌ Wavesurfer error:', error);
+  
+  alert('❌ Не удалось загрузить аудио!\n\n' +
+        'Проверьте:\n' +
+        '1. Файл существует в GitHub\n' +
+        '2. Правильный путь в tracks.json\n' +
+        '3. Формат: MP3, WAV, OGG\n\n' +
+        'Текущий путь:\n' + src);
+  
+  window.isLoadingTrack = false;
+});
 
   const playKey = 'plays:' + src;
   const newCount = getCount(playKey) + 1;
