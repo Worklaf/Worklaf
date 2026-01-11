@@ -1526,26 +1526,6 @@ div[style*="overflow-x: auto"]::-webkit-scrollbar {
     return;
   }
   
-  if (visualizerActive) {
-    console.log('🔄 Updating visualizer for new track...');
-    
-    if (audioContext) {
-      try {
-        if (audioContext.state !== 'closed') {
-          audioContext.close();
-        }
-        audioContext = null;
-        analyser = null;
-      } catch (e) {
-        console.error('❌ Error closing AudioContext:', e);
-      }
-    }
-    
-    setTimeout(() => {
-      initAudioVisualizer();
-    }, 500);
-  }
-  
   window.isLoadingTrack = true;
   console.log('🎵 Starting playTrack...');
   
@@ -2330,6 +2310,7 @@ function initAudioVisualizer() {
   canvas.width = Math.min(window.innerWidth * 0.9, 1000);
   canvas.height = Math.min(window.innerHeight * 0.6, 600);
   
+  // ВАЖНО: Создаем AudioContext только один раз!
   if (!audioContext || audioContext.state === 'closed') {
     console.log('🔊 Creating new AudioContext...');
     
@@ -2342,13 +2323,19 @@ function initAudioVisualizer() {
       const bufferLength = analyser.frequencyBinCount;
       dataArray = new Uint8Array(bufferLength);
       
+      // Подключаем к wavesurfer ОДИН РАЗ
       if (wavesurfer && wavesurfer.getMediaElement) {
         console.log('🔌 Connecting to wavesurfer media element...');
-        const mediaElement = wavesurfer.getMediaElement();
-        const source = audioContext.createMediaElementSource(mediaElement);
-        source.connect(analyser);
-        analyser.connect(audioContext.destination);
-        console.log('✅ Audio connected successfully!');
+        try {
+          const mediaElement = wavesurfer.getMediaElement();
+          const source = audioContext.createMediaElementSource(mediaElement);
+          source.connect(analyser);
+          analyser.connect(audioContext.destination);
+          console.log('✅ Audio connected successfully!');
+        } catch (e) {
+          // Если источник уже создан, просто продолжаем
+          console.log('⚠️ Source already exists, continuing...');
+        }
       } else {
         console.error('❌ Wavesurfer not available!');
       }
@@ -2358,6 +2345,7 @@ function initAudioVisualizer() {
   } else {
     console.log('✅ Using existing AudioContext, state:', audioContext.state);
     
+    // Возобновляем контекст если он приостановлен
     if (audioContext.state === 'suspended') {
       console.log('🔄 Resuming suspended AudioContext...');
       audioContext.resume();
@@ -2411,7 +2399,7 @@ function initAudioVisualizer() {
         drawParticleRain(ctx, centerX, centerY);
         break;
       case 'tunnel':
-        drawCyberTunnel(ctx, centerX, centerY); // НОВАЯ ФУНКЦИЯ
+        drawCyberTunnel(ctx, centerX, centerY);
         break;
     }
   }
