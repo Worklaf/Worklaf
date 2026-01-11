@@ -963,73 +963,99 @@
   }
 
   async function saveCommentToServer(trackSrc, comment) {
-    console.log('💾 Saving for:', trackSrc);
-    
-    if (!USE_JSONBIN) {
-      const key = 'comments:' + trackSrc;
-      const comments = JSON.parse(localStorage.getItem(key) || '[]');
-      comments.push(comment);
-      localStorage.setItem(key, JSON.stringify(comments));
-      console.log('✅ Local saved');
-      return true;
-    }
-
-    try {
-      const response = await fetch(`https://api.jsonbin.io/v3/b/${JSONBIN_BIN_ID}/latest?t=${Date.now()}`, {
-        headers: { 
-          'X-Master-Key': JSONBIN_API_KEY,
-          'X-Bin-Meta': 'false'
-        }
-      });
-      
-      let record = { comments: {}, counts: {} };
-      if (response.ok) {
-        const data = await response.json();
-        record = data.record || { comments: {}, counts: {} };
-      }
-      
-      if (!record.comments) record.comments = {};
-      if (!record.comments[trackSrc]) record.comments[trackSrc] = [];
-      record.comments[trackSrc].push(comment);
-      
-      console.log('➕ Total now:', record.comments[trackSrc].length);
-      
-      const updateResponse = await fetch(`https://api.jsonbin.io/v3/b/${JSONBIN_BIN_ID}`, {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-          'X-Master-Key': JSONBIN_API_KEY,
-          'X-Bin-Meta': 'false'
-        },
-        body: JSON.stringify(record)
-      });
-      
-      if (updateResponse.ok) {
-        console.log('✅ Saved');
-        
-        await new Promise(resolve => setTimeout(resolve, 500));
-        
-        const verify = await fetch(`https://api.jsonbin.io/v3/b/${JSONBIN_BIN_ID}/latest?t=${Date.now()}`, {
-          headers: { 
-            'X-Master-Key': JSONBIN_API_KEY,
-            'X-Bin-Meta': 'false'
-          }
-        });
-        
-        if (verify.ok) {
-          const vData = await verify.json();
-          const saved = vData.record?.comments?.[trackSrc] || [];
-          console.log('🔍 Verify:', saved.length);
-        }
-        
-        return true;
-      }
-      return false;
-    } catch (e) {
-      console.error('❌', e);
-      return false;
-    }
+  console.log('💾 Saving for:', trackSrc);
+  console.log('📝 Comment:', comment);
+  
+  if (!USE_JSONBIN) {
+    const key = 'comments:' + trackSrc;
+    const comments = JSON.parse(localStorage.getItem(key) || '[]');
+    comments.push(comment);
+    localStorage.setItem(key, JSON.stringify(comments));
+    console.log('✅ Local saved');
+    return true;
   }
+
+  try {
+    // 1. ПОЛУЧИТЬ ТЕКУЩИЕ ДАННЫЕ
+    console.log('📥 Fetching current data...');
+    const response = await fetch(`https://api.jsonbin.io/v3/b/${JSONBIN_BIN_ID}/latest`, {
+      headers: { 
+        'X-Master-Key': JSONBIN_API_KEY
+      }
+    });
+    
+    let record = { comments: {}, counts: {} };
+    
+    if (response.ok) {
+      const data = await response.json();
+      record = data.record || { comments: {}, counts: {} };
+      console.log('📦 Current record:', JSON.stringify(record).substring(0, 200));
+    } else {
+      console.error('❌ Fetch error:', response.status, await response.text());
+    }
+    
+    // 2. ДОБАВИТЬ КОММЕНТАРИЙ
+    if (!record.comments) record.comments = {};
+    if (!record.comments[trackSrc]) record.comments[trackSrc] = [];
+    
+    record.comments[trackSrc].push(comment);
+    console.log('➕ Total for this track:', record.comments[trackSrc].length);
+    console.log('📋 All comments:', record.comments[trackSrc]);
+    
+    // 3. СОХРАНИТЬ
+    console.log('💾 Sending PUT request...');
+    console.log('📤 Payload:', JSON.stringify(record).substring(0, 300));
+    
+    const updateResponse = await fetch(`https://api.jsonbin.io/v3/b/${JSONBIN_BIN_ID}`, {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-Master-Key': JSONBIN_API_KEY
+      },
+      body: JSON.stringify(record)
+    });
+    
+    console.log('📡 Response status:', updateResponse.status);
+    
+    if (!updateResponse.ok) {
+      const errorText = await updateResponse.text();
+      console.error('❌ PUT failed:', errorText);
+      return false;
+    }
+    
+    const result = await updateResponse.json();
+    console.log('✅ PUT successful:', result);
+    
+    // 4. ВЕРИФИКАЦИЯ С ЗАДЕРЖКОЙ
+    console.log('⏳ Waiting 2s for server sync...');
+    await new Promise(resolve => setTimeout(resolve, 2000));
+    
+    console.log('🔍 Verifying...');
+    const verifyResponse = await fetch(`https://api.jsonbin.io/v3/b/${JSONBIN_BIN_ID}/latest`, {
+      headers: { 
+        'X-Master-Key': JSONBIN_API_KEY
+      },
+      cache: 'no-store'
+    });
+    
+    if (verifyResponse.ok) {
+      const vData = await verifyResponse.json();
+      const savedComments = vData.record?.comments?.[trackSrc] || [];
+      console.log('🔍 Verify result:', savedComments.length, 'comments');
+      console.log('🔍 Last comment:', savedComments[savedComments.length - 1]);
+      
+      if (savedComments.length === 0) {
+        console.error('⚠️ WARNING: Comment not found after save!');
+        console.log('🔍 Full record:', vData.record);
+      }
+    }
+    
+    return true;
+  } catch (e) {
+    console.error('❌ Exception:', e);
+    return false;
+  }
+}
 
   async function deleteCommentFromServer(trackSrc, index) {
     if (!USE_JSONBIN) {
@@ -1658,7 +1684,101 @@
 
         trackEl.style.display = (matchesSearch && matchesGenre) ? 'flex' : 'none';
       });
+    // В самом конце DOMContentLoaded, перед закрывающей скобкой:
+
+// === TEST JSONBIN CONNECTION ===
+window.testJsonBin = async function() {
+  console.log('🧪 TESTING JSONBIN...');
+  
+  try {
+    // Test 1: READ
+    console.log('📖 Test 1: Reading...');
+    const readRes = await fetch(`https://api.jsonbin.io/v3/b/${JSONBIN_BIN_ID}/latest`, {
+      headers: { 'X-Master-Key': JSONBIN_API_KEY }
+    });
+    
+    if (!readRes.ok) {
+      console.error('❌ READ FAILED:', readRes.status);
+      alert('❌ Cannot read from JSONBin!\nStatus: ' + readRes.status);
+      return;
     }
+    
+    const readData = await readRes.json();
+    console.log('✅ Current data:', readData.record);
+    
+    // Test 2: WRITE
+    console.log('📝 Test 2: Writing test comment...');
+    
+    const testRecord = readData.record || { comments: {}, counts: {} };
+    const testTrack = 'TEST_TRACK_' + Date.now();
+    
+    if (!testRecord.comments) testRecord.comments = {};
+    testRecord.comments[testTrack] = [{
+      text: 'TEST COMMENT ' + Date.now(),
+      author: 'Test User',
+      timestamp: Date.now()
+    }];
+    
+    const writeRes = await fetch(`https://api.jsonbin.io/v3/b/${JSONBIN_BIN_ID}`, {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-Master-Key': JSONBIN_API_KEY
+      },
+      body: JSON.stringify(testRecord)
+    });
+    
+    if (!writeRes.ok) {
+      console.error('❌ WRITE FAILED:', writeRes.status);
+      const errText = await writeRes.text();
+      console.error('Error:', errText);
+      alert('❌ Cannot write to JSONBin!\nStatus: ' + writeRes.status + '\n' + errText);
+      return;
+    }
+    
+    const writeData = await writeRes.json();
+    console.log('✅ Write successful:', writeData);
+    
+    // Test 3: VERIFY
+    console.log('🔍 Test 3: Verifying...');
+    await new Promise(resolve => setTimeout(resolve, 2000));
+    
+    const verifyRes = await fetch(`https://api.jsonbin.io/v3/b/${JSONBIN_BIN_ID}/latest`, {
+      headers: { 'X-Master-Key': JSONBIN_API_KEY },
+      cache: 'no-store'
+    });
+    
+    const verifyData = await verifyRes.json();
+    const testComments = verifyData.record?.comments?.[testTrack];
+    
+    if (testComments && testComments.length > 0) {
+      console.log('✅ TEST PASSED! Comment found:', testComments);
+      alert('✅ JSONBin works perfectly!\n\nTest comment saved and verified.');
+      
+      // Cleanup
+      delete testRecord.comments[testTrack];
+      await fetch(`https://api.jsonbin.io/v3/b/${JSONBIN_BIN_ID}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-Master-Key': JSONBIN_API_KEY
+        },
+        body: JSON.stringify(testRecord)
+      });
+      console.log('🧹 Cleanup done');
+    } else {
+      console.error('❌ TEST FAILED! Comment not found');
+      console.log('Verify data:', verifyData.record);
+      alert('❌ JSONBin test failed!\n\nComment was not saved or not found.');
+    }
+    
+  } catch (e) {
+    console.error('❌ TEST ERROR:', e);
+    alert('❌ Test error: ' + e.message);
+  }
+};
+
+console.log('💡 Run testJsonBin() in console to test');}
 
     searchInput.addEventListener('input', filterTracks);
     genreSelect.addEventListener('change', filterTracks);
