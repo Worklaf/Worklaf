@@ -92,30 +92,95 @@
     #mini-thumb{width:72px;height:96px;object-fit:cover;border-radius:8px}
     #mini-center{flex:1;display:flex;flex-direction:column;gap:8px;min-width:0}
     #mini-title{font-weight:700;color:#fff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-    #mini-wave{height:48px;border-radius:8px;background:linear-gradient(180deg,#05050a,#0b0b10);position:relative}
-    #mini-time{position:absolute;top:2px;right:4px;font-size:11px;color:var(--muted);background:rgba(0,0,0,0.4);padding:2px 6px;border-radius:4px}
+    #mini-wave{height:48px;border-radius:8px;background:linear-gradient(180deg,#05050a,#0b0b10)}
     .mini-controls{display:flex;align-items:center;justify-content:center;gap:18px}
     .control-btn{background:transparent;border:0;color:var(--muted);padding:10px;border-radius:50%;cursor:pointer}
+    .time-display{color:var(--muted);font-size:13px;white-space:nowrap;margin-top:4px}
 
     .side-panel{position:fixed;right:0;top:0;height:100%;width:360px;background:#0b0b10;color:#eaeaf2;padding:18px;box-shadow:-20px 0 40px rgba(0,0,0,.6);transform:translateX(100%);transition:transform .28s ease;z-index:10001;overflow:auto}
     .side-panel.open{transform:translateX(0)}
-    .side-panel h3{margin-top:0;display:flex;align-items:center;gap:8px}
+    .side-panel h3{margin-top:0}
 
     .modal{display:none;position:fixed;left:0;top:0;right:0;bottom:0;background:rgba(0,0,0,0.6);align-items:center;justify-content:center;z-index:10002}
     .modal.open{display:flex}
     .panel{width:min(720px,95%);background:#0b0b10;border-radius:12px;padding:16px;color:#eaeaf2;box-shadow:0 20px 60px rgba(0,0,0,.7);max-height:80vh;overflow:auto}
 
-    .emoji-picker{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px}
-    .emoji-btn{background:rgba(255,255,255,0.05);border:0;padding:6px;border-radius:6px;cursor:pointer;font-size:18px;transition:all .2s}
-    .emoji-btn:hover{background:rgba(255,255,255,0.1);transform:scale(1.1)}
+    /* Emoji panel */
+    .emoji-panel {
+      display: none;
+      position: absolute;
+      bottom: 100%;
+      right: 0;
+      background: #0b0b10;
+      border-radius: 8px;
+      padding: 12px;
+      width: 280px;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+      z-index: 1000;
+      border: 1px solid rgba(255,255,255,0.08);
+    }
+    .emoji-panel.open {
+      display: grid;
+      grid-template-columns: repeat(6, 1fr);
+      gap: 8px;
+    }
+    .emoji-btn {
+      background: rgba(255,255,255,0.05);
+      border: none;
+      border-radius: 6px;
+      padding: 8px;
+      font-size: 20px;
+      cursor: pointer;
+      transition: background 0.2s;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .emoji-btn:hover {
+      background: rgba(255,255,255,0.15);
+    }
 
-    .emoji-modal{display:none;position:fixed;left:50%;top:50%;transform:translate(-50%,-50%);background:#0b0b10;border-radius:12px;padding:16px;box-shadow:0 20px 60px rgba(0,0,0,.7);z-index:10003;max-width:90%;max-height:400px;overflow:auto}
-    .emoji-modal.open{display:block}
-    .emoji-grid{display:grid;grid-template-columns:repeat(8,1fr);gap:4px}
+    /* Copy button */
+    .copy-btn {
+      position: absolute;
+      top: 12px;
+      right: 12px;
+      background: rgba(255,255,255,0.05);
+      border: none;
+      border-radius: 6px;
+      padding: 6px 10px;
+      color: var(--muted);
+      font-size: 12px;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    .copy-btn:hover {
+      background: var(--accent);
+      color: #07060a;
+    }
 
-    .comment-item{background:rgba(255,255,255,0.03);padding:10px;border-radius:8px;margin-bottom:8px;position:relative}
-    .comment-delete{position:absolute;top:8px;right:8px;background:rgba(255,77,166,0.2);border:0;color:#ff4da6;padding:4px 8px;border-radius:4px;cursor:pointer;font-size:11px}
-    .comment-delete:hover{background:rgba(255,77,166,0.4)}
+    /* Delete comment button */
+    .delete-comment {
+      position: absolute;
+      top: 8px;
+      right: 8px;
+      background: rgba(255,77,166,0.1);
+      border: none;
+      border-radius: 4px;
+      color: var(--accent);
+      width: 20px;
+      height: 20px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 12px;
+      cursor: pointer;
+      opacity: 0;
+      transition: opacity 0.2s;
+    }
+    .comment-item:hover .delete-comment {
+      opacity: 1;
+    }
 
     @media (max-width:880px){
       .thumb{width:96px;height:160px}
@@ -149,9 +214,7 @@
     <img id="mini-thumb" src="" alt="">
     <div id="mini-center">
       <div id="mini-title">—</div>
-      <div id="mini-wave">
-        <div id="mini-time">0:00 / 0:00</div>
-      </div>
+      <div id="mini-wave"></div>
       <div id="mini-controls" class="mini-controls">
         <button id="mini-prev" class="control-btn" aria-label="Previous">◀</button>
         <button id="mini-play" class="control-btn" aria-label="Play/Pause">
@@ -159,6 +222,7 @@
         </button>
         <button id="mini-next" class="control-btn" aria-label="Next">▶</button>
       </div>
+      <div class="time-display" id="mini-time">0:00 / 0:00</div>
     </div>
 
     <div id="mini-right" class="mini-actions">
@@ -182,41 +246,26 @@
     <div class="panel" role="document">
       <h3 id="comments-title">Comments</h3>
       <div id="comments-list" class="comments-list" style="max-height:320px;overflow:auto;margin-top:8px;border-radius:8px;padding:8px;background:rgba(255,255,255,0.02)"></div>
-      
-      <div class="emoji-picker" id="emoji-picker">
-        <button class="emoji-btn" data-emoji="🔥">🔥</button>
-        <button class="emoji-btn" data-emoji="😍">😍</button>
-        <button class="emoji-btn" data-emoji="😱">😱</button>
-        <button class="emoji-btn" data-emoji="🙌">🙌</button>
-        <button class="emoji-btn" data-emoji="👍">👍</button>
-        <button class="emoji-btn" data-emoji="👎">👎</button>
-        <button class="emoji-btn" data-emoji="🥵">🥵</button>
-        <button class="emoji-btn" data-emoji="😊">😊</button>
-        <button class="emoji-btn" id="more-emoji">➕</button>
-      </div>
-
-      <div class="row" style="display:flex;gap:8px;margin-top:12px">
-        <textarea id="comment-input" placeholder="Write a comment..." style="width:100%;min-height:80px;padding:8px;border-radius:8px;background:#07060a;border:1px solid rgba(255,255,255,0.04);color:#eaeaf2"></textarea>
+      <div style="position:relative">
+        <textarea id="comment-input" placeholder="Write a comment..." style="width:100%;min-height:80px;padding:8px;border-radius:8px;background:#07060a;border:1px solid rgba(255,255,255,0.04);color:#eaeaf2;margin-top:12px"></textarea>
+        <button id="emoji-toggle" class="btn icon" style="position:absolute;right:8px;bottom:8px">😊</button>
+        <div id="emoji-panel" class="emoji-panel">
+          <!-- Emojis will be inserted here -->
+        </div>
       </div>
       <div class="row" style="justify-content:flex-end;display:flex;gap:8px;margin-top:12px">
         <button id="comment-cancel" class="btn">Cancel</button>
-        <button id="comment-send" class="btn">Send</button>
+        <button id="comment-send" class="btn active">Send</button>
       </div>
     </div>
   </div>
 
-  <div id="emoji-modal" class="emoji-modal">
-    <h3 style="margin-top:0">Все эмодзи</h3>
-    <div class="emoji-grid" id="emoji-grid"></div>
-    <button id="close-emoji-modal" class="btn" style="margin-top:12px;width:100%">Close</button>
-  </div>
-
   <div id="side-panel" class="side-panel" aria-hidden="true">
-    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
-      <button id="side-close" class="btn">Close</button>
-      <button id="copy-text-btn" class="btn">📋 Copy</button>
+    <button id="side-close" class="btn" style="margin-bottom:12px">Close</button>
+    <div style="position:relative">
+      <h3 id="side-title">Full text</h3>
+      <button id="copy-text" class="copy-btn">Copy</button>
     </div>
-    <h3 id="side-title">Full text</h3>
     <div id="side-content" style="white-space:pre-wrap;color:#eaeaf2;margin-top:8px"></div>
   </div>
 
@@ -226,7 +275,7 @@
       <input id="t-title" class="search-input" placeholder="Название трека" style="width:100%;margin-bottom:12px">
       <input id="t-audio" class="search-input" placeholder="Ссылка на mp3 (GitHub raw)" style="width:100%;margin-bottom:12px">
       <input id="t-cover" class="search-input" placeholder="Ссылка на обложку" style="width:100%;margin-bottom:12px">
-      <input id="t-genre" class="search-input" placeholder="Жанры через запятую (Gothic Piano Trap, Ambient)" style="width:100%;margin-bottom:12px">
+      <input id="t-genre" class="search-input" placeholder="Жанры (через запятую, например: Gothic Piano Trap, Trap)" style="width:100%;margin-bottom:12px">
       <textarea id="t-lyrics" placeholder="Текст песни" style="width:100%;min-height:120px;padding:8px;border-radius:8px;background:#07060a;border:1px solid rgba(255,255,255,0.04);color:#eaeaf2;margin-bottom:12px"></textarea>
       <div style="display:flex;gap:8px;justify-content:flex-end">
         <button id="add-cancel" class="btn">Cancel</button>
@@ -238,8 +287,7 @@
   <script src="https://unpkg.com/wavesurfer.js@7"></script>
 
   <script>
-  // === ГЛОБАЛЬНЫЕ ПЕРЕМЕННЫЕ ===
-  const isAdmin = location.search.includes('admin');
+  // === ГЛОБАЛЬНЫЕ ФУНКЦИИ ===
   const getCount = k => parseInt(localStorage.getItem(k) || '0', 10);
   const setCount = (k,v) => localStorage.setItem(k, String(v));
 
@@ -249,36 +297,6 @@
 
   function saveDraftTracks(tracks) {
     localStorage.setItem('draftTracks', JSON.stringify(tracks));
-  }
-
-  function getAllGenres() {
-    const tracks = getDraftTracks();
-    const genres = new Set();
-    tracks.forEach(t => {
-      if (t.genre) {
-        t.genre.split(',').forEach(g => genres.add(g.trim()));
-      }
-    });
-    return Array.from(genres).sort();
-  }
-
-  function updateGenreSelect() {
-    const select = document.getElementById('siteGenre');
-    const current = select.value;
-    select.innerHTML = '<option value="">Все жанры</option>';
-    getAllGenres().forEach(g => {
-      const opt = document.createElement('option');
-      opt.value = g;
-      opt.textContent = g;
-      select.appendChild(opt);
-    });
-    select.value = current;
-  }
-
-  function formatTime(seconds) {
-    const mins = Math.floor(seconds / 60);
-    const secs = Math.floor(seconds % 60);
-    return `${mins}:${secs.toString().padStart(2, '0')}`;
   }
 
   function updateCountUI(src) {
@@ -305,6 +323,7 @@
       }
     });
     
+    // Обновить мини-плеер
     const miniLike = document.getElementById('mini-like');
     const miniDislike = document.getElementById('mini-dislike');
     const val = localStorage.getItem('like:user:' + src);
@@ -324,6 +343,7 @@
       setCount('likes:' + src, getCount('likes:' + src) + 1);
     }
     updateCountUI(src);
+    console.log('❤️ Like toggled for', src);
   }
 
   window.toggleDislike = function(src) {
@@ -338,6 +358,81 @@
       setCount('dislikes:' + src, getCount('dislikes:' + src) + 1);
     }
     updateCountUI(src);
+    console.log('👎 Dislike toggled for', src);
+  }
+
+  function updateTrackDuration(src, duration) {
+    const tracks = getDraftTracks();
+    const trackIndex = tracks.findIndex(t => t.audio === src);
+    if (trackIndex !== -1) {
+      // Format duration as MM:SS
+      const minutes = Math.floor(duration / 60);
+      const seconds = Math.floor(duration % 60);
+      const formatted = `${minutes}:${seconds < 10 ? '0' : ''}${seconds}`;
+      
+      tracks[trackIndex].duration = formatted;
+      saveDraftTracks(tracks);
+      
+      // Update UI if this track is displayed
+      const trackEl = document.querySelector(`.track[data-src="${src}"]`);
+      if (trackEl) {
+        const metaEl = trackEl.querySelector('.meta');
+        if (metaEl) {
+          const genre = tracks[trackIndex].genre || '';
+          metaEl.textContent = `${genre} · ${formatted}`;
+        }
+      }
+      
+      // Update mini player time display
+      if (window.currentTrackSrc === src) {
+        updateTimeDisplay(duration);
+      }
+      
+      console.log(`⏱️ Updated duration for ${src}: ${formatted}`);
+    }
+  }
+
+  function updateTimeDisplay(duration) {
+    const miniTime = document.getElementById('mini-time');
+    if (miniTime && wavesurfer) {
+      const current = wavesurfer.getCurrentTime();
+      const total = duration || wavesurfer.getDuration();
+      
+      const formatTime = (time) => {
+        const minutes = Math.floor(time / 60);
+        const seconds = Math.floor(time % 60);
+        return `${minutes}:${seconds < 10 ? '0' : ''}${seconds}`;
+      };
+      
+      miniTime.textContent = `${formatTime(current)} / ${formatTime(total)}`;
+    }
+  }
+
+  function loadGenresToFilter() {
+    const tracks = getDraftTracks();
+    const genreSet = new Set();
+    
+    tracks.forEach(track => {
+      if (track.genre) {
+        // Split by comma and trim
+        const genres = track.genre.split(',').map(g => g.trim()).filter(g => g);
+        genres.forEach(g => genreSet.add(g));
+      }
+    });
+    
+    const genreSelect = document.getElementById('siteGenre');
+    // Clear existing options except the first
+    while (genreSelect.options.length > 1) {
+      genreSelect.remove(1);
+    }
+    
+    // Add unique genres sorted alphabetically
+    Array.from(genreSet).sort().forEach(genre => {
+      const option = document.createElement('option');
+      option.value = genre.toLowerCase();
+      option.textContent = genre;
+      genreSelect.appendChild(option);
+    });
   }
 
   function renderDraftTracks() {
@@ -361,7 +456,7 @@
         <img class="thumb" src="${track.cover}" alt="${track.title}">
         <div class="info">
           <div class="title">${track.title}</div>
-          <div class="meta">${track.genre} · ${track.duration || '—'}</div>
+          <div class="meta">${track.genre || ''} · ${track.duration || '—'}</div>
           
           <div class="counts">
             <div class="play-count" data-key="${track.audio}">
@@ -389,13 +484,14 @@
       list.appendChild(div);
     });
 
-    updateGenreSelect();
+    loadGenresToFilter();
     console.log('✅ Rendered', tracks.length, 'tracks');
   }
 
   // === PLAYER ===
   let wavesurfer;
   let currentTrackIndex = -1;
+  let currentTrackSrc = '';
   let tracks = [];
   let durationInterval;
 
@@ -413,43 +509,29 @@
     });
 
     wavesurfer.on('ready', () => {
-      console.log('🎵 Ready');
+      console.log('🎵 Ready, playing...');
       wavesurfer.play();
       
-      // Сохранить длительность
+      // Get duration and update track data
       const duration = wavesurfer.getDuration();
-      if (currentTrackIndex >= 0) {
-        tracks[currentTrackIndex].duration = formatTime(duration);
-        saveDraftTracks(tracks);
-        renderDraftTracks();
-      }
+      updateTrackDuration(currentTrackSrc, duration);
       
-      updateTimeDisplay();
+      // Start updating time display
+      if (durationInterval) clearInterval(durationInterval);
+      durationInterval = setInterval(() => updateTimeDisplay(duration), 1000);
     });
 
     wavesurfer.on('play', () => {
       document.getElementById('mini-play-icon').innerHTML = '<path d="M6 4h4v16H6V4zm8 0h4v16h-4V4z"/>';
-      durationInterval = setInterval(updateTimeDisplay, 100);
     });
 
     wavesurfer.on('pause', () => {
       document.getElementById('mini-play-icon').innerHTML = '<path d="M5 3v18l15-9L5 3z"/>';
-      clearInterval(durationInterval);
     });
 
-    wavesurfer.on('finish', () => {
-      clearInterval(durationInterval);
-      playNext();
-    });
+    wavesurfer.on('finish', () => playNext());
     
-    wavesurfer.on('error', (err) => console.error('❌ Error:', err));
-  }
-
-  function updateTimeDisplay() {
-    if (!wavesurfer) return;
-    const current = wavesurfer.getCurrentTime();
-    const total = wavesurfer.getDuration();
-    document.getElementById('mini-time').textContent = `${formatTime(current)} / ${formatTime(total)}`;
+    wavesurfer.on('error', (err) => console.error('❌ Wavesurfer error:', err));
   }
 
   function playTrack(index) {
@@ -458,8 +540,9 @@
     currentTrackIndex = index;
     window.currentTrackIndex = index;
     const track = tracks[index];
+    currentTrackSrc = track.audio;
     
-    console.log('🎵 Loading:', track.title);
+    console.log('🎵 Loading:', track.title, track.audio);
     
     wavesurfer.load(track.audio);
     
@@ -473,9 +556,20 @@
     setCount(playKey, count);
     updateCountUI(track.audio);
     
+    // Sync mini likes
     const val = localStorage.getItem('like:user:' + track.audio);
     document.getElementById('mini-like').classList.toggle('active', val === 'like');
     document.getElementById('mini-dislike').classList.toggle('active', val === 'dislike');
+    
+    // Update time display with existing duration
+    if (track.duration) {
+      // Parse duration from MM:SS format
+      const [min, sec] = track.duration.split(':').map(Number);
+      const duration = min * 60 + sec;
+      updateTimeDisplay(duration);
+    } else {
+      document.getElementById('mini-time').textContent = '0:00 / 0:00';
+    }
   }
 
   function playNext() {
@@ -488,84 +582,85 @@
     playTrack((currentTrackIndex - 1 + tracks.length) % tracks.length);
   }
 
-  // === КОММЕНТАРИИ ===
+  // === КОММЕНТАРИИ И СМАЙЛИКИ ===
   let currentTrackForComments = null;
+  const EMOJIS = ['🔥', '😍', '😱', '🙌', '👍', '👎', '🥵', '😊', '❤️', '🎵', '👏', '😂', '😢', '🤔', '😎', '🤯', '🥳', '🤩', '😘', '😇'];
+
+  function initEmojiPanel() {
+    const emojiPanel = document.getElementById('emoji-panel');
+    if (!emojiPanel) return;
+    
+    emojiPanel.innerHTML = '';
+    EMOJIS.forEach(emoji => {
+      const btn = document.createElement('button');
+      btn.className = 'emoji-btn';
+      btn.textContent = emoji;
+      btn.onclick = () => {
+        const input = document.getElementById('comment-input');
+        input.value += emoji;
+        input.focus();
+      };
+      emojiPanel.appendChild(btn);
+    });
+  }
 
   function loadComments(src) {
     const commentsKey = 'comments:' + src;
     const comments = JSON.parse(localStorage.getItem(commentsKey) || '[]');
     const list = document.getElementById('comments-list');
+    const isAdmin = location.search.includes('admin');
     
     if (comments.length === 0) {
       list.innerHTML = '<p style="color:#bfc3d6;text-align:center;padding:20px">Нет комментариев</p>';
     } else {
-      list.innerHTML = comments.map((c, i) => `
-        <div class="comment-item">
-          ${isAdmin ? `<button class="comment-delete" data-index="${i}">✕</button>` : ''}
-          <div style="color:#eaeaf2;margin-bottom:4px">${c.text}</div>
+      list.innerHTML = comments.map((c, idx) => `
+        <div class="comment-item" style="position:relative;background:rgba(255,255,255,0.03);padding:10px;border-radius:8px;margin-bottom:8px">
+          ${isAdmin ? `<button class="delete-comment" data-index="${idx}">✕</button>` : ''}
+          <div style="color:#eaeaf2;margin-bottom:4px;font-size:16px">${c.text}</div>
           <div style="color:#bfc3d6;font-size:11px">${c.date}</div>
         </div>
       `).join('');
       
-      // Удаление комментариев (админ)
+      // Add delete handlers for admin
       if (isAdmin) {
-        list.querySelectorAll('.comment-delete').forEach(btn => {
-          btn.onclick = () => {
-            const idx = parseInt(btn.dataset.index);
-            comments.splice(idx, 1);
-            localStorage.setItem(commentsKey, JSON.stringify(comments));
-            loadComments(src);
-            console.log('🗑️ Comment deleted');
+        list.querySelectorAll('.delete-comment').forEach(btn => {
+          btn.onclick = (e) => {
+            e.stopPropagation();
+            const index = parseInt(btn.dataset.index);
+            if (confirm('Удалить этот комментарий?')) {
+              deleteComment(src, index);
+            }
           };
         });
       }
     }
   }
 
-  // === ЭМОДЗИ ===
-  const allEmojis = ['😀','😃','😄','😁','😆','😅','🤣','😂','🙂','🙃','😉','😊','😇','🥰','😍','🤩','😘','😗','☺️','😚','😙','🥲','😋','😛','😜','🤪','😝','🤑','🤗','🤭','🤫','🤔','🤐','🤨','😐','😑','😶','😏','😒','🙄','😬','🤥','😌','😔','😪','🤤','😴','😷','🤒','🤕','🤢','🤮','🤧','🥵','🥶','😶‍🌫️','🥴','😵','😵‍💫','🤯','🤠','🥳','🥸','😎','🤓','🧐','😕','😟','🙁','☹️','😮','😯','😲','😳','🥺','😦','😧','😨','😰','😥','😢','😭','😱','😖','😣','😞','😓','😩','😫','🥱','😤','😡','😠','🤬','😈','👿','💀','☠️','💩','🤡','👹','👺','👻','👽','👾','🤖','😺','😸','😹','😻','😼','😽','🙀','😿','😾','🙈','🙉','🙊','💋','💌','💘','💝','💖','💗','💓','💞','💕','💟','❣️','💔','❤️‍🔥','❤️‍🩹','❤️','🧡','💛','💚','💙','💜','🤎','🖤','🤍','💯','💢','💥','💫','💦','💨','🕳️','💣','💬','👁️‍🗨️','🗨️','🗯️','💭','💤','👋','🤚','🖐️','✋','🖖','👌','🤌','🤏','✌️','🤞','🤟','🤘','🤙','👈','👉','👆','🖕','👇','☝️','👍','👎','✊','👊','🤛','🤜','👏','🙌','👐','🤲','🤝','🙏','✍️','💅','🤳','💪','🦾','🦿','🦵','🦶','👂','🦻','👃','🧠','🫀','🫁','🦷','🦴','👀','👁️','👅','👄','🔥','💧','💦'];
-
-  function insertEmoji(emoji) {
-    const input = document.getElementById('comment-input');
-    input.value += emoji;
-    input.focus();
+  function deleteComment(src, index) {
+    const key = 'comments:' + src;
+    const comments = JSON.parse(localStorage.getItem(key) || '[]');
+    if (index >= 0 && index < comments.length) {
+      comments.splice(index, 1);
+      localStorage.setItem(key, JSON.stringify(comments));
+      loadComments(src);
+      console.log('🗑️ Comment deleted');
+    }
   }
 
   // === INIT ===
   document.addEventListener('DOMContentLoaded', () => {
-    console.log('🚀 Init...');
+    console.log('🚀 Initializing...');
     
     tracks = getDraftTracks();
     initWavesurfer();
+    initEmojiPanel();
     renderDraftTracks();
 
     const tracksList = document.getElementById('tracksList');
     const sidePanel = document.getElementById('side-panel');
     const commentsModal = document.getElementById('comments-modal');
-    const emojiModal = document.getElementById('emoji-modal');
 
-    // Эмодзи кнопки
-    document.querySelectorAll('.emoji-btn[data-emoji]').forEach(btn => {
-      btn.onclick = () => insertEmoji(btn.dataset.emoji);
-    });
-
-    document.getElementById('more-emoji').onclick = () => {
-      const grid = document.getElementById('emoji-grid');
-      grid.innerHTML = allEmojis.map(e => `<button class="emoji-btn" onclick="insertEmoji('${e}')">${e}</button>`).join('');
-      emojiModal.classList.add('open');
-    };
-
-    document.getElementById('close-emoji-modal').onclick = () => emojiModal.classList.remove('open');
-
-    // Кнопка копирования текста
-    document.getElementById('copy-text-btn').onclick = () => {
-      const text = document.getElementById('side-content').textContent;
-      navigator.clipboard.writeText(text).then(() => {
-        alert('✅ Текст скопирован!');
-      });
-    };
-
-    // Делегирование в треках
+    // Делегирование кнопок в треках
     tracksList.addEventListener('click', (e) => {
       const btn = e.target.closest('button');
       if (!btn) return;
@@ -580,11 +675,13 @@
 
       if (btn.classList.contains('play-btn')) {
         e.preventDefault();
+        console.log('🎵 Play clicked:', title);
         playTrack(index);
       }
 
       if (btn.classList.contains('open-text-btn')) {
         e.preventDefault();
+        console.log('📄 Text clicked');
         document.getElementById('side-title').textContent = title;
         document.getElementById('side-content').textContent = lyrics || '(No text)';
         sidePanel.classList.add('open');
@@ -592,6 +689,7 @@
 
       if (btn.classList.contains('comment-btn')) {
         e.preventDefault();
+        console.log('💬 Comments clicked');
         currentTrackForComments = src;
         document.getElementById('comments-title').textContent = `Comments: ${title}`;
         loadComments(src);
@@ -608,7 +706,7 @@
       }
     });
 
-    // Лайки
+    // Лайки/дизлайки в треках
     tracksList.addEventListener('click', (e) => {
       const el = e.target.closest('.likes-count, .dislikes-count');
       if (!el) return;
@@ -621,7 +719,7 @@
       }
     });
 
-    // Мини-плеер
+    // Мини-плеер кнопки
     document.getElementById('mini-play').onclick = () => wavesurfer?.playPause();
     document.getElementById('mini-next').onclick = playNext;
     document.getElementById('mini-prev').onclick = playPrev;
@@ -637,11 +735,15 @@
     };
 
     document.getElementById('mini-like').onclick = () => {
-      if (currentTrackIndex >= 0) window.toggleLike(tracks[currentTrackIndex].audio);
+      if (currentTrackIndex >= 0) {
+        window.toggleLike(tracks[currentTrackIndex].audio);
+      }
     };
 
     document.getElementById('mini-dislike').onclick = () => {
-      if (currentTrackIndex >= 0) window.toggleDislike(tracks[currentTrackIndex].audio);
+      if (currentTrackIndex >= 0) {
+        window.toggleDislike(tracks[currentTrackIndex].audio);
+      }
     };
 
     document.getElementById('mini-comment').onclick = () => {
@@ -653,6 +755,19 @@
         commentsModal.classList.add('open');
       }
     };
+
+    // Смайлики
+    document.getElementById('emoji-toggle').onclick = (e) => {
+      e.stopPropagation();
+      const panel = document.getElementById('emoji-panel');
+      panel.classList.toggle('open');
+    };
+    
+    document.addEventListener('click', (e) => {
+      if (!e.target.closest('#emoji-toggle') && !e.target.closest('#emoji-panel')) {
+        document.getElementById('emoji-panel')?.classList.remove('open');
+      }
+    });
 
     // Отправка комментария
     document.getElementById('comment-send').onclick = () => {
@@ -669,12 +784,27 @@
       console.log('💬 Comment saved');
     };
 
-    // Закрытие
+    // Копирование текста
+    document.getElementById('copy-text').onclick = () => {
+      const text = document.getElementById('side-content').textContent;
+      navigator.clipboard.writeText(text).then(() => {
+        const btn = document.getElementById('copy-text');
+        const original = btn.textContent;
+        btn.textContent = 'Copied!';
+        setTimeout(() => btn.textContent = original, 2000);
+        console.log('📋 Text copied');
+      });
+    };
+
+    // Закрытие панелей
     document.getElementById('side-close').onclick = () => sidePanel.classList.remove('open');
-    document.getElementById('comment-cancel').onclick = () => commentsModal.classList.remove('open');
+    document.getElementById('comment-cancel').onclick = () => {
+      commentsModal.classList.remove('open');
+      document.getElementById('emoji-panel')?.classList.remove('open');
+    };
 
     // Админ
-    if (!isAdmin) {
+    if (!location.search.includes('admin')) {
       document.getElementById('addTrackBtn')?.remove();
       document.getElementById('exportJsonBtn')?.remove();
     }
@@ -688,14 +818,22 @@
       const audio = document.getElementById('t-audio').value.trim();
       const cover = document.getElementById('t-cover').value.trim();
       const genre = document.getElementById('t-genre').value.trim();
-      const lyrics = document.getElementById('t-lyrics').value;
+      const lyrics = document.getElementById('t-lyrics').value.trim();
 
       if (!title || !audio || !cover) {
         alert('Название, mp3 и обложка обязательны');
         return;
       }
 
-      const track = { title, audio, cover, genre, lyrics, duration: '—' };
+      const track = { 
+        title, 
+        audio, 
+        cover, 
+        genre: genre || 'Uncategorized',
+        lyrics, 
+        duration: '—' 
+      };
+      
       tracks = getDraftTracks();
       tracks.push(track);
       saveDraftTracks(tracks);
@@ -722,32 +860,32 @@
     });
 
     // Поиск
-    const searchInput = document.getElementById('siteSearch');
-    const genreSelect = document.getElementById('siteGenre');
-    
-    function applyFilters() {
-      const q = (searchInput.value || '').toLowerCase();
-      const g = (genreSelect.value || '').toLowerCase();
-      
-      document.querySelectorAll('.track').forEach(t => {
-        const title = (t.dataset.title || '').toLowerCase();
-        const genre = (t.dataset.genre || '').toLowerCase();
-        
-        const matchQ = !q || title.includes(q) || genre.includes(q);
-        const matchG = !g || genre.includes(g);
-        
-        t.style.display = (matchQ && matchG) ? '' : 'none';
+    document.getElementById('siteSearch').addEventListener('input', (e) => {
+      const query = e.target.value.toLowerCase();
+      document.querySelectorAll('.track').forEach(track => {
+        const title = track.dataset.title?.toLowerCase() || '';
+        const genre = track.dataset.genre?.toLowerCase() || '';
+        const matches = title.includes(query) || genre.includes(query);
+        track.style.display = matches ? '' : 'none';
       });
-    }
-    
-    searchInput.addEventListener('input', applyFilters);
-    genreSelect.addEventListener('change', applyFilters);
+    });
 
-    console.log('✅ Ready');
+    // Фильтр по жанру
+    document.getElementById('siteGenre').addEventListener('change', (e) => {
+      const genre = e.target.value.toLowerCase();
+      document.querySelectorAll('.track').forEach(track => {
+        if (!genre) {
+          track.style.display = '';
+          return;
+        }
+        const trackGenre = track.dataset.genre?.toLowerCase() || '';
+        const matches = trackGenre.includes(genre);
+        track.style.display = matches ? '' : 'none';
+      });
+    });
+
+    console.log('✅ Initialized');
   });
-
-  // Глобальная функция для вставки эмодзи
-  window.insertEmoji = insertEmoji;
   </script>
   
 </body>
