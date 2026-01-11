@@ -1039,21 +1039,25 @@ async function loadTracksFromJSON() {
   return null;
 }
 
-  async function getDraftTracks() {
-  // Сначала проверяем localStorage (draftTracks имеет приоритет)
-  const stored = localStorage.getItem('draftTracks');
-  if (stored && stored !== '[]') {
-    try {
-      const draftTracks = JSON.parse(stored);
-      if (draftTracks.length > 0) {
-        console.log('✅ Loaded', draftTracks.length, 'tracks from draftTracks');
-        globalTracks = draftTracks;
-        return draftTracks;
-      }
-    } catch (e) {
-      console.error('❌ Error parsing draftTracks:', e);
-    }
+ async function getDraftTracks() {
+  console.log('🔄 Forcing fresh load...');
+  
+  // УДАЛЯЕМ весь старый кеш
+  localStorage.removeItem('draftTracks');
+  localStorage.removeItem('cachedTracks');
+  
+  // ЗАГРУЖАЕМ свежие данные
+  const jsonTracks = await loadTracksFromJSON();
+  
+  if (jsonTracks && jsonTracks.length > 0) {
+    console.log('✅ Loaded', jsonTracks.length, 'tracks (FRESH)');
+    globalTracks = jsonTracks;
+    return jsonTracks;
   }
+  
+  console.error('❌ No tracks found');
+  return [];
+}
   
   // Затем пытаемся загрузить из tracks.json
   const jsonTracks = await loadTracksFromJSON();
