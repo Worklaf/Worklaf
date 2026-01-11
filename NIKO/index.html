@@ -2070,7 +2070,9 @@ let audioContext = null;
 let analyser = null;
 let dataArray = null;
 let animationId = null;
-let particles = [];
+let spiralRotation = 0;
+let ripples = [];
+let rippleTimer = 0;
 
 function initAudioVisualizer() {
   const canvas = document.getElementById('audio-visualizer');
@@ -2104,20 +2106,7 @@ function initAudioVisualizer() {
     }
   }
   
-  // Инициализация частиц
-  if (visualizerType === 'particles' && particles.length === 0) {
-    for (let i = 0; i < 100; i++) {
-      particles.push({
-        x: Math.random() * canvas.width,
-        y: Math.random() * canvas.height,
-        vx: (Math.random() - 0.5) * 2,
-        vy: (Math.random() - 0.5) * 2,
-        radius: Math.random() * 3 + 1
-      });
-    }
-  }
-  
-    // Функция рисования
+  // Функция рисования
   function draw() {
     if (!visualizerActive) return;
     
@@ -2148,17 +2137,15 @@ function initAudioVisualizer() {
     }
   }
   
-  // 🌀 CIRCLE (оставляем как есть)
+  // 🌀 CIRCLE
   function drawCircle(ctx, centerX, centerY) {
     const radius = Math.min(canvas.width, canvas.height) * 0.15;
     
-    // Центральный круг
     ctx.beginPath();
     ctx.arc(centerX, centerY, radius, 0, Math.PI * 2);
     ctx.fillStyle = 'rgba(255, 77, 166, 0.1)';
     ctx.fill();
     
-    // Круговые bars
     const bars = 64;
     const angleStep = (Math.PI * 2) / bars;
     
@@ -2185,7 +2172,6 @@ function initAudioVisualizer() {
       ctx.lineCap = 'round';
       ctx.stroke();
       
-      // Свечение
       ctx.beginPath();
       ctx.arc(x2, y2, 3, 0, Math.PI * 2);
       ctx.fillStyle = '#00d1ff';
@@ -2195,7 +2181,6 @@ function initAudioVisualizer() {
       ctx.shadowBlur = 0;
     }
     
-    // Пульсирующий круг
     const avgBass = dataArray.slice(0, 10).reduce((a, b) => a + b, 0) / 10;
     const pulseRadius = radius + (avgBass / 255) * 30;
     
@@ -2206,7 +2191,7 @@ function initAudioVisualizer() {
     ctx.stroke();
   }
   
-  // 📊 FREQUENCY BARS (симметричные столбики с градиентом)
+  // 📊 FREQUENCY
   function drawFrequency(ctx, centerX, centerY) {
     const bars = 32;
     const barWidth = (canvas.width * 0.8) / (bars * 2);
@@ -2216,28 +2201,20 @@ function initAudioVisualizer() {
       const value = dataArray[i * 2] || 0;
       const barHeight = (value / 255) * (canvas.height * 0.6);
       
-      // Левая сторона
       const xLeft = startX + (i * barWidth * 2);
       const yLeft = centerY - (barHeight / 2);
       
-      // Правая сторона (зеркало)
       const xRight = centerX + (centerX - xLeft) - barWidth;
       
-      // Градиент снизу вверх
       const gradient = ctx.createLinearGradient(0, centerY + barHeight/2, 0, centerY - barHeight/2);
       gradient.addColorStop(0, '#ff4da6');
       gradient.addColorStop(0.5, '#9d4dff');
       gradient.addColorStop(1, '#00d1ff');
       
       ctx.fillStyle = gradient;
-      
-      // Левый столбик
       ctx.fillRect(xLeft, yLeft, barWidth - 4, barHeight);
-      
-      // Правый столбик
       ctx.fillRect(xRight, yLeft, barWidth - 4, barHeight);
       
-      // Свечение сверху
       ctx.beginPath();
       ctx.arc(xLeft + barWidth/2, yLeft, 4, 0, Math.PI * 2);
       ctx.fillStyle = '#00d1ff';
@@ -2251,7 +2228,6 @@ function initAudioVisualizer() {
       ctx.shadowBlur = 0;
     }
     
-    // Центральная линия
     ctx.beginPath();
     ctx.moveTo(0, centerY);
     ctx.lineTo(canvas.width, centerY);
@@ -2260,9 +2236,7 @@ function initAudioVisualizer() {
     ctx.stroke();
   }
   
-  // 🌪️ SPIRAL (вращающаяся спираль)
-  let spiralRotation = 0;
-  
+  // 🌪️ SPIRAL
   function drawSpiral(ctx, centerX, centerY) {
     spiralRotation += 0.01;
     
@@ -2287,19 +2261,16 @@ function initAudioVisualizer() {
         ctx.lineTo(x, y);
       }
       
-      // Рисуем точки
       ctx.fillStyle = `hsl(${(i / points) * 360}, 100%, ${50 + normalizedValue * 30}%)`;
       ctx.beginPath();
       ctx.arc(x, y, 2 + normalizedValue * 4, 0, Math.PI * 2);
       ctx.fill();
     }
     
-    // Линия спирали
     ctx.strokeStyle = 'rgba(255, 77, 166, 0.3)';
     ctx.lineWidth = 2;
     ctx.stroke();
     
-    // Центральное свечение
     const avgValue = dataArray.slice(0, 20).reduce((a, b) => a + b, 0) / 20;
     const glowRadius = 20 + (avgValue / 255) * 40;
     
@@ -2313,14 +2284,10 @@ function initAudioVisualizer() {
     ctx.fill();
   }
   
-  // 💧 RIPPLE (концентрические круги/волны)
-  let ripples = [];
-  let rippleTimer = 0;
-  
+  // 💧 RIPPLE
   function drawRipple(ctx, centerX, centerY) {
     rippleTimer++;
     
-    // Создаем новую волну каждые 15 кадров
     const avgBass = dataArray.slice(0, 10).reduce((a, b) => a + b, 0) / 10;
     
     if (rippleTimer % 15 === 0 && avgBass > 50) {
@@ -2332,7 +2299,6 @@ function initAudioVisualizer() {
       });
     }
     
-    // Рисуем и обновляем волны
     ripples = ripples.filter(ripple => {
       ripple.radius += ripple.speed;
       ripple.alpha -= 0.01;
@@ -2341,14 +2307,12 @@ function initAudioVisualizer() {
         return false;
       }
       
-      // Рисуем круг
       ctx.beginPath();
       ctx.arc(centerX, centerY, ripple.radius, 0, Math.PI * 2);
       ctx.strokeStyle = `rgba(0, 209, 255, ${ripple.alpha})`;
       ctx.lineWidth = 3;
       ctx.stroke();
       
-      // Внутренний круг
       ctx.beginPath();
       ctx.arc(centerX, centerY, ripple.radius - 5, 0, Math.PI * 2);
       ctx.strokeStyle = `rgba(255, 77, 166, ${ripple.alpha * 0.5})`;
@@ -2358,7 +2322,6 @@ function initAudioVisualizer() {
       return true;
     });
     
-    // Центральный пульсирующий круг
     const pulse = (avgBass / 255) * 50;
     const pulseRadius = 30 + pulse;
     
@@ -2372,7 +2335,6 @@ function initAudioVisualizer() {
     ctx.arc(centerX, centerY, pulseRadius, 0, Math.PI * 2);
     ctx.fill();
     
-    // Частотные точки по кругу
     const pointCount = 32;
     const pointRadius = pulseRadius + 20;
     
@@ -2393,6 +2355,10 @@ function initAudioVisualizer() {
       ctx.shadowBlur = 0;
     }
   }
+  
+  // ЗАПУСК АНИМАЦИИ
+  draw();
+}
 
 function toggleVisualizerFullscreen() {
   visualizerFullscreen = !visualizerFullscreen;
@@ -2402,7 +2368,6 @@ function toggleVisualizerFullscreen() {
   const btn = document.getElementById('mini-visualizer');
   
   if (visualizerFullscreen) {
-    // Включаем полноэкранный режим
     fullscreenDiv.style.display = 'flex';
     container.style.display = 'none';
     btn.classList.add('active');
@@ -2413,7 +2378,6 @@ function toggleVisualizerFullscreen() {
       audioContext.resume();
     }
     
-    // Обновляем название
     const titleEl = document.getElementById('visualizer-track-title');
     if (titleEl && currentTrackIndex >= 0) {
       titleEl.textContent = globalTracks[currentTrackIndex]?.title || 'Track';
@@ -2422,7 +2386,6 @@ function toggleVisualizerFullscreen() {
     initAudioVisualizer();
     console.log('🌀 Visualizer Fullscreen ON');
   } else {
-    // Выключаем
     fullscreenDiv.style.display = 'none';
     container.style.display = 'block';
     btn.classList.remove('active');
@@ -2442,23 +2405,22 @@ function toggleVisualizerFullscreen() {
 
 function changeVisualizerType(type) {
   visualizerType = type;
-  particles = []; // Сброс частиц
+  ripples = [];
+  rippleTimer = 0;
+  spiralRotation = 0;
   
-  // Обновляем кнопки
   document.querySelectorAll('.visualizer-type-btn').forEach(btn => {
     btn.classList.toggle('active', btn.dataset.type === type);
   });
   
   localStorage.setItem('visualizerType', type);
   
-  // Перезапуск
   if (visualizerActive) {
     if (animationId) cancelAnimationFrame(animationId);
     initAudioVisualizer();
   }
 }
 
-// Восстановление состояния
 const savedType = localStorage.getItem('visualizerType') || 'circle';
 visualizerType = savedType;
 
@@ -2469,6 +2431,80 @@ window.addEventListener('resize', () => {
     canvas.height = window.innerHeight * 0.5;
   }
 });
+
+function playNext() {
+  console.log('⏭️ Playing next track...');
+  
+  if (globalTracks.length === 0) {
+    console.log('❌ No tracks available');
+    return;
+  }
+
+  if (window.isLoadingTrack) {
+    console.log('⏳ Track is loading, waiting...');
+    setTimeout(() => playNext(), 300);
+    return;
+  }
+
+  let nextIndex;
+
+  if (isShuffleMode) {
+    nextIndex = Math.floor(Math.random() * globalTracks.length);
+    console.log('🔀 Random mode: next =', nextIndex);
+  } else {
+    nextIndex = (currentTrackIndex + 1) % globalTracks.length;
+    console.log('🔁 Sequential mode: next =', nextIndex);
+  }
+  
+  const trackEl = document.querySelector(`.track[data-index="${nextIndex}"]`);
+  
+  if (trackEl) {
+    console.log('✅ Found track:', globalTracks[nextIndex]?.title);
+    
+    setTimeout(() => {
+      playTrack(trackEl);
+    }, 200);
+  } else {
+    console.error('❌ Track element not found for index:', nextIndex);
+  }
+}
+
+function playPrev() {
+  console.log('⏮️ Playing previous track...');
+  
+  if (globalTracks.length === 0) {
+    console.log('❌ No tracks available');
+    return;
+  }
+
+  if (window.isLoadingTrack) {
+    console.log('⏳ Track is loading, waiting...');
+    setTimeout(() => playPrev(), 300);
+    return;
+  }
+
+  let prevIndex;
+
+  if (isShuffleMode) {
+    prevIndex = Math.floor(Math.random() * globalTracks.length);
+    console.log('🔀 Random mode: prev =', prevIndex);
+  } else {
+    prevIndex = (currentTrackIndex - 1 + globalTracks.length) % globalTracks.length;
+    console.log('🔁 Sequential mode: prev =', prevIndex);
+  }
+  
+  const trackEl = document.querySelector(`.track[data-index="${prevIndex}"]`);
+  
+  if (trackEl) {
+    console.log('✅ Found track:', globalTracks[prevIndex]?.title);
+    
+    setTimeout(() => {
+      playTrack(trackEl);
+    }, 200);
+  } else {
+    console.error('❌ Track element not found for index:', prevIndex);
+  }
+}
   </script>
 <!-- Полноэкранный режим визуализатора -->
 <div id="visualizer-fullscreen" style="
