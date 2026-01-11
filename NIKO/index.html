@@ -279,6 +279,13 @@
       margin: 8px 0;
     }
 
+    .empty-state code {
+      background: rgba(255,255,255,0.05);
+      padding: 2px 6px;
+      border-radius: 4px;
+      font-size: 12px;
+    }
+
     @media (max-width:880px){
       .thumb{width:96px;height:160px}
       #mini-player{left:12px;right:12px;bottom:12px;flex-wrap:wrap}
@@ -416,27 +423,41 @@
   const getCount = k => parseInt(localStorage.getItem(k) || '0', 10);
   const setCount = (k,v) => localStorage.setItem(k, String(v));
 
-  const DEMO_TRACKS = [
-    {
-      title: "Demo Track - Add Your Own",
-      audio: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3",
-      cover: "https://via.placeholder.com/120x200/0b0b10/ff4da6?text=Demo",
-      genre: "Demo",
-      lyrics: "Это демо-трек.\n\nДобавьте свои треки через ?admin",
-      duration: "—"
-    }
-  ];
+  let globalTracks = [];
 
-  function getDraftTracks() {
-    const stored = localStorage.getItem('draftTracks');
-    if (!stored || stored === '[]') {
-      saveDraftTracks(DEMO_TRACKS);
-      return DEMO_TRACKS;
+  async function loadTracksFromJSON() {
+    try {
+      const response = await fetch('tracks.json');
+      if (response.ok) {
+        const tracks = await response.json();
+        console.log('✅ Loaded', tracks.length, 'tracks from tracks.json');
+        return tracks;
+      }
+    } catch (e) {
+      console.log('ℹ️ No tracks.json found, using localStorage');
     }
-    return JSON.parse(stored);
+    return null;
+  }
+
+  async function getDraftTracks() {
+    const jsonTracks = await loadTracksFromJSON();
+    if (jsonTracks && jsonTracks.length > 0) {
+      globalTracks = jsonTracks;
+      return jsonTracks;
+    }
+    
+    const stored = localStorage.getItem('draftTracks');
+    if (stored && stored !== '[]') {
+      globalTracks = JSON.parse(stored);
+      return globalTracks;
+    }
+    
+    globalTracks = [];
+    return [];
   }
 
   function saveDraftTracks(tracks) {
+    globalTracks = tracks;
     localStorage.setItem('draftTracks', JSON.stringify(tracks));
   }
 
@@ -500,21 +521,20 @@
   }
 
   function updateTrackDuration(src, duration) {
-    const tracks = getDraftTracks();
-    const trackIndex = tracks.findIndex(t => t.audio === src);
+    const trackIndex = globalTracks.findIndex(t => t.audio === src);
     if (trackIndex !== -1) {
       const minutes = Math.floor(duration / 60);
       const seconds = Math.floor(duration % 60);
       const formatted = `${minutes}:${seconds < 10 ? '0' : ''}${seconds}`;
       
-      tracks[trackIndex].duration = formatted;
-      saveDraftTracks(tracks);
+      globalTracks[trackIndex].duration = formatted;
+      saveDraftTracks(globalTracks);
       
       const trackEl = document.querySelector(`.track[data-src="${src}"]`);
       if (trackEl) {
         const metaEl = trackEl.querySelector('.meta');
         if (metaEl) {
-          const genre = tracks[trackIndex].genre || '';
+          const genre = globalTracks[trackIndex].genre || '';
           metaEl.textContent = `${genre} · ${formatted}`;
         }
       }
@@ -542,10 +562,9 @@
   }
 
   function loadGenresToFilter() {
-    const tracks = getDraftTracks();
     const genreSet = new Set();
     
-    tracks.forEach(track => {
+    globalTracks.forEach(track => {
       if (track.genre) {
         const genres = track.genre.split(',').map(g => g.trim()).filter(g => g);
         genres.forEach(g => genreSet.add(g));
@@ -565,9 +584,9 @@
     });
   }
 
-  function renderDraftTracks() {
+  async function renderDraftTracks() {
     const list = document.getElementById('tracksList');
-    const tracks = getDraftTracks();
+    const tracks = await getDraftTracks();
     
     list.innerHTML = '';
 
@@ -575,8 +594,21 @@
       list.innerHTML = `
         <div class="empty-state">
           <h2>Нет треков</h2>
-          <p>Добавьте треки через <strong>?admin</strong></p>
-          <p style="font-size:12px;margin-top:20px">Откройте: <code>${location.origin}${location.pathname}?admin</code></p>
+          <p>Создайте файл <code>tracks.json</code> в корне репозитория</p>
+          <p style="margin-top:16px">Или добавьте через <strong>?admin</strong> и нажмите "📦 Экспорт JSON"</p>
+          <p style="font-size:12px;margin-top:20px;color:#777">
+            Формат tracks.json:<br>
+            <code style="display:block;text-align:left;max-width:400px;margin:8px auto;padding:8px;background:#0b0b10">
+[{<br>
+&nbsp;&nbsp;"title": "Название",<br>
+&nbsp;&nbsp;"audio": "ссылка.mp3",<br>
+&nbsp;&nbsp;"cover": "обложка.jpg",<br>
+&nbsp;&nbsp;"genre": "Жанр",<br>
+&nbsp;&nbsp;"lyrics": "Текст",<br>
+&nbsp;&nbsp;"duration": "3:45"<br>
+}]
+            </code>
+          </p>
         </div>
       `;
       return;
@@ -632,13 +664,12 @@
   let wavesurfer;
   let currentTrackIndex = -1;
   let currentTrackSrc = '';
-  let tracks = [];
   let durationInterval;
   let currentEditingSrc = '';
   let playMode = localStorage.getItem('playMode') || 'sequential';
 
   const PLAY_MODES = {
-    sequential: { icon: '🔁', title: 'Sequential' },
+    sequential: { icon: '▶️', title: 'Sequential' },
     'repeat-one': { icon: '🔂', title: 'Repeat One' },
     random: { icon: '🔀', title: 'Random' }
   };
@@ -694,11 +725,18 @@
     });
 
     wavesurfer.on('finish', () => {
+      if (durationInterval) clearInterval(durationInterval);
+      
       console.log('⏭️ Track finished, mode:', playMode);
+      
       if (playMode === 'repeat-one') {
-        wavesurfer.seekTo(0);
-        wavesurfer.play();
+        console.log('🔂 Repeating current track');
+        setTimeout(() => {
+          wavesurfer.seekTo(0);
+          wavesurfer.play();
+        }, 100);
       } else {
+        console.log('⏭️ Playing next track');
         playNext();
       }
     });
@@ -707,14 +745,22 @@
   }
 
   function playTrack(index) {
-    if (tracks.length === 0) return;
+    if (globalTracks.length === 0) {
+      console.error('❌ No tracks available');
+      return;
+    }
+    
+    if (index < 0 || index >= globalTracks.length) {
+      console.error('❌ Invalid track index:', index);
+      return;
+    }
     
     currentTrackIndex = index;
     window.currentTrackIndex = index;
-    const track = tracks[index];
+    const track = globalTracks[index];
     currentTrackSrc = track.audio;
     
-    console.log('🎵 Loading:', track.title);
+    console.log('🎵 Playing track', index + 1, '/', globalTracks.length, ':', track.title);
     
     wavesurfer.load(track.audio);
     
@@ -742,27 +788,32 @@
   }
 
   function playNext() {
-    if (tracks.length === 0) return;
-    
-    let nextIndex;
-    if (playMode === 'random') {
-      nextIndex = Math.floor(Math.random() * tracks.length);
-    } else {
-      nextIndex = (currentTrackIndex + 1) % tracks.length;
+    if (globalTracks.length === 0) {
+      console.error('❌ No tracks to play');
+      return;
     }
     
-    console.log('⏭️ Next track:', nextIndex, '/', tracks.length);
+    let nextIndex;
+    
+    if (playMode === 'random') {
+      nextIndex = Math.floor(Math.random() * globalTracks.length);
+      console.log('🔀 Random next:', nextIndex);
+    } else {
+      nextIndex = (currentTrackIndex + 1) % globalTracks.length;
+      console.log('▶️ Sequential next:', nextIndex);
+    }
+    
     playTrack(nextIndex);
   }
 
   function playPrev() {
-    if (tracks.length === 0) return;
+    if (globalTracks.length === 0) return;
     
     let prevIndex;
     if (playMode === 'random') {
-      prevIndex = Math.floor(Math.random() * tracks.length);
+      prevIndex = Math.floor(Math.random() * globalTracks.length);
     } else {
-      prevIndex = (currentTrackIndex - 1 + tracks.length) % tracks.length;
+      prevIndex = (currentTrackIndex - 1 + globalTracks.length) % globalTracks.length;
     }
     
     playTrack(prevIndex);
@@ -879,8 +930,6 @@
     editor.style.display = 'block';
     editActions.classList.add('active');
     viewHeader.style.display = 'none';
-    
-    console.log('✏️ Edit mode enabled');
   }
 
   function exitEditMode(save = false) {
@@ -891,15 +940,14 @@
     
     if (save && currentEditingSrc) {
       const newLyrics = editor.value;
-      const tracks = getDraftTracks();
-      const trackIndex = tracks.findIndex(t => t.audio === currentEditingSrc);
+      const trackIndex = globalTracks.findIndex(t => t.audio === currentEditingSrc);
       
       if (trackIndex !== -1) {
-        tracks[trackIndex].lyrics = newLyrics;
-        saveDraftTracks(tracks);
+        globalTracks[trackIndex].lyrics = newLyrics;
+        saveDraftTracks(globalTracks);
         viewDiv.textContent = newLyrics;
         renderDraftTracks();
-        console.log('💾 Lyrics saved for', currentEditingSrc);
+        console.log('💾 Lyrics saved');
       }
     }
     
@@ -909,13 +957,12 @@
     viewHeader.style.display = 'flex';
   }
 
-  document.addEventListener('DOMContentLoaded', () => {
+  document.addEventListener('DOMContentLoaded', async () => {
     console.log('🚀 Initializing...');
     
-    tracks = getDraftTracks();
+    await renderDraftTracks();
     initWavesurfer();
     initEmojiSystem();
-    renderDraftTracks();
     updatePlayModeButton();
 
     if (isAdmin) {
@@ -989,8 +1036,8 @@
     document.getElementById('mini-volume').oninput = (e) => wavesurfer?.setVolume(parseFloat(e.target.value));
 
     document.getElementById('mini-open-text').onclick = () => {
-      if (currentTrackIndex >= 0) {
-        const track = tracks[currentTrackIndex];
+      if (currentTrackIndex >= 0 && currentTrackIndex < globalTracks.length) {
+        const track = globalTracks[currentTrackIndex];
         currentEditingSrc = track.audio;
         document.getElementById('side-title').textContent = track.title;
         document.getElementById('side-content').textContent = track.lyrics || '(No text)';
@@ -1000,20 +1047,20 @@
     };
 
     document.getElementById('mini-like').onclick = () => {
-      if (currentTrackIndex >= 0) {
-        window.toggleLike(tracks[currentTrackIndex].audio);
+      if (currentTrackIndex >= 0 && currentTrackIndex < globalTracks.length) {
+        window.toggleLike(globalTracks[currentTrackIndex].audio);
       }
     };
 
     document.getElementById('mini-dislike').onclick = () => {
-      if (currentTrackIndex >= 0) {
-        window.toggleDislike(tracks[currentTrackIndex].audio);
+      if (currentTrackIndex >= 0 && currentTrackIndex < globalTracks.length) {
+        window.toggleDislike(globalTracks[currentTrackIndex].audio);
       }
     };
 
     document.getElementById('mini-comment').onclick = () => {
-      if (currentTrackIndex >= 0) {
-        const track = tracks[currentTrackIndex];
+      if (currentTrackIndex >= 0 && currentTrackIndex < globalTracks.length) {
+        const track = globalTracks[currentTrackIndex];
         currentTrackForComments = track.audio;
         document.getElementById('comments-title').textContent = `Comments: ${track.title}`;
         loadComments(track.audio);
@@ -1042,21 +1089,12 @@
         const original = btn.textContent;
         btn.textContent = '✅ Copied!';
         setTimeout(() => btn.textContent = original, 2000);
-        console.log('📋 Text copied');
       });
     };
 
-    document.getElementById('edit-text').onclick = () => {
-      enterEditMode();
-    };
-
-    document.getElementById('edit-save').onclick = () => {
-      exitEditMode(true);
-    };
-
-    document.getElementById('edit-cancel').onclick = () => {
-      exitEditMode(false);
-    };
+    document.getElementById('edit-text').onclick = () => enterEditMode();
+    document.getElementById('edit-save').onclick = () => exitEditMode(true);
+    document.getElementById('edit-cancel').onclick = () => exitEditMode(false);
 
     document.getElementById('side-close').onclick = () => {
       exitEditMode(false);
@@ -1076,7 +1114,7 @@
     document.getElementById('addTrackBtn')?.addEventListener('click', () => modal.classList.add('open'));
     document.getElementById('add-cancel').onclick = () => modal.classList.remove('open');
     
-    document.getElementById('add-save').onclick = () => {
+    document.getElementById('add-save').onclick = async () => {
       const title = document.getElementById('t-title').value.trim();
       const audio = document.getElementById('t-audio').value.trim();
       const cover = document.getElementById('t-cover').value.trim();
@@ -1097,9 +1135,8 @@
         duration: '—' 
       };
       
-      tracks = getDraftTracks();
-      tracks.push(track);
-      saveDraftTracks(tracks);
+      globalTracks.push(track);
+      saveDraftTracks(globalTracks);
 
       document.getElementById('t-title').value = '';
       document.getElementById('t-audio').value = '';
@@ -1108,18 +1145,23 @@
       document.getElementById('t-lyrics').value = '';
 
       modal.classList.remove('open');
-      renderDraftTracks();
+      await renderDraftTracks();
       console.log('✅ Track added');
     };
 
     document.getElementById('exportJsonBtn')?.addEventListener('click', () => {
-      const t = getDraftTracks();
-      if (!t.length) return alert('Нет треков');
-      const blob = new Blob([JSON.stringify(t, null, 2)], { type: 'application/json' });
+      if (globalTracks.length === 0) {
+        alert('Нет треков для экспорта');
+        return;
+      }
+      const blob = new Blob([JSON.stringify(globalTracks, null, 2)], { type: 'application/json' });
       const a = document.createElement('a');
       a.href = URL.createObjectURL(blob);
       a.download = 'tracks.json';
       a.click();
+      
+      console.log('📦 Exported', globalTracks.length, 'tracks');
+      alert(`✅ Экспортировано ${globalTracks.length} треков!\n\nЗагрузите файл tracks.json в корень вашего GitHub репозитория, чтобы все могли видеть треки.`);
     });
 
     document.getElementById('siteSearch').addEventListener('input', (e) => {
