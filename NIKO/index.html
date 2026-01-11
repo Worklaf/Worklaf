@@ -2070,12 +2070,12 @@ document.querySelectorAll('.visualizer-type-btn').forEach(btn => {
   // ========================================
 // ========================================
 // ========================================
-// 🎨 ВИЗУАЛИЗАТОРЫ НОВОГО ПОКОЛЕНИЯ (НЕОН)
+// 🎭 MODERN NEON VISUALIZERS
 // ========================================
 
 let visualizerActive = false;
 let visualizerFullscreen = false;
-let visualizerType = 'orb';
+let visualizerType = 'circle';
 let audioContext = null;
 let analyser = null;
 let dataArray = null;
@@ -2083,18 +2083,18 @@ let animationId = null;
 let rotation = 0;
 
 const neonPalette = {
-  main: '#EC4899', // Pink/Magenta
-  accent: '#06B6D4', // Cyan
-  base: '#3B82F6', // Blue
-  highlight: '#FFFFFF'
+  pink: '#EC4899',
+  cyan: '#06B6D4',
+  blue: '#3B82F6',
+  white: '#FFFFFF'
 };
 
 function initAudioVisualizer() {
   const canvas = document.getElementById('audio-visualizer');
   if (!canvas) return;
-  
   const ctx = canvas.getContext('2d');
   
+  // Адаптивный размер
   canvas.width = Math.min(window.innerWidth * 0.9, 900);
   canvas.height = Math.min(window.innerHeight * 0.5, 600);
   
@@ -2102,8 +2102,7 @@ function initAudioVisualizer() {
     audioContext = new (window.AudioContext || window.webkitAudioContext)();
     analyser = audioContext.createAnalyser();
     analyser.fftSize = 1024;
-    analyser.smoothingTimeConstant = 0.85;
-    
+    analyser.smoothingTimeConstant = 0.8;
     const bufferLength = analyser.frequencyBinCount;
     dataArray = new Uint8Array(bufferLength);
     
@@ -2113,389 +2112,159 @@ function initAudioVisualizer() {
         const source = audioContext.createMediaElementSource(mediaElement);
         source.connect(analyser);
         analyser.connect(audioContext.destination);
-      } catch (e) { console.log('⚠️ Audio connected'); }
+      } catch (e) { console.log('⚠️ Audio link ready'); }
     }
   }
   
   function draw() {
     if (!visualizerActive) return;
-    
     animationId = requestAnimationFrame(draw);
     analyser.getByteFrequencyData(dataArray);
     
-    ctx.fillStyle = 'rgba(10, 10, 15, 0.15)';
+    // Эффект шлейфа (motion blur)
+    ctx.fillStyle = 'rgba(10, 10, 15, 0.2)';
     ctx.fillRect(0, 0, canvas.width, canvas.height);
     
     const centerX = canvas.width / 2;
     const centerY = canvas.height / 2;
     
     switch (visualizerType) {
-      case 'orb':
-        drawNeonOrb(ctx, centerX, centerY, canvas);
+      case 'circle':
+        drawModernCircle(ctx, centerX, centerY, canvas);
         break;
       case '3d_wave':
         draw3DWave(ctx, centerX, centerY, canvas);
         break;
-      case 'plasma':
-        drawPlasmaField(ctx, centerX, centerY);
+      case 'neural':
+        drawNeuralPulse(ctx, centerX, centerY, canvas);
         break;
-      case 'cubes':
-        drawCubeGrid(ctx, centerX, centerY, canvas);
+      case 'tunnel':
+        drawCyberTunnel(ctx, centerX, centerY, canvas);
         break;
     }
-  }
-  
-  // 🌀 ORB (Новый - Толстый круговой эквалайзер)
-  function drawNeonOrb(ctx, centerX, centerY, canvas) {
-    const bars = 60;
-    const angleStep = (Math.PI * 2) / bars;
-    const baseRadius = Math.min(canvas.width, canvas.height) * 0.2;
-    
-    const avgAmp = dataArray.slice(0, 10).reduce((a, b) => a + b, 0) / 10;
-    const pulse = (avgAmp / 255) * 40;
-    
-    // Пульсирующий центр
-    ctx.beginPath();
-    ctx.arc(centerX, centerY, baseRadius * 0.1 + pulse * 0.3, 0, Math.PI * 2);
-    ctx.fillStyle = `rgba(255, 255, 255, 0.1)`;
-    ctx.shadowBlur = 40;
-    ctx.shadowColor = neonPalette.main;
-    ctx.fill();
-    ctx.shadowBlur = 0;
-
-    for (let i = 0; i < bars; i++) {
-      const value = dataArray[i] || 0;
-      const normalizedValue = value / 255;
-      
-      // Растягиваем радиус и высоту
-      const radius = baseRadius + normalizedValue * 80;
-      const barThickness = 4 + normalizedValue * 12; 
-      
-      const angle = i * angleStep + rotation * 10;
-      
-      // Градиент из 3 цветов
-      const gradient = ctx.createLinearGradient(
-        centerX + Math.cos(angle) * baseRadius, centerY + Math.sin(angle) * baseRadius,
-        centerX + Math.cos(angle) * radius, centerY + Math.sin(angle) * radius
-      );
-      gradient.addColorStop(0, neonPalette.accent);
-      gradient.addColorStop(0.5, neonPalette.main);
-      gradient.addColorStop(1, neonPalette.base);
-      
-      ctx.beginPath();
-      ctx.arc(centerX, centerY, radius, angle - (barThickness / radius / 2), angle + (barThickness / radius / 2));
-      ctx.lineWidth = barThickness;
-      ctx.strokeStyle = gradient;
-      ctx.lineCap = 'round';
-      ctx.shadowBlur = 15;
-      ctx.shadowColor = neonPalette.main;
-      ctx.stroke();
-    }
-    
-    ctx.shadowBlur = 0;
     rotation += 0.005;
   }
-  
-  // 🌊 3D WAVE (Стилизованные 3D волны, как на скриншотах)
-  function draw3DWave(ctx, centerX, centerY, canvas) {
-    const waveCount = 4;
-    const maxAmplitude = canvas.height * 0.25;
-    
-    for (let w = 0; w < waveCount; w++) {
-      const freqIndex = Math.floor((w / waveCount) * dataArray.length);
-      const value = dataArray[freqIndex] || 0;
-      const normalizedValue = value / 255;
-      
-      const waveColor = w % 2 === 0 ? neonPalette.accent : neonPalette.main;
-      
-      // 3D Эффект - Смещение и толщина
-      const depthOffset = normalizedValue * 40;
-      const waveAmplitude = maxAmplitude * (0.2 + normalizedValue * 0.8);
-      
-      ctx.beginPath();
-      
-      for (let x = 0; x <= canvas.width; x += 5) {
-        const t = x / canvas.width;
-        // Синусоидальная волна с пульсацией
-        const y = centerY + Math.sin(t * Math.PI * 4 + rotation * 5 + w) * waveAmplitude * (0.8 + normalizedValue * 1.2);
-        
-        ctx.lineTo(x + depthOffset * 0.5, y + depthOffset); // Смещение вправо-вниз
-      }
-      
-      ctx.lineWidth = 4 + normalizedValue * 6;
-      ctx.strokeStyle = waveColor;
-      ctx.shadowBlur = 20;
-      ctx.shadowColor = waveColor;
-      ctx.stroke();
-      
-      // Вторая линия для объема
-      ctx.beginPath();
-      for (let x = 0; x <= canvas.width; x += 5) {
-        const t = x / canvas.width;
-        const y = centerY + Math.sin(t * Math.PI * 4 + rotation * 5 + w) * waveAmplitude * (0.8 + normalizedValue * 1.2) - 5;
-        ctx.lineTo(x - depthOffset * 0.5, y - depthOffset); // Смещение влево-вверх
-      }
-      ctx.lineWidth = 2;
-      ctx.strokeStyle = 'rgba(255, 255, 255, 0.2)';
-      ctx.stroke();
-    }
-    
-    ctx.shadowBlur = 0;
-    rotation += 0.008;
-  }
 
-  // ⚡ PLASMA FIELD (Частицы, летящие из центра)
-  function drawPlasmaField(ctx, centerX, centerY) {
-    const particleCount = 150;
-    const avgEnergy = dataArray.slice(0, 30).reduce((a, b) => a + b, 0) / 30;
-    const speedFactor = 0.5 + (avgEnergy / 255) * 2;
+  // 1. ⭕ MODERN CIRCLE (Толстые неоновые бары)
+  function drawModernCircle(ctx, centerX, centerY, canvas) {
+    const bars = 64;
+    const radius = Math.min(canvas.width, canvas.height) * 0.22;
+    const angleStep = (Math.PI * 2) / bars;
+    
+    const avg = dataArray.slice(0, 10).reduce((a, b) => a + b, 0) / 10;
+    const pulse = (avg / 255) * 30;
 
-    if (particles.length < particleCount) {
-        for(let i=0; i < particleCount; i++) {
-             particles.push({
-                angle: Math.random() * Math.PI * 2,
-                distance: Math.random() * 10,
-                speed: Math.random() * 0.5 + 0.5,
-                size: Math.random() * 3 + 1,
-                color: neonPalette.accent
-            });
-        }
-    }
-    
-    const baseHue = 280; // Фиолетовый
-    
-    particles.forEach(p => {
-      p.distance += p.speed * speedFactor;
-      
-      if (p.distance > Math.min(canvas.width, canvas.height) / 2) {
-        p.distance = 0; // Сброс
-        p.speed = Math.random() * 0.5 + 0.5;
-        p.angle = Math.random() * Math.PI * 2;
-      }
-      
-      const x = centerX + Math.cos(p.angle) * p.distance;
-      const y = centerY + Math.sin(p.angle) * p.distance;
-      
-      const freqIndex = Math.floor(p.angle / (Math.PI * 2) * dataArray.length);
-      const energy = (dataArray[freqIndex] || 0) / 255;
-      
-      const size = p.size * (1 + energy * 2);
-      const hue = (baseHue + energy * 80) % 360;
-      
-      ctx.fillStyle = `hsla(${hue}, 100%, 80%, ${0.5 + energy * 0.5})`;
-      ctx.shadowBlur = 10 + energy * 20;
-      ctx.shadowColor = `hsla(${hue}, 100%, 90%, 1)`;
-      
-      ctx.beginPath();
-      ctx.arc(x, y, size, 0, Math.PI * 2);
-      ctx.fill();
-    });
-    
-    ctx.shadowBlur = 0;
-    
-    // Центральный пульс
+    // Внутреннее свечение
+    const glow = ctx.createRadialGradient(centerX, centerY, 0, centerX, centerY, radius + pulse);
+    glow.addColorStop(0, 'rgba(6, 182, 212, 0.1)');
+    glow.addColorStop(1, 'rgba(0, 0, 0, 0)');
+    ctx.fillStyle = glow;
     ctx.beginPath();
-    ctx.arc(centerX, centerY, 10 + avgEnergy / 255 * 50, 0, Math.PI * 2);
-    ctx.strokeStyle = `rgba(255, 255, 255, ${avgEnergy * 0.1})`;
-    ctx.lineWidth = 3;
-    ctx.stroke();
+    ctx.arc(centerX, centerY, radius + pulse, 0, Math.PI * 2);
+    ctx.fill();
+
+    for (let i = 0; i < bars; i++) {
+      const val = dataArray[i] || 0;
+      const norm = val / 255;
+      const h = norm * 100;
+      const angle = i * angleStep + rotation;
+      
+      const x1 = centerX + Math.cos(angle) * radius;
+      const y1 = centerY + Math.sin(angle) * radius;
+      const x2 = centerX + Math.cos(angle) * (radius + h);
+      const y2 = centerY + Math.sin(angle) * (radius + h);
+      
+      ctx.beginPath();
+      ctx.strokeStyle = i % 2 === 0 ? neonPalette.cyan : neonPalette.pink;
+      ctx.lineWidth = 6;
+      ctx.lineCap = 'round';
+      ctx.shadowBlur = 15;
+      ctx.shadowColor = ctx.strokeStyle;
+      ctx.moveTo(x1, y1);
+      ctx.lineTo(x2, y2);
+      ctx.stroke();
+    }
+    ctx.shadowBlur = 0;
   }
-  
-  // 🧊 CUBES (Простая 3D сетка с искажением)
-  function drawCubeGrid(ctx, centerX, centerY, canvas) {
-    const gridSize = 30;
-    const depth = 200;
-    const baseScale = Math.min(canvas.width, canvas.height) * 0.3;
+
+  // 2. 🌊 3D WAVE (Твой любимый стиль)
+  function draw3DWave(ctx, centerX, centerY, canvas) {
+    const waveCount = 5;
+    for (let w = 0; w < waveCount; w++) {
+      const norm = (dataArray[w * 10] || 0) / 255;
+      ctx.beginPath();
+      ctx.strokeStyle = w % 2 === 0 ? neonPalette.cyan : neonPalette.pink;
+      ctx.lineWidth = 3 + norm * 5;
+      ctx.shadowBlur = 10 + norm * 15;
+      ctx.shadowColor = ctx.strokeStyle;
+      
+      const offset = norm * 50;
+      for (let x = 0; x <= canvas.width; x += 10) {
+        const t = x / canvas.width;
+        const y = centerY + Math.sin(t * Math.PI * 3 + rotation * 5 + w) * (40 + norm * 80);
+        ctx.lineTo(x + offset, y + offset);
+      }
+      ctx.stroke();
+    }
+    ctx.shadowBlur = 0;
+  }
+
+  // 3. 🧠 NEURAL PULSE (AI / Технологичный стиль)
+  function drawNeuralPulse(ctx, centerX, centerY, canvas) {
+    const points = 20;
+    const norm = (dataArray[5] || 0) / 255;
     
-    for (let x = -gridSize * 6; x <= gridSize * 6; x += gridSize) {
-      for (let y = -gridSize * 4; y <= gridSize * 4; y += gridSize) {
-        
-        const freqIndex = Math.floor((x + centerX) / canvas.width * dataArray.length);
-        const value = (dataArray[freqIndex] || 0) / 255;
-        
-        const scale = 1 + (value * 0.5);
-        
-        const finalX = centerX + x * scale;
-        const finalY = centerY + y * scale;
-        
-        // Глубина (чем дальше, тем меньше и темнее)
-        const z_dist = Math.sqrt(x*x + y*y) / baseScale;
-        const alpha = Math.max(0.1, 1 - z_dist);
-        const cubeHeight = 10 + value * 50;
-        
-        // Верхняя грань (более яркая)
-        ctx.fillStyle = `rgba(255, 255, 255, ${alpha * 0.4})`;
-        ctx.beginPath();
-        ctx.moveTo(finalX, finalY);
-        ctx.lineTo(finalX + gridSize/2 * scale, finalY - gridSize/2 * scale);
-        ctx.lineTo(finalX + gridSize/2 * scale + gridSize/2 * scale, finalY - gridSize/2 * scale);
-        ctx.lineTo(finalX + gridSize/2 * scale, finalY + gridSize/2 * scale);
-        ctx.closePath();
-        ctx.fill();
-        
-        // Вертикальная линия (реакция на басы)
-        ctx.strokeStyle = `rgba(236, 72, 153, ${alpha * value * 0.8})`;
-        ctx.lineWidth = 3;
-        ctx.beginPath();
-        ctx.moveTo(finalX + gridSize/2 * scale, finalY + gridSize/2 * scale);
-        ctx.lineTo(finalX + gridSize/2 * scale, finalY + gridSize/2 * scale - cubeHeight * scale);
-        ctx.stroke();
-        
-        // Свечение
-        ctx.shadowBlur = 10 + value * 15;
-        ctx.shadowColor = neonPalette.accent;
-        ctx.beginPath();
-        ctx.arc(finalX + gridSize/2 * scale, finalY + gridSize/2 * scale - cubeHeight * scale, 3 + value*2, 0, Math.PI * 2);
-        ctx.fillStyle = neonPalette.accent;
-        ctx.fill();
-        ctx.shadowBlur = 0;
+    ctx.shadowBlur = 15;
+    ctx.shadowColor = neonPalette.cyan;
+    
+    for (let i = 0; i < points; i++) {
+      const angle = (i / points) * Math.PI * 2 + rotation;
+      const r = 100 + Math.sin(rotation * 2 + i) * 50 + norm * 100;
+      const x = centerX + Math.cos(angle) * r;
+      const y = centerY + Math.sin(angle) * r;
+      
+      // Рисуем узлы
+      ctx.fillStyle = neonPalette.white;
+      ctx.beginPath();
+      ctx.arc(x, y, 3 + norm * 5, 0, Math.PI * 2);
+      ctx.fill();
+      
+      // Связи (Neural connections)
+      ctx.beginPath();
+      ctx.strokeStyle = `rgba(6, 182, 212, ${0.2 + norm * 0.5})`;
+      ctx.lineWidth = 1;
+      ctx.moveTo(centerX, centerY);
+      ctx.lineTo(x, y);
+      ctx.stroke();
+    }
+    ctx.shadowBlur = 0;
+  }
+
+  // 4. 🚀 CYBER TUNNEL (Эффект полета)
+  function drawCyberTunnel(ctx, centerX, centerY, canvas) {
+    const norm = (dataArray[10] || 0) / 255;
+    const count = 10;
+    
+    for (let i = 0; i < count; i++) {
+      const size = ((rotation * 100 + i * 50) % 500);
+      const alpha = 1 - (size / 500);
+      const pulseSize = size * (1 + norm * 0.5);
+      
+      ctx.beginPath();
+      ctx.strokeStyle = i % 2 === 0 ? `rgba(6, 182, 212, ${alpha})` : `rgba(236, 72, 153, ${alpha})`;
+      ctx.lineWidth = 2 + norm * 10;
+      ctx.rect(centerX - pulseSize / 2, centerY - pulseSize / 2, pulseSize, pulseSize);
+      ctx.stroke();
+      
+      // Маленькие частицы внутри
+      if (norm > 0.6) {
+        ctx.fillStyle = neonPalette.white;
+        ctx.fillRect(centerX + (Math.random()-0.5)*size, centerY + (Math.random()-0.5)*size, 2, 2);
       }
     }
   }
-  
+
   draw();
-}
-
-function toggleVisualizerFullscreen() {
-  visualizerFullscreen = !visualizerFullscreen;
-  
-  const fullscreenDiv = document.getElementById('visualizer-fullscreen');
-  const container = document.querySelector('.container');
-  const btn = document.getElementById('mini-visualizer');
-  
-  if (visualizerFullscreen) {
-    fullscreenDiv.style.display = 'flex';
-    container.style.display = 'none';
-    btn.classList.add('active');
-    
-    visualizerActive = true;
-    
-    if (audioContext && audioContext.state === 'suspended') {
-      audioContext.resume();
-    }
-    
-    const titleEl = document.getElementById('visualizer-track-title');
-    if (titleEl && currentTrackIndex >= 0) {
-      titleEl.textContent = globalTracks[currentTrackIndex]?.title || 'Track';
-    }
-    
-    initAudioVisualizer();
-  } else {
-    fullscreenDiv.style.display = 'none';
-    container.style.display = 'block';
-    btn.classList.remove('active');
-    
-    visualizerActive = false;
-    
-    if (animationId) {
-      cancelAnimationFrame(animationId);
-      animationId = null;
-    }
-  }
-  
-  localStorage.setItem('visualizerFullscreen', visualizerFullscreen);
-}
-
-function changeVisualizerType(type) {
-  visualizerType = type;
-  particles = [];
-  rotation = 0;
-  dnaRotation = 0;
-  fireParticles = [];
-  auroraWaves = [];
-  
-  document.querySelectorAll('.visualizer-type-btn').forEach(btn => {
-    btn.classList.toggle('active', btn.dataset.type === type);
-  });
-  
-  localStorage.setItem('visualizerType', type);
-  
-  if (visualizerActive) {
-    if (animationId) cancelAnimationFrame(animationId);
-    initAudioVisualizer();
-  }
-}
-
-const savedType = localStorage.getItem('visualizerType') || 'orb';
-visualizerType = savedType;
-
-window.addEventListener('resize', () => {
-  if (visualizerFullscreen) {
-    initAudioVisualizer();
-  }
-});
-	  function playNext() {
-  console.log('⏭️ Playing next track...');
-  
-  if (globalTracks.length === 0) {
-    console.log('❌ No tracks available');
-    return;
-  }
-
-  if (window.isLoadingTrack) {
-    console.log('⏳ Track is loading, waiting...');
-    setTimeout(() => playNext(), 300);
-    return;
-  }
-
-  let nextIndex;
-
-  if (isShuffleMode) {
-    nextIndex = Math.floor(Math.random() * globalTracks.length);
-    console.log('🔀 Random mode: next =', nextIndex);
-  } else {
-    nextIndex = (currentTrackIndex + 1) % globalTracks.length;
-    console.log('🔁 Sequential mode: next =', nextIndex);
-  }
-  
-  const trackEl = document.querySelector(`.track[data-index="${nextIndex}"]`);
-  
-  if (trackEl) {
-    console.log('✅ Found track:', globalTracks[nextIndex]?.title);
-    
-    setTimeout(() => {
-      playTrack(trackEl);
-    }, 200);
-  } else {
-    console.error('❌ Track element not found for index:', nextIndex);
-  }
-}
-
-function playPrev() {
-  console.log('⏮️ Playing previous track...');
-  
-  if (globalTracks.length === 0) {
-    console.log('❌ No tracks available');
-    return;
-  }
-
-  if (window.isLoadingTrack) {
-    console.log('⏳ Track is loading, waiting...');
-    setTimeout(() => playPrev(), 300);
-    return;
-  }
-
-  let prevIndex;
-
-  if (isShuffleMode) {
-    prevIndex = Math.floor(Math.random() * globalTracks.length);
-    console.log('🔀 Random mode: prev =', prevIndex);
-  } else {
-    prevIndex = (currentTrackIndex - 1 + globalTracks.length) % globalTracks.length;
-    console.log('🔁 Sequential mode: prev =', prevIndex);
-  }
-  
-  const trackEl = document.querySelector(`.track[data-index="${prevIndex}"]`);
-  
-  if (trackEl) {
-    console.log('✅ Found track:', globalTracks[prevIndex]?.title);
-    
-    setTimeout(() => {
-      playTrack(trackEl);
-    }, 200);
-  } else {
-    console.error('❌ Track element not found for index:', prevIndex);
-  }
 }
   </script>
 <div id="visualizer-fullscreen" style="
@@ -2523,16 +2292,16 @@ function playPrev() {
     z-index: 50;
   ">
     <div style="
-      display: flex;
-      gap: 10px;
-      padding: 0 10px;
-      min-width: min-content;
-    ">
-      <button class="visualizer-type-btn active" data-type="orb">🌀 Orb</button>
-      <button class="visualizer-type-btn" data-type="3d_wave">🌊 3D Wave</button>
-      <button class="visualizer-type-btn" data-type="plasma">⚡ Plasma</button>
-      <button class="visualizer-type-btn" data-type="cubes">🧊 Cubes</button>
-    </div>
+    display: flex;
+    gap: 10px;
+    padding: 0 10px;
+    min-width: min-content;
+">
+    <button class="visualizer-type-btn active" data-type="circle">⭕ Circle</button>
+    <button class="visualizer-type-btn" data-type="3d_wave">🌊 3D Wave</button>
+    <button class="visualizer-type-btn" data-type="neural">🧠 Neural</button>
+    <button class="visualizer-type-btn" data-type="tunnel">🚀 Tunnel</button>
+</div>
   </div>
 
   <!-- Контейнер для canvas и названия -->
