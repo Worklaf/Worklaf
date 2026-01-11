@@ -2147,7 +2147,36 @@ let raindrops = [];
 let time = 0;
 let touchStartX = 0;
 let touchEndX = 0;
-
+// Палитры
+const neonColors = {
+  cyan: '#00E5FF',
+  pink: '#FF00E5',
+  purple: '#9D00FF',
+  orange: '#FF9D00',
+  yellow: '#FFFF00',
+  green: '#00FF9D',
+  blue: '#0066FF'
+};
+	  if (!audioContext) {
+  audioContext = new (window.AudioContext || window.webkitAudioContext)();
+  analyser = audioContext.createAnalyser();
+  analyser.fftSize = 1024;
+  analyser.smoothingTimeConstant = 0.85;
+  
+  const bufferLength = analyser.frequencyBinCount;
+  dataArray = new Uint8Array(bufferLength);
+  
+  if (wavesurfer && wavesurfer.getMediaElement) {
+    try {
+      const mediaElement = wavesurfer.getMediaElement();
+      const source = audioContext.createMediaElementSource(mediaElement);
+      source.connect(analyser);
+      analyser.connect(audioContext.destination);
+    } catch (e) {
+      console.log('⚠️ Audio already connected');
+    }
+  }
+}
 // Создаем индикаторы точек для визуализаторов
 function createDotIndicators() {
   const dotsContainer = document.getElementById('visualizer-dots');
@@ -2330,37 +2359,54 @@ function initAudioVisualizer() {
   initVisualizerParticles(canvas);
   
   function draw() {
-    if (!visualizerActive) return;
-    
-    time += 0.01;
-    rotation += 0.005;
-    animationId = requestAnimationFrame(draw);
-    analyser.getByteFrequencyData(dataArray);
-    
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
-    
-    const centerX = canvas.width / 2;
-    const centerY = canvas.height / 2;
-    
-    switch (visualizerType) {
-      // Существующие визуализаторы...
-      case 'aurora':
-        drawAurora(ctx, centerX, centerY);
-        break;
-      case 'bubbles':
-        drawBubbles(ctx, centerX, centerY);
-        break;
-      case 'dna':
-        drawMusicDNA(ctx, centerX, centerY);
-        break;
-      case 'laser':
-        drawLaserShow(ctx, centerX, centerY);
-        break;
-      case 'rain':
-        drawParticleRain(ctx, centerX, centerY);
-        break;
-    }
+  if (!visualizerActive) return;
+  
+  time += 0.01;
+  rotation += 0.005;
+  animationId = requestAnimationFrame(draw);
+  analyser.getByteFrequencyData(dataArray);
+  
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+  
+  const centerX = canvas.width / 2;
+  const centerY = canvas.height / 2;
+  
+  switch (visualizerType) {
+    case 'circular':
+      drawCircularSpectrum(ctx, centerX, centerY);
+      break;
+    case 'radial':
+      drawRadialSpectrum(ctx, centerX, centerY);
+      break;
+    case 'neon':
+      drawNeonCircle(ctx, centerX, centerY);
+      break;
+    case 'golden':
+      drawGoldenWave(ctx, centerX, centerY);
+      break;
+    case 'nebula':
+      drawNebula(ctx, centerX, centerY);
+      break;
+    case 'aurora':
+      drawAurora(ctx, centerX, centerY);
+      break;
+    case 'bubbles':
+      drawBubbles(ctx, centerX, centerY);
+      break;
+    case 'dna':
+      drawMusicDNA(ctx, centerX, centerY);
+      break;
+    case 'laser':
+      drawLaserShow(ctx, centerX, centerY);
+      break;
+    case 'rain':
+      drawParticleRain(ctx, centerX, centerY);
+      break;
+    case 'grid':
+      drawCyberGrid(ctx, centerX, centerY);
+      break;
   }
+}
   
   // НОВЫЕ ВИЗУАЛИЗАТОРЫ:
   // ⭕ 1. CIRCULAR SPECTRUM
@@ -3189,7 +3235,122 @@ function initAudioVisualizer() {
     
     ctx.shadowBlur = 0;
   }
+  // 🌐 CYBER GRID 
+function drawCyberGrid(ctx, centerX, centerY) {
+  // Ретро-кибер фон
+  const bgGradient = ctx.createLinearGradient(0, 0, 0, canvas.height);
+  bgGradient.addColorStop(0, '#000428');
+  bgGradient.addColorStop(1, '#004e92');
   
+  ctx.fillStyle = bgGradient;
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
+  
+  // Анализируем музыку для эффектов
+  const bassAvg = dataArray.slice(0, 10).reduce((a, b) => a + b, 0) / 10 / 255;
+  const midAvg = dataArray.slice(20, 40).reduce((a, b) => a + b, 0) / 20 / 255;
+  
+  // Горизонт (линия)
+  ctx.beginPath();
+  ctx.moveTo(0, centerY);
+  ctx.lineTo(canvas.width, centerY);
+  ctx.strokeStyle = 'rgba(0, 255, 255, 0.5)';
+  ctx.lineWidth = 2;
+  ctx.stroke();
+  
+  // Обновляем z-координаты сетки на основе музыки
+  gridPoints.forEach(point => {
+    const freqIndex = Math.floor((point.x + point.y) * 50) % dataArray.length;
+    const targetZ = dataArray[freqIndex] / 255 * 0.5;
+    
+    // Плавно изменяем Z
+    point.z += (targetZ - point.z) * 0.1;
+  });
+  
+  // Рисуем сетку с перспективой
+  ctx.strokeStyle = 'rgba(0, 255, 255, 0.5)';
+  ctx.lineWidth = 1;
+  
+  // Вертикальные линии
+  for (let x = 0; x <= 20; x++) {
+    ctx.beginPath();
+    
+    for (let y = 0; y <= 20; y++) {
+      const point = gridPoints.find(p => Math.abs(p.x - x/20) < 0.001 && Math.abs(p.y - y/20) < 0.001);
+      
+      if (!point) continue;
+      
+      // Перспективное искажение
+      const perspX = centerX + (point.x - 0.5) * canvas.width * (0.5 + point.z);
+      const perspY = centerY + (point.y - 0.5) * canvas.height * (0.3 + point.z);
+      
+      if (y === 0) {
+        ctx.moveTo(perspX, perspY);
+      } else {
+        ctx.lineTo(perspX, perspY);
+      }
+    }
+    
+    ctx.stroke();
+  }
+  
+  // Горизонтальные линии
+  for (let y = 0; y <= 20; y++) {
+    ctx.beginPath();
+    
+    for (let x = 0; x <= 20; x++) {
+      const point = gridPoints.find(p => Math.abs(p.x - x/20) < 0.001 && Math.abs(p.y - y/20) < 0.001);
+      
+      if (!point) continue;
+      
+      // Перспективное искажение
+      const perspX = centerX + (point.x - 0.5) * canvas.width * (0.5 + point.z);
+      const perspY = centerY + (point.y - 0.5) * canvas.height * (0.3 + point.z);
+      
+      if (x === 0) {
+        ctx.moveTo(perspX, perspY);
+      } else {
+        ctx.lineTo(perspX, perspY);
+      }
+    }
+    
+    ctx.stroke();
+  }
+  
+  // Солнце/луна на горизонте
+  const sunRadius = 30 + bassAvg * 20;
+  const sunGradient = ctx.createRadialGradient(
+    centerX, centerY - 30, 0,
+    centerX, centerY - 30, sunRadius
+  );
+  sunGradient.addColorStop(0, 'rgba(255, 0, 128, 1)');
+  sunGradient.addColorStop(0.7, 'rgba(255, 0, 128, 0.5)');
+  sunGradient.addColorStop(1, 'rgba(255, 0, 128, 0)');
+  
+  ctx.beginPath();
+  ctx.arc(centerX, centerY - 30, sunRadius, 0, Math.PI * 2);
+  ctx.fillStyle = sunGradient;
+  ctx.shadowBlur = 20;
+  ctx.shadowColor = 'rgba(255, 0, 128, 0.8)';
+  ctx.fill();
+  
+  // Добавляем эквалайзер внизу
+  const barCount = 20;
+  const barWidth = canvas.width / barCount;
+  const barMaxHeight = canvas.height * 0.2;
+  
+  for (let i = 0; i < barCount; i++) {
+    const value = dataArray[i * 2] / 255;
+    const barHeight = value * barMaxHeight;
+    
+    // Неоновая полоска эквалайзера
+    ctx.fillStyle = `rgba(0, 255, 255, ${value * 0.8})`;
+    ctx.shadowBlur = 10;
+    ctx.shadowColor = 'rgba(0, 255, 255, 0.8)';
+    ctx.fillRect(i * barWidth, canvas.height - barHeight, barWidth - 2, barHeight);
+  }
+  
+  ctx.shadowBlur = 0;
+}
   draw();
 }
 
@@ -3266,6 +3427,11 @@ document.addEventListener('DOMContentLoaded', function() {
   // Загружаем сохраненный тип визуализатора
   const savedType = localStorage.getItem('visualizerType') || 'circular';
   visualizerType = savedType;
+  
+  // Добавляем обработчик для кнопки закрытия
+  document.getElementById('visualizer-close')?.addEventListener('click', () => {
+    toggleVisualizerFullscreen();
+  });
   
   // Обработка изменения размера окна
   window.addEventListener('resize', () => {
@@ -3376,6 +3542,21 @@ function playPrev() {
     ⭕ Circular Spectrum
   </div>
   
+  <!-- Кнопка закрыть -->
+  <button id="visualizer-close" style="
+    position: absolute;
+    top: 20px;
+    right: 20px;
+    background: rgba(255,255,255,0.1);
+    border: 1px solid rgba(255,255,255,0.2);
+    color: #fff;
+    padding: 12px 20px;
+    border-radius: 12px;
+    cursor: pointer;
+    font-size: 16px;
+    transition: all 0.2s;
+  ">✕ Close</button>
+  
   <!-- Стрелки навигации (для свайпа) -->
   <div style="
     position: absolute;
@@ -3435,6 +3616,7 @@ function playPrev() {
       text-align: center;
       padding: 15px 20px 0;
       max-width: 90%;
+      margin-top: 20px;
     " id="visualizer-track-title">Track Name</div>
   </div>
 </div>
