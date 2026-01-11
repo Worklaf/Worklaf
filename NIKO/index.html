@@ -2111,7 +2111,8 @@ document.querySelectorAll('.visualizer-type-btn').forEach(btn => {
   // ========================================
 // ========================================
 // ========================================
-// 🎭 MODERN NEON VISUALIZERS
+// ========================================
+// 🎭 MODERN NEON VISUALIZERS (ИСПРАВЛЕНО)
 // ========================================
 
 let visualizerActive = false;
@@ -2150,41 +2151,44 @@ function initAudioVisualizer() {
     if (wavesurfer && wavesurfer.getMediaElement) {
       try {
         const mediaElement = wavesurfer.getMediaElement();
-        const source = audioContext.createMediaElementSource(mediaElement);
-        source.connect(analyser);
-        analyser.connect(audioContext.destination);
+        // Проверка чтобы не создавать дубликат источника
+        if (!window.sourceNode) {
+            window.sourceNode = audioContext.createMediaElementSource(mediaElement);
+            window.sourceNode.connect(analyser);
+            analyser.connect(audioContext.destination);
+        }
       } catch (e) { console.log('⚠️ Audio link ready'); }
     }
   }
+  
   function draw() {
     if (!visualizerActive) return;
-    
-    time += 0.01;
-    rotation += 0.005;
     animationId = requestAnimationFrame(draw);
     analyser.getByteFrequencyData(dataArray);
     
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    // Эффект шлейфа (motion blur)
+    ctx.fillStyle = 'rgba(10, 10, 15, 0.2)';
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
     
     const centerX = canvas.width / 2;
     const centerY = canvas.height / 2;
     
     switch (visualizerType) {
-      case 'circular':
-        drawModernCircular(ctx, centerX, centerY);
-        break;
-      case 'radial':
-        drawRadialSpectrum(ctx, centerX, centerY);
-        break;
       case 'circle':
         drawModernCircle(ctx, centerX, centerY, canvas);
         break;
       case '3d_wave':
         draw3DWave(ctx, centerX, centerY, canvas);
         break;
+      case 'neural':
+        drawNeuralPulse(ctx, centerX, centerY); // Исправлено имя функции
+        break;
+      case 'tunnel':
+        drawCyberTunnel(ctx, centerX, centerY); // Исправлено имя функции
+        break;
     }
+    rotation += 0.005;
   }
-  
 
   // 1. ⭕ MODERN CIRCLE (Толстые неоновые бары)
   function drawModernCircle(ctx, centerX, centerY, canvas) {
@@ -2250,30 +2254,26 @@ function initAudioVisualizer() {
     ctx.shadowBlur = 0;
   }
 
-  // 2. 🧠 RADIAL SPECTRUM
-  function drawRadialSpectrum(ctx, centerX, centerY) {
+  // 3. 🧠 NEURAL PULSE (Переименовано из drawRadialSpectrum)
+  function drawNeuralPulse(ctx, centerX, centerY) {
     const outerRadius = Math.min(canvas.width, canvas.height) * 0.4;
     const innerRadius = outerRadius * 0.2;
-    const bars = 240;
-    
-    // Черный фон
-    ctx.fillStyle = '#000000';
-    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    const bars = 120; // Уменьшил количество для производительности
     
     // Центр
     ctx.beginPath();
     ctx.arc(centerX, centerY, innerRadius, 0, Math.PI * 2);
     ctx.fillStyle = '#000000';
     ctx.fill();
-    ctx.strokeStyle = 'rgba(255, 255, 255, 0.2)';
-    ctx.lineWidth = 1;
+    ctx.strokeStyle = neonPalette.blue;
+    ctx.lineWidth = 2;
     ctx.stroke();
     
     // Радиальные линии
     for (let i = 0; i < bars; i++) {
       const angle = (i / bars) * Math.PI * 2 + rotation;
       
-      const freqIndex = Math.floor((i / bars) * dataArray.length * 0.8);
+      const freqIndex = Math.floor((i / bars) * dataArray.length * 0.5);
       const value = dataArray[freqIndex] || 0;
       const lineLength = innerRadius + (value / 255) * (outerRadius - innerRadius);
       
@@ -2282,101 +2282,65 @@ function initAudioVisualizer() {
       const x2 = centerX + Math.cos(angle) * lineLength;
       const y2 = centerY + Math.sin(angle) * lineLength;
       
-      const hue = (i / bars) * 360;
-      
       ctx.beginPath();
       ctx.moveTo(x1, y1);
       ctx.lineTo(x2, y2);
-      ctx.strokeStyle = `hsl(${hue}, 100%, 50%)`;
-      ctx.lineWidth = 1.5;
+      ctx.strokeStyle = `hsl(${i * 3}, 100%, 50%)`;
+      ctx.lineWidth = 2;
       ctx.lineCap = 'round';
-      ctx.shadowBlur = 5;
-      ctx.shadowColor = `hsl(${hue}, 100%, 50%)`;
+      ctx.shadowBlur = 10;
+      ctx.shadowColor = ctx.strokeStyle;
       ctx.stroke();
     }
-    
-    // Внешний круг
-    ctx.beginPath();
-    ctx.arc(centerX, centerY, outerRadius, 0, Math.PI * 2);
-    ctx.strokeStyle = 'rgba(255, 255, 255, 0.1)';
-    ctx.lineWidth = 1;
-    ctx.stroke();
     
     ctx.shadowBlur = 0;
   }
 
-  // 4. 🚀 CYBER TUNNEL (Эффект полета)
-  function drawModernCircular(ctx, centerX, centerY) {
+  // 4. 🚀 CYBER TUNNEL (Переименовано из drawModernCircular)
+  function drawCyberTunnel(ctx, centerX, centerY) {
     const radius = Math.min(canvas.width, canvas.height) * 0.3;
-    const bars = 180;
-    const barWidth = 3;
-    
-    // Чёрный фон с градиентом
-    const bgGradient = ctx.createRadialGradient(centerX, centerY, 0, centerX, centerY, radius * 2);
-    bgGradient.addColorStop(0, 'rgba(0, 0, 0, 0.8)');
-    bgGradient.addColorStop(1, 'rgba(0, 0, 0, 0)');
-    
-    ctx.fillStyle = bgGradient;
-    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    const bars = 90;
+    const barWidth = 4;
     
     // Внутренний круг с пульсацией
     const avgBass = dataArray.slice(0, 10).reduce((a, b) => a + b, 0) / 10;
-    const pulseRadius = radius * 0.25 + (avgBass / 255) * 20;
+    const pulseRadius = radius * 0.25 + (avgBass / 255) * 30;
     
     ctx.beginPath();
     ctx.arc(centerX, centerY, pulseRadius, 0, Math.PI * 2);
-    ctx.fillStyle = 'rgba(255, 255, 255, 0.05)';
+    ctx.fillStyle = neonPalette.pink;
+    ctx.shadowBlur = 30;
+    ctx.shadowColor = neonPalette.pink;
     ctx.fill();
+    ctx.shadowBlur = 0;
     
-    // Круговые полосы спектра
+    // Круговые полосы
     for (let i = 0; i < bars; i++) {
-      const angle = (i / bars) * Math.PI * 2;
-      
-      // Анализ частот
-      const freqIndex = Math.floor(i / bars * dataArray.length * 0.8);
+      const angle = (i / bars) * Math.PI * 2 + rotation * -1; // Вращение в обратную сторону
+      const freqIndex = Math.floor(i / bars * dataArray.length * 0.5);
       const value = dataArray[freqIndex] || 0;
-      const barHeight = (value / 255) * (radius * 0.7);
-      
-      // Цветовой градиент по спектру
-      const hue = (i / bars) * 360;
+      const barHeight = (value / 255) * (radius * 0.8);
       
       const x1 = centerX + Math.cos(angle) * radius;
       const y1 = centerY + Math.sin(angle) * radius;
       const x2 = centerX + Math.cos(angle) * (radius + barHeight);
       const y2 = centerY + Math.sin(angle) * (radius + barHeight);
       
-      // Рисуем полоску спектра
       ctx.beginPath();
       ctx.moveTo(x1, y1);
       ctx.lineTo(x2, y2);
       ctx.lineWidth = barWidth;
-      ctx.lineCap = 'round';
-      ctx.strokeStyle = `hsl(${hue}, 100%, 50%)`;
-      ctx.shadowBlur = 10;
-      ctx.shadowColor = `hsl(${hue}, 100%, 50%)`;
-      ctx.stroke();
+      ctx.strokeStyle = neonPalette.cyan;
       
-      // Яркие точки на концах активных полос
-      if (value > 200) {
-        ctx.beginPath();
-        ctx.arc(x2, y2, barWidth + 1, 0, Math.PI * 2);
-        ctx.fillStyle = `hsl(${hue}, 100%, 80%)`;
-        ctx.shadowBlur = 15;
-        ctx.fill();
+      if (value > 150) {
+          ctx.strokeStyle = '#fff';
+          ctx.shadowBlur = 10;
+          ctx.shadowColor = '#fff';
       }
-    }
-    
-    // Кольца вокруг визуализатора
-    for (let ring = 0; ring < 3; ring++) {
-      const ringRadius = radius * (1 + ring * 0.1) + Math.sin(Date.now() * 0.001) * 5;
-      ctx.beginPath();
-      ctx.arc(centerX, centerY, ringRadius, 0, Math.PI * 2);
-      ctx.strokeStyle = `rgba(255, 255, 255, ${0.1 - ring * 0.03})`;
-      ctx.lineWidth = 1;
+      
       ctx.stroke();
+      ctx.shadowBlur = 0;
     }
-    
-    ctx.shadowBlur = 0;
   }
 
   draw();
@@ -2406,7 +2370,6 @@ function toggleVisualizerFullscreen() {
     }
     
     initAudioVisualizer();
-    console.log('🌀 Visualizer Fullscreen ON');
   } else {
     fullscreenDiv.style.display = 'none';
     container.style.display = 'block';
@@ -2418,8 +2381,6 @@ function toggleVisualizerFullscreen() {
       cancelAnimationFrame(animationId);
       animationId = null;
     }
-    
-    console.log('🌀 Visualizer OFF');
   }
   
   localStorage.setItem('visualizerFullscreen', visualizerFullscreen);
@@ -2427,104 +2388,77 @@ function toggleVisualizerFullscreen() {
 
 function changeVisualizerType(type) {
   visualizerType = type;
-  ripples = [];
-  rippleTimer = 0;
-  spiralRotation = 0;
   
+  // Обновляем активную кнопку
   document.querySelectorAll('.visualizer-type-btn').forEach(btn => {
     btn.classList.toggle('active', btn.dataset.type === type);
   });
   
   localStorage.setItem('visualizerType', type);
   
+  // Если визуализатор активен, перезапускаем отрисовку для смены эффекта
   if (visualizerActive) {
-    if (animationId) cancelAnimationFrame(animationId);
-    initAudioVisualizer();
+    // Не нужно перезапускать initAudioVisualizer, просто переменная type изменилась
+    // и следующий кадр draw() подхватит новый case
   }
 }
 
 const savedType = localStorage.getItem('visualizerType') || 'circle';
 visualizerType = savedType;
 
-window.addEventListener('resize', () => {
-  if (visualizerFullscreen) {
-    const canvas = document.getElementById('audio-visualizer');
-    canvas.width = window.innerWidth * 0.8;
-    canvas.height = window.innerHeight * 0.5;
-  }
+// Инициализация при загрузке страницы
+document.addEventListener('DOMContentLoaded', function() {
+    // Восстанавливаем активную кнопку
+    document.querySelectorAll('.visualizer-type-btn').forEach(btn => {
+        btn.classList.toggle('active', btn.dataset.type === visualizerType);
+        
+        // !!! ВАЖНО: Добавляем слушатель клика !!!
+        btn.addEventListener('click', function() {
+            changeVisualizerType(this.dataset.type);
+        });
+    });
+
+    window.addEventListener('resize', () => {
+      if (visualizerFullscreen) {
+        initAudioVisualizer();
+      }
+    });
 });
 
-	  function playNext() {
+// Функции плеера (оставляем как есть)
+function playNext() {
   console.log('⏭️ Playing next track...');
-  
-  if (globalTracks.length === 0) {
-    console.log('❌ No tracks available');
-    return;
-  }
-
-  if (window.isLoadingTrack) {
-    console.log('⏳ Track is loading, waiting...');
-    setTimeout(() => playNext(), 300);
-    return;
-  }
+  if (globalTracks.length === 0) return;
+  if (window.isLoadingTrack) { setTimeout(() => playNext(), 300); return; }
 
   let nextIndex;
-
   if (isShuffleMode) {
     nextIndex = Math.floor(Math.random() * globalTracks.length);
-    console.log('🔀 Random mode: next =', nextIndex);
   } else {
     nextIndex = (currentTrackIndex + 1) % globalTracks.length;
-    console.log('🔁 Sequential mode: next =', nextIndex);
   }
   
   const trackEl = document.querySelector(`.track[data-index="${nextIndex}"]`);
-  
   if (trackEl) {
-    console.log('✅ Found track:', globalTracks[nextIndex]?.title);
-    
-    setTimeout(() => {
-      playTrack(trackEl);
-    }, 200);
-  } else {
-    console.error('❌ Track element not found for index:', nextIndex);
+    setTimeout(() => { playTrack(trackEl); }, 200);
   }
 }
 
 function playPrev() {
   console.log('⏮️ Playing previous track...');
-  
-  if (globalTracks.length === 0) {
-    console.log('❌ No tracks available');
-    return;
-  }
-
-  if (window.isLoadingTrack) {
-    console.log('⏳ Track is loading, waiting...');
-    setTimeout(() => playPrev(), 300);
-    return;
-  }
+  if (globalTracks.length === 0) return;
+  if (window.isLoadingTrack) { setTimeout(() => playPrev(), 300); return; }
 
   let prevIndex;
-
   if (isShuffleMode) {
     prevIndex = Math.floor(Math.random() * globalTracks.length);
-    console.log('🔀 Random mode: prev =', prevIndex);
   } else {
     prevIndex = (currentTrackIndex - 1 + globalTracks.length) % globalTracks.length;
-    console.log('🔁 Sequential mode: prev =', prevIndex);
   }
   
   const trackEl = document.querySelector(`.track[data-index="${prevIndex}"]`);
-  
   if (trackEl) {
-    console.log('✅ Found track:', globalTracks[prevIndex]?.title);
-    
-    setTimeout(() => {
-      playTrack(trackEl);
-    }, 200);
-  } else {
-    console.error('❌ Track element not found for index:', prevIndex);
+    setTimeout(() => { playTrack(trackEl); }, 200);
   }
 }
   </script>
