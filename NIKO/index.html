@@ -514,31 +514,46 @@
   flex-shrink: 0;
 }
 
+.visualizer-type-btn {
+  background: rgba(255,255,255,0.05);
+  border: 2px solid rgba(255,255,255,0.08);
+  color: #fff;
+  padding: 10px 20px;
+  border-radius: 50px;
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 700;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  backdrop-filter: blur(20px);
+  letter-spacing: 0.5px;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
 .visualizer-type-btn:hover {
-  background: rgba(255,255,255,0.15);
+  background: rgba(255,255,255,0.12);
   transform: translateY(-2px) scale(1.05);
-  box-shadow: 0 8px 30px rgba(139, 92, 246, 0.4);
-  border-color: rgba(139, 92, 246, 0.5);
+  box-shadow: 0 8px 30px rgba(255, 107, 53, 0.4);
+  border-color: rgba(255, 107, 53, 0.5);
 }
 
 .visualizer-type-btn.active {
-  background: linear-gradient(135deg, #8B5CF6 0%, #06B6D4 100%);
-  color: #fff;
+  background: linear-gradient(135deg, #FF6B35 0%, #F7931E 50%, #FDC830 100%);
+  color: #0a0a0f;
   border-color: transparent;
-  box-shadow: 0 8px 30px rgba(139, 92, 246, 0.6), 0 0 50px rgba(6, 182, 212, 0.3);
-  animation: pulse 2s ease-in-out infinite;
+  box-shadow: 0 8px 30px rgba(255, 107, 53, 0.6), 0 0 50px rgba(253, 200, 48, 0.3);
+  animation: glow 2s ease-in-out infinite;
 }
 
-@keyframes pulse {
-  0%, 100% { box-shadow: 0 8px 30px rgba(139, 92, 246, 0.6), 0 0 50px rgba(6, 182, 212, 0.3); }
-  50% { box-shadow: 0 12px 40px rgba(139, 92, 246, 0.8), 0 0 70px rgba(6, 182, 212, 0.5); }
-}
-
-#visualizer-close:hover {
-  background: rgba(236, 72, 153, 0.2);
-  border-color: #EC4899;
-  transform: translateY(-2px);
-  box-shadow: 0 8px 30px rgba(236, 72, 153, 0.4);
+@keyframes glow {
+  0%, 100% { 
+    box-shadow: 0 8px 30px rgba(255, 107, 53, 0.6), 0 0 50px rgba(253, 200, 48, 0.3);
+    filter: brightness(1);
+  }
+  50% { 
+    box-shadow: 0 12px 40px rgba(255, 107, 53, 0.8), 0 0 70px rgba(253, 200, 48, 0.5);
+    filter: brightness(1.1);
+  }
 }
 
 /* Скрыть scrollbar */
@@ -554,13 +569,6 @@ div[style*="overflow-x: auto"]::-webkit-scrollbar {
   
   #visualizer-track-title {
     font-size: 18px !important;
-  }
-  
-  #visualizer-close {
-    padding: 8px 14px !important;
-    font-size: 14px !important;
-    top: 10px !important;
-    right: 10px !important;
   }
 }
 /* Визуализация */
@@ -2092,8 +2100,7 @@ document.querySelectorAll('.visualizer-type-btn').forEach(btn => {
   });
   // ========================================
 // ========================================
-// ========================================
-// 🎵 3D + AI ВИЗУАЛИЗАТОРЫ
+// 🎨 НОВЫЕ ВИЗУАЛИЗАТОРЫ - FIRE & OCEAN
 // ========================================
 
 let visualizerActive = false;
@@ -2104,10 +2111,9 @@ let analyser = null;
 let dataArray = null;
 let animationId = null;
 let particles = [];
-let wavePhase = 0;
-let nodes = [];
-let connections = [];
-let matrixColumns = [];
+let dnaRotation = 0;
+let fireParticles = [];
+let auroraWaves = [];
 
 function initAudioVisualizer() {
   const canvas = document.getElementById('audio-visualizer');
@@ -2139,47 +2145,30 @@ function initAudioVisualizer() {
     }
   }
   
-  // Инициализация Neural Network
-  if (visualizerType === 'neural' && nodes.length === 0) {
-    const layers = 4;
-    const nodesPerLayer = 8;
-    
-    for (let layer = 0; layer < layers; layer++) {
-      for (let i = 0; i < nodesPerLayer; i++) {
-        nodes.push({
-          x: (canvas.width / (layers + 1)) * (layer + 1),
-          y: (canvas.height / (nodesPerLayer + 1)) * (i + 1),
-          layer: layer,
-          index: i,
-          activation: 0
-        });
-      }
+  // Инициализация Fire частиц
+  if (visualizerType === 'fire' && fireParticles.length === 0) {
+    for (let i = 0; i < 200; i++) {
+      fireParticles.push({
+        x: Math.random() * canvas.width,
+        y: canvas.height + Math.random() * 100,
+        vy: -Math.random() * 3 - 1,
+        vx: (Math.random() - 0.5) * 2,
+        life: 1,
+        size: Math.random() * 8 + 3
+      });
     }
-    
-    // Создаем связи между слоями
-    nodes.forEach(node => {
-      if (node.layer < layers - 1) {
-        const nextLayerNodes = nodes.filter(n => n.layer === node.layer + 1);
-        nextLayerNodes.forEach(nextNode => {
-          connections.push({
-            from: node,
-            to: nextNode,
-            weight: Math.random()
-          });
-        });
-      }
-    });
   }
   
-  // Инициализация Matrix Rain
-  if (visualizerType === 'matrix' && matrixColumns.length === 0) {
-    const columnCount = Math.floor(canvas.width / 20);
-    for (let i = 0; i < columnCount; i++) {
-      matrixColumns.push({
-        x: i * 20,
-        y: Math.random() * canvas.height,
-        speed: Math.random() * 3 + 2,
-        chars: []
+  // Инициализация Aurora волн
+  if (visualizerType === 'aurora' && auroraWaves.length === 0) {
+    for (let i = 0; i < 5; i++) {
+      auroraWaves.push({
+        y: canvas.height * (0.3 + i * 0.1),
+        amplitude: 50 + i * 20,
+        frequency: 0.02 + i * 0.005,
+        phase: Math.random() * Math.PI * 2,
+        speed: 0.01 + i * 0.005,
+        hue: 160 + i * 30
       });
     }
   }
@@ -2190,7 +2179,7 @@ function initAudioVisualizer() {
     animationId = requestAnimationFrame(draw);
     analyser.getByteFrequencyData(dataArray);
     
-    ctx.fillStyle = 'rgba(7, 6, 10, 0.15)';
+    ctx.fillStyle = 'rgba(10, 10, 15, 0.15)';
     ctx.fillRect(0, 0, canvas.width, canvas.height);
     
     const centerX = canvas.width / 2;
@@ -2199,24 +2188,24 @@ function initAudioVisualizer() {
     switch (visualizerType) {
       case 'orb':
         ctx.clearRect(0, 0, canvas.width, canvas.height);
-        drawModernOrb(ctx, centerX, centerY);
+        drawFireOrb(ctx, centerX, centerY);
         break;
-      case 'neural':
-        drawNeuralNetwork(ctx);
-        break;
-      case 'hologram':
+      case 'dna':
         ctx.clearRect(0, 0, canvas.width, canvas.height);
-        drawHologram(ctx, centerX, centerY);
+        drawDNAHelix(ctx, centerX, centerY);
         break;
-      case 'spectrum':
+      case 'fire':
+        drawFire(ctx);
+        break;
+      case 'aurora':
         ctx.clearRect(0, 0, canvas.width, canvas.height);
-        drawSpectrum3D(ctx, centerX, centerY);
+        drawAurora(ctx);
         break;
     }
   }
   
-  // 🌀 ORB (улучшенный)
-  function drawModernOrb(ctx, centerX, centerY) {
+  // 🌀 FIRE ORB - Огненный шар
+  function drawFireOrb(ctx, centerX, centerY) {
     const radius = Math.min(canvas.width, canvas.height) * 0.18;
     const bars = 80;
     const angleStep = (Math.PI * 2) / bars;
@@ -2224,16 +2213,19 @@ function initAudioVisualizer() {
     const avgBass = dataArray.slice(0, 15).reduce((a, b) => a + b, 0) / 15;
     const glowRadius = radius * 0.6 + (avgBass / 255) * 40;
     
+    // Огненное свечение
     const innerGlow = ctx.createRadialGradient(centerX, centerY, 0, centerX, centerY, glowRadius);
-    innerGlow.addColorStop(0, 'rgba(139, 92, 246, 0.6)');
-    innerGlow.addColorStop(0.5, 'rgba(6, 182, 212, 0.3)');
-    innerGlow.addColorStop(1, 'rgba(6, 182, 212, 0)');
+    innerGlow.addColorStop(0, 'rgba(253, 200, 48, 0.8)');
+    innerGlow.addColorStop(0.4, 'rgba(247, 147, 30, 0.5)');
+    innerGlow.addColorStop(0.7, 'rgba(255, 107, 53, 0.3)');
+    innerGlow.addColorStop(1, 'rgba(255, 107, 53, 0)');
     
     ctx.fillStyle = innerGlow;
     ctx.beginPath();
     ctx.arc(centerX, centerY, glowRadius, 0, Math.PI * 2);
     ctx.fill();
     
+    // Огненные лучи
     for (let i = 0; i < bars; i++) {
       const value = dataArray[i % dataArray.length] || 0;
       const normalizedValue = value / 255;
@@ -2246,11 +2238,12 @@ function initAudioVisualizer() {
       const x2 = centerX + Math.cos(angle) * (radius + barHeight);
       const y2 = centerY + Math.sin(angle) * (radius + barHeight);
       
-      const hue = (i / bars) * 60 + 250;
+      // Огненный градиент: желтый → оранжевый → красный
       const gradient = ctx.createLinearGradient(x1, y1, x2, y2);
-      gradient.addColorStop(0, `hsla(${hue}, 70%, 50%, 0.3)`);
-      gradient.addColorStop(0.5, `hsla(${hue}, 80%, 60%, 0.8)`);
-      gradient.addColorStop(1, `hsla(${hue}, 90%, 70%, 1)`);
+      gradient.addColorStop(0, `rgba(253, 200, 48, 0.3)`);
+      gradient.addColorStop(0.4, `rgba(247, 147, 30, 0.8)`);
+      gradient.addColorStop(0.7, `rgba(255, 107, 53, 1)`);
+      gradient.addColorStop(1, `rgba(255, 30, 30, 1)`);
       
       ctx.beginPath();
       ctx.moveTo(x1, y1);
@@ -2258,232 +2251,243 @@ function initAudioVisualizer() {
       ctx.strokeStyle = gradient;
       ctx.lineWidth = 5;
       ctx.lineCap = 'round';
-      ctx.shadowBlur = 20;
-      ctx.shadowColor = `hsla(${hue}, 80%, 60%, ${normalizedValue})`;
+      ctx.shadowBlur = 25;
+      ctx.shadowColor = `rgba(255, 107, 53, ${normalizedValue})`;
       ctx.stroke();
       
+      // Искры на концах
       if (normalizedValue > 0.3) {
         ctx.beginPath();
         ctx.arc(x2, y2, 4, 0, Math.PI * 2);
-        ctx.fillStyle = `hsla(${hue}, 90%, 80%, ${normalizedValue})`;
-        ctx.shadowBlur = 30;
+        ctx.fillStyle = `rgba(253, 200, 48, ${normalizedValue})`;
+        ctx.shadowBlur = 40;
+        ctx.shadowColor = 'rgba(253, 200, 48, 1)';
         ctx.fill();
       }
     }
     
     ctx.shadowBlur = 0;
     
+    // Пульсирующие огненные кольца
     for (let ring = 0; ring < 3; ring++) {
       const ringRadius = radius + (avgBass / 255) * 25 + ring * 15;
       ctx.beginPath();
       ctx.arc(centerX, centerY, ringRadius, 0, Math.PI * 2);
-      ctx.strokeStyle = `rgba(139, 92, 246, ${0.3 - ring * 0.1})`;
+      ctx.strokeStyle = `rgba(255, 107, 53, ${0.4 - ring * 0.12})`;
       ctx.lineWidth = 2;
       ctx.stroke();
     }
   }
   
-  // 🧠 NEURAL NETWORK
-  function drawNeuralNetwork(ctx) {
-    const avgFreq = dataArray.reduce((a, b) => a + b, 0) / dataArray.length / 255;
+  // 🧬 DNA HELIX - Двойная спираль
+  function drawDNAHelix(ctx, centerX, centerY) {
+    dnaRotation += 0.02;
     
-    // Рисуем связи
-    connections.forEach(conn => {
-      const freqIndex = Math.floor(Math.random() * dataArray.length);
-      const activation = (dataArray[freqIndex] || 0) / 255;
+    const helixWidth = Math.min(canvas.width * 0.6, 500);
+    const helixHeight = canvas.height * 0.7;
+    const points = 100;
+    const radius = 80;
+    
+    for (let i = 0; i < points; i++) {
+      const t = i / points;
+      const x = centerX - helixWidth / 2 + t * helixWidth;
+      const y = centerY - helixHeight / 2 + t * helixHeight;
       
-      if (activation > 0.2) {
+      const freqIndex = Math.floor(t * dataArray.length);
+      const value = (dataArray[freqIndex] || 0) / 255;
+      
+      // Первая спираль (океанский градиент)
+      const angle1 = t * Math.PI * 4 + dnaRotation;
+      const x1 = x + Math.cos(angle1) * (radius + value * 30);
+      const y1 = y + Math.sin(angle1) * (radius * 0.3);
+      
+      // Вторая спираль
+      const angle2 = angle1 + Math.PI;
+      const x2 = x + Math.cos(angle2) * (radius + value * 30);
+      const y2 = y + Math.sin(angle2) * (radius * 0.3);
+      
+      // Связи между спиралями
+      if (i % 5 === 0) {
         ctx.beginPath();
-        ctx.moveTo(conn.from.x, conn.from.y);
-        ctx.lineTo(conn.to.x, conn.to.y);
-        
-        const gradient = ctx.createLinearGradient(
-          conn.from.x, conn.from.y,
-          conn.to.x, conn.to.y
-        );
-        gradient.addColorStop(0, `rgba(139, 92, 246, ${activation * 0.5})`);
-        gradient.addColorStop(1, `rgba(6, 182, 212, ${activation * 0.5})`);
-        
-        ctx.strokeStyle = gradient;
-        ctx.lineWidth = 2 * activation;
-        ctx.shadowBlur = 10;
-        ctx.shadowColor = `rgba(139, 92, 246, ${activation})`;
-        ctx.stroke();
-      }
-    });
-    
-    ctx.shadowBlur = 0;
-    
-    // Рисуем узлы
-    nodes.forEach((node, index) => {
-      const freqIndex = Math.floor((index / nodes.length) * dataArray.length);
-      node.activation = (dataArray[freqIndex] || 0) / 255;
-      
-      const size = 8 + node.activation * 15;
-      const hue = 250 + node.layer * 20;
-      
-      const gradient = ctx.createRadialGradient(node.x, node.y, 0, node.x, node.y, size);
-      gradient.addColorStop(0, `hsla(${hue}, 80%, 70%, 1)`);
-      gradient.addColorStop(0.5, `hsla(${hue}, 80%, 60%, 0.8)`);
-      gradient.addColorStop(1, `hsla(${hue}, 80%, 50%, 0)`);
-      
-      ctx.beginPath();
-      ctx.arc(node.x, node.y, size, 0, Math.PI * 2);
-      ctx.fillStyle = gradient;
-      ctx.shadowBlur = 20;
-      ctx.shadowColor = `hsla(${hue}, 80%, 60%, ${node.activation})`;
-      ctx.fill();
-      
-      // Пульс
-      if (node.activation > 0.5) {
-        ctx.beginPath();
-        ctx.arc(node.x, node.y, size + 5, 0, Math.PI * 2);
-        ctx.strokeStyle = `hsla(${hue}, 80%, 70%, ${node.activation * 0.5})`;
+        ctx.moveTo(x1, y1);
+        ctx.lineTo(x2, y2);
+        ctx.strokeStyle = `rgba(0, 217, 255, ${0.3 + value * 0.5})`;
         ctx.lineWidth = 2;
         ctx.stroke();
       }
+      
+      // Точки первой спирали (океан)
+      const size1 = 4 + value * 6;
+      const gradient1 = ctx.createRadialGradient(x1, y1, 0, x1, y1, size1 * 2);
+      gradient1.addColorStop(0, 'rgba(0, 245, 255, 1)');
+      gradient1.addColorStop(0.5, 'rgba(0, 217, 255, 0.8)');
+      gradient1.addColorStop(1, 'rgba(0, 153, 255, 0)');
+      
+      ctx.beginPath();
+      ctx.arc(x1, y1, size1, 0, Math.PI * 2);
+      ctx.fillStyle = gradient1;
+      ctx.shadowBlur = 20;
+      ctx.shadowColor = 'rgba(0, 245, 255, 0.8)';
+      ctx.fill();
+      
+      // Точки второй спирали (мята)
+      const gradient2 = ctx.createRadialGradient(x2, y2, 0, x2, y2, size1 * 2);
+      gradient2.addColorStop(0, 'rgba(0, 255, 179, 1)');
+      gradient2.addColorStop(0.5, 'rgba(0, 229, 160, 0.8)');
+      gradient2.addColorStop(1, 'rgba(0, 204, 160, 0)');
+      
+      ctx.beginPath();
+      ctx.arc(x2, y2, size1, 0, Math.PI * 2);
+      ctx.fillStyle = gradient2;
+      ctx.shadowColor = 'rgba(0, 255, 179, 0.8)';
+      ctx.fill();
+    }
+    
+    ctx.shadowBlur = 0;
+  }
+  
+  // 🔥 FIRE - Пламя
+  function drawFire(ctx) {
+    const avgBass = dataArray.slice(0, 20).reduce((a, b) => a + b, 0) / 20 / 255;
+    
+    // Добавляем новые частицы внизу
+    if (Math.random() < 0.5 + avgBass) {
+      fireParticles.push({
+        x: canvas.width / 2 + (Math.random() - 0.5) * (canvas.width * 0.4),
+        y: canvas.height,
+        vy: -Math.random() * 4 - 2 - avgBass * 3,
+        vx: (Math.random() - 0.5) * 3,
+        life: 1,
+        size: Math.random() * 10 + 5 + avgBass * 10
+      });
+    }
+    
+    // Обновляем и рисуем частицы
+    fireParticles = fireParticles.filter(p => {
+      p.y += p.vy;
+      p.x += p.vx;
+      p.vy *= 0.98;
+      p.vx *= 0.95;
+      p.life -= 0.01;
+      
+      if (p.life <= 0) return false;
+      
+      const size = p.size * p.life;
+      
+      // Огненный градиент
+      const gradient = ctx.createRadialGradient(p.x, p.y, 0, p.x, p.y, size * 2);
+      
+      if (p.life > 0.7) {
+        // Ядро - белое/желтое
+        gradient.addColorStop(0, `rgba(255, 255, 255, ${p.life})`);
+        gradient.addColorStop(0.3, `rgba(253, 200, 48, ${p.life * 0.9})`);
+        gradient.addColorStop(0.6, `rgba(247, 147, 30, ${p.life * 0.6})`);
+        gradient.addColorStop(1, `rgba(255, 107, 53, 0)`);
+      } else if (p.life > 0.4) {
+        // Средняя часть - оранжевое
+        gradient.addColorStop(0, `rgba(253, 200, 48, ${p.life})`);
+        gradient.addColorStop(0.4, `rgba(247, 147, 30, ${p.life * 0.8})`);
+        gradient.addColorStop(0.7, `rgba(255, 107, 53, ${p.life * 0.5})`);
+        gradient.addColorStop(1, `rgba(255, 30, 30, 0)`);
+      } else {
+        // Края - красное/темное
+        gradient.addColorStop(0, `rgba(255, 107, 53, ${p.life})`);
+        gradient.addColorStop(0.5, `rgba(255, 30, 30, ${p.life * 0.6})`);
+        gradient.addColorStop(1, `rgba(139, 0, 0, 0)`);
+      }
+      
+      ctx.beginPath();
+      ctx.arc(p.x, p.y, size, 0, Math.PI * 2);
+      ctx.fillStyle = gradient;
+      ctx.shadowBlur = 30;
+      ctx.shadowColor = `rgba(255, 107, 53, ${p.life * 0.5})`;
+      ctx.fill();
+      
+      return true;
     });
     
     ctx.shadowBlur = 0;
+    
+    // Тепловые волны
+    for (let y = canvas.height - 100; y > canvas.height - 300; y -= 50) {
+      ctx.beginPath();
+      for (let x = 0; x < canvas.width; x += 10) {
+        const wave = Math.sin(x * 0.02 + Date.now() * 0.005) * 20 * avgBass;
+        if (x === 0) {
+          ctx.moveTo(x, y + wave);
+        } else {
+          ctx.lineTo(x, y + wave);
+        }
+      }
+      ctx.strokeStyle = `rgba(255, 107, 53, ${0.1 * avgBass})`;
+      ctx.lineWidth = 2;
+      ctx.stroke();
+    }
   }
   
-  // 🔷 HOLOGRAM
-  function drawHologram(ctx, centerX, centerY) {
-    wavePhase += 0.02;
-    
-    const size = Math.min(canvas.width, canvas.height) * 0.4;
-    const gridSize = 20;
-    const depth = 100;
-    
-    // 3D сетка
-    for (let z = 0; z < depth; z += 10) {
-      const scale = 1 - (z / depth) * 0.5;
-      const alpha = 1 - (z / depth);
+  // 🌌 AURORA - Северное сияние
+  function drawAurora(ctx) {
+    auroraWaves.forEach(wave => {
+      wave.phase += wave.speed;
       
-      const freqIndex = Math.floor((z / depth) * dataArray.length);
-      const wave = (dataArray[freqIndex] || 0) / 255;
+      const freqIndex = Math.floor(Math.random() * dataArray.length);
+      const intensity = (dataArray[freqIndex] || 0) / 255;
       
-      ctx.strokeStyle = `rgba(6, 182, 212, ${alpha * 0.5})`;
-      ctx.lineWidth = 1;
-      
-      // Горизонтальные линии
-      for (let y = -size; y <= size; y += gridSize) {
-        ctx.beginPath();
-        for (let x = -size; x <= size; x += 5) {
-          const waveOffset = Math.sin(x * 0.02 + wavePhase + z * 0.1) * wave * 30;
-          const px = centerX + x * scale;
-          const py = centerY + (y + waveOffset) * scale - z * 0.5;
-          
-          if (x === -size) {
-            ctx.moveTo(px, py);
-          } else {
-            ctx.lineTo(px, py);
-          }
-        }
-        ctx.stroke();
-      }
-      
-      // Вертикальные линии
-      for (let x = -size; x <= size; x += gridSize) {
-        ctx.beginPath();
-        for (let y = -size; y <= size; y += 5) {
-          const waveOffset = Math.sin(y * 0.02 + wavePhase + z * 0.1) * wave * 30;
-          const px = centerX + x * scale;
-          const py = centerY + (y + waveOffset) * scale - z * 0.5;
-          
-          if (y === -size) {
-            ctx.moveTo(px, py);
-          } else {
-            ctx.lineTo(px, py);
-          }
-        }
-        ctx.stroke();
-      }
-      
-      // Светящиеся точки на пересечениях
-      if (wave > 0.5) {
-        for (let x = -size; x <= size; x += gridSize) {
-          for (let y = -size; y <= size; y += gridSize) {
-            const waveOffset = Math.sin(x * 0.02 + y * 0.02 + wavePhase) * wave * 30;
-            const px = centerX + x * scale;
-            const py = centerY + (y + waveOffset) * scale - z * 0.5;
-            
-            ctx.beginPath();
-            ctx.arc(px, py, 2, 0, Math.PI * 2);
-            ctx.fillStyle = `rgba(139, 92, 246, ${alpha * wave})`;
-            ctx.shadowBlur = 15;
-            ctx.shadowColor = `rgba(139, 92, 246, ${alpha * wave})`;
-            ctx.fill();
-          }
-        }
-      }
-    }
-    
-    ctx.shadowBlur = 0;
-  }
-  
-  // 📊 SPECTRUM 3D
-  function drawSpectrum3D(ctx, centerX, centerY) {
-    const bars = 64;
-    const barWidth = 12;
-    const spacing = 2;
-    const maxHeight = canvas.height * 0.6;
-    const perspective = 0.8;
-    
-    for (let i = 0; i < bars; i++) {
-      const value = dataArray[i] || 0;
-      const normalizedValue = value / 255;
-      const barHeight = normalizedValue * maxHeight;
-      
-      // Позиция с перспективой
-      const distance = Math.abs(i - bars / 2) / (bars / 2);
-      const scale = 1 - distance * perspective * 0.5;
-      const depth = distance * 50;
-      
-      const x = centerX - (bars / 2) * (barWidth + spacing) * scale + i * (barWidth + spacing) * scale;
-      const y = centerY - barHeight / 2 + depth;
-      const width = barWidth * scale;
-      
-      // Градиент
-      const hue = (i / bars) * 180 + 180;
-      const gradient = ctx.createLinearGradient(x, y + barHeight, x, y);
-      gradient.addColorStop(0, `hsla(${hue}, 80%, 40%, 0.3)`);
-      gradient.addColorStop(0.5, `hsla(${hue}, 90%, 50%, 0.7)`);
-      gradient.addColorStop(1, `hsla(${hue}, 100%, 60%, 1)`);
-      
-      ctx.fillStyle = gradient;
-      ctx.fillRect(x, y, width, barHeight);
-      
-      // Боковая грань (3D эффект)
-      ctx.fillStyle = `hsla(${hue}, 70%, 30%, 0.6)`;
+      // Рисуем волну
       ctx.beginPath();
-      ctx.moveTo(x + width, y);
-      ctx.lineTo(x + width + 5, y - 5);
-      ctx.lineTo(x + width + 5, y + barHeight - 5);
-      ctx.lineTo(x + width, y + barHeight);
+      
+      for (let x = 0; x < canvas.width; x += 5) {
+        const t = x / canvas.width;
+        const y = wave.y + 
+                 Math.sin(x * wave.frequency + wave.phase) * wave.amplitude * (0.5 + intensity * 0.5) +
+                 Math.sin(x * wave.frequency * 2 + wave.phase * 1.3) * (wave.amplitude * 0.5) * intensity;
+        
+        if (x === 0) {
+          ctx.moveTo(x, y);
+        } else {
+          ctx.lineTo(x, y);
+        }
+      }
+      
+      // Градиент для северного сияния (зелено-голубой)
+      const gradient = ctx.createLinearGradient(0, wave.y - wave.amplitude, 0, wave.y + wave.amplitude);
+      gradient.addColorStop(0, `hsla(${wave.hue}, 80%, 60%, 0)`);
+      gradient.addColorStop(0.3, `hsla(${wave.hue}, 80%, 60%, ${0.3 + intensity * 0.4})`);
+      gradient.addColorStop(0.6, `hsla(${wave.hue}, 80%, 50%, ${0.5 + intensity * 0.4})`);
+      gradient.addColorStop(1, `hsla(${wave.hue}, 80%, 40%, 0)`);
+      
+      ctx.strokeStyle = gradient;
+      ctx.lineWidth = 4 + intensity * 6;
+      ctx.lineCap = 'round';
+      ctx.shadowBlur = 30;
+      ctx.shadowColor = `hsla(${wave.hue}, 80%, 50%, ${intensity * 0.8})`;
+      ctx.stroke();
+      
+      // Заливка под волной
+      ctx.lineTo(canvas.width, canvas.height);
+      ctx.lineTo(0, canvas.height);
       ctx.closePath();
+      
+      const fillGrad = ctx.createLinearGradient(0, wave.y, 0, canvas.height);
+      fillGrad.addColorStop(0, `hsla(${wave.hue}, 80%, 50%, ${0.1 + intensity * 0.2})`);
+      fillGrad.addColorStop(1, `hsla(${wave.hue}, 80%, 30%, 0)`);
+      ctx.fillStyle = fillGrad;
       ctx.fill();
       
-      // Верхняя грань
-      ctx.fillStyle = `hsla(${hue}, 80%, 50%, 0.8)`;
-      ctx.beginPath();
-      ctx.moveTo(x, y);
-      ctx.lineTo(x + 5, y - 5);
-      ctx.lineTo(x + width + 5, y - 5);
-      ctx.lineTo(x + width, y);
-      ctx.closePath();
-      ctx.fill();
-      
-      // Свечение сверху
-      if (normalizedValue > 0.4) {
-        ctx.beginPath();
-        ctx.arc(x + width / 2, y, 4 * scale, 0, Math.PI * 2);
-        ctx.fillStyle = `hsla(${hue}, 100%, 70%, ${normalizedValue})`;
-        ctx.shadowBlur = 20;
-        ctx.shadowColor = `hsla(${hue}, 100%, 60%, ${normalizedValue})`;
-        ctx.fill();
+      // Мерцающие частицы
+      if (intensity > 0.5) {
+        for (let i = 0; i < 10; i++) {
+          const px = Math.random() * canvas.width;
+          const py = wave.y + (Math.random() - 0.5) * wave.amplitude * 2;
+          
+          ctx.beginPath();
+          ctx.arc(px, py, 2 + Math.random() * 3, 0, Math.PI * 2);
+          ctx.fillStyle = `hsla(${wave.hue + Math.random() * 30}, 90%, 70%, ${intensity})`;
+          ctx.shadowBlur = 20;
+          ctx.fill();
+        }
       }
-    }
+    });
     
     ctx.shadowBlur = 0;
   }
@@ -2534,10 +2538,9 @@ function toggleVisualizerFullscreen() {
 function changeVisualizerType(type) {
   visualizerType = type;
   particles = [];
-  wavePhase = 0;
-  nodes = [];
-  connections = [];
-  matrixColumns = [];
+  dnaRotation = 0;
+  fireParticles = [];
+  auroraWaves = [];
   
   document.querySelectorAll('.visualizer-type-btn').forEach(btn => {
     btn.classList.toggle('active', btn.dataset.type === type);
@@ -2626,33 +2629,29 @@ function playPrev() {
   left: 0;
   right: 0;
   bottom: 0;
-  background: linear-gradient(135deg, #07060a 0%, #0a0910 100%);
+  background: linear-gradient(135deg, #0a0a0f 0%, #050508 100%);
   z-index: 9998;
   display: none;
   flex-direction: column;
 ">
-  <!-- Кнопка закрыть - САМАЯ ВЕРХНЯЯ -->
-  <button id="visualizer-close" style="
+  <!-- Подсказка - закрыть по кнопке визуализатора -->
+  <div style="
     position: absolute;
-    top: 15px;
-    right: 15px;
-    background: rgba(255,255,255,0.08);
-    border: 2px solid rgba(255,255,255,0.15);
-    color: #fff;
-    padding: 10px 18px;
-    border-radius: 50px;
-    cursor: pointer;
-    font-size: 15px;
-    font-weight: 700;
-    transition: all 0.3s;
-    backdrop-filter: blur(20px);
+    top: 20px;
+    right: 20px;
+    color: rgba(255,255,255,0.5);
+    font-size: 13px;
+    font-weight: 600;
+    text-align: right;
     z-index: 100;
-  ">✕ Close</button>
+  ">
+    Tap 🌀 to close
+  </div>
 
-  <!-- Переключатель типов - САМЫЙ ВЕРХ -->
+  <!-- Переключатель типов - ЧУТЬ НИЖЕ -->
   <div style="
     width: 100%;
-    padding: 20px;
+    padding: 70px 20px 20px;
     display: flex;
     justify-content: center;
     overflow-x: auto;
@@ -2669,9 +2668,9 @@ function playPrev() {
       min-width: min-content;
     ">
       <button class="visualizer-type-btn active" data-type="orb">🌀 Orb</button>
-      <button class="visualizer-type-btn" data-type="neural">🧠 Neural</button>
-      <button class="visualizer-type-btn" data-type="hologram">🔷 Hologram</button>
-      <button class="visualizer-type-btn" data-type="spectrum">📊 Spectrum</button>
+      <button class="visualizer-type-btn" data-type="dna">🧬 DNA</button>
+      <button class="visualizer-type-btn" data-type="fire">🔥 Fire</button>
+      <button class="visualizer-type-btn" data-type="aurora">🌌 Aurora</button>
     </div>
   </div>
 
@@ -2703,8 +2702,7 @@ function playPrev() {
     " id="visualizer-track-title">Track Name</div>
   </div>
 </div>
-
-  
+ 
   
   <!-- Кнопка закрыть -->
   <button id="visualizer-close" style="
