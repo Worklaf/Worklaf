@@ -1531,7 +1531,29 @@ div[style*="overflow-x: auto"]::-webkit-scrollbar {
     console.log('⏳ Already loading track, please wait...');
     return;
   }
-  
+  // После загрузки нового трека, обновляем AudioContext для визуализатора
+  if (visualizerActive) {
+    console.log('🔄 Updating visualizer for new track...');
+    
+    // Сбрасываем контекст, если он уже существует
+    if (audioContext) {
+      try {
+        // Закрываем старый контекст, если он есть
+        if (audioContext.state !== 'closed') {
+          audioContext.close();
+        }
+        audioContext = null;
+        analyser = null;
+      } catch (e) {
+        console.error('❌ Error closing AudioContext:', e);
+      }
+    }
+    
+    // Запускаем визуализатор с задержкой после загрузки трека
+    setTimeout(() => {
+      initAudioVisualizer();
+    }, 500);
+  }
   window.isLoadingTrack = true;
   console.log('🎵 Starting playTrack...');
   
@@ -2157,26 +2179,7 @@ const neonColors = {
   green: '#00FF9D',
   blue: '#0066FF'
 };
-	  if (!audioContext) {
-  audioContext = new (window.AudioContext || window.webkitAudioContext)();
-  analyser = audioContext.createAnalyser();
-  analyser.fftSize = 1024;
-  analyser.smoothingTimeConstant = 0.85;
-  
-  const bufferLength = analyser.frequencyBinCount;
-  dataArray = new Uint8Array(bufferLength);
-  
-  if (wavesurfer && wavesurfer.getMediaElement) {
-    try {
-      const mediaElement = wavesurfer.getMediaElement();
-      const source = audioContext.createMediaElementSource(mediaElement);
-      source.connect(analyser);
-      analyser.connect(audioContext.destination);
-    } catch (e) {
-      console.log('⚠️ Audio already connected');
-    }
-  }
-}
+	  
 // Создаем индикаторы точек для визуализаторов
 function createDotIndicators() {
   const dotsContainer = document.getElementById('visualizer-dots');
@@ -2342,17 +2345,55 @@ function initVisualizerParticles(canvas) {
 }
 
 // Инициализация и рисование визуализаторов
+// Инициализация и рисование визуализаторов
 function initAudioVisualizer() {
+  console.log('🎵 Initializing audio visualizer...');
+  
   const canvas = document.getElementById('audio-visualizer');
-  if (!canvas) return;
+  if (!canvas) {
+    console.error('❌ Canvas element not found!');
+    return;
+  }
   
   const ctx = canvas.getContext('2d');
   
   canvas.width = Math.min(window.innerWidth * 0.9, 1000);
   canvas.height = Math.min(window.innerHeight * 0.6, 600);
   
-  if (!audioContext) {
-    // ... (тот же код для инициализации AudioContext)
+  // Важно: Создаем новый AudioContext и подключаем к wavesurfer
+  if (!audioContext || audioContext.state === 'closed') {
+    console.log('🔊 Creating new AudioContext...');
+    
+    try {
+      audioContext = new (window.AudioContext || window.webkitAudioContext)();
+      analyser = audioContext.createAnalyser();
+      analyser.fftSize = 1024;
+      analyser.smoothingTimeConstant = 0.85;
+      
+      const bufferLength = analyser.frequencyBinCount;
+      dataArray = new Uint8Array(bufferLength);
+      
+      if (wavesurfer && wavesurfer.getMediaElement) {
+        console.log('🔌 Connecting to wavesurfer media element...');
+        const mediaElement = wavesurfer.getMediaElement();
+        const source = audioContext.createMediaElementSource(mediaElement);
+        source.connect(analyser);
+        analyser.connect(audioContext.destination);
+        console.log('✅ Audio connected successfully!');
+      } else {
+        console.error('❌ Wavesurfer not available!');
+      }
+    } catch (e) {
+      console.error('❌ Error initializing AudioContext:', e);
+    }
+  } else {
+    console.log('✅ Using existing AudioContext, state:', audioContext.state);
+    
+    // Возобновляем контекст, если он приостановлен
+    if (audioContext.state === 'suspended') {
+      console.log('🔄 Resuming suspended AudioContext...');
+      audioContext.resume();
+    }
   }
   
   // Инициализируем частицы для визуализаторов
@@ -3619,7 +3660,6 @@ function playPrev() {
       margin-top: 20px;
     " id="visualizer-track-title">Track Name</div>
   </div>
-</div>
 </div>
 </body>
 </html>
