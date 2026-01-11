@@ -498,7 +498,32 @@
         gap:8px;
       }
     }
+/* Визуализация */
+#audio-visualizer {
+  filter: blur(1px);
+  mix-blend-mode: screen;
+}
 
+#audio-visualizer.active {
+  opacity: 0.8 !important;
+}
+
+/* Кнопка визуализации в мини-плеере */
+.visualizer-btn {
+  position: relative;
+}
+
+.visualizer-btn.active::after {
+  content: '';
+  position: absolute;
+  top: -2px;
+  right: -2px;
+  width: 8px;
+  height: 8px;
+  background: #00ff00;
+  border-radius: 50%;
+  box-shadow: 0 0 10px #00ff00;
+}
     @media (max-width:480px){
       body{padding:8px;padding-bottom:150px}
       
@@ -590,6 +615,7 @@
         <button id="mini-open-text" class="btn icon" aria-label="Open full text" title="Text">📄</button>
         <button id="mini-like" class="btn icon" aria-label="Like" title="Like">❤</button>
         <button id="mini-dislike" class="btn icon" aria-label="Dislike" title="Dislike">👎</button>
+		  <button id="mini-visualizer" class="btn icon visualizer-btn" aria-label="Visualizer" title="Visualizer">🌀</button>
         <button id="mini-comment" class="btn icon" aria-label="Comments" title="Comments">💬</button>
         <button id="mini-share" class="btn icon" aria-label="Share" title="Share">🔗</button>
         <a id="mini-download" class="btn icon" href="#" download aria-label="Download" title="Download">⬇️</a>
@@ -1733,7 +1759,10 @@
     document.getElementById('mini-comment')?.addEventListener('click', () => {
       openComments(currentTrackSrc);
     });
-
+// Визуализация
+document.getElementById('mini-visualizer')?.addEventListener('click', () => {
+  toggleVisualizer();
+});
     document.getElementById('mini-share')?.addEventListener('click', () => {
       const url = window.location.origin + window.location.pathname + '?track=' + encodeURIComponent(currentTrackSrc);
       navigator.clipboard.writeText(url).then(() => {
@@ -1910,6 +1939,176 @@
       }, 500);
     }
   });
+  // ========================================
+// 🎵 КРУГОВАЯ АУДИО ВИЗУАЛИЗАЦИЯ
+// ========================================
+
+let visualizerActive = false;
+let audioContext = null;
+let analyser = null;
+let dataArray = null;
+let animationId = null;
+
+function initAudioVisualizer() {
+  const canvas = document.getElementById('audio-visualizer');
+  if (!canvas) return;
+  
+  const ctx = canvas.getContext('2d');
+  
+  // Устанавливаем размер canvas
+  canvas.width = 300;
+  canvas.height = 300;
+  
+  // Создаем Audio Context
+  if (!audioContext) {
+    audioContext = new (window.AudioContext || window.webkitAudioContext)();
+    analyser = audioContext.createAnalyser();
+    analyser.fftSize = 512;
+    
+    const bufferLength = analyser.frequencyBinCount;
+    dataArray = new Uint8Array(bufferLength);
+    
+    // Подключаем к wavesurfer
+    if (wavesurfer) {
+      try {
+        const source = audioContext.createMediaElementSource(wavesurfer.getMediaElement());
+        source.connect(analyser);
+        analyser.connect(audioContext.destination);
+      } catch (e) {
+        console.log('⚠️ Audio already connected');
+      }
+    }
+  }
+  
+  // Функция рисования
+  function draw() {
+    if (!visualizerActive) return;
+    
+    animationId = requestAnimationFrame(draw);
+    
+    analyser.getByteFrequencyData(dataArray);
+    
+    // Очистка canvas
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    
+    const centerX = canvas.width / 2;
+    const centerY = canvas.height / 2;
+    const radius = 80;
+    
+    // Рисуем центральный круг
+    ctx.beginPath();
+    ctx.arc(centerX, centerY, radius, 0, Math.PI * 2);
+    ctx.fillStyle = 'rgba(255, 77, 166, 0.1)';
+    ctx.fill();
+    
+    // Рисуем круговые bars
+    const bars = 64;
+    const angleStep = (Math.PI * 2) / bars;
+    
+    for (let i = 0; i < bars; i++) {
+      const value = dataArray[i] || 0;
+      const barHeight = (value / 255) * 100;
+      
+      const angle = i * angleStep - Math.PI / 2;
+      
+      // Внутренняя точка
+      const x1 = centerX + Math.cos(angle) * radius;
+      const y1 = centerY + Math.sin(angle) * radius;
+      
+      // Внешняя точка
+      const x2 = centerX + Math.cos(angle) * (radius + barHeight);
+      const y2 = centerY + Math.sin(angle) * (radius + barHeight);
+      
+      // Градиент от розового к голубому
+      const gradient = ctx.createLinearGradient(x1, y1, x2, y2);
+      gradient.addColorStop(0, '#ff4da6');
+      gradient.addColorStop(1, '#00d1ff');
+      
+      // Рисуем линию
+      ctx.beginPath();
+      ctx.moveTo(x1, y1);
+      ctx.lineTo(x2, y2);
+      ctx.strokeStyle = gradient;
+      ctx.lineWidth = 3;
+      ctx.lineCap = 'round';
+      ctx.stroke();
+      
+      // Добавляем свечение на концах
+      ctx.beginPath();
+      ctx.arc(x2, y2, 2, 0, Math.PI * 2);
+      ctx.fillStyle = '#00d1ff';
+      ctx.shadowBlur = 10;
+      ctx.shadowColor = '#00d1ff';
+      ctx.fill();
+      ctx.shadowBlur = 0;
+    }
+    
+    // Средний круг (пульсирует от басов)
+    const avgBass = dataArray.slice(0, 10).reduce((a, b) => a + b, 0) / 10;
+    const pulseRadius = radius + (avgBass / 255) * 20;
+    
+    ctx.beginPath();
+    ctx.arc(centerX, centerY, pulseRadius, 0, Math.PI * 2);
+    ctx.strokeStyle = 'rgba(255, 77, 166, 0.3)';
+    ctx.lineWidth = 2;
+    ctx.stroke();
+  }
+  
+  draw();
+}
+
+function toggleVisualizer() {
+  visualizerActive = !visualizerActive;
+  
+  const canvas = document.getElementById('audio-visualizer');
+  const btn = document.getElementById('mini-visualizer');
+  
+  if (visualizerActive) {
+    canvas.classList.add('active');
+    btn.classList.add('active');
+    
+    if (audioContext && audioContext.state === 'suspended') {
+      audioContext.resume();
+    }
+    
+    initAudioVisualizer();
+    console.log('🌀 Visualizer ON');
+  } else {
+    canvas.classList.remove('active');
+    btn.classList.remove('active');
+    
+    if (animationId) {
+      cancelAnimationFrame(animationId);
+      animationId = null;
+    }
+    
+    console.log('🌀 Visualizer OFF');
+  }
+  
+  localStorage.setItem('visualizerEnabled', visualizerActive);
+}
+
+// Восстанавливаем состояние
+const savedVisualizerState = localStorage.getItem('visualizerEnabled') === 'true';
+if (savedVisualizerState && wavesurfer) {
+  setTimeout(() => {
+    visualizerActive = true;
+    toggleVisualizer();
+  }, 500);
+}
   </script>
+<!-- Canvas для визуализации -->
+<canvas id="audio-visualizer" style="
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 300px;
+  height: 300px;
+  pointer-events: none;
+  z-index: 0;
+  opacity: 0;
+  transition: opacity 0.5s;
+"></canvas>
 </body>
 </html>
