@@ -99,64 +99,88 @@
 
     .side-panel{position:fixed;right:0;top:0;height:100%;width:360px;background:#0b0b10;color:#eaeaf2;padding:18px;box-shadow:-20px 0 40px rgba(0,0,0,.6);transform:translateX(100%);transition:transform .28s ease;z-index:10001;overflow:auto}
     .side-panel.open{transform:translateX(0)}
-    .side-panel h3{margin-top:0}
+    .side-panel h3{margin:12px 0}
+    
+    /* Copy button - на одном уровне с Close */
+    .side-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;gap:8px}
+    .copy-btn{
+      background:linear-gradient(90deg,var(--accent),var(--accent2));
+      border:0;
+      color:#07060a;
+      padding:8px 16px;
+      border-radius:10px;
+      font-weight:600;
+      cursor:pointer;
+      transition:all .2s;
+      font-size:13px;
+    }
+    .copy-btn:hover{transform:translateY(-2px);box-shadow:0 8px 20px rgba(255,77,166,0.3)}
+    .copy-btn.copied{background:#0acf83}
 
     .modal{display:none;position:fixed;left:0;top:0;right:0;bottom:0;background:rgba(0,0,0,0.6);align-items:center;justify-content:center;z-index:10002}
     .modal.open{display:flex}
     .panel{width:min(720px,95%);background:#0b0b10;border-radius:12px;padding:16px;color:#eaeaf2;box-shadow:0 20px 60px rgba(0,0,0,.7);max-height:80vh;overflow:auto}
 
-    /* Emoji panel */
-    .emoji-panel {
-      display: none;
-      position: absolute;
-      bottom: 100%;
-      right: 0;
-      background: #0b0b10;
-      border-radius: 8px;
-      padding: 12px;
-      width: 280px;
-      box-shadow: 0 10px 30px rgba(0,0,0,0.5);
-      z-index: 1000;
-      border: 1px solid rgba(255,255,255,0.08);
-    }
-    .emoji-panel.open {
-      display: grid;
-      grid-template-columns: repeat(6, 1fr);
-      gap: 8px;
-    }
+    /* Emoji quick bar */
+    .emoji-quick{display:flex;gap:6px;margin-bottom:8px;flex-wrap:wrap;align-items:center}
     .emoji-btn {
       background: rgba(255,255,255,0.05);
       border: none;
-      border-radius: 6px;
-      padding: 8px;
-      font-size: 20px;
+      border-radius: 8px;
+      padding: 10px 12px;
+      font-size: 22px;
       cursor: pointer;
-      transition: background 0.2s;
+      transition: all 0.2s;
       display: flex;
       align-items: center;
       justify-content: center;
+      min-width:44px;
+      min-height:44px;
     }
     .emoji-btn:hover {
       background: rgba(255,255,255,0.15);
+      transform: scale(1.1);
+    }
+    .emoji-btn.plus{
+      background:linear-gradient(90deg,var(--accent),var(--accent2));
+      color:#fff;
+      font-size:18px;
+      font-weight:700;
     }
 
-    /* Copy button */
-    .copy-btn {
-      position: absolute;
-      top: 12px;
-      right: 12px;
-      background: rgba(255,255,255,0.05);
-      border: none;
-      border-radius: 6px;
-      padding: 6px 10px;
-      color: var(--muted);
-      font-size: 12px;
-      cursor: pointer;
-      transition: all 0.2s;
+    /* Emoji modal (как в Telegram) */
+    .emoji-modal{
+      display:none;
+      position:fixed;
+      left:50%;
+      top:50%;
+      transform:translate(-50%,-50%);
+      background:#0b0b10;
+      border-radius:12px;
+      padding:20px;
+      box-shadow:0 20px 60px rgba(0,0,0,.8);
+      z-index:10003;
+      width:min(500px,90vw);
+      max-height:70vh;
+      overflow:auto;
+      border:1px solid rgba(255,255,255,0.08);
     }
-    .copy-btn:hover {
-      background: var(--accent);
-      color: #07060a;
+    .emoji-modal.open{display:block}
+    .emoji-modal h3{margin-top:0;color:#fff}
+    .emoji-grid{
+      display:grid;
+      grid-template-columns:repeat(auto-fill,minmax(48px,1fr));
+      gap:6px;
+      margin-bottom:16px;
+    }
+    .emoji-category{margin-bottom:20px}
+    .emoji-category-title{
+      color:var(--accent);
+      font-size:13px;
+      font-weight:700;
+      margin-bottom:8px;
+      text-transform:uppercase;
+      letter-spacing:0.5px;
     }
 
     /* Delete comment button */
@@ -168,16 +192,17 @@
       border: none;
       border-radius: 4px;
       color: var(--accent);
-      width: 20px;
-      height: 20px;
+      width: 24px;
+      height: 24px;
       display: flex;
       align-items: center;
       justify-content: center;
-      font-size: 12px;
+      font-size: 14px;
       cursor: pointer;
       opacity: 0;
       transition: opacity 0.2s;
     }
+    .comment-item{position:relative}
     .comment-item:hover .delete-comment {
       opacity: 1;
     }
@@ -186,6 +211,7 @@
       .thumb{width:96px;height:160px}
       #mini-player{left:12px;right:12px;bottom:12px}
       .side-panel{width:100%}
+      .emoji-grid{grid-template-columns:repeat(auto-fill,minmax(44px,1fr))}
     }
   </style>
 </head>
@@ -246,26 +272,60 @@
     <div class="panel" role="document">
       <h3 id="comments-title">Comments</h3>
       <div id="comments-list" class="comments-list" style="max-height:320px;overflow:auto;margin-top:8px;border-radius:8px;padding:8px;background:rgba(255,255,255,0.02)"></div>
-      <div style="position:relative">
-        <textarea id="comment-input" placeholder="Write a comment..." style="width:100%;min-height:80px;padding:8px;border-radius:8px;background:#07060a;border:1px solid rgba(255,255,255,0.04);color:#eaeaf2;margin-top:12px"></textarea>
-        <button id="emoji-toggle" class="btn icon" style="position:absolute;right:8px;bottom:8px">😊</button>
-        <div id="emoji-panel" class="emoji-panel">
-          <!-- Emojis will be inserted here -->
-        </div>
+      
+      <!-- Quick emoji bar -->
+      <div class="emoji-quick">
+        <button class="emoji-btn" data-emoji="🔥">🔥</button>
+        <button class="emoji-btn" data-emoji="😍">😍</button>
+        <button class="emoji-btn" data-emoji="😱">😱</button>
+        <button class="emoji-btn" data-emoji="🙌">🙌</button>
+        <button class="emoji-btn" data-emoji="👍">👍</button>
+        <button class="emoji-btn" data-emoji="👎">👎</button>
+        <button class="emoji-btn plus" id="open-emoji-modal">+</button>
       </div>
-      <div class="row" style="justify-content:flex-end;display:flex;gap:8px;margin-top:12px">
+
+      <textarea id="comment-input" placeholder="Write a comment..." style="width:100%;min-height:80px;padding:8px;border-radius:8px;background:#07060a;border:1px solid rgba(255,255,255,0.04);color:#eaeaf2;margin-bottom:12px"></textarea>
+      
+      <div class="row" style="justify-content:flex-end;display:flex;gap:8px">
         <button id="comment-cancel" class="btn">Cancel</button>
         <button id="comment-send" class="btn active">Send</button>
       </div>
     </div>
   </div>
 
-  <div id="side-panel" class="side-panel" aria-hidden="true">
-    <button id="side-close" class="btn" style="margin-bottom:12px">Close</button>
-    <div style="position:relative">
-      <h3 id="side-title">Full text</h3>
-      <button id="copy-text" class="copy-btn">Copy</button>
+  <!-- Emoji modal (full) -->
+  <div id="emoji-modal" class="emoji-modal">
+    <h3>Выбрать эмодзи</h3>
+    
+    <div class="emoji-category">
+      <div class="emoji-category-title">😊 Смайлы</div>
+      <div class="emoji-grid" id="emoji-smiles"></div>
     </div>
+
+    <div class="emoji-category">
+      <div class="emoji-category-title">❤️ Эмоции</div>
+      <div class="emoji-grid" id="emoji-hearts"></div>
+    </div>
+
+    <div class="emoji-category">
+      <div class="emoji-category-title">🤘 Жесты</div>
+      <div class="emoji-grid" id="emoji-hands"></div>
+    </div>
+
+    <div class="emoji-category">
+      <div class="emoji-category-title">🔥 Символы</div>
+      <div class="emoji-grid" id="emoji-symbols"></div>
+    </div>
+
+    <button id="close-emoji-modal" class="btn active" style="width:100%;margin-top:12px">Close</button>
+  </div>
+
+  <div id="side-panel" class="side-panel" aria-hidden="true">
+    <div class="side-header">
+      <button id="side-close" class="btn">Close</button>
+      <button id="copy-text" class="copy-btn">📋 Copy</button>
+    </div>
+    <h3 id="side-title">Full text</h3>
     <div id="side-content" style="white-space:pre-wrap;color:#eaeaf2;margin-top:8px"></div>
   </div>
 
@@ -533,7 +593,52 @@
     
     wavesurfer.on('error', (err) => console.error('❌ Wavesurfer error:', err));
   }
+// === ЭМОДЗИ ===
+const EMOJI_CATEGORIES = {
+  smiles: ['😀','😃','😄','😁','😆','😅','🤣','😂','🙂','🙃','😉','😊','😇','🥰','😍','🤩','😘','😗','☺️','😚','😙','🥲','😋','😛','😜','🤪','😝','🤑','🤗','🤭','🤫','🤔','🤐','🤨','😐','😑','😶','😏','😒','🙄','😬','😮‍💨','🤥','😌','😔','😪','🤤','😴','😷','🤒','🤕','🤢','🤮','🤧','🥵','🥶','🥴','😵','😵‍💫','🤯','🤠','🥳','🥸','😎','🤓','🧐'],
+  hearts: ['❤️','🧡','💛','💚','💙','💜','🖤','🤍','🤎','💔','❤️‍🔥','❤️‍🩹','💕','💞','💓','💗','💖','💘','💝','💟','☮️','✝️','☪️','🕉️','☸️','✡️','🔯','🕎','☯️','☦️','🛐','⛎','♈','♉','♊','♋','♌','♍','♎','♏','♐','♑','♒','♓'],
+  hands: ['👋','🤚','🖐️','✋','🖖','👌','🤌','🤏','✌️','🤞','🤟','🤘','🤙','👈','👉','👆','🖕','👇','☝️','👍','👎','✊','👊','🤛','🤜','👏','🙌','👐','🤲','🤝','🙏','✍️','💅','🤳','💪','🦾','🦿','🦵','🦶'],
+  symbols: ['🔥','⚡','💥','✨','💫','⭐','🌟','💢','💨','💦','💤','🕳️','💣','💬','👁️‍🗨️','🗨️','🗯️','💭','🎵','🎶','🎤','🎧','🎼','🎹','🥁','🎷','🎺','🎸','🪕','🎻','🎲','🎯','🎳','🎮','🎰','🧩']
+};
 
+function initEmojiModal() {
+  Object.keys(EMOJI_CATEGORIES).forEach(category => {
+    const container = document.getElementById(`emoji-${category}`);
+    if (!container) return;
+    
+    container.innerHTML = '';
+    EMOJI_CATEGORIES[category].forEach(emoji => {
+      const btn = document.createElement('button');
+      btn.className = 'emoji-btn';
+      btn.textContent = emoji;
+      btn.onclick = () => {
+        const input = document.getElementById('comment-input');
+        input.value += emoji;
+        input.focus();
+      };
+      container.appendChild(btn);
+    });
+  });
+}
+
+function initQuickEmoji() {
+  document.querySelectorAll('.emoji-quick .emoji-btn[data-emoji]').forEach(btn => {
+    btn.onclick = () => {
+      const emoji = btn.dataset.emoji;
+      const input = document.getElementById('comment-input');
+      input.value += emoji;
+      input.focus();
+    };
+  });
+  
+  document.getElementById('open-emoji-modal')?.addEventListener('click', () => {
+    document.getElementById('emoji-modal').classList.add('open');
+  });
+  
+  document.getElementById('close-emoji-modal')?.addEventListener('click', () => {
+    document.getElementById('emoji-modal').classList.remove('open');
+  });
+}
   function playTrack(index) {
     if (tracks.length === 0) return;
     
@@ -650,7 +755,8 @@
   // === INIT ===
   document.addEventListener('DOMContentLoaded', () => {
     console.log('🚀 Initializing...');
-    
+initEmojiModal();
+initQuickEmoji();
     tracks = getDraftTracks();
     initWavesurfer();
     initEmojiPanel();
@@ -785,16 +891,20 @@
     };
 
     // Копирование текста
-    document.getElementById('copy-text').onclick = () => {
-      const text = document.getElementById('side-content').textContent;
-      navigator.clipboard.writeText(text).then(() => {
-        const btn = document.getElementById('copy-text');
-        const original = btn.textContent;
-        btn.textContent = 'Copied!';
-        setTimeout(() => btn.textContent = original, 2000);
-        console.log('📋 Text copied');
-      });
-    };
+document.getElementById('copy-text').onclick = () => {
+  const text = document.getElementById('side-content').textContent;
+  const btn = document.getElementById('copy-text');
+  
+  navigator.clipboard.writeText(text).then(() => {
+    btn.textContent = '✅ Copied!';
+    btn.classList.add('copied');
+    setTimeout(() => {
+      btn.textContent = '📋 Copy';
+      btn.classList.remove('copied');
+    }, 2000);
+    console.log('📋 Text copied');
+  });
+};
 
     // Закрытие панелей
     document.getElementById('side-close').onclick = () => sidePanel.classList.remove('open');
