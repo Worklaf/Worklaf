@@ -2266,6 +2266,79 @@ function initAudioVisualizer() {
 
   draw();
 }
+	  
+function toggleVisualizerFullscreen() {
+  visualizerFullscreen = !visualizerFullscreen;
+  
+  const fullscreenDiv = document.getElementById('visualizer-fullscreen');
+  const container = document.querySelector('.container');
+  const btn = document.getElementById('mini-visualizer');
+  
+  if (visualizerFullscreen) {
+    fullscreenDiv.style.display = 'flex';
+    container.style.display = 'none';
+    btn.classList.add('active');
+    
+    visualizerActive = true;
+    
+    if (audioContext && audioContext.state === 'suspended') {
+      audioContext.resume();
+    }
+    
+    const titleEl = document.getElementById('visualizer-track-title');
+    if (titleEl && currentTrackIndex >= 0) {
+      titleEl.textContent = globalTracks[currentTrackIndex]?.title || 'Track';
+    }
+    
+    initAudioVisualizer();
+    console.log('🌀 Visualizer Fullscreen ON');
+  } else {
+    fullscreenDiv.style.display = 'none';
+    container.style.display = 'block';
+    btn.classList.remove('active');
+    
+    visualizerActive = false;
+    
+    if (animationId) {
+      cancelAnimationFrame(animationId);
+      animationId = null;
+    }
+    
+    console.log('🌀 Visualizer OFF');
+  }
+  
+  localStorage.setItem('visualizerFullscreen', visualizerFullscreen);
+}
+
+function changeVisualizerType(type) {
+  visualizerType = type;
+  ripples = [];
+  rippleTimer = 0;
+  spiralRotation = 0;
+  
+  document.querySelectorAll('.visualizer-type-btn').forEach(btn => {
+    btn.classList.toggle('active', btn.dataset.type === type);
+  });
+  
+  localStorage.setItem('visualizerType', type);
+  
+  if (visualizerActive) {
+    if (animationId) cancelAnimationFrame(animationId);
+    initAudioVisualizer();
+  }
+}
+
+const savedType = localStorage.getItem('visualizerType') || 'circle';
+visualizerType = savedType;
+
+window.addEventListener('resize', () => {
+  if (visualizerFullscreen) {
+    const canvas = document.getElementById('audio-visualizer');
+    canvas.width = window.innerWidth * 0.8;
+    canvas.height = window.innerHeight * 0.5;
+  }
+});
+
 	  function playNext() {
   console.log('⏭️ Playing next track...');
   
