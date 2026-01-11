@@ -1011,33 +1011,54 @@ div[style*="overflow-x: auto"]::-webkit-scrollbar {
   }
 
   async function getDraftTracks() {
-    const jsonTracks = await loadTracksFromJSON();
-    
-    if (jsonTracks && jsonTracks.length > 0) {
-      globalTracks = jsonTracks;
-      localStorage.setItem('cachedTracks', JSON.stringify(jsonTracks));
-      return jsonTracks;
+  // Сначала проверяем localStorage (draftTracks имеет приоритет)
+  const stored = localStorage.getItem('draftTracks');
+  if (stored && stored !== '[]') {
+    try {
+      const draftTracks = JSON.parse(stored);
+      if (draftTracks.length > 0) {
+        console.log('✅ Loaded', draftTracks.length, 'tracks from draftTracks');
+        globalTracks = draftTracks;
+        return draftTracks;
+      }
+    } catch (e) {
+      console.error('❌ Error parsing draftTracks:', e);
     }
-    
-    const cached = localStorage.getItem('cachedTracks');
-    if (cached) {
-      globalTracks = JSON.parse(cached);
-      return globalTracks;
-    }
-    
-    const stored = localStorage.getItem('draftTracks');
-    if (stored && stored !== '[]') {
-      globalTracks = JSON.parse(stored);
-      return globalTracks;
-    }
-    
-    return [];
   }
+  
+  // Затем пытаемся загрузить из tracks.json
+  const jsonTracks = await loadTracksFromJSON();
+  
+  if (jsonTracks && jsonTracks.length > 0) {
+    globalTracks = jsonTracks;
+    localStorage.setItem('cachedTracks', JSON.stringify(jsonTracks));
+    localStorage.setItem('draftTracks', JSON.stringify(jsonTracks));
+    console.log('✅ Loaded', jsonTracks.length, 'tracks from tracks.json');
+    return jsonTracks;
+  }
+  
+  // Затем проверяем кеш
+  const cached = localStorage.getItem('cachedTracks');
+  if (cached) {
+    try {
+      const cachedTracks = JSON.parse(cached);
+      globalTracks = cachedTracks;
+      console.log('✅ Loaded', cachedTracks.length, 'tracks from cache');
+      return cachedTracks;
+    } catch (e) {
+      console.error('❌ Error parsing cachedTracks:', e);
+    }
+  }
+  
+  return [];
+}
 
   function saveDraftTracks(tracks) {
-    globalTracks = tracks;
-    localStorage.setItem('draftTracks', JSON.stringify(tracks));
-  }
+  globalTracks = tracks;
+  localStorage.setItem('draftTracks', JSON.stringify(tracks));
+  // ВАЖНО: Также обновляем кеш, чтобы новые треки не терялись
+  localStorage.setItem('cachedTracks', JSON.stringify(tracks));
+}
 
   async function loadCommentsFromServer(trackSrc) {
   console.log('📥 Loading comments for:', trackSrc);
@@ -2033,48 +2054,67 @@ div[style*="overflow-x: auto"]::-webkit-scrollbar {
         document.getElementById('add-track-modal').classList.remove('open');
       });
 
-      document.getElementById('add-save').addEventListener('click', () => {
-        const title = document.getElementById('t-title').value.trim();
-        const audio = document.getElementById('t-audio').value.trim();
-        const cover = document.getElementById('t-cover').value.trim();
-        const genre = document.getElementById('t-genre').value.trim();
-        const lyrics = document.getElementById('t-lyrics').value.trim();
+      document.getElementById('add-save').addEventListener('click', async () => {
+  const title = document.getElementById('t-title').value.trim();
+  const audio = document.getElementById('t-audio').value.trim();
+  const cover = document.getElementById('t-cover').value.trim();
+  const genre = document.getElementById('t-genre').value.trim();
+  const lyrics = document.getElementById('t-lyrics').value.trim();
 
-        if (!title || !audio || !cover) {
-          alert(t('required'));
-          return;
-        }
+  if (!title || !audio || !cover) {
+    alert(t('required'));
+    return;
+  }
 
-        const newTrack = { title, audio, cover, genre, lyrics, duration: '—' };
-        globalTracks.push(newTrack);
-        saveDraftTracks(globalTracks);
-        renderDraftTracks();
-
-        document.getElementById('t-title').value = '';
-        document.getElementById('t-audio').value = '';
-        document.getElementById('t-cover').value = '';
-        document.getElementById('t-genre').value = '';
-        document.getElementById('t-lyrics').value = '';
-        document.getElementById('add-track-modal').classList.remove('open');
-      });
+  const newTrack = { 
+    title, 
+    audio, 
+    cover, 
+    genre, 
+    lyrics, 
+    duration: '—' 
+  };
+  
+  // Добавляем новый трек
+  globalTracks.push(newTrack);
+  
+  // Сохраняем обновленный список
+  saveDraftTracks(globalTracks);
+  
+  // Перерисовываем список
+  await renderDraftTracks();
+  
+  // Очищаем форму
+  document.getElementById('t-title').value = '';
+  document.getElementById('t-audio').value = '';
+  document.getElementById('t-cover').value = '';
+  document.getElementById('t-genre').value = '';
+  document.getElementById('t-lyrics').value = '';
+  
+  // Закрываем модальное окно
+  document.getElementById('add-track-modal').classList.remove('open');
+  
+  // Показываем уведомление
+  alert('✅ ' + title + ' успешно добавлен!');
+});
 
       document.getElementById('exportJsonBtn').addEventListener('click', () => {
-        if (globalTracks.length === 0) {
-          alert(t('noTracks'));
-          return;
-        }
+  if (globalTracks.length === 0) {
+    alert(t('noTracks'));
+    return;
+  }
 
-        const json = JSON.stringify(globalTracks, null, 2);
-        const blob = new Blob([json], { type: 'application/json' });
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = 'tracks.json';
-        a.click();
-        URL.revokeObjectURL(url);
+  const json = JSON.stringify(globalTracks, null, 2);
+  const blob = new Blob([json], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = 'tracks.json';
+  a.click();
+  URL.revokeObjectURL(url);
 
-        alert(`✅ ${t('exported')} ${globalTracks.length} ${t('tracks')}\n\n📤 ${t('uploadGithub')}\n🔄 ${t('refreshPage')}`);
-      });
+  alert(`✅ ${t('exported')} ${globalTracks.length} ${t('tracks')}\n\n📤 ${t('uploadGithub')}\n🔄 ${t('refreshPage')}`);
+});
     } else {
       document.getElementById('addTrackBtn').style.display = 'none';
       document.getElementById('exportJsonBtn').style.display = 'none';
