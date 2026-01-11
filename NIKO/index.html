@@ -2143,10 +2143,13 @@ const visualizerTypes = [
   { id: 'radial', name: '🌈 Radial Spectrum' },
   { id: 'neon', name: '💫 Neon Circle' },
   { id: 'golden', name: '🔶 Golden Wave' },
+  { id: 'nebula', name: '🌌 Nebula' },
   { id: 'aurora', name: '🌠 Aurora' },
   { id: 'bubbles', name: '🫧 Bubbles' },
   { id: 'dna', name: '🧬 Music DNA' },
-  { id: 'laser', name: '⚡ Laser Show' }
+  { id: 'laser', name: '⚡ Laser Show' },
+  { id: 'rain', name: '💦 Particle Rain' },
+  { id: 'grid', name: '🌐 Cyber Grid' }
 ];
 
 let visualizerActive = false;
@@ -2255,26 +2258,21 @@ function handleTouchEnd() {
 }
 
 // Инициализация свайп-навигации
-// Инициализация свайп-навигации (без стрелок, добавлено нажатие)
 function initSwipeNavigation() {
   const fullscreenDiv = document.getElementById('visualizer-fullscreen');
-  const canvas = document.getElementById('audio-visualizer');
-  if (!fullscreenDiv || !canvas) return;
+  if (!fullscreenDiv) return;
   
   // Слушаем сенсорные события
   fullscreenDiv.addEventListener('touchstart', handleTouchStart, false);
   fullscreenDiv.addEventListener('touchmove', handleTouchMove, false);
   fullscreenDiv.addEventListener('touchend', handleTouchEnd, false);
   
-  // Добавляем клик по визуализатору для закрытия
-  canvas.addEventListener('click', function() {
-    toggleVisualizerFullscreen();
-  });
+  // Кнопки навигации
+  const prevBtn = document.getElementById('viz-prev-btn');
+  const nextBtn = document.getElementById('viz-next-btn');
   
-  // Отменяем обработчик на двойной тап (для iOS)
-  canvas.addEventListener('dblclick', function(e) {
-    e.preventDefault();
-  });
+  if (prevBtn) prevBtn.addEventListener('click', prevVisualizer);
+  if (nextBtn) nextBtn.addEventListener('click', nextVisualizer);
 }
 
 // Создаем различные типы частиц для новых визуализаторов
@@ -2744,6 +2742,68 @@ function initAudioVisualizer() {
     
     ctx.shadowBlur = 0;
   }
+  
+  // 🌌 5. NEBULA (НОВЫЙ)
+  function drawNebula(ctx, centerX, centerY) {
+    // Космический фон
+    ctx.fillStyle = '#000';
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    
+    // Звезды
+    for (let i = 0; i < 100; i++) {
+      const x = Math.random() * canvas.width;
+      const y = Math.random() * canvas.height;
+      const size = Math.random() * 1.5 + 0.5;
+      
+      ctx.beginPath();
+      ctx.arc(x, y, size, 0, Math.PI * 2);
+      ctx.fillStyle = `rgba(255, 255, 255, ${Math.random() * 0.8 + 0.2})`;
+      ctx.fill();
+    }
+    
+    // Частицы туманности
+    nebulaParticles.forEach((p, index) => {
+      // Плавное движение
+      p.x += Math.sin(time * 0.5 + index) * p.speed;
+      p.y += Math.cos(time * 0.3 + index) * p.speed;
+      
+      // Возвращаем на экран, если вышли за границы
+      if (p.x < -20) p.x = canvas.width + 20;
+      if (p.x > canvas.width + 20) p.x = -20;
+      if (p.y < -20) p.y = canvas.height + 20;
+      if (p.y > canvas.height + 20) p.y = -20;
+      
+      // Частота для этой частицы
+      const freqIndex = Math.floor((index / nebulaParticles.length) * dataArray.length);
+      const value = dataArray[freqIndex] / 255;
+      
+      // Размер зависит от частоты
+      const size = p.size + value * 10;
+      
+      // Рисуем частицу с градиентом
+      const gradient = ctx.createRadialGradient(p.x, p.y, 0, p.x, p.y, size * 3);
+      gradient.addColorStop(0, p.color);
+      gradient.addColorStop(0.5, p.color.replace(')', ', 0.5)').replace('rgb', 'rgba'));
+      gradient.addColorStop(1, p.color.replace(')', ', 0)').replace('rgb', 'rgba'));
+      
+      ctx.beginPath();
+      ctx.arc(p.x, p.y, size * 3, 0, Math.PI * 2);
+      ctx.fillStyle = gradient;
+      ctx.fill();
+    });
+    
+    // Пульсирующее свечение в центре
+    const bassAvg = dataArray.slice(0, 10).reduce((a, b) => a + b, 0) / 10 / 255;
+    const glow = ctx.createRadialGradient(centerX, centerY, 0, centerX, centerY, 150 + bassAvg * 100);
+    glow.addColorStop(0, 'rgba(157, 0, 255, 0.4)');
+    glow.addColorStop(0.5, 'rgba(157, 0, 255, 0.1)');
+    glow.addColorStop(1, 'rgba(157, 0, 255, 0)');
+    
+    ctx.beginPath();
+    ctx.arc(centerX, centerY, 250, 0, Math.PI * 2);
+    ctx.fillStyle = glow;
+    ctx.fill();
+  }
   // 🌠 AURORA BOREALIS (НОВЫЙ)
   function drawAurora(ctx, centerX, centerY) {
     // Ночное небо с градиентом
@@ -3124,6 +3184,214 @@ function initAudioVisualizer() {
     ctx.shadowBlur = 0;
   }
   
+  // 💦 PARTICLE RAIN (НОВЫЙ)
+  function drawParticleRain(ctx, centerX, centerY) {
+    // Темный фон с градиентом
+    const bgGradient = ctx.createLinearGradient(0, 0, 0, canvas.height);
+    bgGradient.addColorStop(0, '#000510');
+    bgGradient.addColorStop(1, '#002050');
+    
+    ctx.fillStyle = bgGradient;
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    
+    // Анализируем музыку
+    const bassAvg = dataArray.slice(0, 10).reduce((a, b) => a + b, 0) / 10 / 255;
+    
+    // Обновляем и рисуем капли
+    raindrops.forEach((drop, index) => {
+      // Частотный диапазон для этой капли
+      const freqIndex = Math.floor((index / raindrops.length) * dataArray.length);
+      const value = dataArray[freqIndex] / 255;
+      
+      // Скорость падения зависит от музыки
+      const speed = drop.speed * (1 + value * 0.5);
+      
+      // Обновляем позицию
+      drop.y += speed;
+      
+      // Если капля достигла низа, возвращаем ее наверх
+      if (drop.y > canvas.height) {
+        drop.y = -10;
+        drop.x = Math.random() * canvas.width;
+      }
+      
+      // Размер зависит от музыки
+      const size = drop.size * (1 + value * 0.5);
+      
+      // Рисуем каплю
+      ctx.beginPath();
+      // Форма капли (вытянутая вниз)
+      ctx.moveTo(drop.x, drop.y - size);
+      ctx.bezierCurveTo(
+        drop.x - size, drop.y - size/2,
+        drop.x - size, drop.y,
+        drop.x, drop.y + size
+      );
+      ctx.bezierCurveTo(
+        drop.x + size, drop.y,
+        drop.x + size, drop.y - size/2,
+        drop.x, drop.y - size
+      );
+      
+      // Градиент для капли
+      const dropGradient = ctx.createLinearGradient(drop.x, drop.y - size, drop.x, drop.y + size);
+      dropGradient.addColorStop(0, 'rgba(255, 255, 255, 0.8)');
+      dropGradient.addColorStop(1, drop.color);
+      
+      ctx.fillStyle = dropGradient;
+      ctx.shadowBlur = 10;
+      ctx.shadowColor = drop.color;
+      ctx.fill();
+    });
+    
+    // Эффект отражения внизу
+    const reflectionGradient = ctx.createLinearGradient(0, canvas.height - 100, 0, canvas.height);
+    reflectionGradient.addColorStop(0, 'rgba(0, 100, 200, 0)');
+    reflectionGradient.addColorStop(1, 'rgba(0, 100, 200, 0.2)');
+    
+    ctx.fillStyle = reflectionGradient;
+    ctx.fillRect(0, canvas.height - 100, canvas.width, 100);
+    
+    // Волны на поверхности
+    for (let i = 0; i < 5; i++) {
+      const waveY = canvas.height - 10 - i * 5;
+      const amplitude = 3 + i + bassAvg * 10;
+      
+      ctx.beginPath();
+      
+      for (let x = 0; x < canvas.width; x += 5) {
+        const y = waveY + Math.sin(x * 0.02 + time * (1 + i * 0.5)) * amplitude;
+        
+        if (x === 0) {
+          ctx.moveTo(x, y);
+        } else {
+          ctx.lineTo(x, y);
+        }
+      }
+      
+      ctx.strokeStyle = `rgba(100, 200, 255, ${0.2 - i * 0.03})`;
+      ctx.lineWidth = 2;
+      ctx.stroke();
+    }
+    
+    ctx.shadowBlur = 0;
+  }
+  // 🌐 CYBER GRID 
+function drawCyberGrid(ctx, centerX, centerY) {
+  // Ретро-кибер фон
+  const bgGradient = ctx.createLinearGradient(0, 0, 0, canvas.height);
+  bgGradient.addColorStop(0, '#000428');
+  bgGradient.addColorStop(1, '#004e92');
+  
+  ctx.fillStyle = bgGradient;
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
+  
+  // Анализируем музыку для эффектов
+  const bassAvg = dataArray.slice(0, 10).reduce((a, b) => a + b, 0) / 10 / 255;
+  const midAvg = dataArray.slice(20, 40).reduce((a, b) => a + b, 0) / 20 / 255;
+  
+  // Горизонт (линия)
+  ctx.beginPath();
+  ctx.moveTo(0, centerY);
+  ctx.lineTo(canvas.width, centerY);
+  ctx.strokeStyle = 'rgba(0, 255, 255, 0.5)';
+  ctx.lineWidth = 2;
+  ctx.stroke();
+  
+  // Обновляем z-координаты сетки на основе музыки
+  gridPoints.forEach(point => {
+    const freqIndex = Math.floor((point.x + point.y) * 50) % dataArray.length;
+    const targetZ = dataArray[freqIndex] / 255 * 0.5;
+    
+    // Плавно изменяем Z
+    point.z += (targetZ - point.z) * 0.1;
+  });
+  
+  // Рисуем сетку с перспективой
+  ctx.strokeStyle = 'rgba(0, 255, 255, 0.5)';
+  ctx.lineWidth = 1;
+  
+  // Вертикальные линии
+  for (let x = 0; x <= 20; x++) {
+    ctx.beginPath();
+    
+    for (let y = 0; y <= 20; y++) {
+      const point = gridPoints.find(p => Math.abs(p.x - x/20) < 0.001 && Math.abs(p.y - y/20) < 0.001);
+      
+      if (!point) continue;
+      
+      // Перспективное искажение
+      const perspX = centerX + (point.x - 0.5) * canvas.width * (0.5 + point.z);
+      const perspY = centerY + (point.y - 0.5) * canvas.height * (0.3 + point.z);
+      
+      if (y === 0) {
+        ctx.moveTo(perspX, perspY);
+      } else {
+        ctx.lineTo(perspX, perspY);
+      }
+    }
+    
+    ctx.stroke();
+  }
+  
+  // Горизонтальные линии
+  for (let y = 0; y <= 20; y++) {
+    ctx.beginPath();
+    
+    for (let x = 0; x <= 20; x++) {
+      const point = gridPoints.find(p => Math.abs(p.x - x/20) < 0.001 && Math.abs(p.y - y/20) < 0.001);
+      
+      if (!point) continue;
+      
+      // Перспективное искажение
+      const perspX = centerX + (point.x - 0.5) * canvas.width * (0.5 + point.z);
+      const perspY = centerY + (point.y - 0.5) * canvas.height * (0.3 + point.z);
+      
+      if (x === 0) {
+        ctx.moveTo(perspX, perspY);
+      } else {
+        ctx.lineTo(perspX, perspY);
+      }
+    }
+    
+    ctx.stroke();
+  }
+  
+  // Солнце/луна на горизонте
+  const sunRadius = 30 + bassAvg * 20;
+  const sunGradient = ctx.createRadialGradient(
+    centerX, centerY - 30, 0,
+    centerX, centerY - 30, sunRadius
+  );
+  sunGradient.addColorStop(0, 'rgba(255, 0, 128, 1)');
+  sunGradient.addColorStop(0.7, 'rgba(255, 0, 128, 0.5)');
+  sunGradient.addColorStop(1, 'rgba(255, 0, 128, 0)');
+  
+  ctx.beginPath();
+  ctx.arc(centerX, centerY - 30, sunRadius, 0, Math.PI * 2);
+  ctx.fillStyle = sunGradient;
+  ctx.shadowBlur = 20;
+  ctx.shadowColor = 'rgba(255, 0, 128, 0.8)';
+  ctx.fill();
+  
+  // Добавляем эквалайзер внизу
+  const barCount = 20;
+  const barWidth = canvas.width / barCount;
+  const barMaxHeight = canvas.height * 0.2;
+  
+  for (let i = 0; i < barCount; i++) {
+    const value = dataArray[i * 2] / 255;
+    const barHeight = value * barMaxHeight;
+    
+    // Неоновая полоска эквалайзера
+    ctx.fillStyle = `rgba(0, 255, 255, ${value * 0.8})`;
+    ctx.shadowBlur = 10;
+    ctx.shadowColor = 'rgba(0, 255, 255, 0.8)';
+    ctx.fillRect(i * barWidth, canvas.height - barHeight, barWidth - 2, barHeight);
+  }
+  
+  ctx.shadowBlur = 0;
+}
   draw();
 }
 
@@ -3314,6 +3582,29 @@ function playPrev() {
   " id="visualizer-name-indicator">
     ⭕ Circular Spectrum
   </div>
+  
+  <!-- Стрелки навигации (для свайпа) -->
+  <div style="
+    position: absolute;
+    top: 50%;
+    left: 15px;
+    transform: translateY(-50%);
+    z-index: 51;
+    opacity: 0.7;
+    font-size: 30px;
+    cursor: pointer;
+  " id="viz-prev-btn">◀</div>
+  
+  <div style="
+    position: absolute;
+    top: 50%;
+    right: 15px;
+    transform: translateY(-50%);
+    z-index: 51;
+    opacity: 0.7;
+    font-size: 30px;
+    cursor: pointer;
+  " id="viz-next-btn">▶</div>
   
   <!-- Индикаторы (точки) -->
   <div style="
