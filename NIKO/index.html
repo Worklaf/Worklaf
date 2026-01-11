@@ -94,7 +94,9 @@
     #mini-title{font-weight:700;color:#fff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
     #mini-wave{height:48px;border-radius:8px;background:linear-gradient(180deg,#05050a,#0b0b10)}
     .mini-controls{display:flex;align-items:center;justify-content:center;gap:18px}
-    .control-btn{background:transparent;border:0;color:var(--muted);padding:10px;border-radius:50%;cursor:pointer}
+    .control-btn{background:transparent;border:0;color:var(--muted);padding:10px;border-radius:50%;cursor:pointer;transition:all .2s}
+    .control-btn:hover{color:#fff;transform:scale(1.1)}
+    .control-btn.active{color:var(--accent)}
     .time-display{color:var(--muted);font-size:13px;white-space:nowrap;margin-top:4px}
 
     .side-panel{position:fixed;right:0;top:0;height:100%;width:360px;background:#0b0b10;color:#eaeaf2;padding:18px;box-shadow:-20px 0 40px rgba(0,0,0,.6);transform:translateX(100%);transition:transform .28s ease;z-index:10001;overflow:auto}
@@ -262,11 +264,27 @@
       opacity: 1;
     }
 
+    .empty-state {
+      text-align: center;
+      padding: 60px 20px;
+      color: var(--muted);
+    }
+
+    .empty-state h2 {
+      color: #fff;
+      margin-bottom: 12px;
+    }
+
+    .empty-state p {
+      margin: 8px 0;
+    }
+
     @media (max-width:880px){
       .thumb{width:96px;height:160px}
-      #mini-player{left:12px;right:12px;bottom:12px}
+      #mini-player{left:12px;right:12px;bottom:12px;flex-wrap:wrap}
       .side-panel{width:100%}
       .emoji-popup-grid{grid-template-columns:repeat(6,1fr)}
+      #mini-right{width:100%;order:3}
     }
   </style>
 </head>
@@ -297,11 +315,12 @@
       <div id="mini-title">—</div>
       <div id="mini-wave"></div>
       <div id="mini-controls" class="mini-controls">
-        <button id="mini-prev" class="control-btn" aria-label="Previous">◀</button>
-        <button id="mini-play" class="control-btn" aria-label="Play/Pause">
+        <button id="mini-prev" class="control-btn" aria-label="Previous" title="Previous">◀</button>
+        <button id="mini-play" class="control-btn" aria-label="Play/Pause" title="Play/Pause">
           <svg id="mini-play-icon" width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M5 3v18l15-9L5 3z"/></svg>
         </button>
-        <button id="mini-next" class="control-btn" aria-label="Next">▶</button>
+        <button id="mini-next" class="control-btn" aria-label="Next" title="Next">▶</button>
+        <button id="play-mode" class="control-btn" aria-label="Play mode" title="Sequential">🔁</button>
       </div>
       <div class="time-display" id="mini-time">0:00 / 0:00</div>
     </div>
@@ -397,8 +416,24 @@
   const getCount = k => parseInt(localStorage.getItem(k) || '0', 10);
   const setCount = (k,v) => localStorage.setItem(k, String(v));
 
+  const DEMO_TRACKS = [
+    {
+      title: "Demo Track - Add Your Own",
+      audio: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3",
+      cover: "https://via.placeholder.com/120x200/0b0b10/ff4da6?text=Demo",
+      genre: "Demo",
+      lyrics: "Это демо-трек.\n\nДобавьте свои треки через ?admin",
+      duration: "—"
+    }
+  ];
+
   function getDraftTracks() {
-    return JSON.parse(localStorage.getItem('draftTracks') || '[]');
+    const stored = localStorage.getItem('draftTracks');
+    if (!stored || stored === '[]') {
+      saveDraftTracks(DEMO_TRACKS);
+      return DEMO_TRACKS;
+    }
+    return JSON.parse(stored);
   }
 
   function saveDraftTracks(tracks) {
@@ -536,6 +571,17 @@
     
     list.innerHTML = '';
 
+    if (tracks.length === 0) {
+      list.innerHTML = `
+        <div class="empty-state">
+          <h2>Нет треков</h2>
+          <p>Добавьте треки через <strong>?admin</strong></p>
+          <p style="font-size:12px;margin-top:20px">Откройте: <code>${location.origin}${location.pathname}?admin</code></p>
+        </div>
+      `;
+      return;
+    }
+
     tracks.forEach((track, index) => {
       const div = document.createElement('div');
       div.className = 'track';
@@ -589,6 +635,31 @@
   let tracks = [];
   let durationInterval;
   let currentEditingSrc = '';
+  let playMode = localStorage.getItem('playMode') || 'sequential';
+
+  const PLAY_MODES = {
+    sequential: { icon: '🔁', title: 'Sequential' },
+    'repeat-one': { icon: '🔂', title: 'Repeat One' },
+    random: { icon: '🔀', title: 'Random' }
+  };
+
+  function updatePlayModeButton() {
+    const btn = document.getElementById('play-mode');
+    if (!btn) return;
+    const mode = PLAY_MODES[playMode];
+    btn.textContent = mode.icon;
+    btn.title = mode.title;
+    btn.classList.toggle('active', playMode !== 'sequential');
+  }
+
+  function cyclePlayMode() {
+    const modes = Object.keys(PLAY_MODES);
+    const currentIndex = modes.indexOf(playMode);
+    playMode = modes[(currentIndex + 1) % modes.length];
+    localStorage.setItem('playMode', playMode);
+    updatePlayModeButton();
+    console.log('🔁 Play mode:', playMode);
+  }
 
   function initWavesurfer() {
     wavesurfer = WaveSurfer.create({
@@ -622,7 +693,15 @@
       document.getElementById('mini-play-icon').innerHTML = '<path d="M5 3v18l15-9L5 3z"/>';
     });
 
-    wavesurfer.on('finish', () => playNext());
+    wavesurfer.on('finish', () => {
+      console.log('⏭️ Track finished, mode:', playMode);
+      if (playMode === 'repeat-one') {
+        wavesurfer.seekTo(0);
+        wavesurfer.play();
+      } else {
+        playNext();
+      }
+    });
     
     wavesurfer.on('error', (err) => console.error('❌ Error:', err));
   }
@@ -664,12 +743,29 @@
 
   function playNext() {
     if (tracks.length === 0) return;
-    playTrack((currentTrackIndex + 1) % tracks.length);
+    
+    let nextIndex;
+    if (playMode === 'random') {
+      nextIndex = Math.floor(Math.random() * tracks.length);
+    } else {
+      nextIndex = (currentTrackIndex + 1) % tracks.length;
+    }
+    
+    console.log('⏭️ Next track:', nextIndex, '/', tracks.length);
+    playTrack(nextIndex);
   }
 
   function playPrev() {
     if (tracks.length === 0) return;
-    playTrack((currentTrackIndex - 1 + tracks.length) % tracks.length);
+    
+    let prevIndex;
+    if (playMode === 'random') {
+      prevIndex = Math.floor(Math.random() * tracks.length);
+    } else {
+      prevIndex = (currentTrackIndex - 1 + tracks.length) % tracks.length;
+    }
+    
+    playTrack(prevIndex);
   }
 
   let currentTrackForComments = null;
@@ -820,6 +916,7 @@
     initWavesurfer();
     initEmojiSystem();
     renderDraftTracks();
+    updatePlayModeButton();
 
     if (isAdmin) {
       document.getElementById('edit-text').style.display = 'inline-block';
@@ -888,6 +985,7 @@
     document.getElementById('mini-play').onclick = () => wavesurfer?.playPause();
     document.getElementById('mini-next').onclick = playNext;
     document.getElementById('mini-prev').onclick = playPrev;
+    document.getElementById('play-mode').onclick = cyclePlayMode;
     document.getElementById('mini-volume').oninput = (e) => wavesurfer?.setVolume(parseFloat(e.target.value));
 
     document.getElementById('mini-open-text').onclick = () => {
