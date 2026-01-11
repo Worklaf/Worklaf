@@ -663,6 +663,7 @@ div[style*="overflow-x: auto"]::-webkit-scrollbar {
 
     <button id="addTrackBtn" class="btn">⬆ Upload Track</button>
     <button id="exportJsonBtn" class="btn">📦 Export JSON</button>
+	  <button id="resetPlaysBtn" class="btn" style="background:rgba(255,77,77,0.1);border-color:rgba(255,77,77,0.3)">🔄 Reset Plays</button>
   </header>
 
   <main>
@@ -3438,6 +3439,119 @@ function playPrev() {
     console.error('❌ Track element not found for index:', prevIndex);
   }
 }
+	  // ========================================
+// 🔄 СБРОС ПРОСЛУШИВАНИЙ (ADMIN)
+// ========================================
+
+function loadPlaysForReset() {
+  const container = document.getElementById('plays-tracks-list');
+  if (!container) return;
+  
+  container.innerHTML = '';
+  
+  if (globalTracks.length === 0) {
+    container.innerHTML = '<p style="text-align:center;color:#bfc3d6;padding:20px">No tracks</p>';
+    return;
+  }
+  
+  globalTracks.forEach((track, index) => {
+    const plays = getCount('plays:' + track.audio);
+    
+    const div = document.createElement('div');
+    div.style.cssText = 'padding: 8px; margin-bottom: 6px; background: rgba(255,255,255,0.05); border-radius: 8px';
+    
+    div.innerHTML = `
+      <label style="display: flex; align-items: center; gap: 10px; cursor: pointer">
+        <input type="checkbox" class="play-checkbox" data-src="${track.audio}" style="width: 16px; height: 16px">
+        <img src="${track.cover}" style="width: 40px; height: 60px; object-fit: cover; border-radius: 4px" alt="">
+        <div style="flex: 1; min-width: 0">
+          <div style="font-weight: 600; color: #fff; font-size: 13px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap">
+            ${track.title}
+          </div>
+          <div style="color: #bfc3d6; font-size: 12px">
+            🎵 ${plays} plays
+          </div>
+        </div>
+      </label>
+    `;
+    
+    container.appendChild(div);
+  });
+}
+
+function openResetPlaysModal() {
+  document.getElementById('reset-plays-modal').classList.add('open');
+  loadPlaysForReset();
+  document.getElementById('select-all-plays').checked = false;
+}
+
+async function resetPlaysCounters() {
+  const selected = Array.from(document.querySelectorAll('.play-checkbox:checked'))
+    .map(cb => cb.dataset.src);
+  
+  if (selected.length === 0) {
+    alert('❌ Select at least one track!');
+    return;
+  }
+  
+  const confirm = window.confirm(
+    `⚠️ RESET PLAYS?\n\n` +
+    `${selected.length} track(s) will be reset to 0 plays.\n\n` +
+    `This cannot be undone!\n\n` +
+    `Continue?`
+  );
+  
+  if (!confirm) return;
+  
+  const btn = document.getElementById('reset-plays-confirm');
+  btn.textContent = '⏳ Resetting...';
+  btn.disabled = true;
+  
+  for (const src of selected) {
+    const key = 'plays:' + src;
+    localStorage.removeItem(key);
+    delete globalCounts[key];
+    setCount(key, 0);
+    if (USE_JSONBIN) await saveCountToServer(key, 0);
+  }
+  
+  // Обновляем UI
+  document.querySelectorAll('.track').forEach(trackEl => {
+    const src = trackEl.dataset.src;
+    if (selected.includes(src)) {
+      const playCount = trackEl.querySelector('.play-count .num');
+      if (playCount) playCount.textContent = '0';
+    }
+  });
+  
+  if (selected.includes(currentTrackSrc)) {
+    updateCountUI(currentTrackSrc);
+  }
+  
+  btn.textContent = '🗑️ Reset';
+  btn.disabled = false;
+  
+  document.getElementById('reset-plays-modal').classList.remove('open');
+  
+  alert(`✅ Done!\n\n${selected.length} track(s) reset to 0 plays`);
+}
+
+// Обработчики
+document.addEventListener('DOMContentLoaded', function() {
+  if (isAdmin) {
+    document.getElementById('resetPlaysBtn')?.addEventListener('click', openResetPlaysModal);
+    document.getElementById('reset-plays-cancel')?.addEventListener('click', () => {
+      document.getElementById('reset-plays-modal').classList.remove('open');
+    });
+    document.getElementById('reset-plays-confirm')?.addEventListener('click', resetPlaysCounters);
+    document.getElementById('select-all-plays')?.addEventListener('change', (e) => {
+      document.querySelectorAll('.play-checkbox').forEach(cb => cb.checked = e.target.checked);
+    });
+  } else {
+    const btn = document.getElementById('resetPlaysBtn');
+    if (btn) btn.style.display = 'none';
+  }
+});
   </script>
 
 <div id="visualizer-fullscreen" style="
@@ -3524,6 +3638,30 @@ function playPrev() {
       max-width: 90%;
       margin-top: 20px;
     " id="visualizer-track-title">Track Name</div>
+  </div>
+</div>
+	<!-- МОДАЛКА СБРОСА ПРОСЛУШИВАНИЙ -->
+<div id="reset-plays-modal" class="modal">
+  <div class="panel" style="max-width: 500px">
+    <h3>🔄 Reset Plays Counter</h3>
+    
+    <div style="margin: 16px 0; padding: 12px; background: rgba(255,77,77,0.1); border-radius: 8px">
+      <strong style="color: #ff4da6">⚠️ Warning:</strong> This cannot be undone!
+    </div>
+
+    <div style="margin: 16px 0">
+      <label style="display: flex; align-items: center; gap: 8px; cursor: pointer; padding: 8px; background: rgba(255,255,255,0.05); border-radius: 8px">
+        <input type="checkbox" id="select-all-plays" style="width: 18px; height: 18px">
+        <span style="font-weight: 600">Select All</span>
+      </label>
+    </div>
+
+    <div id="plays-tracks-list" style="max-height: 300px; overflow-y: auto; border: 1px solid rgba(255,255,255,0.08); border-radius: 8px; padding: 8px; background: rgba(0,0,0,0.3)"></div>
+
+    <div style="display: flex; gap: 8px; justify-content: flex-end; margin-top: 16px">
+      <button id="reset-plays-cancel" class="btn">Cancel</button>
+      <button id="reset-plays-confirm" class="btn active" style="background: linear-gradient(90deg, #ff4da6, #ff0000)">🗑️ Reset</button>
+    </div>
   </div>
 </div>
 </body>
