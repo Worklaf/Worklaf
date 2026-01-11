@@ -499,30 +499,37 @@
       }
     }
 .visualizer-type-btn {
-  background: rgba(255,255,255,0.05);
-  border: 1px solid rgba(255,255,255,0.1);
+  background: rgba(255,255,255,0.08);
+  border: 1px solid rgba(255,255,255,0.15);
   color: var(--muted);
-  padding: 10px 18px;
-  border-radius: 10px;
+  padding: 12px 20px;
+  border-radius: 12px;
   cursor: pointer;
-  font-size: 14px;
-  transition: all 0.2s;
+  font-size: 15px;
+  font-weight: 600;
+  transition: all 0.3s;
+  position: relative;
+  z-index: 20;
+  backdrop-filter: blur(10px);
 }
 
 .visualizer-type-btn:hover {
-  background: rgba(255,255,255,0.1);
-  transform: translateY(-2px);
+  background: rgba(255,255,255,0.15);
+  transform: translateY(-3px);
+  box-shadow: 0 5px 20px rgba(0, 209, 255, 0.3);
 }
 
 .visualizer-type-btn.active {
-  background: linear-gradient(90deg, var(--accent), var(--accent2));
+  background: linear-gradient(135deg, var(--accent), var(--accent2));
   color: #07060a;
   border-color: transparent;
+  box-shadow: 0 5px 25px rgba(255, 77, 166, 0.5);
 }
 
 #visualizer-close:hover {
   background: rgba(255,255,255,0.2);
   transform: translateY(-2px);
+  box-shadow: 0 5px 20px rgba(255, 77, 166, 0.3);
 }
 /* Визуализация */
 #audio-visualizer {
@@ -1469,6 +1476,55 @@
   }
 
   function playTrack(trackEl) {
+  // Предотвращаем двойную загрузку
+  if (window.isLoadingTrack) {
+    console.log('⏳ Already loading track, please wait...');
+    return;
+  }
+  
+  window.isLoadingTrack = true;
+  
+  const src = trackEl.dataset.src;
+  const title = trackEl.dataset.title;
+  const cover = trackEl.querySelector('.thumb').src;
+  const index = parseInt(trackEl.dataset.index);
+
+  currentTrackSrc = src;
+  currentTrackIndex = index;
+  window.currentTrackSrc = src;
+
+  document.getElementById('mini-title').textContent = title;
+  document.getElementById('mini-thumb').src = cover;
+  document.getElementById('mini-player').style.display = 'flex';
+
+  // Останавливаем текущее воспроизведение
+  if (wavesurfer) {
+    wavesurfer.stop();
+  }
+  
+  // ЗАДЕРЖКА перед загрузкой следующего трека
+  setTimeout(() => {
+    wavesurfer.load(src);
+    
+    // Снимаем флаг через 500ms
+    setTimeout(() => {
+      window.isLoadingTrack = false;
+    }, 500);
+  }, 100);
+
+  const playKey = 'plays:' + src;
+  const newCount = getCount(playKey) + 1;
+  setCount(playKey, newCount);
+  saveCountToServer(playKey, newCount);
+  updateCountUI(src);
+
+  updateMiniPlayerButtons();
+  
+  // Обновляем название в визуализаторе
+  const vizTitle = document.getElementById('visualizer-track-title');
+  if (vizTitle) {
+    vizTitle.textContent = title;
+  }
     const src = trackEl.dataset.src;
     const title = trackEl.dataset.title;
     const cover = trackEl.querySelector('.thumb').src;
@@ -2086,7 +2142,7 @@ function initAudioVisualizer() {
     }
   }
   
-  // Функция рисования
+    // Функция рисования
   function draw() {
     if (!visualizerActive) return;
     
@@ -2105,19 +2161,19 @@ function initAudioVisualizer() {
       case 'circle':
         drawCircle(ctx, centerX, centerY);
         break;
-      case 'bars':
-        drawBars(ctx);
+      case 'frequency':
+        drawFrequency(ctx, centerX, centerY);
         break;
-      case 'wave':
-        drawWave(ctx, centerY);
+      case 'spiral':
+        drawSpiral(ctx, centerX, centerY);
         break;
-      case 'particles':
-        drawParticles(ctx);
+      case 'ripple':
+        drawRipple(ctx, centerX, centerY);
         break;
     }
   }
   
-  // 🌀 CIRCLE
+  // 🌀 CIRCLE (оставляем как есть)
   function drawCircle(ctx, centerX, centerY) {
     const radius = Math.min(canvas.width, canvas.height) * 0.15;
     
@@ -2175,43 +2231,80 @@ function initAudioVisualizer() {
     ctx.stroke();
   }
   
-  // 📊 BARS
-  function drawBars(ctx) {
-    const bars = 64;
-    const barWidth = canvas.width / bars;
+  // 📊 FREQUENCY BARS (симметричные столбики с градиентом)
+  function drawFrequency(ctx, centerX, centerY) {
+    const bars = 32;
+    const barWidth = (canvas.width * 0.8) / (bars * 2);
+    const startX = centerX - (bars * barWidth);
     
     for (let i = 0; i < bars; i++) {
-      const value = dataArray[i] || 0;
-      const barHeight = (value / 255) * canvas.height * 0.8;
+      const value = dataArray[i * 2] || 0;
+      const barHeight = (value / 255) * (canvas.height * 0.6);
       
-      const x = i * barWidth;
-      const y = canvas.height - barHeight;
+      // Левая сторона
+      const xLeft = startX + (i * barWidth * 2);
+      const yLeft = centerY - (barHeight / 2);
       
-      const gradient = ctx.createLinearGradient(0, y, 0, canvas.height);
-      gradient.addColorStop(0, '#00d1ff');
-      gradient.addColorStop(1, '#ff4da6');
+      // Правая сторона (зеркало)
+      const xRight = centerX + (centerX - xLeft) - barWidth;
+      
+      // Градиент снизу вверх
+      const gradient = ctx.createLinearGradient(0, centerY + barHeight/2, 0, centerY - barHeight/2);
+      gradient.addColorStop(0, '#ff4da6');
+      gradient.addColorStop(0.5, '#9d4dff');
+      gradient.addColorStop(1, '#00d1ff');
       
       ctx.fillStyle = gradient;
-      ctx.fillRect(x, y, barWidth - 2, barHeight);
       
-      // Отражение
-      ctx.globalAlpha = 0.2;
-      ctx.fillRect(x, 0, barWidth - 2, canvas.height - barHeight);
-      ctx.globalAlpha = 1;
+      // Левый столбик
+      ctx.fillRect(xLeft, yLeft, barWidth - 4, barHeight);
+      
+      // Правый столбик
+      ctx.fillRect(xRight, yLeft, barWidth - 4, barHeight);
+      
+      // Свечение сверху
+      ctx.beginPath();
+      ctx.arc(xLeft + barWidth/2, yLeft, 4, 0, Math.PI * 2);
+      ctx.fillStyle = '#00d1ff';
+      ctx.shadowBlur = 20;
+      ctx.shadowColor = '#00d1ff';
+      ctx.fill();
+      
+      ctx.beginPath();
+      ctx.arc(xRight + barWidth/2, yLeft, 4, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.shadowBlur = 0;
     }
-  }
-  
-  // 〰️ WAVE
-  function drawWave(ctx, centerY) {
+    
+    // Центральная линия
     ctx.beginPath();
     ctx.moveTo(0, centerY);
+    ctx.lineTo(canvas.width, centerY);
+    ctx.strokeStyle = 'rgba(255, 77, 166, 0.3)';
+    ctx.lineWidth = 2;
+    ctx.stroke();
+  }
+  
+  // 🌪️ SPIRAL (вращающаяся спираль)
+  let spiralRotation = 0;
+  
+  function drawSpiral(ctx, centerX, centerY) {
+    spiralRotation += 0.01;
     
-    const sliceWidth = canvas.width / dataArray.length;
-    let x = 0;
+    const maxRadius = Math.min(canvas.width, canvas.height) * 0.4;
+    const points = 128;
     
-    for (let i = 0; i < dataArray.length; i++) {
-      const v = dataArray[i] / 255.0;
-      const y = centerY + (v * canvas.height * 0.4) - (canvas.height * 0.2);
+    ctx.beginPath();
+    
+    for (let i = 0; i < points; i++) {
+      const value = dataArray[i % dataArray.length] || 0;
+      const normalizedValue = value / 255;
+      
+      const angle = (i / points) * Math.PI * 6 + spiralRotation;
+      const radius = (i / points) * maxRadius * (0.5 + normalizedValue * 0.5);
+      
+      const x = centerX + Math.cos(angle) * radius;
+      const y = centerY + Math.sin(angle) * radius;
       
       if (i === 0) {
         ctx.moveTo(x, y);
@@ -2219,90 +2312,112 @@ function initAudioVisualizer() {
         ctx.lineTo(x, y);
       }
       
-      x += sliceWidth;
+      // Рисуем точки
+      ctx.fillStyle = `hsl(${(i / points) * 360}, 100%, ${50 + normalizedValue * 30}%)`;
+      ctx.beginPath();
+      ctx.arc(x, y, 2 + normalizedValue * 4, 0, Math.PI * 2);
+      ctx.fill();
     }
     
-    ctx.lineTo(canvas.width, centerY);
-    
-    const gradient = ctx.createLinearGradient(0, 0, canvas.width, 0);
-    gradient.addColorStop(0, '#ff4da6');
-    gradient.addColorStop(0.5, '#00d1ff');
-    gradient.addColorStop(1, '#ff4da6');
-    
-    ctx.strokeStyle = gradient;
-    ctx.lineWidth = 4;
+    // Линия спирали
+    ctx.strokeStyle = 'rgba(255, 77, 166, 0.3)';
+    ctx.lineWidth = 2;
     ctx.stroke();
     
-    // Заливка под волной
-    ctx.lineTo(canvas.width, canvas.height);
-    ctx.lineTo(0, canvas.height);
-    ctx.closePath();
+    // Центральное свечение
+    const avgValue = dataArray.slice(0, 20).reduce((a, b) => a + b, 0) / 20;
+    const glowRadius = 20 + (avgValue / 255) * 40;
     
-    const fillGradient = ctx.createLinearGradient(0, centerY, 0, canvas.height);
-    fillGradient.addColorStop(0, 'rgba(255, 77, 166, 0.2)');
-    fillGradient.addColorStop(1, 'rgba(0, 209, 255, 0.05)');
+    const gradient = ctx.createRadialGradient(centerX, centerY, 0, centerX, centerY, glowRadius);
+    gradient.addColorStop(0, 'rgba(0, 209, 255, 0.8)');
+    gradient.addColorStop(1, 'rgba(0, 209, 255, 0)');
     
-    ctx.fillStyle = fillGradient;
+    ctx.fillStyle = gradient;
+    ctx.beginPath();
+    ctx.arc(centerX, centerY, glowRadius, 0, Math.PI * 2);
     ctx.fill();
   }
   
-  // ✨ PARTICLES
-  function drawParticles(ctx) {
-    const avgFreq = dataArray.reduce((a, b) => a + b, 0) / dataArray.length;
+  // 💧 RIPPLE (концентрические круги/волны)
+  let ripples = [];
+  let rippleTimer = 0;
+  
+  function drawRipple(ctx, centerX, centerY) {
+    rippleTimer++;
     
-    particles.forEach((p, index) => {
-      // Обновление позиции
-      p.x += p.vx;
-      p.y += p.vy;
+    // Создаем новую волну каждые 15 кадров
+    const avgBass = dataArray.slice(0, 10).reduce((a, b) => a + b, 0) / 10;
+    
+    if (rippleTimer % 15 === 0 && avgBass > 50) {
+      ripples.push({
+        radius: 0,
+        maxRadius: Math.min(canvas.width, canvas.height) * 0.5,
+        alpha: 1,
+        speed: 2 + (avgBass / 255) * 3
+      });
+    }
+    
+    // Рисуем и обновляем волны
+    ripples = ripples.filter(ripple => {
+      ripple.radius += ripple.speed;
+      ripple.alpha -= 0.01;
       
-      // Влияние звука
-      const influence = dataArray[index % dataArray.length] / 255;
-      p.vx += (Math.random() - 0.5) * influence * 0.5;
-      p.vy += (Math.random() - 0.5) * influence * 0.5;
+      if (ripple.alpha <= 0 || ripple.radius > ripple.maxRadius) {
+        return false;
+      }
       
-      // Границы
-      if (p.x < 0 || p.x > canvas.width) p.vx *= -1;
-      if (p.y < 0 || p.y > canvas.height) p.vy *= -1;
+      // Рисуем круг
+      ctx.beginPath();
+      ctx.arc(centerX, centerY, ripple.radius, 0, Math.PI * 2);
+      ctx.strokeStyle = `rgba(0, 209, 255, ${ripple.alpha})`;
+      ctx.lineWidth = 3;
+      ctx.stroke();
       
-      // Ограничение скорости
-      p.vx = Math.max(-3, Math.min(3, p.vx));
-      p.vy = Math.max(-3, Math.min(3, p.vy));
+      // Внутренний круг
+      ctx.beginPath();
+      ctx.arc(centerX, centerY, ripple.radius - 5, 0, Math.PI * 2);
+      ctx.strokeStyle = `rgba(255, 77, 166, ${ripple.alpha * 0.5})`;
+      ctx.lineWidth = 2;
+      ctx.stroke();
       
-      // Рисование
-      const size = p.radius + (influence * 5);
+      return true;
+    });
+    
+    // Центральный пульсирующий круг
+    const pulse = (avgBass / 255) * 50;
+    const pulseRadius = 30 + pulse;
+    
+    const gradient = ctx.createRadialGradient(centerX, centerY, 0, centerX, centerY, pulseRadius);
+    gradient.addColorStop(0, 'rgba(255, 77, 166, 0.8)');
+    gradient.addColorStop(0.5, 'rgba(157, 77, 255, 0.4)');
+    gradient.addColorStop(1, 'rgba(0, 209, 255, 0)');
+    
+    ctx.fillStyle = gradient;
+    ctx.beginPath();
+    ctx.arc(centerX, centerY, pulseRadius, 0, Math.PI * 2);
+    ctx.fill();
+    
+    // Частотные точки по кругу
+    const pointCount = 32;
+    const pointRadius = pulseRadius + 20;
+    
+    for (let i = 0; i < pointCount; i++) {
+      const angle = (i / pointCount) * Math.PI * 2;
+      const value = dataArray[i * 4] || 0;
+      const size = 2 + (value / 255) * 6;
+      
+      const x = centerX + Math.cos(angle) * pointRadius;
+      const y = centerY + Math.sin(angle) * pointRadius;
       
       ctx.beginPath();
-      ctx.arc(p.x, p.y, size, 0, Math.PI * 2);
-      
-      const gradient = ctx.createRadialGradient(p.x, p.y, 0, p.x, p.y, size);
-      gradient.addColorStop(0, `rgba(255, 77, 166, ${influence})`);
-      gradient.addColorStop(1, `rgba(0, 209, 255, 0)`);
-      
-      ctx.fillStyle = gradient;
+      ctx.arc(x, y, size, 0, Math.PI * 2);
+      ctx.fillStyle = `rgba(0, 209, 255, ${value / 255})`;
+      ctx.shadowBlur = 10;
+      ctx.shadowColor = '#00d1ff';
       ctx.fill();
-      
-      // Связи между частицами
-      particles.forEach((p2, index2) => {
-        if (index2 <= index) return;
-        
-        const dx = p.x - p2.x;
-        const dy = p.y - p2.y;
-        const distance = Math.sqrt(dx * dx + dy * dy);
-        
-        if (distance < 100) {
-          ctx.beginPath();
-          ctx.moveTo(p.x, p.y);
-          ctx.lineTo(p2.x, p2.y);
-          ctx.strokeStyle = `rgba(0, 209, 255, ${(1 - distance / 100) * 0.3})`;
-          ctx.lineWidth = 1;
-          ctx.stroke();
-        }
-      });
-    });
+      ctx.shadowBlur = 0;
+    }
   }
-  
-  draw();
-}
 
 function toggleVisualizerFullscreen() {
   visualizerFullscreen = !visualizerFullscreen;
@@ -2410,19 +2525,21 @@ window.addEventListener('resize', () => {
     padding: 0 20px;
   " id="visualizer-track-title">Track Name</div>
   
-  <!-- Переключатель типов -->
+    <!-- Переключатель типов -->
   <div style="
     display: flex;
-    gap: 12px;
-    margin-top: 20px;
+    gap: 10px;
+    margin-top: 30px;
     flex-wrap: wrap;
     justify-content: center;
     padding: 0 20px;
+    position: relative;
+    z-index: 10;
   ">
     <button class="visualizer-type-btn active" data-type="circle">🌀 Circle</button>
-    <button class="visualizer-type-btn" data-type="bars">📊 Bars</button>
-    <button class="visualizer-type-btn" data-type="wave">〰️ Wave</button>
-    <button class="visualizer-type-btn" data-type="particles">✨ Particles</button>
+    <button class="visualizer-type-btn" data-type="frequency">📊 Frequency</button>
+    <button class="visualizer-type-btn" data-type="spiral">🌪️ Spiral</button>
+    <button class="visualizer-type-btn" data-type="ripple">💧 Ripple</button>
   </div>
   
   <!-- Кнопка закрыть -->
