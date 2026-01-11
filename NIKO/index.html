@@ -96,6 +96,7 @@
     .mini-controls{display:flex;align-items:center;justify-content:center;gap:18px}
     .control-btn{background:transparent;border:0;color:var(--muted);padding:10px;border-radius:50%;cursor:pointer;transition:all .2s}
     .control-btn:hover{color:#fff;transform:scale(1.1)}
+    .control-btn.active{color:var(--accent)}
     .time-display{color:var(--muted);font-size:13px;white-space:nowrap;margin-top:4px}
 
     .side-panel{position:fixed;right:0;top:0;height:100%;width:360px;background:#0b0b10;color:#eaeaf2;padding:18px;box-shadow:-20px 0 40px rgba(0,0,0,.6);transform:translateX(100%);transition:transform .28s ease;z-index:10001;overflow:auto}
@@ -227,7 +228,7 @@
     }
 
     .emoji-quick-access .emoji-btn {
-      background: rgba(255, 255, 255, 0.05);
+      background: rgba(255,255,255,0.05);
       border: none;
       border-radius: 8px;
       padding: 8px 12px;
@@ -237,7 +238,7 @@
     }
 
     .emoji-quick-access .emoji-btn:hover {
-      background: rgba(255, 255, 255, 0.15);
+      background: rgba(255,255,255,0.15);
       transform: scale(1.05);
     }
 
@@ -336,6 +337,7 @@
           <svg id="mini-play-icon" width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M5 3v18l15-9L5 3z"/></svg>
         </button>
         <button id="mini-next" class="control-btn" aria-label="Next" title="Next">▶</button>
+        <button id="shuffle-btn" class="control-btn" aria-label="Shuffle" title="Shuffle: Off">🔀</button>
       </div>
       <div class="time-display" id="mini-time">0:00 / 0:00</div>
     </div>
@@ -415,7 +417,7 @@
       <input id="t-title" class="search-input" placeholder="Название трека" style="width:100%;margin-bottom:12px">
       <input id="t-audio" class="search-input" placeholder="Ссылка на mp3 (GitHub raw)" style="width:100%;margin-bottom:12px">
       <input id="t-cover" class="search-input" placeholder="Ссылка на обложку" style="width:100%;margin-bottom:12px">
-      <input id="t-genre" class="search-input" placeholder="Жанры (через запятую)" style="width:100%;margin-bottom:12px">
+      <input id="t-genre" class="search-input" placeholder="Жанры (через запятую, например: Gothic Piano Trap, Trap)" style="width:100%;margin-bottom:12px">
       <textarea id="t-lyrics" placeholder="Текст песни" style="width:100%;min-height:120px;padding:8px;border-radius:8px;background:#07060a;border:1px solid rgba(255,255,255,0.04);color:#eaeaf2;margin-bottom:12px"></textarea>
       <div style="display:flex;gap:8px;justify-content:flex-end">
         <button id="add-cancel" class="btn">Cancel</button>
@@ -431,21 +433,15 @@
   const getCount = k => parseInt(localStorage.getItem(k) || '0', 10);
   const setCount = (k,v) => localStorage.setItem(k, String(v));
 
-  // НАСТРОЙКА КОММЕНТАРИЕВ (для всех пользователей)
-  // Создай бесплатный аккаунт на https://jsonbin.io
-  // Создай новый Bin и вставь сюда BIN ID и API KEY
-  const JSONBIN_BIN_ID = '';  // Например: '65abc123def456789'
-  const JSONBIN_API_KEY = ''; // Твой Master Key
-  const USE_JSONBIN = JSONBIN_BIN_ID && JSONBIN_API_KEY;
-
   let globalTracks = [];
+  let isShuffleMode = localStorage.getItem('shuffleMode') === 'true';
 
   async function loadTracksFromJSON() {
     const paths = ['./tracks.json', '/tracks.json', 'tracks.json'];
     
     for (const path of paths) {
       try {
-        console.log('🔍 Trying:', path);
+        console.log('🔍 Trying to load:', path);
         const response = await fetch(path + '?t=' + Date.now());
         
         if (response.ok) {
@@ -466,6 +462,7 @@
     const jsonTracks = await loadTracksFromJSON();
     
     if (jsonTracks && jsonTracks.length > 0) {
+      console.log('📦 Using tracks.json');
       globalTracks = jsonTracks;
       localStorage.setItem('cachedTracks', JSON.stringify(jsonTracks));
       return jsonTracks;
@@ -473,125 +470,25 @@
     
     const cached = localStorage.getItem('cachedTracks');
     if (cached) {
+      console.log('💾 Using cached');
       globalTracks = JSON.parse(cached);
       return globalTracks;
     }
     
     const stored = localStorage.getItem('draftTracks');
     if (stored && stored !== '[]') {
+      console.log('🗄️ Using localStorage');
       globalTracks = JSON.parse(stored);
       return globalTracks;
     }
     
-    globalTracks = [];
+    console.log('⚠️ No tracks found');
     return [];
   }
 
   function saveDraftTracks(tracks) {
     globalTracks = tracks;
     localStorage.setItem('draftTracks', JSON.stringify(tracks));
-  }
-
-  // КОММЕНТАРИИ
-  async function loadCommentsFromServer(trackSrc) {
-    if (!USE_JSONBIN) {
-      return JSON.parse(localStorage.getItem('comments:' + trackSrc) || '[]');
-    }
-
-    try {
-      const response = await fetch(`https://api.jsonbin.io/v3/b/${JSONBIN_BIN_ID}/latest`, {
-        headers: { 'X-Master-Key': JSONBIN_API_KEY }
-      });
-      
-      if (response.ok) {
-        const data = await response.json();
-        const allComments = data.record || {};
-        return allComments[trackSrc] || [];
-      }
-    } catch (e) {
-      console.error('❌ Load comments error:', e);
-    }
-    
-    return [];
-  }
-
-  async function saveCommentToServer(trackSrc, comment) {
-    if (!USE_JSONBIN) {
-      const key = 'comments:' + trackSrc;
-      const comments = JSON.parse(localStorage.getItem(key) || '[]');
-      comments.push(comment);
-      localStorage.setItem(key, JSON.stringify(comments));
-      return true;
-    }
-
-    try {
-      const response = await fetch(`https://api.jsonbin.io/v3/b/${JSONBIN_BIN_ID}/latest`, {
-        headers: { 'X-Master-Key': JSONBIN_API_KEY }
-      });
-      
-      let allComments = {};
-      if (response.ok) {
-        const data = await response.json();
-        allComments = data.record || {};
-      }
-      
-      if (!allComments[trackSrc]) allComments[trackSrc] = [];
-      allComments[trackSrc].push(comment);
-      
-      const updateResponse = await fetch(`https://api.jsonbin.io/v3/b/${JSONBIN_BIN_ID}`, {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-          'X-Master-Key': JSONBIN_API_KEY
-        },
-        body: JSON.stringify(allComments)
-      });
-      
-      return updateResponse.ok;
-    } catch (e) {
-      console.error('❌ Save comment error:', e);
-      return false;
-    }
-  }
-
-  async function deleteCommentFromServer(trackSrc, index) {
-    if (!USE_JSONBIN) {
-      const key = 'comments:' + trackSrc;
-      const comments = JSON.parse(localStorage.getItem(key) || '[]');
-      comments.splice(index, 1);
-      localStorage.setItem(key, JSON.stringify(comments));
-      return true;
-    }
-
-    try {
-      const response = await fetch(`https://api.jsonbin.io/v3/b/${JSONBIN_BIN_ID}/latest`, {
-        headers: { 'X-Master-Key': JSONBIN_API_KEY }
-      });
-      
-      if (!response.ok) return false;
-      
-      const data = await response.json();
-      const allComments = data.record || {};
-      
-      if (allComments[trackSrc] && allComments[trackSrc][index]) {
-        allComments[trackSrc].splice(index, 1);
-        
-        const updateResponse = await fetch(`https://api.jsonbin.io/v3/b/${JSONBIN_BIN_ID}`, {
-          method: 'PUT',
-          headers: {
-            'Content-Type': 'application/json',
-            'X-Master-Key': JSONBIN_API_KEY
-          },
-          body: JSON.stringify(allComments)
-        });
-        
-        return updateResponse.ok;
-      }
-    } catch (e) {
-      console.error('❌ Delete error:', e);
-    }
-    
-    return false;
   }
 
   function updateCountUI(src) {
@@ -727,7 +624,7 @@
       list.innerHTML = `
         <div class="empty-state">
           <h2>Нет треков</h2>
-          <p>Создайте <code>tracks.json</code> в корне репозитория</p>
+          <p>Создайте файл <code>tracks.json</code> в корне репозитория</p>
           <p style="margin-top:16px">Или добавьте через <strong>?admin</strong></p>
         </div>
       `;
@@ -787,6 +684,20 @@
   let durationInterval;
   let currentEditingSrc = '';
 
+  function updateShuffleButton() {
+    const btn = document.getElementById('shuffle-btn');
+    if (!btn) return;
+    btn.classList.toggle('active', isShuffleMode);
+    btn.title = isShuffleMode ? 'Shuffle: On' : 'Shuffle: Off';
+    console.log('🔀 Shuffle:', isShuffleMode);
+  }
+
+  function toggleShuffle() {
+    isShuffleMode = !isShuffleMode;
+    localStorage.setItem('shuffleMode', isShuffleMode);
+    updateShuffleButton();
+  }
+
   function initWavesurfer() {
     wavesurfer = WaveSurfer.create({
       container: '#mini-wave',
@@ -801,7 +712,7 @@
     });
 
     wavesurfer.on('ready', () => {
-      console.log('🎵 Ready, playing...');
+      console.log('🎵 Ready');
       wavesurfer.play();
       
       const duration = wavesurfer.getDuration();
@@ -820,22 +731,46 @@
     });
 
     wavesurfer.on('finish', () => {
-      if (durationInterval) clearInterval(durationInterval);
-      console.log('🏁 Track finished!');
-      console.log('📊 Current index:', currentTrackIndex);
-      console.log('📊 Total tracks:', globalTracks.length);
+      console.log('🏁 Track finished');
+      console.log('📊 Tracks available:', globalTracks.length);
+      console.log('🔢 Current index:', currentTrackIndex);
+      console.log('🔀 Shuffle mode:', isShuffleMode);
       
-      // Просто играем следующий трек
-      const nextIndex = (currentTrackIndex + 1) % globalTracks.length;
-      console.log('⏭️ Auto-playing next track:', nextIndex);
+      if (durationInterval) {
+        clearInterval(durationInterval);
+      }
       
-      // Используем setTimeout чтобы дать wavesurfer время "отдохнуть"
-      setTimeout(() => {
-        playTrack(nextIndex);
-      }, 500);
+      // ИСПРАВЛЕННАЯ ЛОГИКА - ПРЯМОЙ ВЫЗОВ
+      handleTrackFinish();
     });
     
-    wavesurfer.on('error', (err) => console.error('❌ Wavesurfer error:', err));
+    wavesurfer.on('error', (err) => console.error('❌ Error:', err));
+  }
+
+  function handleTrackFinish() {
+    if (!globalTracks || globalTracks.length === 0) {
+      console.error('❌ No tracks to play');
+      return;
+    }
+    
+    console.log('▶️ handleTrackFinish called');
+    
+    let nextIndex;
+    
+    if (isShuffleMode) {
+      // Случайный трек
+      nextIndex = Math.floor(Math.random() * globalTracks.length);
+      console.log('🔀 Random next:', nextIndex);
+    } else {
+      // Следующий по порядку
+      nextIndex = (currentTrackIndex + 1) % globalTracks.length;
+      console.log('➡️ Sequential next:', nextIndex);
+    }
+    
+    // Небольшая задержка перед следующим треком
+    setTimeout(() => {
+      playTrack(nextIndex);
+    }, 500);
   }
 
   function playTrack(index) {
@@ -850,10 +785,11 @@
     }
     
     currentTrackIndex = index;
+    window.currentTrackIndex = index;
     const track = globalTracks[index];
     currentTrackSrc = track.audio;
     
-    console.log('🎵 Playing track', (index + 1), '/', globalTracks.length, ':', track.title);
+    console.log('🎵 Playing', index + 1, '/', globalTracks.length, ':', track.title);
     
     wavesurfer.load(track.audio);
     
@@ -872,29 +808,44 @@
     
     if (track.duration) {
       const [min, sec] = track.duration.split(':').map(Number);
-      updateTimeDisplay(min * 60 + sec);
+      const duration = min * 60 + sec;
+      updateTimeDisplay(duration);
     } else {
       document.getElementById('mini-time').textContent = '0:00 / 0:00';
     }
   }
 
-  function playNextTrack() {
+  function playNext() {
     if (!globalTracks || globalTracks.length === 0) return;
-    const nextIndex = (currentTrackIndex + 1) % globalTracks.length;
-    console.log('⏭️ Manual next:', nextIndex);
+    
+    let nextIndex;
+    if (isShuffleMode) {
+      nextIndex = Math.floor(Math.random() * globalTracks.length);
+      console.log('🔀 Manual random:', nextIndex);
+    } else {
+      nextIndex = (currentTrackIndex + 1) % globalTracks.length;
+      console.log('➡️ Manual next:', nextIndex);
+    }
+    
     playTrack(nextIndex);
   }
 
-  function playPrevTrack() {
+  function playPrev() {
     if (!globalTracks || globalTracks.length === 0) return;
-    const prevIndex = (currentTrackIndex - 1 + globalTracks.length) % globalTracks.length;
-    console.log('⏮️ Manual prev:', prevIndex);
+    
+    let prevIndex;
+    if (isShuffleMode) {
+      prevIndex = Math.floor(Math.random() * globalTracks.length);
+    } else {
+      prevIndex = (currentTrackIndex - 1 + globalTracks.length) % globalTracks.length;
+    }
+    
     playTrack(prevIndex);
   }
 
   let currentTrackForComments = null;
   const POPULAR_EMOJIS = ['🔥', '😍', '😱', '🙌', '👍', '🥵', '❤️', '🎵', '👏', '😂'];
-  const ALL_EMOJIS = ['😀','😃','😄','😁','😆','😅','🤣','😂','🙂','🙃','😉','😊','😇','🥰','😍','🤩','😘','😗','☺️','😚','😙','🥲','😋','😛','😜','🤪','😝','🤑','🤗','🤭','🤫','🤔','🤐','🤨','😐','😑','😶','😏','😒','🙄','😬','🤥','😌','😔','😪','🤤','😴','😷','🤒','🤕','🤢','🤮','🤧','🥵','🥶','😶‍🌫️','🥴','😵','😵‍💫','🤯','🤠','🥳','🥸','😎','🤓','🧐','😕','😟','🙁','☹️','😮','😯','😲','😳','🥺','😦','😧','😨','😰','😥','😢','😭','😱','😖','😣','😞','😓','😩','😫','🥱','😤','😡','😠','🤬','😈','👿','💀','☠️','💩','🤡','👹','👺','👻','👽','👾','🤖','😺','😸','😹','😻','😼','😽','🙀','😿','😾','🙈','🙉','🙊','💋','💌','💘','💝','💖','💗','💓','💞','💕','💟','❣️','💔','❤️‍🔥','❤️‍🩹','❤️','🧡','💛','💚','💙','💜','🤎','🖤','🤍','💯','💢','💥','💫','💦','💨','🕳️','💣','💬','👁️‍🗨️','🗨️','🗯️','💭','💤','👋','🤚','🖐️','✋','🖖','👌','🤌','🤏','✌️','🤞','🤟','🤘','🤙','👈','👉','👆','🖕','👇','☝️','👍','👎','✊','👊','🤛','🤜','👏','🙌','👐','🤲','🤝','🙏','✍️','💅','🤳','💪','🦾','🦿','🦵','🦶','👂','🦻','👃','🧠','🫀','🫁','🦷','🦴','👀','👁️','👅','👄','🔥','💧','💦','🎵','🎶','🎤','🎧','🎼','🎹','🥁','🎷','🎺','🎸','🪕','🎻','🎬','🎮','👾','🎯','🎲','🎰','🎳'];
+  const ALL_EMOJIS = ['😀','😃','😄','😁','😆','😅','🤣','😂','🙂','🙃','😉','😊','😇','🥰','😍','🤩','😘','😗','☺️','😚','😙','🥲','😋','😛','😜','🤪','😝','🤑','🤗','🤭','🤫','🤔','🤐','🤨','😐','😑','😶','😏','😒','🙄','😬','🤥','😌','😔','😪','🤤','😴','😷','🤒','🤕','🤢','🤮','🤧','🥵','🥶','😶‍🌫️','🥴','😵','😵‍💫','🤯','🤠','🥳','🥸','😎','🤓','🧐','😕','😟','🙁','☹️','😮','😯','😲','😳','🥺','😦','😧','😨','😰','😥','😢','😭','😱','😖','😣','😞','😓','😩','😫','🥱','😤','😡','😠','🤬','😈','👿','💀','☠️','💩','🤡','👹','👺','👻','👽','👾','🤖','😺','😸','😹','😻','😼','😽','🙀','😿','😾','🙈','🙉','🙊','💋','💌','💘','💝','💖','💗','💓','💞','💕','💟','❣️','💔','❤️‍🔥','❤️‍🩹','❤️','🧡','💛','💚','💙','💜','🤎','🖤','🤍','💯','💢','💥','💫','💦','💨','🕳️','💣','💬','👁️‍🗨️','🗨️','🗯️','💭','💤','👋','🤚','🖐️','✋','🖖','👌','🤌','🤏','✌️','🤞','🤟','🤘','🤙','👈','👉','👆','🖕','👇','☝️','👍','👎','✊','👊','🤛','🤜','👏','🙌','👐','🤲','🤝','🙏','✍️','💅','🤳','💪','🦾','🦿','🦵','🦶','👂','🦻','👃','🧠','🫀','🫁','🦷','🦴','👀','👁️','👅','👄','🔥','💧','💦','🎵','🎶','🎤','🎧','🎼','🎹','🥁','🎷','🎺','🎸','🪕','🎻'];
 
   function initEmojiSystem() {
     document.querySelectorAll('.quick-emoji').forEach(btn => {
@@ -951,8 +902,9 @@
     });
   }
 
-  async function loadComments(src) {
-    const comments = await loadCommentsFromServer(src);
+  function loadComments(src) {
+    const commentsKey = 'comments:' + src;
+    const comments = JSON.parse(localStorage.getItem(commentsKey) || '[]');
     const list = document.getElementById('comments-list');
     
     if (comments.length === 0) {
@@ -968,16 +920,25 @@
       
       if (isAdmin) {
         list.querySelectorAll('.delete-comment').forEach(btn => {
-          btn.onclick = async (e) => {
+          btn.onclick = (e) => {
             e.stopPropagation();
             const index = parseInt(btn.dataset.index);
             if (confirm('Удалить?')) {
-              await deleteCommentFromServer(src, index);
-              loadComments(src);
+              deleteComment(src, index);
             }
           };
         });
       }
+    }
+  }
+
+  function deleteComment(src, index) {
+    const key = 'comments:' + src;
+    const comments = JSON.parse(localStorage.getItem(key) || '[]');
+    if (index >= 0 && index < comments.length) {
+      comments.splice(index, 1);
+      localStorage.setItem(key, JSON.stringify(comments));
+      loadComments(src);
     }
   }
 
@@ -1019,18 +980,15 @@
   }
 
   document.addEventListener('DOMContentLoaded', async () => {
-    console.log('🚀 Init...');
+    console.log('🚀 Init');
     
     await renderDraftTracks();
     initWavesurfer();
     initEmojiSystem();
+    updateShuffleButton();
 
     if (isAdmin) {
       document.getElementById('edit-text').style.display = 'inline-block';
-    }
-
-    if (!USE_JSONBIN) {
-      console.log('ℹ️ Комментарии локальные. Добавь JSONBin для общих комментариев: https://jsonbin.io');
     }
 
     const tracksList = document.getElementById('tracksList');
@@ -1094,8 +1052,9 @@
     });
 
     document.getElementById('mini-play').onclick = () => wavesurfer?.playPause();
-    document.getElementById('mini-next').onclick = playNextTrack;
-    document.getElementById('mini-prev').onclick = playPrevTrack;
+    document.getElementById('mini-next').onclick = playNext;
+    document.getElementById('mini-prev').onclick = playPrev;
+    document.getElementById('shuffle-btn').onclick = toggleShuffle;
     document.getElementById('mini-volume').oninput = (e) => wavesurfer?.setVolume(parseFloat(e.target.value));
 
     document.getElementById('mini-open-text').onclick = () => {
@@ -1110,11 +1069,15 @@
     };
 
     document.getElementById('mini-like').onclick = () => {
-      if (currentTrackIndex >= 0) window.toggleLike(globalTracks[currentTrackIndex].audio);
+      if (currentTrackIndex >= 0) {
+        window.toggleLike(globalTracks[currentTrackIndex].audio);
+      }
     };
 
     document.getElementById('mini-dislike').onclick = () => {
-      if (currentTrackIndex >= 0) window.toggleDislike(globalTracks[currentTrackIndex].audio);
+      if (currentTrackIndex >= 0) {
+        window.toggleDislike(globalTracks[currentTrackIndex].audio);
+      }
     };
 
     document.getElementById('mini-comment').onclick = () => {
@@ -1127,18 +1090,19 @@
       }
     };
 
-    document.getElementById('comment-send').onclick = async () => {
+    document.getElementById('comment-send').onclick = () => {
       const text = document.getElementById('comment-input').value.trim();
       if (!text || !currentTrackForComments) return;
 
-      const comment = {
-        text,
-        date: new Date().toLocaleString('ru-RU')
-      };
-
-      await saveCommentToServer(currentTrackForComments, comment);
+      const key = 'comments:' + currentTrackForComments;
+      const comments = JSON.parse(localStorage.getItem(key) || '[]');
+      comments.push({ text, date: new Date().toLocaleString('ru-RU') });
+      localStorage.setItem(key, JSON.stringify(comments));
+      
       document.getElementById('comment-input').value = '';
       loadComments(currentTrackForComments);
+      
+      alert('💬 Комментарий сохранён! Все пользователи этого устройства его увидят.');
     };
 
     document.getElementById('copy-text').onclick = () => {
@@ -1185,14 +1149,7 @@
         return;
       }
 
-      const track = { 
-        title, 
-        audio, 
-        cover, 
-        genre: genre || 'Uncategorized',
-        lyrics, 
-        duration: '—' 
-      };
+      const track = { title, audio, cover, genre: genre || 'Uncategorized', lyrics, duration: '—' };
       
       globalTracks.push(track);
       saveDraftTracks(globalTracks);
@@ -1218,7 +1175,7 @@
       a.download = 'tracks.json';
       a.click();
       
-      alert(`✅ Экспортировано ${globalTracks.length} треков!\n\n📝 Загрузи tracks.json в GitHub\n🔄 Обнови страницу (Ctrl+F5)`);
+      alert(`✅ Экспортировано ${globalTracks.length} треков!\n\n📤 Загрузи tracks.json в GitHub\n🔄 Обнови страницу на всех устройствах`);
     });
 
     document.getElementById('siteSearch').addEventListener('input', (e) => {
@@ -1244,7 +1201,7 @@
       });
     });
 
-    console.log('✅ Ready!');
+    console.log('✅ Ready');
   });
   </script>
   
