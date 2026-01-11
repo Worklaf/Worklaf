@@ -286,6 +286,12 @@
       font-size: 12px;
     }
 
+    .loading-state {
+      text-align: center;
+      padding: 60px 20px;
+      color: var(--muted);
+    }
+
     @media (max-width:880px){
       .thumb{width:96px;height:160px}
       #mini-player{left:12px;right:12px;bottom:12px;flex-wrap:wrap}
@@ -312,7 +318,11 @@
   </header>
 
   <main>
-    <div class="list" id="tracksList"></div>
+    <div class="list" id="tracksList">
+      <div class="loading-state">
+        <h2>⏳ Загрузка треков...</h2>
+      </div>
+    </div>
   </main>
 </div>
 
@@ -327,7 +337,7 @@
           <svg id="mini-play-icon" width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M5 3v18l15-9L5 3z"/></svg>
         </button>
         <button id="mini-next" class="control-btn" aria-label="Next" title="Next">▶</button>
-        <button id="play-mode" class="control-btn" aria-label="Play mode" title="Sequential">🔁</button>
+        <button id="play-mode" class="control-btn" aria-label="Play mode" title="Sequential">▶️</button>
       </div>
       <div class="time-display" id="mini-time">0:00 / 0:00</div>
     </div>
@@ -426,32 +436,55 @@
   let globalTracks = [];
 
   async function loadTracksFromJSON() {
-    try {
-      const response = await fetch('tracks.json');
-      if (response.ok) {
-        const tracks = await response.json();
-        console.log('✅ Loaded', tracks.length, 'tracks from tracks.json');
-        return tracks;
+    const paths = ['./tracks.json', '/tracks.json', 'tracks.json'];
+    
+    for (const path of paths) {
+      try {
+        console.log('🔍 Trying to load:', path);
+        const response = await fetch(path + '?t=' + Date.now());
+        console.log('📡 Response status:', response.status, response.statusText);
+        
+        if (response.ok) {
+          const text = await response.text();
+          console.log('📄 Response length:', text.length);
+          const tracks = JSON.parse(text);
+          console.log('✅ Loaded', tracks.length, 'tracks from', path);
+          return tracks;
+        }
+      } catch (e) {
+        console.log('❌ Failed to load from', path, ':', e.message);
       }
-    } catch (e) {
-      console.log('ℹ️ No tracks.json found, using localStorage');
     }
+    
+    console.log('ℹ️ No tracks.json found');
     return null;
   }
 
   async function getDraftTracks() {
     const jsonTracks = await loadTracksFromJSON();
+    
     if (jsonTracks && jsonTracks.length > 0) {
+      console.log('📦 Using tracks from JSON file');
       globalTracks = jsonTracks;
+      localStorage.setItem('cachedTracks', JSON.stringify(jsonTracks));
       return jsonTracks;
+    }
+    
+    const cached = localStorage.getItem('cachedTracks');
+    if (cached) {
+      console.log('💾 Using cached tracks');
+      globalTracks = JSON.parse(cached);
+      return globalTracks;
     }
     
     const stored = localStorage.getItem('draftTracks');
     if (stored && stored !== '[]') {
+      console.log('🗄️ Using localStorage tracks');
       globalTracks = JSON.parse(stored);
       return globalTracks;
     }
     
+    console.log('⚠️ No tracks found');
     globalTracks = [];
     return [];
   }
@@ -596,19 +629,6 @@
           <h2>Нет треков</h2>
           <p>Создайте файл <code>tracks.json</code> в корне репозитория</p>
           <p style="margin-top:16px">Или добавьте через <strong>?admin</strong> и нажмите "📦 Экспорт JSON"</p>
-          <p style="font-size:12px;margin-top:20px;color:#777">
-            Формат tracks.json:<br>
-            <code style="display:block;text-align:left;max-width:400px;margin:8px auto;padding:8px;background:#0b0b10">
-[{<br>
-&nbsp;&nbsp;"title": "Название",<br>
-&nbsp;&nbsp;"audio": "ссылка.mp3",<br>
-&nbsp;&nbsp;"cover": "обложка.jpg",<br>
-&nbsp;&nbsp;"genre": "Жанр",<br>
-&nbsp;&nbsp;"lyrics": "Текст",<br>
-&nbsp;&nbsp;"duration": "3:45"<br>
-}]
-            </code>
-          </p>
         </div>
       `;
       return;
@@ -681,6 +701,7 @@
     btn.textContent = mode.icon;
     btn.title = mode.title;
     btn.classList.toggle('active', playMode !== 'sequential');
+    console.log('🔄 Play mode UI updated:', playMode);
   }
 
   function cyclePlayMode() {
@@ -689,7 +710,7 @@
     playMode = modes[(currentIndex + 1) % modes.length];
     localStorage.setItem('playMode', playMode);
     updatePlayModeButton();
-    console.log('🔁 Play mode:', playMode);
+    console.log('🔁 Play mode changed to:', playMode);
   }
 
   function initWavesurfer() {
@@ -706,7 +727,7 @@
     });
 
     wavesurfer.on('ready', () => {
-      console.log('🎵 Ready');
+      console.log('🎵 Wavesurfer ready');
       wavesurfer.play();
       
       const duration = wavesurfer.getDuration();
@@ -727,31 +748,35 @@
     wavesurfer.on('finish', () => {
       if (durationInterval) clearInterval(durationInterval);
       
-      console.log('⏭️ Track finished, mode:', playMode);
+      console.log('🏁 Track finished');
+      console.log('🔄 Current mode:', playMode);
+      console.log('🎵 Current index:', currentTrackIndex, '/', globalTracks.length);
       
       if (playMode === 'repeat-one') {
-        console.log('🔂 Repeating current track');
-        setTimeout(() => {
-          wavesurfer.seekTo(0);
-          wavesurfer.play();
-        }, 100);
+        console.log('🔂 Repeating same track');
+        playTrack(currentTrackIndex);
+      } else if (playMode === 'random') {
+        const randomIndex = Math.floor(Math.random() * globalTracks.length);
+        console.log('🔀 Playing random track:', randomIndex);
+        playTrack(randomIndex);
       } else {
-        console.log('⏭️ Playing next track');
-        playNext();
+        const nextIndex = (currentTrackIndex + 1) % globalTracks.length;
+        console.log('▶️ Playing next track:', nextIndex);
+        playTrack(nextIndex);
       }
     });
     
-    wavesurfer.on('error', (err) => console.error('❌ Error:', err));
+    wavesurfer.on('error', (err) => console.error('❌ Wavesurfer error:', err));
   }
 
   function playTrack(index) {
-    if (globalTracks.length === 0) {
+    if (!globalTracks || globalTracks.length === 0) {
       console.error('❌ No tracks available');
       return;
     }
     
     if (index < 0 || index >= globalTracks.length) {
-      console.error('❌ Invalid track index:', index);
+      console.error('❌ Invalid track index:', index, '/', globalTracks.length);
       return;
     }
     
@@ -788,7 +813,7 @@
   }
 
   function playNext() {
-    if (globalTracks.length === 0) {
+    if (!globalTracks || globalTracks.length === 0) {
       console.error('❌ No tracks to play');
       return;
     }
@@ -797,17 +822,17 @@
     
     if (playMode === 'random') {
       nextIndex = Math.floor(Math.random() * globalTracks.length);
-      console.log('🔀 Random next:', nextIndex);
+      console.log('🔀 Random:', nextIndex);
     } else {
       nextIndex = (currentTrackIndex + 1) % globalTracks.length;
-      console.log('▶️ Sequential next:', nextIndex);
+      console.log('▶️ Next:', nextIndex);
     }
     
     playTrack(nextIndex);
   }
 
   function playPrev() {
-    if (globalTracks.length === 0) return;
+    if (!globalTracks || globalTracks.length === 0) return;
     
     let prevIndex;
     if (playMode === 'random') {
@@ -915,7 +940,6 @@
       comments.splice(index, 1);
       localStorage.setItem(key, JSON.stringify(comments));
       loadComments(src);
-      console.log('🗑️ Comment deleted');
     }
   }
 
@@ -947,7 +971,6 @@
         saveDraftTracks(globalTracks);
         viewDiv.textContent = newLyrics;
         renderDraftTracks();
-        console.log('💾 Lyrics saved');
       }
     }
     
@@ -958,7 +981,7 @@
   }
 
   document.addEventListener('DOMContentLoaded', async () => {
-    console.log('🚀 Initializing...');
+    console.log('🚀 Starting initialization...');
     
     await renderDraftTracks();
     initWavesurfer();
@@ -1030,8 +1053,14 @@
     });
 
     document.getElementById('mini-play').onclick = () => wavesurfer?.playPause();
-    document.getElementById('mini-next').onclick = playNext;
-    document.getElementById('mini-prev').onclick = playPrev;
+    document.getElementById('mini-next').onclick = () => {
+      console.log('⏭️ Next button clicked');
+      playNext();
+    };
+    document.getElementById('mini-prev').onclick = () => {
+      console.log('⏮️ Prev button clicked');
+      playPrev();
+    };
     document.getElementById('play-mode').onclick = cyclePlayMode;
     document.getElementById('mini-volume').oninput = (e) => wavesurfer?.setVolume(parseFloat(e.target.value));
 
@@ -1079,7 +1108,6 @@
       
       document.getElementById('comment-input').value = '';
       loadComments(currentTrackForComments);
-      console.log('💬 Comment saved');
     };
 
     document.getElementById('copy-text').onclick = () => {
@@ -1146,7 +1174,6 @@
 
       modal.classList.remove('open');
       await renderDraftTracks();
-      console.log('✅ Track added');
     };
 
     document.getElementById('exportJsonBtn')?.addEventListener('click', () => {
@@ -1160,8 +1187,7 @@
       a.download = 'tracks.json';
       a.click();
       
-      console.log('📦 Exported', globalTracks.length, 'tracks');
-      alert(`✅ Экспортировано ${globalTracks.length} треков!\n\nЗагрузите файл tracks.json в корень вашего GitHub репозитория, чтобы все могли видеть треки.`);
+      alert(`✅ Exported ${globalTracks.length} tracks!\n\n📝 Загрузи файл tracks.json в корень GitHub репозитория.\n\n🔄 После загрузки обнови страницу (Ctrl+F5) на всех устройствах.`);
     });
 
     document.getElementById('siteSearch').addEventListener('input', (e) => {
@@ -1187,7 +1213,9 @@
       });
     });
 
-    console.log('✅ Initialized');
+    console.log('✅ Initialization complete');
+    console.log('📊 Tracks loaded:', globalTracks.length);
+    console.log('🔄 Play mode:', playMode);
   });
   </script>
   
