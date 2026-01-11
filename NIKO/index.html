@@ -994,21 +994,50 @@ div[style*="overflow-x: auto"]::-webkit-scrollbar {
   let globalTracks = [];
   let isShuffleMode = localStorage.getItem('shuffleMode') === 'true';
 
-  async function loadTracksFromJSON() {
-    const paths = ['./tracks.json', '/tracks.json', 'tracks.json'];
-    
-    for (const path of paths) {
-      try {
-        const response = await fetch(path + '?t=' + Date.now());
-        if (response.ok) {
-          const tracks = JSON.parse(await response.text());
-          console.log('✅ Loaded', tracks.length, 'from', path);
-          return tracks;
+  const APP_VERSION = Date.now(); // Уникальная версия
+
+async function loadTracksFromJSON() {
+  console.log('🔄 Loading tracks.json v' + APP_VERSION);
+  
+  const paths = [
+    `./tracks.json?v=${APP_VERSION}`,
+    `/tracks.json?v=${APP_VERSION}`,
+    `tracks.json?v=${APP_VERSION}`
+  ];
+  
+  for (const path of paths) {
+    try {
+      console.log('📥 Trying:', path);
+      
+      const response = await fetch(path, {
+        method: 'GET',
+        cache: 'no-store',
+        headers: {
+          'Cache-Control': 'no-cache, no-store, must-revalidate',
+          'Pragma': 'no-cache',
+          'Expires': '0'
         }
-      } catch (e) {}
+      });
+      
+      if (response.ok) {
+        const text = await response.text();
+        console.log('📦 Response:', text.substring(0, 100));
+        
+        const tracks = JSON.parse(text);
+        console.log('✅ Loaded', tracks.length, 'tracks from', path);
+        
+        return tracks;
+      } else {
+        console.log('❌ Status:', response.status);
+      }
+    } catch (e) {
+      console.error('❌ Error:', e.message);
     }
-    return null;
   }
+  
+  console.error('❌ All paths failed!');
+  return null;
+}
 
   async function getDraftTracks() {
   // Сначала проверяем localStorage (draftTracks имеет приоритет)
