@@ -2070,8 +2070,7 @@ document.querySelectorAll('.visualizer-type-btn').forEach(btn => {
   // ========================================
 // ========================================
 // ========================================
-// ========================================
-// 🎵 ВИЗУАЛИЗАТОРЫ КАК В TIKTOK И YOUTUBE
+// 💿 ФУТУРИСТИЧНЫЕ ВИЗУАЛИЗАТОРЫ (ПО ФОТО)
 // ========================================
 
 let visualizerActive = false;
@@ -2081,24 +2080,21 @@ let audioContext = null;
 let analyser = null;
 let dataArray = null;
 let animationId = null;
-let particles = [];
-let terrainTime = 0;
+let rotation = 0;
 
 function initAudioVisualizer() {
   const canvas = document.getElementById('audio-visualizer');
   if (!canvas) return;
-  
   const ctx = canvas.getContext('2d');
   
   canvas.width = Math.min(window.innerWidth * 0.9, 1000);
-  canvas.height = Math.min(window.innerHeight * 0.5, 600);
+  canvas.height = Math.min(window.innerHeight * 0.6, 700);
   
   if (!audioContext) {
     audioContext = new (window.AudioContext || window.webkitAudioContext)();
     analyser = audioContext.createAnalyser();
     analyser.fftSize = 1024;
-    analyser.smoothingTimeConstant = 0.85;
-    
+    analyser.smoothingTimeConstant = 0.8;
     const bufferLength = analyser.frequencyBinCount;
     dataArray = new Uint8Array(bufferLength);
     
@@ -2108,68 +2104,33 @@ function initAudioVisualizer() {
         const source = audioContext.createMediaElementSource(mediaElement);
         source.connect(analyser);
         analyser.connect(audioContext.destination);
-      } catch (e) {
-        console.log('⚠️ Audio connected');
-      }
-    }
-  }
-  
-  // Инициализация частиц для particles визуализатора
-  if (visualizerType === 'particles' && particles.length === 0) {
-    for (let i = 0; i < 200; i++) {
-      particles.push({
-        x: Math.random() * canvas.width,
-        y: Math.random() * canvas.height,
-        radius: Math.random() * 3 + 2,
-        color: `hsl(${Math.random() * 60 + 180}, 100%, 60%)`,
-        vx: (Math.random() - 0.5) * 2,
-        vy: (Math.random() - 0.5) * 2
-      });
+      } catch (e) { console.log('⚠️ Audio connected'); }
     }
   }
   
   function draw() {
     if (!visualizerActive) return;
-    
     animationId = requestAnimationFrame(draw);
     analyser.getByteFrequencyData(dataArray);
     
     ctx.clearRect(0, 0, canvas.width, canvas.height);
-    
     const centerX = canvas.width / 2;
     const centerY = canvas.height / 2;
     
     switch (visualizerType) {
-      case 'circular':
-        drawModernCircular(ctx, centerX, centerY);
-        break;
-      case 'bars3d':
-        drawBars3D(ctx, centerX, centerY);
-        break;
-      case 'particles':
-        drawParticlesFlow(ctx, centerX, centerY);
-        break;
-      case 'terrain':
-        drawAudioTerrain(ctx, centerX, centerY);
-        break;
+      case 'circular': drawModernCircular(ctx, centerX, centerY); break;
+      case '3d_wave': draw3DWave(ctx, centerX, centerY, canvas); break;
+      case 'cyber_disk': drawCyberDisk(ctx, centerX, centerY); break;
+      case 'spectrum_3d': drawSpectrum3DPlane(ctx, centerX, centerY); break;
+      case 'golden_waves': drawGoldenWaves(ctx, centerX, centerY, canvas); break;
     }
+    rotation += 0.01;
   }
-  
-  // ⭕ КРУГОВОЙ СПЕКТР - СОВРЕМЕННЫЙ СТИЛЬ (на основе 2-й картинки)
+
+  // ⭕ MODERN CIRCLE (Твой любимый)
   function drawModernCircular(ctx, centerX, centerY) {
     const radius = Math.min(canvas.width, canvas.height) * 0.3;
     const bars = 180;
-    const barWidth = 3;
-    
-    // Чёрный фон с градиентом
-    const bgGradient = ctx.createRadialGradient(centerX, centerY, 0, centerX, centerY, radius * 2);
-    bgGradient.addColorStop(0, 'rgba(0, 0, 0, 0.8)');
-    bgGradient.addColorStop(1, 'rgba(0, 0, 0, 0)');
-    
-    ctx.fillStyle = bgGradient;
-    ctx.fillRect(0, 0, canvas.width, canvas.height);
-    
-    // Внутренний круг с пульсацией
     const avgBass = dataArray.slice(0, 10).reduce((a, b) => a + b, 0) / 10;
     const pulseRadius = radius * 0.25 + (avgBass / 255) * 20;
     
@@ -2177,17 +2138,12 @@ function initAudioVisualizer() {
     ctx.arc(centerX, centerY, pulseRadius, 0, Math.PI * 2);
     ctx.fillStyle = 'rgba(255, 255, 255, 0.05)';
     ctx.fill();
-    
-    // Круговые полосы спектра
+
     for (let i = 0; i < bars; i++) {
-      const angle = (i / bars) * Math.PI * 2;
-      
-      // Анализ частот
+      const angle = (i / bars) * Math.PI * 2 + rotation * 0.2;
       const freqIndex = Math.floor(i / bars * dataArray.length * 0.8);
       const value = dataArray[freqIndex] || 0;
       const barHeight = (value / 255) * (radius * 0.7);
-      
-      // Цветовой градиент по спектру
       const hue = (i / bars) * 360;
       
       const x1 = centerX + Math.cos(angle) * radius;
@@ -2195,348 +2151,144 @@ function initAudioVisualizer() {
       const x2 = centerX + Math.cos(angle) * (radius + barHeight);
       const y2 = centerY + Math.sin(angle) * (radius + barHeight);
       
-      // Рисуем полоску спектра
       ctx.beginPath();
       ctx.moveTo(x1, y1);
       ctx.lineTo(x2, y2);
-      ctx.lineWidth = barWidth;
+      ctx.lineWidth = 3;
       ctx.lineCap = 'round';
       ctx.strokeStyle = `hsl(${hue}, 100%, 50%)`;
       ctx.shadowBlur = 10;
-      ctx.shadowColor = `hsl(${hue}, 100%, 50%)`;
-      ctx.stroke();
-      
-      // Яркие точки на концах активных полос
-      if (value > 200) {
-        ctx.beginPath();
-        ctx.arc(x2, y2, barWidth + 1, 0, Math.PI * 2);
-        ctx.fillStyle = `hsl(${hue}, 100%, 80%)`;
-        ctx.shadowBlur = 15;
-        ctx.fill();
-      }
-    }
-    
-    // Кольца вокруг визуализатора
-    for (let ring = 0; ring < 3; ring++) {
-      const ringRadius = radius * (1 + ring * 0.1) + Math.sin(Date.now() * 0.001) * 5;
-      ctx.beginPath();
-      ctx.arc(centerX, centerY, ringRadius, 0, Math.PI * 2);
-      ctx.strokeStyle = `rgba(255, 255, 255, ${0.1 - ring * 0.03})`;
-      ctx.lineWidth = 1;
+      ctx.shadowColor = ctx.strokeStyle;
       ctx.stroke();
     }
-    
     ctx.shadowBlur = 0;
   }
-  
-  // 📊 3D BARS - ОСТАВЛЯЕМ (НА ОСНОВЕ 1-Й КАРТИНКИ)
-  function drawBars3D(ctx, centerX, centerY) {
-    const bars = 64;
-    const maxBarHeight = canvas.height * 0.8;
-    
-    // Тёмный фон с градиентом
-    const bgGradient = ctx.createRadialGradient(centerX, centerY, 0, centerX, centerY, canvas.width);
-    bgGradient.addColorStop(0, 'rgba(10, 10, 20, 1)');
-    bgGradient.addColorStop(1, 'rgba(0, 0, 5, 1)');
-    ctx.fillStyle = bgGradient;
-    ctx.fillRect(0, 0, canvas.width, canvas.height);
-    
-    // Рисуем сетку
-    ctx.strokeStyle = 'rgba(50, 50, 100, 0.2)';
-    ctx.lineWidth = 1;
-    
-    // Горизонтальные линии
-    for (let y = centerY; y < canvas.height; y += 20) {
+
+  // 🌊 3D WAVE (Твой любимый)
+  function draw3DWave(ctx, centerX, centerY, canvas) {
+    const waveCount = 5;
+    for (let w = 0; w < waveCount; w++) {
+      const norm = (dataArray[w * 20] || 0) / 255;
       ctx.beginPath();
-      ctx.moveTo(0, y);
-      ctx.lineTo(canvas.width, y);
+      ctx.strokeStyle = w % 2 === 0 ? '#00f5ff' : '#ff007f';
+      ctx.lineWidth = 2 + norm * 4;
+      ctx.shadowBlur = 15;
+      ctx.shadowColor = ctx.strokeStyle;
+      
+      const offset = norm * 40;
+      for (let x = 0; x <= canvas.width; x += 15) {
+        const t = x / canvas.width;
+        const y = centerY + Math.sin(t * Math.PI * 3 + rotation * 5 + w) * (50 + norm * 100);
+        ctx.lineTo(x + offset, y + offset);
+      }
       ctx.stroke();
     }
-    
-    // Волна в основании (как на первой картинке)
+    ctx.shadowBlur = 0;
+  }
+
+  // 💿 CYBER DISK (На основе фото 3 и 4 - Футуристичный интерфейс)
+  function drawCyberDisk(ctx, centerX, centerY) {
+    const baseRadius = 150;
+    const avgVolume = dataArray.reduce((a, b) => a + b, 0) / dataArray.length;
+    const pulse = avgVolume / 255 * 30;
+
+    // Вращающиеся кольца
+    for(let r = 0; r < 4; r++) {
+      ctx.beginPath();
+      const radius = baseRadius + pulse + (r * 20);
+      const startAngle = rotation * (r % 2 === 0 ? 1 : -1);
+      ctx.arc(centerX, centerY, radius, startAngle, startAngle + Math.PI * 1.5);
+      ctx.strokeStyle = r % 2 === 0 ? '#00d1ff' : '#ff4da6';
+      ctx.lineWidth = 2;
+      ctx.stroke();
+    }
+
+    // Спектральные лучи
+    const bars = 120;
+    for(let i = 0; i < bars; i++) {
+      const angle = (i / bars) * Math.PI * 2 + rotation;
+      const val = dataArray[i % 128] / 255;
+      const h = val * 80;
+      
+      ctx.beginPath();
+      ctx.moveTo(centerX + Math.cos(angle) * baseRadius, centerY + Math.sin(angle) * baseRadius);
+      ctx.lineTo(centerX + Math.cos(angle) * (baseRadius + h), centerY + Math.sin(angle) * (baseRadius + h));
+      ctx.strokeStyle = `hsla(${200 + val * 100}, 100%, 60%, ${val})`;
+      ctx.lineWidth = 2;
+      ctx.stroke();
+    }
+
+    // Центральный "реактор"
     ctx.beginPath();
-    for (let x = 0; x < canvas.width; x += 5) {
-      const i = Math.floor(x / canvas.width * dataArray.length);
-      const value = dataArray[i] / 255;
+    ctx.arc(centerX, centerY, 30 + pulse, 0, Math.PI * 2);
+    ctx.fillStyle = '#fff';
+    ctx.shadowBlur = 30;
+    ctx.shadowColor = '#00d1ff';
+    ctx.fill();
+    ctx.shadowBlur = 0;
+  }
+
+  // 📐 3D PLANE (На основе фото 1 - Спектр в перспективе)
+  function drawSpectrum3DPlane(ctx, centerX, centerY) {
+    const bars = 64;
+    const barWidth = 12;
+    const gap = 4;
+    const totalWidth = bars * (barWidth + gap);
+    
+    ctx.save();
+    ctx.translate(centerX, centerY + 100);
+    
+    for(let i = 0; i < bars; i++) {
+      const val = dataArray[i * 4] / 255;
+      const h = val * 250;
+      const x = (i - bars/2) * (barWidth + gap);
       
-      const y = centerY + Math.sin(x * 0.01 + Date.now() * 0.001) * 20 + value * 30;
+      // Перспектива: чем дальше от центра, тем ниже Y
+      const skew = Math.abs(i - bars/2) * 2;
       
-      if (x === 0) {
-        ctx.moveTo(x, y);
-      } else {
+      const grad = ctx.createLinearGradient(0, 0, 0, -h);
+      grad.addColorStop(0, `hsl(${i * 5}, 100%, 50%)`);
+      grad.addColorStop(1, '#fff');
+
+      ctx.fillStyle = grad;
+      ctx.shadowBlur = 15;
+      ctx.shadowColor = grad;
+      
+      // Рисуем с искажением для эффекта плоскости
+      ctx.fillRect(x, -skew, barWidth, -h);
+    }
+    ctx.restore();
+    ctx.shadowBlur = 0;
+  }
+
+  // ✨ GOLD WAVE (На основе фото 5 - Элегантные тонкие линии)
+  function drawGoldenWaves(ctx, centerX, centerY, canvas) {
+    ctx.globalCompositeOperation = 'lighter';
+    const lines = 12;
+    const avgBass = dataArray[0] / 255;
+
+    for(let i = 0; i < lines; i++) {
+      ctx.beginPath();
+      const norm = dataArray[i * 10] / 255;
+      ctx.strokeStyle = `rgba(255, ${200 + i * 4}, ${100 + i * 10}, ${0.2 + norm * 0.5})`;
+      ctx.lineWidth = 0.5 + norm * 2;
+
+      for(let x = 0; x < canvas.width; x += 10) {
+        const t = x / canvas.width;
+        const y = centerY + Math.sin(t * 5 + rotation + i) * (50 * norm) + 
+                  Math.cos(t * 10 - rotation) * (30 * avgBass);
         ctx.lineTo(x, y);
       }
+      ctx.stroke();
     }
-    
-    const waveGradient = ctx.createLinearGradient(0, centerY, 0, centerY + 100);
-    waveGradient.addColorStop(0, 'rgba(255, 50, 0, 0.8)');
-    waveGradient.addColorStop(0.5, 'rgba(255, 150, 0, 0.5)');
-    waveGradient.addColorStop(1, 'rgba(255, 200, 0, 0.1)');
-    
-    ctx.strokeStyle = waveGradient;
-    ctx.lineWidth = 3;
-    ctx.stroke();
-    
-    // 3D столбики
-    const barWidth = canvas.width / bars;
-    
-    for (let i = 0; i < bars; i++) {
-      const x = i * barWidth;
-      
-      // Используем разные части спектра для градиента цветов
-      const value = dataArray[i] / 255;
-      const barHeight = value * maxBarHeight;
-      
-      // Определяем цвет в зависимости от частоты
-      let color;
-      
-      if (i < bars * 0.25) { // Низкие частоты - голубой
-        color = `rgba(0, 200, 255, ${value * 0.8})`;
-      } else if (i < bars * 0.5) { // Низко-средние - зеленый
-        color = `rgba(0, 255, 150, ${value * 0.8})`;
-      } else if (i < bars * 0.75) { // Высоко-средние - желтый
-        color = `rgba(255, 255, 0, ${value * 0.8})`;
-      } else { // Высокие частоты - красный/оранжевый
-        color = `rgba(255, 100, 0, ${value * 0.8})`;
-      }
-      
-      // Рисуем 3D столбик с градиентом
-      const gradient = ctx.createLinearGradient(0, centerY, 0, centerY - barHeight);
-      gradient.addColorStop(0, 'rgba(50, 50, 100, 0.2)');
-      gradient.addColorStop(1, color);
-      
-      ctx.fillStyle = gradient;
-      ctx.fillRect(x, centerY - barHeight, barWidth - 1, barHeight);
-      
-      // Добавляем блики сверху для 3D эффекта
-      if (barHeight > 20) {
-        ctx.fillStyle = 'rgba(255, 255, 255, 0.3)';
-        ctx.fillRect(x, centerY - barHeight, barWidth - 1, 2);
-      }
-      
-      // Частицы над высокими столбиками
-      if (value > 0.7) {
-        for (let p = 0; p < 2; p++) {
-          const particleSize = Math.random() * 3 + 1;
-          const particleX = x + Math.random() * barWidth;
-          const particleY = centerY - barHeight - Math.random() * 30;
-          
-          ctx.beginPath();
-          ctx.arc(particleX, particleY, particleSize, 0, Math.PI * 2);
-          ctx.fillStyle = color.replace('0.8', '0.6');
-          ctx.fill();
-        }
-      }
-    }
+    ctx.globalCompositeOperation = 'source-over';
   }
-  
-  // ✨ PARTICLES FLOW - НОВЫЙ (как в Spotify)
-  function drawParticlesFlow(ctx, centerX, centerY) {
-    // Тёмный фон
-    ctx.fillStyle = 'rgba(0, 0, 0, 0.15)';
-    ctx.fillRect(0, 0, canvas.width, canvas.height);
-    
-    const avgBass = dataArray.slice(0, 20).reduce((a, b) => a + b, 0) / 20 / 255;
-    const avgMid = dataArray.slice(20, 50).reduce((a, b) => a + b, 0) / 30 / 255;
-    
-    // Обновляем и рисуем частицы
-    particles.forEach((p, index) => {
-      // Анализируем частоту для этой частицы
-      const freqIndex = Math.floor((index / particles.length) * dataArray.length);
-      const frequency = dataArray[freqIndex] / 255;
-      
-      // Движение на основе музыки
-      p.vx += (Math.random() - 0.5) * 0.3 * avgMid;
-      p.vy += (Math.random() - 0.5) * 0.3 * avgBass;
-      
-      // Ограничение скорости
-      p.vx = Math.max(-2, Math.min(2, p.vx));
-      p.vy = Math.max(-2, Math.min(2, p.vy));
-      
-      // Применяем скорость
-      p.x += p.vx;
-      p.y += p.vy;
-      
-      // Трение
-      p.vx *= 0.98;
-      p.vy *= 0.98;
-      
-      // Границы
-      if (p.x < 0) p.x = canvas.width;
-      if (p.x > canvas.width) p.x = 0;
-      if (p.y < 0) p.y = canvas.height;
-      if (p.y > canvas.height) p.y = 0;
-      
-      // Размер частиц зависит от музыки
-      const size = p.radius + frequency * 5;
-      
-      // Рисуем частицу с градиентом и свечением
-      const gradient = ctx.createRadialGradient(p.x, p.y, 0, p.x, p.y, size * 2);
-      gradient.addColorStop(0, p.color.replace('60%', '80%'));
-      gradient.addColorStop(0.5, p.color);
-      gradient.addColorStop(1, p.color.replace('60%', '0%'));
-      
-      ctx.beginPath();
-      ctx.arc(p.x, p.y, size, 0, Math.PI * 2);
-      ctx.fillStyle = gradient;
-      ctx.shadowBlur = 10;
-      ctx.shadowColor = p.color;
-      ctx.fill();
-      
-      // Соединяем близкие частицы линиями
-      particles.forEach((p2, i) => {
-        if (i <= index) return;
-        
-        const dx = p.x - p2.x;
-        const dy = p.y - p2.y;
-        const dist = Math.sqrt(dx * dx + dy * dy);
-        
-        if (dist < 80) {
-          ctx.beginPath();
-          ctx.moveTo(p.x, p.y);
-          ctx.lineTo(p2.x, p2.y);
-          ctx.strokeStyle = `rgba(180, 180, 255, ${(1 - dist / 80) * 0.2})`;
-          ctx.lineWidth = 1;
-          ctx.stroke();
-        }
-      });
-    });
-    
-    // Звуковая пульсация в центре
-    const pulseSize = 50 + avgBass * 100;
-    const pulseGradient = ctx.createRadialGradient(centerX, centerY, 0, centerX, centerY, pulseSize);
-    pulseGradient.addColorStop(0, `rgba(50, 180, 255, ${avgBass * 0.3})`);
-    pulseGradient.addColorStop(0.6, `rgba(50, 180, 255, ${avgBass * 0.1})`);
-    pulseGradient.addColorStop(1, 'rgba(50, 180, 255, 0)');
-    
-    ctx.beginPath();
-    ctx.arc(centerX, centerY, pulseSize, 0, Math.PI * 2);
-    ctx.fillStyle = pulseGradient;
-    ctx.shadowBlur = 30;
-    ctx.shadowColor = 'rgba(50, 180, 255, 0.5)';
-    ctx.fill();
-    
-    ctx.shadowBlur = 0;
-  }
-  
-  // 🌄 AUDIO TERRAIN - 3D ЛАНДШАФТ (НОВЫЙ)
-  function drawAudioTerrain(ctx, centerX, centerY) {
-    terrainTime += 0.01;
-    
-    // Градиентный фон
-    const gradient = ctx.createLinearGradient(0, 0, 0, canvas.height);
-    gradient.addColorStop(0, '#000510');
-    gradient.addColorStop(1, '#000000');
-    ctx.fillStyle = gradient;
-    ctx.fillRect(0, 0, canvas.width, canvas.height);
-    
-    // Параметры ландшафта
-    const rows = 30;
-    const cols = 64;
-    const cellWidth = canvas.width / cols;
-    const startY = canvas.height - 200;
-    
-    // Рисуем каждый ряд 3D ландшафта
-    for (let z = rows - 1; z >= 0; z--) {
-      const rowY = startY - z * 6;
-      const depth = 1 - z / rows; // 0 = дальние, 1 = ближние
-      
-      // Точки для этого ряда
-      const points = [];
-      
-      for (let x = 0; x < cols; x++) {
-        const freqIndex = Math.floor(x / cols * dataArray.length * 0.8);
-        const value = dataArray[freqIndex] / 255;
-        
-        // Высота точки зависит от частоты и позиции
-        const heightFactor = depth * 0.7 + 0.3; // Ближние выше
-        const noise = Math.sin((x * 0.1) + (z * 0.1) + terrainTime) * 10;
-        const height = value * 200 * heightFactor + noise;
-        
-        // Сохраняем точку
-        points.push({
-          x: x * cellWidth,
-          y: rowY - height
-        });
-      }
-      
-      // Рисуем линию ландшафта
-      ctx.beginPath();
-      ctx.moveTo(0, rowY);
-      
-      points.forEach(point => {
-        ctx.lineTo(point.x, point.y);
-      });
-      
-      // Замыкаем путь
-      ctx.lineTo(canvas.width, rowY);
-      ctx.closePath();
-      
-      // Градиент для ряда
-      const hue = 180 + z * 3; // От голубого к фиолетовому
-      const rowGradient = ctx.createLinearGradient(0, rowY - 150, 0, rowY);
-      rowGradient.addColorStop(0, `hsla(${hue}, 100%, 50%, ${depth * 0.9})`);
-      rowGradient.addColorStop(1, `hsla(${hue - 40}, 100%, 30%, ${depth * 0.3})`);
-      
-      ctx.fillStyle = rowGradient;
-      
-      // Сетка для 3D эффекта
-      if (z % 2 === 0) {
-        ctx.strokeStyle = `rgba(255, 255, 255, ${depth * 0.15})`;
-        ctx.lineWidth = 1;
-        ctx.stroke();
-      }
-      
-      ctx.fill();
-      
-      // Светящиеся точки на вершинах
-      if (z % 3 === 0) {
-        points.forEach((point, index) => {
-          if (index % 4 === 0) {
-            const freqIndex = Math.floor(index / points.length * dataArray.length);
-            const value = dataArray[freqIndex] / 255;
-            
-            if (value > 0.6) {
-              ctx.beginPath();
-              ctx.arc(point.x, point.y, 2 * depth, 0, Math.PI * 2);
-              ctx.fillStyle = `hsla(${hue - 30}, 100%, 80%, ${depth * value})`;
-              ctx.shadowBlur = 10;
-              ctx.shadowColor = `hsla(${hue - 30}, 100%, 80%, ${depth})`;
-              ctx.fill();
-            }
-          }
-        });
-      }
-    }
-    
-    // Горизонт с градиентом
-    const horizon = ctx.createLinearGradient(0, startY - 100, 0, startY);
-    horizon.addColorStop(0, 'rgba(50, 0, 100, 0.3)');
-    horizon.addColorStop(1, 'rgba(0, 0, 0, 0)');
-    ctx.fillStyle = horizon;
-    ctx.fillRect(0, startY - 100, canvas.width, 100);
-    
-    // Звёзды на фоне
-    for (let i = 0; i < 50; i++) {
-      const x = Math.random() * canvas.width;
-      const y = Math.random() * (startY - 150);
-      const size = Math.random() * 2 + 1;
-      
-      ctx.beginPath();
-      ctx.arc(x, y, size, 0, Math.PI * 2);
-      ctx.fillStyle = `rgba(255, 255, 255, ${Math.random() * 0.7 + 0.3})`;
-      ctx.fill();
-    }
-    
-    ctx.shadowBlur = 0;
-  }
-  
+
   draw();
 }
 
 function toggleVisualizerFullscreen() {
   visualizerFullscreen = !visualizerFullscreen;
-  
   const fullscreenDiv = document.getElementById('visualizer-fullscreen');
   const container = document.querySelector('.container');
   const btn = document.getElementById('mini-visualizer');
@@ -2545,46 +2297,26 @@ function toggleVisualizerFullscreen() {
     fullscreenDiv.style.display = 'flex';
     container.style.display = 'none';
     btn.classList.add('active');
-    
-    visualizerActive = true;
-    
-    if (audioContext && audioContext.state === 'suspended') {
-      audioContext.resume();
-    }
-    
+    if (audioContext && audioContext.state === 'suspended') audioContext.resume();
     const titleEl = document.getElementById('visualizer-track-title');
-    if (titleEl && currentTrackIndex >= 0) {
-      titleEl.textContent = globalTracks[currentTrackIndex]?.title || 'Track';
-    }
-    
+    if (titleEl && currentTrackIndex >= 0) titleEl.textContent = globalTracks[currentTrackIndex]?.title || 'Track';
     initAudioVisualizer();
   } else {
     fullscreenDiv.style.display = 'none';
     container.style.display = 'block';
     btn.classList.remove('active');
-    
     visualizerActive = false;
-    
-    if (animationId) {
-      cancelAnimationFrame(animationId);
-      animationId = null;
-    }
+    if (animationId) cancelAnimationFrame(animationId);
   }
-  
-  localStorage.setItem('visualizerFullscreen', visualizerFullscreen);
 }
 
 function changeVisualizerType(type) {
   visualizerType = type;
-  particles = [];
-  terrainTime = 0;
-  
+  rotation = 0;
   document.querySelectorAll('.visualizer-type-btn').forEach(btn => {
     btn.classList.toggle('active', btn.dataset.type === type);
   });
-  
   localStorage.setItem('visualizerType', type);
-  
   if (visualizerActive) {
     if (animationId) cancelAnimationFrame(animationId);
     initAudioVisualizer();
@@ -2691,10 +2423,11 @@ function playPrev() {
   padding: 0 10px;
   min-width: min-content;
 ">
-  <button class="visualizer-type-btn active" data-type="circular">⭕ Circle</button>
-  <button class="visualizer-type-btn" data-type="bars3d">📊 3D Bars</button>
-  <button class="visualizer-type-btn" data-type="particles">✨ Particles</button>
-  <button class="visualizer-type-btn" data-type="terrain">🌄 Terrain</button>
+  <button class="visualizer-type-btn active" data-type="circular">⭕ Modern Circle</button>
+  <button class="visualizer-type-btn" data-type="3d_wave">🌊 3D Wave</button>
+  <button class="visualizer-type-btn" data-type="cyber_disk">💿 Cyber Disk</button>
+  <button class="visualizer-type-btn" data-type="spectrum_3d">📐 3D Plane</button>
+  <button class="visualizer-type-btn" data-type="golden_waves">✨ Gold Wave</button>
 </div>
 
   <!-- Контейнер для canvas и названия -->
