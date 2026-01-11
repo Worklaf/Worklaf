@@ -1,0 +1,151 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<title>Добавить трек — N1KO</title>
+<style>
+  body { font-family: Arial; background:#0b0b10; color:#fff; padding:20px; }
+  h1 { margin-bottom:20px; }
+  .block { background:#14141a; padding:20px; border-radius:10px; margin-bottom:20px; }
+  label { display:block; margin-top:10px; font-weight:bold; }
+  input, textarea, select {
+    width:100%; padding:8px; margin-top:5px;
+    background:#0b0b10; border:1px solid #333; color:#fff; border-radius:6px;
+  }
+  textarea { height:120px; }
+  button {
+    margin-top:20px; padding:12px 20px; background:#ff4da6;
+    border:0; border-radius:8px; cursor:pointer; font-size:16px; color:#000;
+  }
+  #preview { margin-top:10px; max-width:200px; border-radius:10px; }
+  pre {
+    background:#000; padding:15px; border-radius:10px; white-space:pre-wrap;
+    margin-top:20px; border:1px solid #333;
+  }
+</style>
+</head>
+<body>
+
+<h1>Добавить новый трек</h1>
+
+<div class="block">
+  <label>MP3 файл</label>
+  <input type="file" id="mp3" accept=".mp3">
+
+  <label>Обложка</label>
+  <input type="file" id="cover" accept="image/*">
+  <img id="preview" style="display:none">
+
+  <label>Название трека</label>
+  <input id="title">
+
+  <label>Жанр</label>
+  <input id="genre" placeholder="Например: Gothic Piano Trap">
+
+  <label>Длительность</label>
+  <input id="duration" placeholder="03:45">
+
+  <label>Описание</label>
+  <textarea id="desc"></textarea>
+
+  <label>Текст песни</label>
+  <textarea id="lyrics"></textarea>
+
+  <button onclick="generate()">Сгенерировать код</button>
+</div>
+
+<h2>HTML для вставки в index.html</h2>
+<pre id="card"></pre>
+
+<h2>HTML для страницы трека</h2>
+<pre id="page"></pre>
+
+<script>
+document.getElementById("cover").addEventListener("change", e => {
+  const file = e.target.files[0];
+  if (file) {
+    const url = URL.createObjectURL(file);
+    const img = document.getElementById("preview");
+    img.src = url;
+    img.style.display = "block";
+  }
+});
+
+function generate() {
+  const mp3 = document.getElementById("mp3").files[0];
+  const cover = document.getElementById("cover").files[0];
+  const title = document.getElementById("title").value.trim();
+  const genre = document.getElementById("genre").value.trim();
+  const duration = document.getElementById("duration").value.trim();
+  const desc = document.getElementById("desc").value.trim();
+  const lyrics = document.getElementById("lyrics").value.trim();
+
+  if (!mp3 || !cover || !title) {
+    alert("MP3, обложка и название — обязательны");
+    return;
+  }
+
+  const mp3Name = mp3.name;
+  const coverName = cover.name;
+  const txtName = title.toLowerCase().replace(/[^a-z0-9]+/g,"_") + ".txt";
+  const pageName = "track-" + title.toLowerCase().replace(/[^a-z0-9]+/g,"_") + ".html";
+
+  // HTML карточки
+  const cardHTML = `
+<div class="track"
+     data-src="N1KO/assets/${mp3Name}"
+     data-page="N1KO/${pageName}"
+     data-title="${title}"
+     data-genre="${genre}"
+     data-duration="${duration}"
+     data-lyrics-file="N1KO/assets/${txtName}">
+  <a class="card-link" href="N1KO/${pageName}">
+    <img class="thumb" src="N1KO/assets/${coverName}">
+  </a>
+  <div class="info">
+    <div class="title">${title}</div>
+    <div class="meta">${genre} · ${duration}</div>
+  </div>
+</div>`;
+
+  // HTML страницы трека
+  const pageHTML = `
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<title>${title} — N1KO</title>
+<link rel="stylesheet" href="../style.css">
+</head>
+<body>
+<div id="track-page"
+     data-src="N1KO/assets/${mp3Name}"
+     data-title="${title}"
+     data-genre="${genre}"
+     data-duration="${duration}"
+     data-lyrics-file="N1KO/assets/${txtName}">
+  <h1>${title}</h1>
+  <img src="N1KO/assets/${coverName}" style="max-width:300px;border-radius:10px">
+  <p><b>Жанр:</b> ${genre}</p>
+  <p><b>Длительность:</b> ${duration}</p>
+  <p>${desc}</p>
+  <pre id="lyrics"></pre>
+</div>
+<script src="../player.js"></script>
+</body>
+</html>`;
+
+  document.getElementById("card").textContent = cardHTML;
+  document.getElementById("page").textContent = pageHTML;
+
+  // Скачать текст песни
+  const blob = new Blob([lyrics], {type:"text/plain"});
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(blob);
+  a.download = txtName;
+  a.click();
+}
+</script>
+
+</body>
+</html>
