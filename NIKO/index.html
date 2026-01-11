@@ -1483,6 +1483,7 @@
   }
   
   window.isLoadingTrack = true;
+  console.log('🎵 Starting playTrack...');
   
   const src = trackEl.dataset.src;
   const title = trackEl.dataset.title;
@@ -1493,25 +1494,36 @@
   currentTrackIndex = index;
   window.currentTrackSrc = src;
 
+  console.log('📀 Loading track:', title, 'Index:', index);
+
   document.getElementById('mini-title').textContent = title;
   document.getElementById('mini-thumb').src = cover;
   document.getElementById('mini-player').style.display = 'flex';
+
+  // Обновляем активный трек в списке
+  document.querySelectorAll('.track').forEach(t => t.classList.remove('playing'));
+  trackEl.classList.add('playing');
 
   // Останавливаем текущее воспроизведение
   if (wavesurfer) {
     wavesurfer.stop();
   }
   
-  // ЗАДЕРЖКА перед загрузкой следующего трека
+  // ЗАДЕРЖКА перед загрузкой следующего трека (избегаем AbortError)
   setTimeout(() => {
+    console.log('⏳ Loading audio file...');
+    
     wavesurfer.load(src);
     
-    // Снимаем флаг через 500ms
+    // Снимаем флаг загрузки через 500ms
     setTimeout(() => {
       window.isLoadingTrack = false;
+      console.log('✅ Loading flag cleared');
     }, 500);
-  }, 100);
+    
+  }, 150); // Задержка 150ms
 
+  // Увеличиваем счетчик прослушиваний
   const playKey = 'plays:' + src;
   const newCount = getCount(playKey) + 1;
   setCount(playKey, newCount);
@@ -1520,34 +1532,13 @@
 
   updateMiniPlayerButtons();
   
-  // Обновляем название в визуализаторе
+  // Обновляем название в полноэкранном визуализаторе
   const vizTitle = document.getElementById('visualizer-track-title');
   if (vizTitle) {
     vizTitle.textContent = title;
   }
-    const src = trackEl.dataset.src;
-    const title = trackEl.dataset.title;
-    const cover = trackEl.querySelector('.thumb').src;
-    const index = parseInt(trackEl.dataset.index);
 
-    currentTrackSrc = src;
-    currentTrackIndex = index;
-    window.currentTrackSrc = src;
-
-    document.getElementById('mini-title').textContent = title;
-    document.getElementById('mini-thumb').src = cover;
-    document.getElementById('mini-player').style.display = 'flex';
-
-    wavesurfer.load(src);
-
-    const playKey = 'plays:' + src;
-    const newCount = getCount(playKey) + 1;
-    setCount(playKey, newCount);
-    saveCountToServer(playKey, newCount);
-    updateCountUI(src);
-
-    updateMiniPlayerButtons();
-    // Media Session API для управления с экрана блокировки
+  // Media Session API для управления с экрана блокировки и уведомлений
   if ('mediaSession' in navigator) {
     const track = globalTracks[index];
     
@@ -1556,29 +1547,58 @@
       artist: 'N1K∅',
       album: track.genre || 'Music',
       artwork: [
-        { src: track.cover, sizes: '512x512', type: 'image/jpeg' }
+        { 
+          src: track.cover, 
+          sizes: '512x512', 
+          type: 'image/jpeg' 
+        }
       ]
     });
     
+    // Обработчики управления
     navigator.mediaSession.setActionHandler('play', () => {
+      console.log('📱 Media Session: Play');
       wavesurfer.play();
     });
     
     navigator.mediaSession.setActionHandler('pause', () => {
+      console.log('📱 Media Session: Pause');
       wavesurfer.pause();
     });
     
     navigator.mediaSession.setActionHandler('previoustrack', () => {
+      console.log('📱 Media Session: Previous');
       playPrev();
     });
     
     navigator.mediaSession.setActionHandler('nexttrack', () => {
+      console.log('📱 Media Session: Next');
       playNext();
+    });
+    
+    navigator.mediaSession.setActionHandler('seekbackward', (details) => {
+      console.log('📱 Media Session: Seek backward');
+      const currentTime = wavesurfer.getCurrentTime();
+      wavesurfer.seekTo(Math.max(0, currentTime - 10) / wavesurfer.getDuration());
+    });
+    
+    navigator.mediaSession.setActionHandler('seekforward', (details) => {
+      console.log('📱 Media Session: Seek forward');
+      const currentTime = wavesurfer.getCurrentTime();
+      const duration = wavesurfer.getDuration();
+      wavesurfer.seekTo(Math.min(duration, currentTime + 10) / duration);
     });
     
     console.log('📱 Media Session API initialized');
   }
+  
+  // Открываем текст песни
+  const lyricsText = globalTracks[index]?.lyrics || 'No lyrics available';
+  const lyricsContent = document.getElementById('lyrics-content');
+  if (lyricsContent) {
+    lyricsContent.textContent = lyricsText;
   }
+}
 
   function playNext() {
   console.log('⏭️ Playing next track...');
