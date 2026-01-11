@@ -1532,21 +1532,9 @@ div[style*="overflow-x: auto"]::-webkit-scrollbar {
     return;
   }
   // После загрузки нового трека, обновляем AudioContext для визуализатора
-  if (visualizerActive) {
-    console.log('🔄 Updating visualizer for new track...');
-    
-    // Сбрасываем контекст, если он уже существует
-    if (audioContext) {
-      try {
-        // Закрываем старый контекст, если он есть
-        if (audioContext.state !== 'closed') {
-          audioContext.close();
-        }
-        audioContext = null;
-        analyser = null;
-      } catch (e) {
-        console.error('❌ Error closing AudioContext:', e);
-      }
+  if (visualizerActive && (!audioContext || audioContext.state === 'suspended')) {
+    initAudioVisualizer(); 
+}
     }
     
     // Запускаем визуализатор с задержкой после загрузки трека
@@ -2345,25 +2333,16 @@ function initVisualizerParticles(canvas) {
 }
 
 // Инициализация и рисование визуализаторов
-// Инициализация и рисование визуализаторов
 function initAudioVisualizer() {
-  console.log('🎵 Initializing audio visualizer...');
-  
   const canvas = document.getElementById('audio-visualizer');
-  if (!canvas) {
-    console.error('❌ Canvas element not found!');
-    return;
-  }
-  
+  if (!canvas) return;
   const ctx = canvas.getContext('2d');
   
   canvas.width = Math.min(window.innerWidth * 0.9, 1000);
   canvas.height = Math.min(window.innerHeight * 0.6, 600);
   
-  // Важно: Создаем новый AudioContext и подключаем к wavesurfer
-  if (!audioContext || audioContext.state === 'closed') {
-    console.log('🔊 Creating new AudioContext...');
-    
+  // Создаем контекст ТОЛЬКО если его еще нет
+  if (!audioContext) {
     try {
       audioContext = new (window.AudioContext || window.webkitAudioContext)();
       analyser = audioContext.createAnalyser();
@@ -2374,38 +2353,31 @@ function initAudioVisualizer() {
       dataArray = new Uint8Array(bufferLength);
       
       if (wavesurfer && wavesurfer.getMediaElement) {
-        console.log('🔌 Connecting to wavesurfer media element...');
         const mediaElement = wavesurfer.getMediaElement();
+        // Это делается ОДИН РАЗ за всю жизнь страницы
         const source = audioContext.createMediaElementSource(mediaElement);
         source.connect(analyser);
         analyser.connect(audioContext.destination);
-        console.log('✅ Audio connected successfully!');
-      } else {
-        console.error('❌ Wavesurfer not available!');
       }
     } catch (e) {
-      console.error('❌ Error initializing AudioContext:', e);
-    }
-  } else {
-    console.log('✅ Using existing AudioContext, state:', audioContext.state);
-    
-    // Возобновляем контекст, если он приостановлен
-    if (audioContext.state === 'suspended') {
-      console.log('🔄 Resuming suspended AudioContext...');
-      audioContext.resume();
+      console.error('Ошибка аудио:', e);
     }
   }
+
+  // Если контекст спит (политика браузера), будим его
+  if (audioContext && audioContext.state === 'suspended') {
+    audioContext.resume();
+  }
   
-  // Инициализируем частицы для визуализаторов
   initVisualizerParticles(canvas);
   
   function draw() {
-  if (!visualizerActive) return;
-  
-  time += 0.01;
-  rotation += 0.005;
-  animationId = requestAnimationFrame(draw);
-  analyser.getByteFrequencyData(dataArray);
+    if (!visualizerActive || !analyser) return; // Добавлена проверка !analyser
+    
+    time += 0.01;
+    rotation += 0.005;
+    animationId = requestAnimationFrame(draw);
+    analyser.getByteFrequencyData(dataArray);
   
   ctx.clearRect(0, 0, canvas.width, canvas.height);
   
@@ -2448,7 +2420,8 @@ function initAudioVisualizer() {
       break;
   }
 }
-  
+  if (animationId) cancelAnimationFrame(animationId);
+  draw();
   // НОВЫЕ ВИЗУАЛИЗАТОРЫ:
   // ⭕ 1. CIRCULAR SPECTRUM
   function drawCircularSpectrum(ctx, centerX, centerY) {
