@@ -207,11 +207,10 @@
     </div>
   </div>
 
-  <script src="https://unpkg.com/wavesurfer.js"></script>
-  <script src="player.js"></script>
+  <script src="https://unpkg.com/wavesurfer.js@7"></script>
 
   <script>
-  // ГЛОБАЛЬНЫЕ ФУНКЦИИ
+  // === ГЛОБАЛЬНЫЕ ФУНКЦИИ ===
   const getCount = k => parseInt(localStorage.getItem(k) || '0', 10);
   const setCount = (k,v) => localStorage.setItem(k, String(v));
 
@@ -246,9 +245,16 @@
         if(n) n.textContent = getCount('plays:' + src);
       }
     });
+    
+    // Обновить мини-плеер
+    const miniLike = document.getElementById('mini-like');
+    const miniDislike = document.getElementById('mini-dislike');
+    const val = localStorage.getItem('like:user:' + src);
+    if(miniLike) miniLike.classList.toggle('active', val === 'like');
+    if(miniDislike) miniDislike.classList.toggle('active', val === 'dislike');
   }
 
-  function toggleLike(src) {
+  window.toggleLike = function(src) {
     const userKey = 'like:user:' + src;
     const cur = localStorage.getItem(userKey);
     if(cur === 'like'){
@@ -260,9 +266,10 @@
       setCount('likes:' + src, getCount('likes:' + src) + 1);
     }
     updateCountUI(src);
+    console.log('❤️ Like toggled for', src);
   }
 
-  function toggleDislike(src) {
+  window.toggleDislike = function(src) {
     const userKey = 'like:user:' + src;
     const cur = localStorage.getItem(userKey);
     if(cur === 'dislike'){
@@ -274,6 +281,7 @@
       setCount('dislikes:' + src, getCount('dislikes:' + src) + 1);
     }
     updateCountUI(src);
+    console.log('👎 Dislike toggled for', src);
   }
 
   function renderDraftTracks() {
@@ -328,13 +336,112 @@
     console.log('✅ Rendered', tracks.length, 'tracks');
   }
 
-  // ДЕЛЕГИРОВАНИЕ СОБЫТИЙ
+  // === PLAYER ===
+  let wavesurfer;
+  let currentTrackIndex = -1;
+  let tracks = [];
+
+  function initWavesurfer() {
+    wavesurfer = WaveSurfer.create({
+      container: '#mini-wave',
+      waveColor: '#bfc3d6',
+      progressColor: '#ff4da6',
+      cursorColor: '#00d1ff',
+      barWidth: 2,
+      barRadius: 3,
+      barGap: 2,
+      height: 48,
+      normalize: true
+    });
+
+    wavesurfer.on('ready', () => {
+      console.log('🎵 Ready, playing...');
+      wavesurfer.play();
+    });
+
+    wavesurfer.on('play', () => {
+      document.getElementById('mini-play-icon').innerHTML = '<path d="M6 4h4v16H6V4zm8 0h4v16h-4V4z"/>';
+    });
+
+    wavesurfer.on('pause', () => {
+      document.getElementById('mini-play-icon').innerHTML = '<path d="M5 3v18l15-9L5 3z"/>';
+    });
+
+    wavesurfer.on('finish', () => playNext());
+    
+    wavesurfer.on('error', (err) => console.error('❌ Wavesurfer error:', err));
+  }
+
+  function playTrack(index) {
+    if (tracks.length === 0) return;
+    
+    currentTrackIndex = index;
+    window.currentTrackIndex = index;
+    const track = tracks[index];
+    
+    console.log('🎵 Loading:', track.title, track.audio);
+    
+    wavesurfer.load(track.audio);
+    
+    document.getElementById('mini-title').textContent = track.title;
+    document.getElementById('mini-thumb').src = track.cover;
+    document.getElementById('mini-download').href = track.audio;
+    document.getElementById('mini-player').style.display = 'flex';
+    
+    const playKey = 'plays:' + track.audio;
+    const count = getCount(playKey) + 1;
+    setCount(playKey, count);
+    updateCountUI(track.audio);
+    
+    // Sync mini likes
+    const val = localStorage.getItem('like:user:' + track.audio);
+    document.getElementById('mini-like').classList.toggle('active', val === 'like');
+    document.getElementById('mini-dislike').classList.toggle('active', val === 'dislike');
+  }
+
+  function playNext() {
+    if (tracks.length === 0) return;
+    playTrack((currentTrackIndex + 1) % tracks.length);
+  }
+
+  function playPrev() {
+    if (tracks.length === 0) return;
+    playTrack((currentTrackIndex - 1 + tracks.length) % tracks.length);
+  }
+
+  // === КОММЕНТАРИИ ===
+  let currentTrackForComments = null;
+
+  function loadComments(src) {
+    const commentsKey = 'comments:' + src;
+    const comments = JSON.parse(localStorage.getItem(commentsKey) || '[]');
+    const list = document.getElementById('comments-list');
+    
+    if (comments.length === 0) {
+      list.innerHTML = '<p style="color:#bfc3d6;text-align:center;padding:20px">Нет комментариев</p>';
+    } else {
+      list.innerHTML = comments.map(c => `
+        <div style="background:rgba(255,255,255,0.03);padding:10px;border-radius:8px;margin-bottom:8px">
+          <div style="color:#eaeaf2;margin-bottom:4px">${c.text}</div>
+          <div style="color:#bfc3d6;font-size:11px">${c.date}</div>
+        </div>
+      `).join('');
+    }
+  }
+
+  // === INIT ===
   document.addEventListener('DOMContentLoaded', () => {
+    console.log('🚀 Initializing...');
+    
+    tracks = getDraftTracks();
+    initWavesurfer();
+    renderDraftTracks();
+
     const tracksList = document.getElementById('tracksList');
     const sidePanel = document.getElementById('side-panel');
     const commentsModal = document.getElementById('comments-modal');
 
-    // Делегирование для всех кнопок в треках
+    // Делегирование кнопок в треках
     tracksList.addEventListener('click', (e) => {
       const btn = e.target.closest('button');
       if (!btn) return;
@@ -347,140 +454,156 @@
       const lyrics = track.dataset.lyrics;
       const index = parseInt(track.dataset.index);
 
-      // PLAY
       if (btn.classList.contains('play-btn')) {
         e.preventDefault();
         console.log('🎵 Play clicked:', title);
-        window.dispatchEvent(new CustomEvent('track-play', { detail: { src, index } }));
+        playTrack(index);
       }
 
-      // TEXT
       if (btn.classList.contains('open-text-btn')) {
         e.preventDefault();
-        console.log('📄 Text clicked:', title);
+        console.log('📄 Text clicked');
         document.getElementById('side-title').textContent = title;
         document.getElementById('side-content').textContent = lyrics || '(No text)';
         sidePanel.classList.add('open');
       }
 
-      // COMMENTS
       if (btn.classList.contains('comment-btn')) {
         e.preventDefault();
-        console.log('💬 Comments clicked:', title);
+        console.log('💬 Comments clicked');
+        currentTrackForComments = src;
         document.getElementById('comments-title').textContent = `Comments: ${title}`;
+        loadComments(src);
         commentsModal.classList.add('open');
       }
 
-      // SHARE
       if (btn.classList.contains('share-btn')) {
         e.preventDefault();
-        console.log('🔗 Share clicked:', title);
         if(navigator.share) {
           navigator.share({ title, url: location.href }).catch(()=>{});
         } else {
-          alert('Ссылка скопирована: ' + location.href);
+          alert('Link: ' + location.href);
         }
       }
     });
 
-    // Лайки/дизлайки
+    // Лайки/дизлайки в треках
     tracksList.addEventListener('click', (e) => {
       const el = e.target.closest('.likes-count, .dislikes-count');
       if (!el) return;
-
-      const src = el.dataset.key;
-      if (!src) return;
-
       e.preventDefault();
+      const src = el.dataset.key;
       if (el.classList.contains('likes-count')) {
-        console.log('❤️ Like clicked');
-        toggleLike(src);
+        window.toggleLike(src);
       } else {
-        console.log('👎 Dislike clicked');
-        toggleDislike(src);
+        window.toggleDislike(src);
       }
     });
+
+    // Мини-плеер кнопки
+    document.getElementById('mini-play').onclick = () => wavesurfer?.playPause();
+    document.getElementById('mini-next').onclick = playNext;
+    document.getElementById('mini-prev').onclick = playPrev;
+    document.getElementById('mini-volume').oninput = (e) => wavesurfer?.setVolume(parseFloat(e.target.value));
+
+    document.getElementById('mini-open-text').onclick = () => {
+      if (currentTrackIndex >= 0) {
+        const track = tracks[currentTrackIndex];
+        document.getElementById('side-title').textContent = track.title;
+        document.getElementById('side-content').textContent = track.lyrics || '(No text)';
+        sidePanel.classList.add('open');
+      }
+    };
+
+    document.getElementById('mini-like').onclick = () => {
+      if (currentTrackIndex >= 0) {
+        window.toggleLike(tracks[currentTrackIndex].audio);
+      }
+    };
+
+    document.getElementById('mini-dislike').onclick = () => {
+      if (currentTrackIndex >= 0) {
+        window.toggleDislike(tracks[currentTrackIndex].audio);
+      }
+    };
+
+    document.getElementById('mini-comment').onclick = () => {
+      if (currentTrackIndex >= 0) {
+        const track = tracks[currentTrackIndex];
+        currentTrackForComments = track.audio;
+        document.getElementById('comments-title').textContent = `Comments: ${track.title}`;
+        loadComments(track.audio);
+        commentsModal.classList.add('open');
+      }
+    };
+
+    // Отправка комментария
+    document.getElementById('comment-send').onclick = () => {
+      const text = document.getElementById('comment-input').value.trim();
+      if (!text || !currentTrackForComments) return;
+
+      const key = 'comments:' + currentTrackForComments;
+      const comments = JSON.parse(localStorage.getItem(key) || '[]');
+      comments.push({ text, date: new Date().toLocaleString('ru-RU') });
+      localStorage.setItem(key, JSON.stringify(comments));
+      
+      document.getElementById('comment-input').value = '';
+      loadComments(currentTrackForComments);
+      console.log('💬 Comment saved');
+    };
 
     // Закрытие панелей
     document.getElementById('side-close').onclick = () => sidePanel.classList.remove('open');
     document.getElementById('comment-cancel').onclick = () => commentsModal.classList.remove('open');
 
-    // Админ кнопки
+    // Админ
     if (!location.search.includes('admin')) {
       document.getElementById('addTrackBtn')?.remove();
       document.getElementById('exportJsonBtn')?.remove();
     }
 
-    const addBtn = document.getElementById('addTrackBtn');
     const modal = document.getElementById('add-track-modal');
+    document.getElementById('addTrackBtn')?.addEventListener('click', () => modal.classList.add('open'));
+    document.getElementById('add-cancel').onclick = () => modal.classList.remove('open');
+    
+    document.getElementById('add-save').onclick = () => {
+      const title = document.getElementById('t-title').value.trim();
+      const audio = document.getElementById('t-audio').value.trim();
+      const cover = document.getElementById('t-cover').value.trim();
+      const genre = document.getElementById('t-genre').value;
+      const lyrics = document.getElementById('t-lyrics').value;
 
-    if (addBtn) {
-      addBtn.onclick = () => modal.classList.add('open');
-      document.getElementById('add-cancel').onclick = () => modal.classList.remove('open');
-      
-      document.getElementById('add-save').onclick = () => {
-        const title = document.getElementById('t-title').value.trim();
-        const audio = document.getElementById('t-audio').value.trim();
-        const cover = document.getElementById('t-cover').value.trim();
-        const genre = document.getElementById('t-genre').value;
-        const lyrics = document.getElementById('t-lyrics').value;
+      if (!title || !audio || !cover) {
+        alert('Название, mp3 и обложка обязательны');
+        return;
+      }
 
-        if (!title || !audio || !cover) {
-          alert('Название, mp3 и обложка обязательны');
-          return;
-        }
+      const track = { title, audio, cover, genre, lyrics, duration: '—' };
+      tracks = getDraftTracks();
+      tracks.push(track);
+      saveDraftTracks(tracks);
 
-        const track = { title, audio, cover, genre, lyrics, duration: '—' };
-        const tracks = getDraftTracks();
-        tracks.push(track);
-        saveDraftTracks(tracks);
+      document.getElementById('t-title').value = '';
+      document.getElementById('t-audio').value = '';
+      document.getElementById('t-cover').value = '';
+      document.getElementById('t-lyrics').value = '';
 
-        document.getElementById('t-title').value = '';
-        document.getElementById('t-audio').value = '';
-        document.getElementById('t-cover').value = '';
-        document.getElementById('t-lyrics').value = '';
-
-        modal.classList.remove('open');
-        renderDraftTracks();
-        console.log('✅ Track added:', title);
-      };
-    }
-
-    const exportBtn = document.getElementById('exportJsonBtn');
-    if (exportBtn) {
-      exportBtn.onclick = () => {
-        const tracks = getDraftTracks();
-        if (!tracks.length) {
-          alert('Нет треков для экспорта');
-          return;
-        }
-        const json = JSON.stringify(tracks, null, 2);
-        const blob = new Blob([json], { type: 'application/json' });
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = 'tracks.json';
-        a.click();
-        URL.revokeObjectURL(url);
-        console.log('📦 Exported', tracks.length, 'tracks');
-      };
-    }
-
-    // API для player.js
-    window.__SITE_UI = {
-      updatePlayCountUI: (src, total) => {
-        document.querySelectorAll('.play-count').forEach(el => {
-          if(el.dataset.key === src){
-            const n = el.querySelector('.num');
-            if(n) n.textContent = total;
-          }
-        });
-      },
-      syncLikeFromTop: updateCountUI
+      modal.classList.remove('open');
+      renderDraftTracks();
+      console.log('✅ Track added');
     };
 
-    renderDraftTracks();
-    console.log('✅ Site initialized');
+    document.getElementById('exportJsonBtn')?.addEventListener('click', () => {
+      const t = getDraftTracks();
+      if (!t.length) return alert('Нет треков');
+      const blob = new Blob([JSON.stringify(t, null, 2)], { type: 'application/json' });
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(blob);
+      a.download = 'tracks.json';
+      a.click();
+    });
+
+    console.log('✅ Initialized');
   });
   </script>
   
