@@ -3440,12 +3440,19 @@ function playPrev() {
   }
 }
 	  // ========================================
-// 🔄 СБРОС ПРОСЛУШИВАНИЙ (ADMIN)
 // ========================================
+// 🔄 СБРОС СТАТИСТИКИ (ADMIN)
+// ========================================
+
+function getResetType() {
+  return document.querySelector('input[name="reset-type"]:checked')?.value || 'plays';
+}
 
 function loadPlaysForReset() {
   const container = document.getElementById('plays-tracks-list');
   if (!container) return;
+  
+  const resetType = getResetType();
   
   container.innerHTML = '';
   
@@ -3455,7 +3462,21 @@ function loadPlaysForReset() {
   }
   
   globalTracks.forEach((track, index) => {
-    const plays = getCount('plays:' + track.audio);
+    let count, icon, label;
+    
+    if (resetType === 'plays') {
+      count = getCount('plays:' + track.audio);
+      icon = '🎵';
+      label = 'plays';
+    } else if (resetType === 'likes') {
+      count = getCount('likes:' + track.audio);
+      icon = '❤️';
+      label = 'likes';
+    } else {
+      count = getCount('dislikes:' + track.audio);
+      icon = '💔';
+      label = 'dislikes';
+    }
     
     const div = document.createElement('div');
     div.style.cssText = 'padding: 8px; margin-bottom: 6px; background: rgba(255,255,255,0.05); border-radius: 8px';
@@ -3469,7 +3490,7 @@ function loadPlaysForReset() {
             ${track.title}
           </div>
           <div style="color: #bfc3d6; font-size: 12px">
-            🎵 ${plays} plays
+            ${icon} ${count} ${label}
           </div>
         </div>
       </label>
@@ -3486,6 +3507,7 @@ function openResetPlaysModal() {
 }
 
 async function resetPlaysCounters() {
+  const resetType = getResetType();
   const selected = Array.from(document.querySelectorAll('.play-checkbox:checked'))
     .map(cb => cb.dataset.src);
   
@@ -3494,9 +3516,21 @@ async function resetPlaysCounters() {
     return;
   }
   
+  const typeLabels = {
+    plays: 'PLAYS',
+    likes: 'LIKES',
+    dislikes: 'DISLIKES'
+  };
+  
+  const typeIcons = {
+    plays: '🎵',
+    likes: '❤️',
+    dislikes: '💔'
+  };
+  
   const confirm = window.confirm(
-    `⚠️ RESET PLAYS?\n\n` +
-    `${selected.length} track(s) will be reset to 0 plays.\n\n` +
+    `⚠️ RESET ${typeLabels[resetType]}?\n\n` +
+    `${selected.length} track(s) will have ${typeLabels[resetType].toLowerCase()} reset to 0.\n\n` +
     `This cannot be undone!\n\n` +
     `Continue?`
   );
@@ -3508,7 +3542,7 @@ async function resetPlaysCounters() {
   btn.disabled = true;
   
   for (const src of selected) {
-    const key = 'plays:' + src;
+    const key = resetType + ':' + src;
     localStorage.removeItem(key);
     delete globalCounts[key];
     setCount(key, 0);
@@ -3519,8 +3553,16 @@ async function resetPlaysCounters() {
   document.querySelectorAll('.track').forEach(trackEl => {
     const src = trackEl.dataset.src;
     if (selected.includes(src)) {
-      const playCount = trackEl.querySelector('.play-count .num');
-      if (playCount) playCount.textContent = '0';
+      if (resetType === 'plays') {
+        const playCount = trackEl.querySelector('.play-count .num');
+        if (playCount) playCount.textContent = '0';
+      } else if (resetType === 'likes') {
+        const likeCount = trackEl.querySelector('.like-count .num');
+        if (likeCount) likeCount.textContent = '0';
+      } else if (resetType === 'dislikes') {
+        const dislikeCount = trackEl.querySelector('.dislike-count .num');
+        if (dislikeCount) dislikeCount.textContent = '0';
+      }
     }
   });
   
@@ -3533,7 +3575,7 @@ async function resetPlaysCounters() {
   
   document.getElementById('reset-plays-modal').classList.remove('open');
   
-  alert(`✅ Done!\n\n${selected.length} track(s) reset to 0 plays`);
+  alert(`✅ Done!\n\n${selected.length} track(s) ${typeLabels[resetType].toLowerCase()} reset to 0`);
 }
 
 // Обработчики
@@ -3546,6 +3588,14 @@ document.addEventListener('DOMContentLoaded', function() {
     document.getElementById('reset-plays-confirm')?.addEventListener('click', resetPlaysCounters);
     document.getElementById('select-all-plays')?.addEventListener('change', (e) => {
       document.querySelectorAll('.play-checkbox').forEach(cb => cb.checked = e.target.checked);
+    });
+    
+    // Переключение типа сброса
+    document.querySelectorAll('input[name="reset-type"]').forEach(radio => {
+      radio.addEventListener('change', () => {
+        loadPlaysForReset();
+        document.getElementById('select-all-plays').checked = false;
+      });
     });
   } else {
     const btn = document.getElementById('resetPlaysBtn');
@@ -3640,15 +3690,32 @@ document.addEventListener('DOMContentLoaded', function() {
     " id="visualizer-track-title">Track Name</div>
   </div>
 </div>
-	<!-- МОДАЛКА СБРОСА ПРОСЛУШИВАНИЙ -->
+	<!-- МОДАЛКА СБРОСА СТАТИСТИКИ -->
 <div id="reset-plays-modal" class="modal">
   <div class="panel" style="max-width: 500px">
-    <h3>🔄 Reset Plays Counter</h3>
+    <h3>🔄 Reset Statistics</h3>
     
     <div style="margin: 16px 0; padding: 12px; background: rgba(255,77,77,0.1); border-radius: 8px">
       <strong style="color: #ff4da6">⚠️ Warning:</strong> This cannot be undone!
     </div>
 
+    <!-- ВЫБОР ТИПА СБРОСА -->
+    <div style="display: flex; gap: 12px; margin: 16px 0; padding: 12px; background: rgba(255,255,255,0.05); border-radius: 8px">
+      <label style="display: flex; align-items: center; gap: 6px; cursor: pointer; flex: 1">
+        <input type="radio" name="reset-type" value="plays" checked style="width: 16px; height: 16px">
+        <span style="font-weight: 600">🎵 Plays</span>
+      </label>
+      <label style="display: flex; align-items: center; gap: 6px; cursor: pointer; flex: 1">
+        <input type="radio" name="reset-type" value="likes" style="width: 16px; height: 16px">
+        <span style="font-weight: 600">❤️ Likes</span>
+      </label>
+      <label style="display: flex; align-items: center; gap: 6px; cursor: pointer; flex: 1">
+        <input type="radio" name="reset-type" value="dislikes" style="width: 16px; height: 16px">
+        <span style="font-weight: 600">💔 Dislikes</span>
+      </label>
+    </div>
+
+    <!-- SELECT ALL -->
     <div style="margin: 16px 0">
       <label style="display: flex; align-items: center; gap: 8px; cursor: pointer; padding: 8px; background: rgba(255,255,255,0.05); border-radius: 8px">
         <input type="checkbox" id="select-all-plays" style="width: 18px; height: 18px">
@@ -3656,8 +3723,10 @@ document.addEventListener('DOMContentLoaded', function() {
       </label>
     </div>
 
+    <!-- СПИСОК ТРЕКОВ -->
     <div id="plays-tracks-list" style="max-height: 300px; overflow-y: auto; border: 1px solid rgba(255,255,255,0.08); border-radius: 8px; padding: 8px; background: rgba(0,0,0,0.3)"></div>
 
+    <!-- КНОПКИ -->
     <div style="display: flex; gap: 8px; justify-content: flex-end; margin-top: 16px">
       <button id="reset-plays-cancel" class="btn">Cancel</button>
       <button id="reset-plays-confirm" class="btn active" style="background: linear-gradient(90deg, #ff4da6, #ff0000)">🗑️ Reset</button>
