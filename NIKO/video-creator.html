@@ -1,1938 +1,671 @@
-<!doctype html>
-<html lang="en">
+<!DOCTYPE html>
+<html lang="ru">
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>N1K∅ — Super Video Creator</title>
-  <link rel="stylesheet" href="https://unpkg.com/modern-normalize/modern-normalize.css">
-  <style>
-    :root{
-      --bg:#07060a;
-      --card:#0b0b10;
-      --muted:#bfc3d6;
-      --accent:#ff4da6;
-      --accent2:#00d1ff;
-      --radius:12px;
-    }
-    
-    * {
-      box-sizing: border-box;
-    }
-    
-    html,body{
-      height:100%;
-      margin:0;
-      font-family:Inter,system-ui,Arial,Helvetica,sans-serif;
-      background:var(--bg);
-      color:#eaeaf2;
-      -webkit-font-smoothing:antialiased;
-      -moz-osx-font-smoothing:grayscale;
-    }
-
-    body {
-      display: flex;
-      flex-direction: column;
-      overflow-x: hidden;
-    }
-
-    .header {
-      padding: 16px 20px;
-      background: linear-gradient(180deg, var(--card), var(--bg));
-      border-bottom: 1px solid rgba(255,255,255,0.05);
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      gap: 12px;
-      flex-wrap: wrap;
-      position: sticky;
-      top: 0;
-      z-index: 100;
-      backdrop-filter: blur(10px);
-    }
-
-    .header h1 {
-      margin: 0;
-      font-size: 22px;
-      color: #fff;
-      display: flex;
-      align-items: center;
-      gap: 8px;
-    }
-
-    .header-actions {
-      display: flex;
-      gap: 8px;
-    }
-
-    .back-btn, .icon-btn {
-      background: rgba(255,255,255,0.05);
-      border: 1px solid rgba(255,255,255,0.1);
-      color: #fff;
-      padding: 8px 16px;
-      border-radius: 10px;
-      cursor: pointer;
-      text-decoration: none;
-      display: inline-flex;
-      align-items: center;
-      gap: 6px;
-      transition: all 0.2s;
-      font-size: 14px;
-      font-weight: 600;
-    }
-
-    .back-btn:hover, .icon-btn:hover {
-      background: rgba(255,255,255,0.1);
-      transform: translateY(-2px);
-    }
-
-    .container {
-      flex: 1;
-      display: grid;
-      grid-template-columns: 300px 1fr 280px;
-      gap: 16px;
-      padding: 16px;
-      max-width: 100%;
-      overflow: hidden;
-    }
-
-    .sidebar {
-      background: var(--card);
-      border-radius: var(--radius);
-      padding: 16px;
-      border: 1px solid rgba(255,255,255,0.05);
-      overflow-y: auto;
-      max-height: calc(100vh - 120px);
-    }
-
-    .sidebar h3 {
-      margin: 0 0 12px 0;
-      font-size: 14px;
-      color: var(--muted);
-      text-transform: uppercase;
-      letter-spacing: 1px;
-    }
-
-    .main-area {
-      display: flex;
-      flex-direction: column;
-      gap: 12px;
-      min-width: 0;
-    }
-
-    .preview-container {
-      background: #000;
-      border-radius: var(--radius);
-      overflow: hidden;
-      position: relative;
-      aspect-ratio: 16/9;
-      border: 2px solid rgba(255,255,255,0.1);
-      box-shadow: 0 10px 40px rgba(0,0,0,0.5);
-    }
-
-    #videoCanvas {
-      width: 100%;
-      height: 100%;
-      object-fit: contain;
-      cursor: crosshair;
-    }
-
-    .timeline-area {
-      background: var(--card);
-      border-radius: var(--radius);
-      padding: 12px;
-      border: 1px solid rgba(255,255,255,0.05);
-    }
-
-    .playback-controls {
-      display: flex;
-      align-items: center;
-      gap: 12px;
-      margin-bottom: 12px;
-    }
-
-    .play-btn {
-      width: 40px;
-      height: 40px;
-      border-radius: 50%;
-      background: linear-gradient(135deg, var(--accent), var(--accent2));
-      border: none;
-      color: #fff;
-      font-size: 18px;
-      cursor: pointer;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      transition: all 0.2s;
-      box-shadow: 0 4px 12px rgba(255,77,166,0.3);
-    }
-
-    .play-btn:hover {
-      transform: scale(1.1);
-      box-shadow: 0 6px 20px rgba(255,77,166,0.5);
-    }
-
-    .time-display {
-      font-size: 13px;
-      color: var(--muted);
-      font-variant-numeric: tabular-nums;
-      min-width: 100px;
-    }
-
-    .timeline-slider {
-      flex: 1;
-      height: 40px;
-      background: rgba(255,255,255,0.05);
-      border-radius: 8px;
-      position: relative;
-      cursor: pointer;
-      overflow: hidden;
-    }
-
-    .timeline-progress {
-      height: 100%;
-      background: linear-gradient(90deg, var(--accent), var(--accent2));
-      width: 0%;
-      transition: width 0.1s linear;
-      position: relative;
-    }
-
-    .timeline-waveform {
-      position: absolute;
-      top: 0;
-      left: 0;
-      width: 100%;
-      height: 100%;
-      display: flex;
-      align-items: center;
-      gap: 1px;
-      padding: 0 4px;
-    }
-
-    .waveform-bar {
-      flex: 1;
-      background: rgba(255,255,255,0.2);
-      border-radius: 2px;
-      min-width: 2px;
-    }
-
-    .timeline-handle {
-      position: absolute;
-      top: 50%;
-      right: -8px;
-      transform: translateY(-50%);
-      width: 16px;
-      height: 16px;
-      background: #fff;
-      border-radius: 50%;
-      box-shadow: 0 0 10px rgba(255,255,255,0.5);
-      pointer-events: none;
-    }
-
-    .tools-panel {
-      background: var(--card);
-      border-radius: var(--radius);
-      padding: 16px;
-      border: 1px solid rgba(255,255,255,0.05);
-      overflow-y: auto;
-      max-height: calc(100vh - 120px);
-    }
-
-    .tool-section {
-      margin-bottom: 20px;
-      padding-bottom: 20px;
-      border-bottom: 1px solid rgba(255,255,255,0.05);
-    }
-
-    .tool-section:last-child {
-      border-bottom: none;
-      margin-bottom: 0;
-      padding-bottom: 0;
-    }
-
-    .tool-title {
-      font-size: 12px;
-      color: var(--muted);
-      text-transform: uppercase;
-      letter-spacing: 1px;
-      margin-bottom: 12px;
-      display: flex;
-      align-items: center;
-      gap: 6px;
-    }
-
-    .btn {
-      width: 100%;
-      background: rgba(255,255,255,0.05);
-      border: 1px solid rgba(255,255,255,0.1);
-      color: #fff;
-      padding: 10px 16px;
-      border-radius: 8px;
-      font-size: 13px;
-      font-weight: 600;
-      cursor: pointer;
-      transition: all 0.2s;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      gap: 8px;
-      margin-bottom: 8px;
-    }
-
-    .btn:hover:not(:disabled) {
-      background: rgba(255,255,255,0.1);
-      transform: translateY(-1px);
-    }
-
-    .btn:disabled {
-      opacity: 0.5;
-      cursor: not-allowed;
-    }
-
-    .btn-primary {
-      background: linear-gradient(90deg, var(--accent), var(--accent2));
-      border: none;
-      box-shadow: 0 4px 12px rgba(255,77,166,0.3);
-    }
-
-    .btn-primary:hover:not(:disabled) {
-      transform: translateY(-2px);
-      box-shadow: 0 6px 20px rgba(255,77,166,0.4);
-    }
-
-    .input {
-      width: 100%;
-      padding: 8px 12px;
-      border-radius: 8px;
-      border: 1px solid rgba(255,255,255,0.08);
-      background: rgba(0,0,0,0.3);
-      color: #fff;
-      font-size: 13px;
-      margin-bottom: 8px;
-      transition: all 0.2s;
-    }
-
-    .input:focus {
-      outline: none;
-      border-color: var(--accent);
-      box-shadow: 0 0 0 3px rgba(255,77,166,0.1);
-    }
-
-    .color-input {
-      width: 100%;
-      height: 36px;
-      border-radius: 8px;
-      border: 1px solid rgba(255,255,255,0.1);
-      background: transparent;
-      cursor: pointer;
-    }
-
-    .slider-group {
-      margin-bottom: 12px;
-    }
-
-    .slider-label {
-      display: flex;
-      justify-content: space-between;
-      font-size: 11px;
-      color: var(--muted);
-      margin-bottom: 6px;
-    }
-
-    .slider {
-      width: 100%;
-      height: 4px;
-      border-radius: 2px;
-      background: rgba(255,255,255,0.1);
-      outline: none;
-      -webkit-appearance: none;
-    }
-
-    .slider::-webkit-slider-thumb {
-      -webkit-appearance: none;
-      width: 14px;
-      height: 14px;
-      border-radius: 50%;
-      background: var(--accent);
-      cursor: pointer;
-      box-shadow: 0 0 10px rgba(255,77,166,0.5);
-    }
-
-    .slider::-moz-range-thumb {
-      width: 14px;
-      height: 14px;
-      border-radius: 50%;
-      background: var(--accent);
-      cursor: pointer;
-      border: none;
-      box-shadow: 0 0 10px rgba(255,77,166,0.5);
-    }
-
-    .viz-grid {
-      display: grid;
-      grid-template-columns: repeat(2, 1fr);
-      gap: 8px;
-      margin-bottom: 12px;
-    }
-
-    .viz-card {
-      background: rgba(255,255,255,0.03);
-      border: 2px solid rgba(255,255,255,0.08);
-      border-radius: 8px;
-      padding: 12px;
-      cursor: pointer;
-      transition: all 0.2s;
-      text-align: center;
-    }
-
-    .viz-card:hover {
-      background: rgba(255,255,255,0.08);
-      border-color: rgba(255,255,255,0.15);
-    }
-
-    .viz-card.active {
-      background: linear-gradient(135deg, rgba(255,77,166,0.2), rgba(0,209,255,0.2));
-      border-color: var(--accent);
-      box-shadow: 0 4px 20px rgba(255,77,166,0.3);
-    }
-
-    .viz-icon {
-      font-size: 24px;
-      margin-bottom: 6px;
-    }
-
-    .viz-name {
-      font-weight: 600;
-      color: #fff;
-      font-size: 11px;
-    }
-
-    .emoji-picker {
-      display: grid;
-      grid-template-columns: repeat(6, 1fr);
-      gap: 4px;
-      max-height: 150px;
-      overflow-y: auto;
-      padding: 4px;
-      background: rgba(0,0,0,0.3);
-      border-radius: 8px;
-      margin-bottom: 12px;
-    }
-
-    .emoji-btn {
-      background: transparent;
-      border: 1px solid rgba(255,255,255,0.05);
-      border-radius: 6px;
-      padding: 8px;
-      font-size: 20px;
-      cursor: pointer;
-      transition: all 0.2s;
-    }
-
-    .emoji-btn:hover {
-      background: rgba(255,255,255,0.1);
-      transform: scale(1.2);
-    }
-
-    .layer-item {
-      background: rgba(255,255,255,0.05);
-      border: 1px solid rgba(255,255,255,0.08);
-      border-radius: 8px;
-      padding: 10px;
-      margin-bottom: 8px;
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      gap: 8px;
-      cursor: pointer;
-      transition: all 0.2s;
-    }
-
-    .layer-item:hover {
-      background: rgba(255,255,255,0.1);
-      border-color: rgba(255,255,255,0.15);
-    }
-
-    .layer-item.selected {
-      background: rgba(255,77,166,0.1);
-      border-color: var(--accent);
-    }
-
-    .layer-info {
-      flex: 1;
-      min-width: 0;
-    }
-
-    .layer-name {
-      font-size: 12px;
-      font-weight: 600;
-      color: #fff;
-      white-space: nowrap;
-      overflow: hidden;
-      text-overflow: ellipsis;
-    }
-
-    .layer-type {
-      font-size: 10px;
-      color: var(--muted);
-    }
-
-    .layer-actions {
-      display: flex;
-      gap: 4px;
-    }
-
-    .layer-btn {
-      background: transparent;
-      border: none;
-      color: var(--muted);
-      font-size: 14px;
-      cursor: pointer;
-      padding: 4px;
-      border-radius: 4px;
-      transition: all 0.2s;
-    }
-
-    .layer-btn:hover {
-      background: rgba(255,255,255,0.1);
-      color: #fff;
-    }
-
-    .recording-indicator {
-      position: fixed;
-      top: 20px;
-      right: 20px;
-      background: rgba(255,0,0,0.9);
-      color: #fff;
-      padding: 12px 20px;
-      border-radius: 10px;
-      font-weight: 600;
-      display: none;
-      align-items: center;
-      gap: 10px;
-      box-shadow: 0 4px 20px rgba(255,0,0,0.5);
-      z-index: 1000;
-      animation: pulse 2s infinite;
-    }
-
-    .recording-indicator.active {
-      display: flex;
-    }
-
-    .rec-dot {
-      width: 10px;
-      height: 10px;
-      background: #fff;
-      border-radius: 50%;
-      animation: blink 1s infinite;
-    }
-
-    @keyframes blink {
-      0%, 100% { opacity: 1; }
-      50% { opacity: 0.3; }
-    }
-
-    .canvas-overlay {
-      position: absolute;
-      top: 0;
-      left: 0;
-      width: 100%;
-      height: 100%;
-      pointer-events: none;
-    }
-
-    .draggable-element {
-      position: absolute;
-      cursor: move;
-      pointer-events: all;
-      user-select: none;
-      padding: 8px;
-      background: rgba(255,77,166,0.1);
-      border: 2px dashed rgba(255,77,166,0.5);
-      border-radius: 4px;
-      transition: all 0.2s;
-    }
-
-    .draggable-element:hover {
-      border-color: var(--accent);
-      background: rgba(255,77,166,0.2);
-    }
-
-    .draggable-element.selected {
-      border-style: solid;
-      border-color: var(--accent);
-      box-shadow: 0 0 20px rgba(255,77,166,0.3);
-    }
-
-    .resize-handle {
-      position: absolute;
-      bottom: -6px;
-      right: -6px;
-      width: 12px;
-      height: 12px;
-      background: var(--accent);
-      border-radius: 50%;
-      cursor: nwse-resize;
-      box-shadow: 0 0 10px rgba(255,77,166,0.5);
-    }
-
-    .status-bar {
-      background: rgba(0,0,0,0.8);
-      padding: 8px 12px;
-      border-radius: 8px;
-      color: var(--muted);
-      font-size: 12px;
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      border: 1px solid rgba(255,255,255,0.05);
-    }
-
-    .status-indicator {
-      width: 6px;
-      height: 6px;
-      border-radius: 50%;
-      background: #666;
-    }
-
-    .status-indicator.active {
-      background: #00ff00;
-      box-shadow: 0 0 10px #00ff00;
-      animation: pulse 2s infinite;
-    }
-
-    @keyframes pulse {
-      0%, 100% { opacity: 1; transform: scale(1); }
-      50% { opacity: 0.7; transform: scale(1.2); }
-    }
-
-    @media (max-width: 1200px) {
-      .container {
-        grid-template-columns: 1fr;
-      }
-
-      .sidebar, .tools-panel {
-        max-height: none;
-      }
-    }
-
-    @media (max-width: 768px) {
-      .header h1 {
-        font-size: 16px;
-      }
-
-      .viz-grid {
-        grid-template-columns: 1fr;
-      }
-
-      .emoji-picker {
-        grid-template-columns: repeat(5, 1fr);
-      }
-    }
-
-    /* Scrollbar styles */
-    ::-webkit-scrollbar {
-      width: 8px;
-      height: 8px;
-    }
-
-    ::-webkit-scrollbar-track {
-      background: rgba(255,255,255,0.05);
-      border-radius: 4px;
-    }
-
-    ::-webkit-scrollbar-thumb {
-      background: rgba(255,255,255,0.2);
-      border-radius: 4px;
-    }
-
-    ::-webkit-scrollbar-thumb:hover {
-      background: rgba(255,255,255,0.3);
-    }
-  </style>
+    <meta charset="UTF-8">
+    <title>Pro Video Visualizer</title>
+    <style>
+        :root {
+            --bg-dark: #0f0f12;
+            --panel-bg: #16161a;
+            --accent: #00a2ff;
+            --border: #2d2d33;
+            --text: #e0e0e0;
+        }
+
+        body {
+            margin: 0;
+            background: var(--bg-dark);
+            color: var(--text);
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            overflow: hidden;
+            display: flex;
+            height: 100vh;
+        }
+
+        /* --- SIDEBAR --- */
+        .sidebar {
+            width: 320px;
+            background: var(--panel-bg);
+            border-right: 1px solid var(--border);
+            display: flex;
+            flex-direction: column;
+        }
+
+        .tabs {
+            display: flex;
+            background: #000;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .tab-btn {
+            flex: 1;
+            padding: 12px 5px;
+            border: none;
+            background: none;
+            color: #888;
+            cursor: pointer;
+            font-size: 11px;
+            text-transform: uppercase;
+            font-weight: bold;
+        }
+
+        .tab-btn.active {
+            color: var(--accent);
+            border-bottom: 2px solid var(--accent);
+        }
+
+        .controls-container {
+            flex: 1;
+            overflow-y: auto;
+            padding: 15px;
+        }
+
+        .control-group {
+            margin-bottom: 20px;
+            border-bottom: 1px solid #222;
+            padding-bottom: 10px;
+        }
+
+        .group-title {
+            font-size: 12px;
+            color: #fff;
+            margin-bottom: 10px;
+            display: flex;
+            align-items: center;
+        }
+
+        .group-title::before {
+            content: '▾';
+            margin-right: 5px;
+        }
+
+        .control-row {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 8px;
+            font-size: 11px;
+        }
+
+        .control-row label { width: 40%; color: #aaa; }
+        
+        input[type="range"] { flex: 1; height: 4px; accent-color: var(--accent); }
+        input[type="number"] { width: 50px; background: #222; border: 1px solid var(--border); color: var(--accent); font-size: 11px; }
+        select { background: #222; color: #fff; border: 1px solid var(--border); padding: 2px; font-size: 11px; }
+
+        /* --- PREVIEW AREA --- */
+        .main-content {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+            position: relative;
+        }
+
+        #canvas-container {
+            box-shadow: 0 0 50px rgba(0,0,0,0.5);
+            background: #000;
+            position: relative;
+            max-width: 100%;
+            max-height: 80vh;
+        }
+
+        canvas {
+            display: block;
+            width: 100%;
+            height: 100%;
+        }
+
+        /* --- TIMELINE / BOTTOM --- */
+        .bottom-bar {
+            position: absolute;
+            bottom: 0;
+            left: 320px;
+            right: 0;
+            height: 80px;
+            background: rgba(22, 22, 26, 0.95);
+            border-top: 1px solid var(--border);
+            display: flex;
+            align-items: center;
+            padding: 0 20px;
+        }
+
+        .play-btn {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            border: none;
+            background: var(--accent);
+            color: white;
+            cursor: pointer;
+            margin-right: 20px;
+        }
+
+        .timeline {
+            flex: 1;
+            height: 4px;
+            background: #333;
+            position: relative;
+            cursor: pointer;
+        }
+
+        .progress {
+            position: absolute;
+            height: 100%;
+            background: var(--accent);
+            width: 0%;
+        }
+
+        .recording-indicator {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            color: red;
+            display: none;
+            align-items: center;
+            gap: 5px;
+            font-weight: bold;
+        }
+
+        .dot { width: 10px; height: 10px; background: red; border-radius: 50%; animation: blink 1s infinite; }
+        @keyframes blink { 0%, 100% { opacity: 1; } 50% { opacity: 0; } }
+    </style>
 </head>
 <body>
-  <div class="recording-indicator" id="recordingIndicator">
-    <div class="rec-dot"></div>
-    <span>RECORDING</span>
-  </div>
 
-  <div class="header">
-    <h1>
-      <span>🎬</span>
-      <span>Super Video Creator</span>
-    </h1>
-    <div class="header-actions">
-      <button class="icon-btn" id="recordBtn" title="Start Recording">
-        <span>⏺️</span>
-        <span>Record</span>
-      </button>
-      <a href="index.html" class="back-btn">
-        <span>←</span>
-        <span>Back</span>
-      </a>
-    </div>
-  </div>
-
-  <div class="container">
-    <!-- LEFT SIDEBAR -->
-    <div class="sidebar">
-      <h3>📁 Project</h3>
-      
-      <input type="file" id="audioFile" accept="audio/*" class="input" style="font-size: 11px;">
-      
-      <div class="tool-section">
-        <div class="tool-title">🎨 Visualizer</div>
-        <div class="viz-grid">
-          <div class="viz-card active" data-viz="circular">
-            <div class="viz-icon">⭕</div>
-            <div class="viz-name">Circular</div>
-          </div>
-          <div class="viz-card" data-viz="radial">
-            <div class="viz-icon">🌈</div>
-            <div class="viz-name">Radial</div>
-          </div>
-          <div class="viz-card" data-viz="neon">
-            <div class="viz-icon">💫</div>
-            <div class="viz-name">Neon</div>
-          </div>
-          <div class="viz-card" data-viz="tunnel">
-            <div class="viz-icon">🚀</div>
-            <div class="viz-name">Tunnel</div>
-          </div>
-        </div>
-      </div>
-
-      <div class="tool-section">
-        <div class="tool-title">🖼️ Background</div>
-        <input type="file" id="bgImage" accept="image/*" class="input" style="font-size: 11px;">
-        <input type="color" id="bgColor" value="#000000" class="color-input">
-        
-        <div class="slider-group">
-          <div class="slider-label">
-            <span>Blur</span>
-            <span id="blurValue">0</span>
-          </div>
-          <input type="range" id="bgBlur" class="slider" min="0" max="20" value="0">
-        </div>
-
-        <div class="slider-group">
-          <div class="slider-label">
-            <span>Brightness</span>
-            <span id="brightnessValue">100%</span>
-          </div>
-          <input type="range" id="bgBrightness" class="slider" min="0" max="200" value="100">
-        </div>
-      </div>
-
-      <div class="tool-section">
-        <div class="tool-title">📐 Canvas</div>
-        <select id="resolution" class="input">
-          <option value="1920x1080">1920x1080 (Full HD)</option>
-          <option value="1280x720">1280x720 (HD)</option>
-          <option value="3840x2160">3840x2160 (4K)</option>
-          <option value="1080x1920">1080x1920 (Vertical)</option>
-          <option value="1080x1080">1080x1080 (Square)</option>
-        </select>
-
-        <select id="fps" class="input">
-          <option value="24">24 FPS</option>
-          <option value="30" selected>30 FPS</option>
-          <option value="60">60 FPS</option>
-        </select>
-      </div>
+<div class="sidebar">
+    <div class="tabs">
+        <button class="tab-btn active" onclick="showTab('tab-project')">Project</button>
+        <button class="tab-btn" onclick="showTab('tab-audio')">Audio</button>
+        <button class="tab-btn" onclick="showTab('tab-viz')">Spectrum</button>
+        <button class="tab-btn" onclick="showTab('tab-fx')">Effects</button>
     </div>
 
-    <!-- MAIN AREA -->
-    <div class="main-area">
-      <div class="preview-container" id="previewContainer">
-        <canvas id="videoCanvas"></canvas>
-        <div class="canvas-overlay" id="canvasOverlay"></div>
-      </div>
-
-      <div class="timeline-area">
-        <div class="playback-controls">
-          <button class="play-btn" id="playBtn">▶️</button>
-          <div class="time-display" id="timeDisplay">0:00 / 0:00</div>
-          <div class="timeline-slider" id="timelineSlider">
-            <div class="timeline-waveform" id="waveform"></div>
-            <div class="timeline-progress" id="timelineProgress">
-              <div class="timeline-handle"></div>
+    <div class="controls-container">
+        <!-- PROJECT TAB -->
+        <div id="tab-project" class="tab-content">
+            <div class="control-group">
+                <div class="group-title">Canvas Settings</div>
+                <div class="control-row">
+                    <label>Ratio</label>
+                    <select id="aspectRatio" onchange="updateCanvasSize()">
+                        <option value="16:9">16:9 (YouTube)</option>
+                        <option value="9:16">9:16 (TikTok)</option>
+                        <option value="1:1">1:1 (Instagram)</option>
+                        <option value="4:3">4:3 (Classic)</option>
+                    </select>
+                </div>
+                <div class="control-row">
+                    <label>FPS</label>
+                    <input type="number" id="fpsLimit" value="60">
+                </div>
             </div>
-          </div>
+
+            <div class="control-group">
+                <div class="group-title">Background</div>
+                <button onclick="document.getElementById('bgInput').click()" style="width:100%; background:#333; color:white; border:none; padding:5px; margin-bottom:10px;">Change Image</button>
+                <input type="file" id="bgInput" hidden accept="image/*">
+                <div class="control-row">
+                    <label>Brightness</label>
+                    <input type="range" id="bgBrightness" min="0" max="2" step="0.1" value="0.5">
+                </div>
+                <div class="control-row">
+                    <label>Blur</label>
+                    <input type="range" id="bgBlur" min="0" max="20" value="0">
+                </div>
+                <div class="control-row">
+                    <label>Reactiveness</label>
+                    <input type="range" id="bgReact" min="0" max="0.5" step="0.01" value="0.05">
+                </div>
+            </div>
+
+            <div class="control-group">
+                <div class="group-title">Emblem / Photo</div>
+                <button onclick="document.getElementById('emblemInput').click()" style="width:100%; background:#333; color:white; border:none; padding:5px; margin-bottom:10px;">Add Overlay Photo</button>
+                <input type="file" id="emblemInput" hidden accept="image/*">
+                <div class="control-row">
+                    <label>Clip to Circle</label>
+                    <input type="checkbox" id="emblemCircle" checked>
+                </div>
+                <div class="control-row">
+                    <label>Size</label>
+                    <input type="range" id="emblemSize" min="0.1" max="1" step="0.01" value="0.3">
+                </div>
+                <div class="control-row">
+                    <label>X Position</label>
+                    <input type="range" id="emblemX" min="0" max="1" step="0.01" value="0.5">
+                </div>
+                <div class="control-row">
+                    <label>Y Position</label>
+                    <input type="range" id="emblemY" min="0" max="1" step="0.01" value="0.5">
+                </div>
+            </div>
         </div>
-        <div class="status-bar">
-          <div class="status-indicator" id="statusIndicator"></div>
-          <span id="statusText">Load audio to start</span>
+
+        <!-- AUDIO TAB -->
+        <div id="tab-audio" class="tab-content" style="display:none">
+            <div class="control-group">
+                <div class="group-title">Audio File</div>
+                <input type="file" id="audioInput" accept="audio/*" style="width:100%; font-size:10px;">
+                <div class="control-row" style="margin-top:10px">
+                    <label>Smoothing</label>
+                    <input type="range" id="audioSmooth" min="0" max="0.99" step="0.01" value="0.8">
+                </div>
+            </div>
         </div>
-      </div>
-    </div>
 
-    <!-- RIGHT PANEL -->
-    <div class="tools-panel">
-      <div class="tool-section">
-        <div class="tool-title">➕ Add Elements</div>
-        <button class="btn" id="addTextBtn">
-          <span>📝</span>
-          <span>Add Text</span>
-        </button>
-        <button class="btn" id="addEmojiBtn">
-          <span>😀</span>
-          <span>Add Emoji</span>
-        </button>
-        <button class="btn" id="addImageBtn">
-          <span>🖼️</span>
-          <span>Add Image</span>
-        </button>
-        <input type="file" id="imageFile" accept="image/*" style="display:none">
-      </div>
+        <!-- VISUALIZER TAB -->
+        <div id="tab-viz" class="tab-content" style="display:none">
+            <div class="control-group">
+                <div class="group-title">Spectrum Style</div>
+                <select id="vizType" style="width:100%; margin-bottom:10px;">
+                    <option value="cyberTunnel">Cyber Tunnel</option>
+                    <option value="bars">Classic Bars</option>
+                    <option value="circle">Circular Bars</option>
+                    <option value="neonLine">Neon Wave</option>
+                </select>
+                <div class="control-row">
+                    <label>Color</label>
+                    <input type="color" id="vizColor" value="#00a2ff">
+                </div>
+                <div class="control-row">
+                    <label>Glow</label>
+                    <input type="range" id="vizGlow" min="0" max="50" value="20">
+                </div>
+                <div class="control-row">
+                    <label>Scale</label>
+                    <input type="range" id="vizScale" min="0.1" max="3" step="0.1" value="1">
+                </div>
+                <div class="control-row">
+                    <label>Position Y</label>
+                    <input type="range" id="vizY" min="0" max="1" step="0.01" value="0.5">
+                </div>
+            </div>
+        </div>
 
-      <div class="tool-section" id="emojiSection" style="display:none">
-        <div class="tool-title">😀 Emoji Picker</div>
-        <div class="emoji-picker" id="emojiPicker"></div>
-      </div>
-
-      <div class="tool-section" id="editSection" style="display:none">
-        <div class="tool-title">✏️ Edit Element</div>
+        <!-- EFFECTS TAB -->
+        <div id="tab-fx" class="tab-content" style="display:none">
+            <div class="control-group">
+                <div class="group-title">Particles</div>
+                <div class="control-row">
+                    <label>Type</label>
+                    <select id="partType">
+                        <option value="none">None</option>
+                        <option value="snow">Snowflakes</option>
+                        <option value="stars">Stars</option>
+                    </select>
+                </div>
+                <div class="control-row">
+                    <label>Amount</label>
+                    <input type="range" id="partCount" min="0" max="500" value="150">
+                </div>
+            </div>
+            <div class="control-group">
+                <div class="group-title">Screen FX</div>
+                <div class="control-row">
+                    <label>Flicker</label>
+                    <input type="checkbox" id="fxFlicker">
+                </div>
+                <div class="control-row">
+                    <label>RGB Shift</label>
+                    <input type="checkbox" id="fxRGB">
+                </div>
+            </div>
+        </div>
         
-        <input type="text" id="editText" class="input" placeholder="Text content">
-        
-        <div class="slider-group">
-          <div class="slider-label">
-            <span>Font Size</span>
-            <span id="fontSizeValue">32px</span>
-          </div>
-          <input type="range" id="fontSize" class="slider" min="12" max="120" value="32">
-        </div>
-
-        <input type="color" id="textColor" value="#ffffff" class="color-input">
-
-        <div class="slider-group">
-          <div class="slider-label">
-            <span>Opacity</span>
-            <span id="opacityValue">100%</span>
-          </div>
-          <input type="range" id="opacity" class="slider" min="0" max="100" value="100">
-        </div>
-
-        <div class="slider-group">
-          <div class="slider-label">
-            <span>Rotation</span>
-            <span id="rotationValue">0°</span>
-          </div>
-          <input type="range" id="rotation" class="slider" min="0" max="360" value="0">
-        </div>
-
-        <label style="display: flex; align-items: center; gap: 8px; margin: 8px 0; cursor: pointer;">
-          <input type="checkbox" id="roundImage">
-          <span style="font-size: 13px;">Make Round</span>
-        </label>
-
-        <button class="btn" id="deleteBtn" style="background: rgba(255,0,0,0.2); border-color: rgba(255,0,0,0.3);">
-          <span>🗑️</span>
-          <span>Delete</span>
-        </button>
-      </div>
-
-      <div class="tool-section">
-        <div class="tool-title">📑 Layers</div>
-        <div id="layersList"></div>
-      </div>
-
-      <div class="tool-section">
-        <div class="tool-title">💾 Export</div>
-        <button class="btn btn-primary" id="exportBtn" disabled>
-          <span>⬇️</span>
-          <span>Download Video</span>
-        </button>
-      </div>
+        <button id="recordBtn" style="width:100%; padding:15px; background: #e74c3c; color:white; border:none; font-weight:bold; cursor:pointer; margin-top:20px;">START RECORDING</button>
     </div>
-  </div>
+</div>
 
-  <script>
-    // ========================================
-    // 🎯 GLOBAL STATE
-    // ========================================
-    let audioContext = null;
-    let analyser = null;
-    let dataArray = null;
-    let animationId = null;
-    let audioSource = null;
-    let audioBuffer = null;
-    let isPlaying = false;
-    let startTime = 0;
-    let pauseTime = 0;
-    let currentTime = 0;
-    let duration = 0;
+<div class="main-content">
+    <div class="recording-indicator" id="recInd">
+        <div class="dot"></div> REC
+    </div>
     
-    let selectedVisualizer = 'circular';
-    let rotation = 0;
-    let time = 0;
-    
-    let bgImageData = null;
-    let bgBlur = 0;
-    let bgBrightness = 100;
-    let bgColor = '#000000';
-    
-    let layers = [];
-    let selectedLayer = null;
-    let draggedElement = null;
-    let isDragging = false;
-    let isResizing = false;
-    let dragOffset = { x: 0, y: 0 };
-    
-    let mediaRecorder = null;
-    let recordedChunks = [];
-    let isRecording = false;
-    
-    const canvas = document.getElementById('videoCanvas');
+    <div id="canvas-container">
+        <canvas id="mainCanvas"></canvas>
+    </div>
+</div>
+
+<div class="bottom-bar">
+    <button class="play-btn" id="playBtn">▶</button>
+    <div style="margin-right:15px; font-family:monospace; font-size:12px;" id="timeInfo">00:00 / 00:00</div>
+    <div class="timeline" id="timeline">
+        <div class="progress" id="progress"></div>
+    </div>
+</div>
+
+<script>
+    // --- CORE VARIABLES ---
+    const canvas = document.getElementById('mainCanvas');
     const ctx = canvas.getContext('2d');
-    const overlay = document.getElementById('canvasOverlay');
-    
-    const emojis = ['😀','😃','😄','😁','😆','😅','🤣','😂','🙂','🙃','😉','😊','😇','🥰','😍','🤩','😘','😗','☺️','😚','😙','🥲','😋','😛','😜','🤪','😝','🤑','🤗','🤭','🤫','🤔','🤐','🤨','😐','😑','😶','😏','😒','🙄','😬','🤥','😌','😔','😪','🤤','😴','😷','🤒','🤕','🤢','🤮','🤧','🥵','🥶','🥴','😵','🤯','🤠','🥳','🥸','😎','🤓','🧐','😕','😟','🙁','☹️','😮','😯','😲','😳','🥺','😦','😧','😨','😰','😥','😢','😭','😱','😖','😣','😞','😓','😩','😫','🥱','😤','😡','😠','🤬','😈','👿','💀','☠️','💩','🤡','👹','👺','👻','👽','👾','🤖','😺','😸','😹','😻','😼','😽','🙀','😿','😾'];
+    let audioCtx, analyser, source, dataArray;
+    let audio = new Audio();
+    let isPlaying = false;
+    let bgImage = new Image();
+    let emblemImage = new Image();
+    let particles = [];
+    let tunnelZ = 0;
 
-    // ========================================
-    // 🎨 CANVAS SETUP
-    // ========================================
-    function setCanvasResolution() {
-      const resolution = document.getElementById('resolution').value;
-      const [width, height] = resolution.split('x').map(Number);
-      canvas.width = width;
-      canvas.height = height;
+    // --- CONFIG ---
+    const cfg = {
+        width: 1280,
+        height: 720,
+        vizScale: 1,
+        vizY: 0.5
+    };
+
+    // --- INITIALIZATION ---
+    function init() {
+        updateCanvasSize();
+        createParticles();
+        requestAnimationFrame(render);
     }
 
-    setCanvasResolution();
+    function updateCanvasSize() {
+        const ratio = document.getElementById('aspectRatio').value;
+        const container = document.getElementById('canvas-container');
+        
+        if(ratio === '16:9') { cfg.width = 1280; cfg.height = 720; }
+        else if(ratio === '9:16') { cfg.width = 720; cfg.height = 1280; }
+        else if(ratio === '1:1') { cfg.width = 1080; cfg.height = 1080; }
+        else if(ratio === '4:3') { cfg.width = 1024; cfg.height = 768; }
 
-    // ========================================
-    // 🎵 AUDIO HANDLING
-    // ========================================
-    document.getElementById('audioFile').addEventListener('change', async (e) => {
-      const file = e.target.files[0];
-      if (!file) return;
+        canvas.width = cfg.width;
+        canvas.height = cfg.height;
+        
+        // Visual adjustment to fit screen
+        const screenH = window.innerHeight * 0.8;
+        const scale = screenH / cfg.height;
+        container.style.width = (cfg.width * scale) + 'px';
+        container.style.height = screenH + 'px';
+    }
 
-      try {
-        updateStatus('Loading audio...', 'active');
+    // --- AUDIO LOGIC ---
+    document.getElementById('audioInput').onchange = function(e) {
+        const file = e.target.files[0];
+        if(!file) return;
+        audio.src = URL.createObjectURL(file);
+        setupAudioContext();
+    };
 
-        if (audioContext) {
-          audioContext.close();
+    function setupAudioContext() {
+        if(!audioCtx) {
+            audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+            analyser = audioCtx.createAnalyser();
+            source = audioCtx.createMediaElementSource(audio);
+            source.connect(analyser);
+            analyser.connect(audioCtx.destination);
         }
-
-        audioContext = new (window.AudioContext || window.webkitAudioContext)();
-        analyser = audioContext.createAnalyser();
         analyser.fftSize = 1024;
-        analyser.smoothingTimeConstant = 0.85;
-
-        const arrayBuffer = await file.arrayBuffer();
-        audioBuffer = await audioContext.decodeAudioData(arrayBuffer);
-        
-        duration = audioBuffer.duration;
         dataArray = new Uint8Array(analyser.frequencyBinCount);
-        
-        generateWaveform();
-        updateStatus('Audio loaded! Click play to start', 'active');
-        document.getElementById('exportBtn').disabled = false;
-        
-      } catch (error) {
-        console.error('Audio load error:', error);
-        updateStatus('Error loading audio', 'error');
-      }
-    });
-
-    // ========================================
-    // 🎬 PLAYBACK CONTROLS
-    // ========================================
-    document.getElementById('playBtn').addEventListener('click', togglePlayback);
-
-    function togglePlayback() {
-      if (!audioBuffer) {
-        updateStatus('Please load audio first', 'error');
-        return;
-      }
-
-      if (isPlaying) {
-        pausePlayback();
-      } else {
-        startPlayback();
-      }
     }
 
-    function startPlayback() {
-      isPlaying = true;
-      document.getElementById('playBtn').textContent = '⏸️';
-      
-      if (audioSource) {
-        audioSource.stop();
-      }
-
-      audioSource = audioContext.createBufferSource();
-      audioSource.buffer = audioBuffer;
-      audioSource.connect(analyser);
-      analyser.connect(audioContext.destination);
-      
-      audioSource.onended = () => {
-        isPlaying = false;
-        document.getElementById('playBtn').textContent = '▶️';
-        currentTime = 0;
-        updateTimeDisplay();
-      };
-
-      startTime = audioContext.currentTime - pauseTime;
-      audioSource.start(0, pauseTime);
-      
-      startVisualization();
-      updateStatus('Playing...', 'active');
-    }
-
-    function pausePlayback() {
-      isPlaying = false;
-      document.getElementById('playBtn').textContent = '▶️';
-      
-      if (audioSource) {
-        audioSource.stop();
-        pauseTime = audioContext.currentTime - startTime;
-      }
-      
-      if (animationId) {
-        cancelAnimationFrame(animationId);
-      }
-      
-      updateStatus('Paused', 'default');
-    }
-
-    // ========================================
-    // ⏱️ TIMELINE
-    // ========================================
-    const timelineSlider = document.getElementById('timelineSlider');
-    const timelineProgress = document.getElementById('timelineProgress');
-
-    timelineSlider.addEventListener('click', (e) => {
-      const rect = timelineSlider.getBoundingClientRect();
-      const percent = (e.clientX - rect.left) / rect.width;
-      seekTo(percent * duration);
-    });
-
-    function seekTo(time) {
-      pauseTime = Math.max(0, Math.min(time, duration));
-      currentTime = pauseTime;
-      updateTimeDisplay();
-      
-      if (isPlaying) {
-        startPlayback();
-      }
-    }
-
-    function updateTimeDisplay() {
-      const current = formatTime(currentTime);
-      const total = formatTime(duration);
-      document.getElementById('timeDisplay').textContent = `${current} / ${total}`;
-      
-      const percent = (currentTime / duration) * 100;
-      timelineProgress.style.width = percent + '%';
-    }
-
-    function formatTime(seconds) {
-      const mins = Math.floor(seconds / 60);
-      const secs = Math.floor(seconds % 60);
-      return `${mins}:${secs.toString().padStart(2, '0')}`;
-    }
-
-    function generateWaveform() {
-      const waveform = document.getElementById('waveform');
-      waveform.innerHTML = '';
-      
-      const samples = 100;
-      const channelData = audioBuffer.getChannelData(0);
-      const blockSize = Math.floor(channelData.length / samples);
-      
-      for (let i = 0; i < samples; i++) {
-        const bar = document.createElement('div');
-        bar.className = 'waveform-bar';
-        
-        let sum = 0;
-        for (let j = 0; j < blockSize; j++) {
-          sum += Math.abs(channelData[i * blockSize + j]);
-        }
-        const average = sum / blockSize;
-        const height = Math.max(10, average * 100);
-        
-        bar.style.height = height + '%';
-        waveform.appendChild(bar);
-      }
-    }
-
-    // ========================================
-    // 🎨 VISUALIZATION
-    // ========================================
-    function startVisualization() {
-      if (animationId) cancelAnimationFrame(animationId);
-      animate();
-    }
-
-    function animate() {
-      if (!isPlaying) return;
-      
-      animationId = requestAnimationFrame(animate);
-      
-      if (analyser) {
-        analyser.getByteFrequencyData(dataArray);
-      }
-      
-      currentTime = audioContext.currentTime - startTime;
-      updateTimeDisplay();
-      
-      rotation += 0.005;
-      time += 0.01;
-      
-      render();
-    }
-
-    function render() {
-      const centerX = canvas.width / 2;
-      const centerY = canvas.height / 2;
-      
-      // Background
-      ctx.fillStyle = bgColor;
-      ctx.fillRect(0, 0, canvas.width, canvas.height);
-      
-      // Background Image
-      if (bgImageData) {
-        ctx.save();
-        if (bgBlur > 0) {
-          ctx.filter = `blur(${bgBlur}px) brightness(${bgBrightness}%)`;
+    document.getElementById('playBtn').onclick = () => {
+        if(audio.paused) {
+            audio.play();
+            if(audioCtx) audioCtx.resume();
+            document.getElementById('playBtn').innerText = '⏸';
         } else {
-          ctx.filter = `brightness(${bgBrightness}%)`;
+            audio.pause();
+            document.getElementById('playBtn').innerText = '▶';
         }
-        ctx.drawImage(bgImageData, 0, 0, canvas.width, canvas.height);
+    };
+
+    // --- IMAGE LOADING ---
+    document.getElementById('bgInput').onchange = (e) => {
+        const reader = new FileReader();
+        reader.onload = (ev) => bgImage.src = ev.target.result;
+        reader.readAsDataURL(e.target.files[0]);
+    };
+
+    document.getElementById('emblemInput').onchange = (e) => {
+        const reader = new FileReader();
+        reader.onload = (ev) => emblemImage.src = ev.target.result;
+        reader.readAsDataURL(e.target.files[0]);
+    };
+
+    // --- PARTICLES ---
+    function createParticles() {
+        particles = [];
+        for(let i=0; i<500; i++) {
+            particles.push({
+                x: Math.random() * canvas.width,
+                y: Math.random() * canvas.height,
+                size: Math.random() * 3 + 1,
+                speed: Math.random() * 2 + 0.5,
+                opacity: Math.random()
+            });
+        }
+    }
+
+    // --- RENDERING FUNCTIONS ---
+
+    function drawBackground(bass) {
+        ctx.save();
+        const react = parseFloat(document.getElementById('bgReact').value);
+        const blur = document.getElementById('bgBlur').value;
+        const bright = document.getElementById('bgBrightness').value;
+        
+        const scale = 1 + (bass / 255) * react;
+        
+        ctx.filter = `blur(${blur}px) brightness(${bright})`;
+        ctx.translate(canvas.width/2, canvas.height/2);
+        ctx.scale(scale, scale);
+        
+        if(bgImage.src) {
+            const aspect = bgImage.width / bgImage.height;
+            let dw, dh;
+            if(canvas.width / canvas.height > aspect) {
+                dw = canvas.width; dh = dw / aspect;
+            } else {
+                dh = canvas.height; dw = dh * aspect;
+            }
+            ctx.drawImage(bgImage, -dw/2, -dh/2, dw, dh);
+        } else {
+            ctx.fillStyle = '#050505';
+            ctx.fillRect(-canvas.width/2, -canvas.height/2, canvas.width, canvas.height);
+        }
         ctx.restore();
-      }
-      
-      // Visualizer
-      if (dataArray) {
-        switch (selectedVisualizer) {
-          case 'circular':
-            drawCircularSpectrum(ctx, centerX, centerY);
-            break;
-          case 'radial':
-            drawRadialSpectrum(ctx, centerX, centerY);
-            break;
-          case 'neon':
-            drawNeonCircle(ctx, centerX, centerY);
-            break;
-          case 'tunnel':
-            drawCyberTunnel(ctx, centerX, centerY);
-            break;
+    }
+
+    function drawFX(bass) {
+        const type = document.getElementById('partType').value;
+        const count = document.getElementById('partCount').value;
+        if(type === 'none') return;
+
+        ctx.fillStyle = type === 'snow' ? 'rgba(255,255,255,0.8)' : 'rgba(255,255,200,0.8)';
+        for(let i=0; i<count; i++) {
+            let p = particles[i];
+            ctx.beginPath();
+            ctx.arc(p.x, p.y, p.size * (1 + bass/500), 0, Math.PI*2);
+            ctx.fill();
+            
+            p.y += p.speed * (1 + bass/200);
+            if(p.y > canvas.height) p.y = -10;
         }
-      }
-      
-      // Layers
-      layers.forEach(layer => {
-        if (!layer.visible) return;
+
+        if(document.getElementById('fxFlicker').checked && bass > 200) {
+            ctx.fillStyle = `rgba(255,255,255,${(bass-200)/500})`;
+            ctx.fillRect(0,0,canvas.width, canvas.height);
+        }
+    }
+
+    function drawCyberTunnel(bass) {
+        const color = document.getElementById('vizColor').value;
+        const glow = document.getElementById('vizGlow').value;
+        const scale = document.getElementById('vizScale').value;
+        const yPos = canvas.height * document.getElementById('vizY').value;
+
+        ctx.save();
+        ctx.translate(canvas.width/2, yPos);
+        ctx.scale(scale, scale);
+        
+        ctx.strokeStyle = color;
+        ctx.shadowBlur = glow;
+        ctx.shadowColor = color;
+        ctx.lineWidth = 2;
+
+        tunnelZ += 2 + (bass/50);
+        
+        for(let i=0; i<15; i++) {
+            let z = (i * 100 - (tunnelZ % 100));
+            let s = 500 / (z + 100);
+            if(s < 0) continue;
+            
+            let w = canvas.width * s;
+            let h = canvas.height * s;
+            
+            ctx.beginPath();
+            ctx.rect(-w/2, -h/2, w, h);
+            ctx.stroke();
+
+            // Connecting lines
+            if(i === 0) {
+                ctx.beginPath();
+                ctx.moveTo(-canvas.width, -canvas.height); ctx.lineTo(-w/2, -h/2);
+                ctx.moveTo(canvas.width, -canvas.height); ctx.lineTo(w/2, -h/2);
+                ctx.moveTo(-canvas.width, canvas.height); ctx.lineTo(-w/2, h/2);
+                ctx.moveTo(canvas.width, canvas.height); ctx.lineTo(w/2, h/2);
+                ctx.stroke();
+            }
+        }
+        ctx.restore();
+    }
+
+    function drawBars(bass) {
+        const color = document.getElementById('vizColor').value;
+        const yPos = canvas.height * document.getElementById('vizY').value;
+        const scale = document.getElementById('vizScale').value;
+        
+        const barWidth = (canvas.width / dataArray.length) * 2;
+        ctx.fillStyle = color;
+        ctx.shadowBlur = document.getElementById('vizGlow').value;
+        ctx.shadowColor = color;
+
+        for(let i=0; i<dataArray.length; i++) {
+            let h = dataArray[i] * scale;
+            ctx.fillRect(i * barWidth, yPos - h/2, barWidth - 2, h);
+        }
+    }
+
+    function drawEmblem(bass) {
+        if(!emblemImage.src) return;
+        
+        const sizeInput = document.getElementById('emblemSize').value;
+        const posX = document.getElementById('emblemX').value * canvas.width;
+        const posY = document.getElementById('emblemY').value * canvas.height;
+        const isCircle = document.getElementById('emblemCircle').checked;
+        
+        const size = (canvas.width * sizeInput) * (1 + bass/1000);
         
         ctx.save();
-        ctx.globalAlpha = layer.opacity / 100;
+        ctx.translate(posX, posY);
         
-        if (layer.type === 'text') {
-          ctx.font = `bold ${layer.fontSize}px Arial`;
-          ctx.fillStyle = layer.color;
-          ctx.textAlign = 'center';
-          ctx.textBaseline = 'middle';
-          
-          ctx.translate(layer.x, layer.y);
-          ctx.rotate((layer.rotation * Math.PI) / 180);
-          
-          ctx.shadowBlur = 10;
-          ctx.shadowColor = '#000';
-          ctx.fillText(layer.content, 0, 0);
-          ctx.shadowBlur = 0;
-          
-        } else if (layer.type === 'emoji') {
-          ctx.font = `${layer.fontSize}px Arial`;
-          ctx.textAlign = 'center';
-          ctx.textBaseline = 'middle';
-          
-          ctx.translate(layer.x, layer.y);
-          ctx.rotate((layer.rotation * Math.PI) / 180);
-          ctx.fillText(layer.content, 0, 0);
-          
-        } else if (layer.type === 'image' && layer.imageData) {
-          ctx.translate(layer.x, layer.y);
-          ctx.rotate((layer.rotation * Math.PI) / 180);
-          
-          if (layer.round) {
+        if(isCircle) {
             ctx.beginPath();
-            ctx.arc(0, 0, layer.width / 2, 0, Math.PI * 2);
-            ctx.closePath();
+            ctx.arc(0, 0, size/2, 0, Math.PI*2);
             ctx.clip();
-          }
-          
-          ctx.drawImage(layer.imageData, -layer.width / 2, -layer.height / 2, layer.width, layer.height);
         }
         
+        ctx.drawImage(emblemImage, -size/2, -size/2, size, size);
         ctx.restore();
-      });
     }
 
-    // ========================================
-    // 🎨 VISUALIZERS (SAME AS BEFORE)
-    // ========================================
-    
-    function drawCircularSpectrum(ctx, centerX, centerY) {
-      const radius = Math.min(canvas.width, canvas.height) * 0.25;
-      const bars = 180;
-      const barWidth = 3;
-      
-      const avgBass = dataArray.slice(0, 10).reduce((a, b) => a + b, 0) / 10;
-      const pulseRadius = radius * 0.25 + (avgBass / 255) * 20;
-      
-      ctx.beginPath();
-      ctx.arc(centerX, centerY, pulseRadius, 0, Math.PI * 2);
-      ctx.fillStyle = 'rgba(255, 255, 255, 0.05)';
-      ctx.fill();
-      
-      for (let i = 0; i < bars; i++) {
-        const angle = (i / bars) * Math.PI * 2;
-        const freqIndex = Math.floor(i / bars * dataArray.length * 0.8);
-        const value = dataArray[freqIndex] || 0;
-        const barHeight = (value / 255) * (radius * 0.7);
-        const hue = (i / bars) * 360;
-        
-        const x1 = centerX + Math.cos(angle) * radius;
-        const y1 = centerY + Math.sin(angle) * radius;
-        const x2 = centerX + Math.cos(angle) * (radius + barHeight);
-        const y2 = centerY + Math.sin(angle) * (radius + barHeight);
-        
-        ctx.beginPath();
-        ctx.moveTo(x1, y1);
-        ctx.lineTo(x2, y2);
-        ctx.lineWidth = barWidth;
-        ctx.lineCap = 'round';
-        ctx.strokeStyle = `hsl(${hue}, 100%, 50%)`;
-        ctx.shadowBlur = 10;
-        ctx.shadowColor = `hsl(${hue}, 100%, 50%)`;
-        ctx.stroke();
-      }
-      
-      ctx.shadowBlur = 0;
-    }
-
-    function drawRadialSpectrum(ctx, centerX, centerY) {
-      const outerRadius = Math.min(canvas.width, canvas.height) * 0.35;
-      const innerRadius = outerRadius * 0.2;
-      const bars = 240;
-      
-      for (let i = 0; i < bars; i++) {
-        const angle = (i / bars) * Math.PI * 2 + rotation;
-        const freqIndex = Math.floor((i / bars) * dataArray.length * 0.8);
-        const value = dataArray[freqIndex] || 0;
-        const lineLength = innerRadius + (value / 255) * (outerRadius - innerRadius);
-        
-        const x1 = centerX + Math.cos(angle) * innerRadius;
-        const y1 = centerY + Math.sin(angle) * innerRadius;
-        const x2 = centerX + Math.cos(angle) * lineLength;
-        const y2 = centerY + Math.sin(angle) * lineLength;
-        
-        const hue = (i / bars) * 360;
-        
-        ctx.beginPath();
-        ctx.moveTo(x1, y1);
-        ctx.lineTo(x2, y2);
-        ctx.strokeStyle = `hsl(${hue}, 100%, 50%)`;
-        ctx.lineWidth = 1.5;
-        ctx.lineCap = 'round';
-        ctx.shadowBlur = 5;
-        ctx.shadowColor = `hsl(${hue}, 100%, 50%)`;
-        ctx.stroke();
-      }
-      
-      ctx.shadowBlur = 0;
-    }
-
-    function drawNeonCircle(ctx, centerX, centerY) {
-      const radius = Math.min(canvas.width, canvas.height) * 0.25;
-      
-      const bassAvg = dataArray.slice(0, 10).reduce((a, b) => a + b, 0) / 10 / 255;
-      
-      const circleGradient = ctx.createLinearGradient(
-        centerX - radius, centerY, centerX + radius, centerY
-      );
-      circleGradient.addColorStop(0, '#00E5FF');
-      circleGradient.addColorStop(0.5, '#9D00FF');
-      circleGradient.addColorStop(1, '#FF00E5');
-      
-      ctx.beginPath();
-      ctx.arc(centerX, centerY, radius, 0, Math.PI * 2);
-      ctx.strokeStyle = circleGradient;
-      ctx.lineWidth = 3 + bassAvg * 5;
-      ctx.shadowBlur = 20 + bassAvg * 20;
-      ctx.shadowColor = '#00E5FF';
-      ctx.stroke();
-      
-      ctx.shadowBlur = 0;
-    }
-
-    function drawCyberTunnel(ctx, centerX, centerY) {
-      const radius = Math.min(canvas.width, canvas.height) * 0.25;
-      const bars = 90;
-      
-      const avgBass = dataArray.slice(0, 10).reduce((a, b) => a + b, 0) / 10;
-      const pulseRadius = radius * 0.25 + (avgBass / 255) * 30;
-      
-      ctx.beginPath();
-      ctx.arc(centerX, centerY, pulseRadius, 0, Math.PI * 2);
-      ctx.fillStyle = '#FF00E5';
-      ctx.shadowBlur = 30;
-      ctx.shadowColor = '#FF00E5';
-      ctx.fill();
-      ctx.shadowBlur = 0;
-      
-      for (let i = 0; i < bars; i++) {
-        const angle = (i / bars) * Math.PI * 2 + rotation * -1;
-        const freqIndex = Math.floor(i / bars * dataArray.length * 0.5);
-        const value = dataArray[freqIndex] || 0;
-        const barHeight = (value / 255) * (radius * 0.8);
-        
-        const x1 = centerX + Math.cos(angle) * radius;
-        const y1 = centerY + Math.sin(angle) * radius;
-        const x2 = centerX + Math.cos(angle) * (radius + barHeight);
-        const y2 = centerY + Math.sin(angle) * (radius + barHeight);
-        
-        ctx.beginPath();
-        ctx.moveTo(x1, y1);
-        ctx.lineTo(x2, y2);
-        ctx.lineWidth = 4;
-        ctx.strokeStyle = '#00E5FF';
-        ctx.stroke();
-      }
-    }
-
-    // ========================================
-    // 🎨 UI CONTROLS
-    // ========================================
-    
-    // Visualizer selection
-    document.querySelectorAll('.viz-card').forEach(card => {
-      card.addEventListener('click', () => {
-        document.querySelectorAll('.viz-card').forEach(c => c.classList.remove('active'));
-        card.classList.add('active');
-        selectedVisualizer = card.dataset.viz;
-      });
-    });
-
-    // Background controls
-    document.getElementById('bgImage').addEventListener('change', async (e) => {
-      const file = e.target.files[0];
-      if (!file) return;
-      
-      const img = new Image();
-      img.src = URL.createObjectURL(file);
-      await img.decode();
-      bgImageData = img;
-    });
-
-    document.getElementById('bgColor').addEventListener('input', (e) => {
-      bgColor = e.target.value;
-    });
-
-    document.getElementById('bgBlur').addEventListener('input', (e) => {
-      bgBlur = parseInt(e.target.value);
-      document.getElementById('blurValue').textContent = bgBlur;
-    });
-
-    document.getElementById('bgBrightness').addEventListener('input', (e) => {
-      bgBrightness = parseInt(e.target.value);
-      document.getElementById('brightnessValue').textContent = bgBrightness + '%';
-    });
-
-    document.getElementById('resolution').addEventListener('change', setCanvasResolution);
-
-    // ========================================
-    // ➕ ADD ELEMENTS
-    // ========================================
-    
-    document.getElementById('addTextBtn').addEventListener('click', () => {
-      const layer = {
-        id: Date.now(),
-        type: 'text',
-        content: 'Double click to edit',
-        x: canvas.width / 2,
-        y: canvas.height / 2,
-        fontSize: 32,
-        color: '#ffffff',
-        opacity: 100,
-        rotation: 0,
-        visible: true
-      };
-      
-      layers.push(layer);
-      createDraggableElement(layer);
-      updateLayersList();
-    });
-
-    document.getElementById('addEmojiBtn').addEventListener('click', () => {
-      const emojiSection = document.getElementById('emojiSection');
-      emojiSection.style.display = emojiSection.style.display === 'none' ? 'block' : 'none';
-      
-      if (emojiSection.style.display === 'block') {
-        const picker = document.getElementById('emojiPicker');
-        picker.innerHTML = '';
-        
-        emojis.forEach(emoji => {
-          const btn = document.createElement('button');
-          btn.className = 'emoji-btn';
-          btn.textContent = emoji;
-          btn.onclick = () => addEmoji(emoji);
-          picker.appendChild(btn);
-        });
-      }
-    });
-
-    function addEmoji(emoji) {
-      const layer = {
-        id: Date.now(),
-        type: 'emoji',
-        content: emoji,
-        x: canvas.width / 2,
-        y: canvas.height / 2,
-        fontSize: 64,
-        opacity: 100,
-        rotation: 0,
-        visible: true
-      };
-      
-      layers.push(layer);
-      createDraggableElement(layer);
-      updateLayersList();
-      document.getElementById('emojiSection').style.display = 'none';
-    }
-
-    document.getElementById('addImageBtn').addEventListener('click', () => {
-      document.getElementById('imageFile').click();
-    });
-
-    document.getElementById('imageFile').addEventListener('change', async (e) => {
-      const file = e.target.files[0];
-      if (!file) return;
-      
-      const img = new Image();
-      img.src = URL.createObjectURL(file);
-      await img.decode();
-      
-      const layer = {
-        id: Date.now(),
-        type: 'image',
-        imageData: img,
-        x: canvas.width / 2,
-        y: canvas.height / 2,
-        width: 200,
-        height: 200,
-        opacity: 100,
-        rotation: 0,
-        round: false,
-        visible: true
-      };
-      
-      layers.push(layer);
-      createDraggableElement(layer);
-      updateLayersList();
-    });
-
-    // ========================================
-    // 🖱️ DRAGGABLE ELEMENTS
-    // ========================================
-    
-    function createDraggableElement(layer) {
-      const el = document.createElement('div');
-      el.className = 'draggable-element';
-      el.dataset.layerId = layer.id;
-      el.style.left = (layer.x / canvas.width * 100) + '%';
-      el.style.top = (layer.y / canvas.height * 100) + '%';
-      el.style.transform = 'translate(-50%, -50%)';
-      
-      if (layer.type === 'text') {
-        el.textContent = layer.content;
-        el.style.fontSize = (layer.fontSize / canvas.width * 100) + 'vw';
-        el.style.color = layer.color;
-      } else if (layer.type === 'emoji') {
-        el.textContent = layer.content;
-        el.style.fontSize = (layer.fontSize / canvas.width * 100) + 'vw';
-      } else if (layer.type === 'image') {
-        el.style.width = (layer.width / canvas.width * 100) + '%';
-        el.style.height = (layer.height / canvas.height * 100) + '%';
-        el.style.backgroundImage = `url(${layer.imageData.src})`;
-        el.style.backgroundSize = 'contain';
-        el.style.backgroundRepeat = 'no-repeat';
-        el.style.backgroundPosition = 'center';
-        if (layer.round) {
-          el.style.borderRadius = '50%';
+    // --- MAIN RENDER LOOP ---
+    function render() {
+        if(analyser) {
+            analyser.smoothingTimeConstant = document.getElementById('audioSmooth').value;
+            analyser.getByteFrequencyData(dataArray);
+        } else {
+            dataArray = new Uint8Array(512).fill(0);
         }
-      }
-      
-      const handle = document.createElement('div');
-      handle.className = 'resize-handle';
-      el.appendChild(handle);
-      
-      el.addEventListener('mousedown', (e) => startDrag(e, layer));
-      el.addEventListener('dblclick', () => selectLayer(layer));
-      handle.addEventListener('mousedown', (e) => {
-        e.stopPropagation();
-        startResize(e, layer);
-      });
-      
-      overlay.appendChild(el);
-    }
 
-    function startDrag(e, layer) {
-      if (e.target.classList.contains('resize-handle')) return;
-      
-      isDragging = true;
-      draggedElement = layer;
-      
-      const rect = canvas.getBoundingClientRect();
-      dragOffset.x = e.clientX - rect.left - (layer.x / canvas.width) * rect.width;
-      dragOffset.y = e.clientY - rect.top - (layer.y / canvas.height) * rect.height;
-      
-      e.preventDefault();
-    }
-
-    function startResize(e, layer) {
-      isResizing = true;
-      draggedElement = layer;
-      e.preventDefault();
-    }
-
-    document.addEventListener('mousemove', (e) => {
-      if (isDragging && draggedElement) {
-        const rect = canvas.getBoundingClientRect();
-        const x = ((e.clientX - rect.left - dragOffset.x) / rect.width) * canvas.width;
-        const y = ((e.clientY - rect.top - dragOffset.y) / rect.height) * canvas.height;
+        const bass = dataArray ? dataArray[2] : 0;
         
-        draggedElement.x = Math.max(0, Math.min(canvas.width, x));
-        draggedElement.y = Math.max(0, Math.min(canvas.height, y));
+        // Clear
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
         
-        updateDraggablePosition(draggedElement);
-      } else if (isResizing && draggedElement) {
-        if (draggedElement.type === 'text' || draggedElement.type === 'emoji') {
-          const rect = canvas.getBoundingClientRect();
-          const centerX = rect.left + (draggedElement.x / canvas.width) * rect.width;
-          const distance = Math.hypot(e.clientX - centerX, e.clientY - centerX);
-          draggedElement.fontSize = Math.max(12, Math.min(120, distance * 0.5));
-          
-          const el = overlay.querySelector(`[data-layer-id="${draggedElement.id}"]`);
-          if (el) {
-            el.style.fontSize = (draggedElement.fontSize / canvas.width * 100) + 'vw';
-          }
-        } else if (draggedElement.type === 'image') {
-          const rect = canvas.getBoundingClientRect();
-          const centerX = rect.left + (draggedElement.x / canvas.width) * rect.width;
-          const centerY = rect.top + (draggedElement.y / canvas.height) * rect.height;
-          const distance = Math.hypot(e.clientX - centerX, e.clientY - centerY);
-          const size = Math.max(50, Math.min(500, distance * 2));
-          
-          draggedElement.width = size;
-          draggedElement.height = size;
-          
-          const el = overlay.querySelector(`[data-layer-id="${draggedElement.id}"]`);
-          if (el) {
-            el.style.width = (size / canvas.width * 100) + '%';
-            el.style.height = (size / canvas.height * 100) + '%';
-          }
+        // 1. Background
+        drawBackground(bass);
+        
+        // 2. FX
+        drawFX(bass);
+        
+        // 3. Visualizer
+        const type = document.getElementById('vizType').value;
+        if(type === 'cyberTunnel') drawCyberTunnel(bass);
+        else if(type === 'bars') drawBars(bass);
+        else if(type === 'circle') {
+             // Logic for circular bars...
+             drawBars(bass); // Fallback
         }
-      }
-    });
 
-    document.addEventListener('mouseup', () => {
-      isDragging = false;
-      isResizing = false;
-      draggedElement = null;
-    });
+        // 4. Emblem
+        drawEmblem(bass);
 
-    function updateDraggablePosition(layer) {
-      const el = overlay.querySelector(`[data-layer-id="${layer.id}"]`);
-      if (el) {
-        el.style.left = (layer.x / canvas.width * 100) + '%';
-        el.style.top = (layer.y / canvas.height * 100) + '%';
-      }
-    }
-
-    // ========================================
-    // ✏️ EDIT CONTROLS
-    // ========================================
-    
-    function selectLayer(layer) {
-      selectedLayer = layer;
-      
-      document.querySelectorAll('.draggable-element').forEach(el => {
-        el.classList.remove('selected');
-      });
-      
-      const el = overlay.querySelector(`[data-layer-id="${layer.id}"]`);
-      if (el) el.classList.add('selected');
-      
-      const editSection = document.getElementById('editSection');
-      editSection.style.display = 'block';
-      
-      document.getElementById('editText').value = layer.content || '';
-      document.getElementById('fontSize').value = layer.fontSize || 32;
-      document.getElementById('fontSizeValue').textContent = (layer.fontSize || 32) + 'px';
-      document.getElementById('textColor').value = layer.color || '#ffffff';
-      document.getElementById('opacity').value = layer.opacity || 100;
-      document.getElementById('opacityValue').textContent = (layer.opacity || 100) + '%';
-      document.getElementById('rotation').value = layer.rotation || 0;
-      document.getElementById('rotationValue').textContent = (layer.rotation || 0) + '°';
-      document.getElementById('roundImage').checked = layer.round || false;
-      
-      updateLayersList();
-    }
-
-    document.getElementById('editText').addEventListener('input', (e) => {
-      if (!selectedLayer) return;
-      selectedLayer.content = e.target.value;
-      
-      const el = overlay.querySelector(`[data-layer-id="${selectedLayer.id}"]`);
-      if (el && selectedLayer.type === 'text') {
-        el.textContent = e.target.value;
-      }
-    });
-
-    document.getElementById('fontSize').addEventListener('input', (e) => {
-      if (!selectedLayer) return;
-      selectedLayer.fontSize = parseInt(e.target.value);
-      document.getElementById('fontSizeValue').textContent = e.target.value + 'px';
-      
-      const el = overlay.querySelector(`[data-layer-id="${selectedLayer.id}"]`);
-      if (el) {
-        el.style.fontSize = (selectedLayer.fontSize / canvas.width * 100) + 'vw';
-      }
-    });
-
-    document.getElementById('textColor').addEventListener('input', (e) => {
-      if (!selectedLayer) return;
-      selectedLayer.color = e.target.value;
-      
-      const el = overlay.querySelector(`[data-layer-id="${selectedLayer.id}"]`);
-      if (el && selectedLayer.type === 'text') {
-        el.style.color = e.target.value;
-      }
-    });
-
-    document.getElementById('opacity').addEventListener('input', (e) => {
-      if (!selectedLayer) return;
-      selectedLayer.opacity = parseInt(e.target.value);
-      document.getElementById('opacityValue').textContent = e.target.value + '%';
-    });
-
-    document.getElementById('rotation').addEventListener('input', (e) => {
-      if (!selectedLayer) return;
-      selectedLayer.rotation = parseInt(e.target.value);
-      document.getElementById('rotationValue').textContent = e.target.value + '°';
-    });
-
-    document.getElementById('roundImage').addEventListener('change', (e) => {
-      if (!selectedLayer || selectedLayer.type !== 'image') return;
-      selectedLayer.round = e.target.checked;
-      
-      const el = overlay.querySelector(`[data-layer-id="${selectedLayer.id}"]`);
-      if (el) {
-        el.style.borderRadius = e.target.checked ? '50%' : '0';
-      }
-    });
-	document.getElementById('deleteBtn').addEventListener('click', () => {
-      if (!selectedLayer) return;
-      
-      layers = layers.filter(l => l.id !== selectedLayer.id);
-      
-      const el = overlay.querySelector(`[data-layer-id="${selectedLayer.id}"]`);
-      if (el) el.remove();
-      
-      selectedLayer = null;
-      document.getElementById('editSection').style.display = 'none';
-      updateLayersList();
-    });
-
-    // ========================================
-    // 📑 LAYERS LIST
-    // ========================================
-    
-    function updateLayersList() {
-      const list = document.getElementById('layersList');
-      list.innerHTML = '';
-      
-      if (layers.length === 0) {
-        list.innerHTML = '<div style="color: var(--muted); font-size: 12px; text-align: center; padding: 20px;">No layers yet</div>';
-        return;
-      }
-      
-      layers.forEach((layer, index) => {
-        const item = document.createElement('div');
-        item.className = 'layer-item';
-        if (selectedLayer && selectedLayer.id === layer.id) {
-          item.classList.add('selected');
+        // Update UI
+        if(audio.duration) {
+            const p = (audio.currentTime / audio.duration) * 100;
+            document.getElementById('progress').style.width = p + '%';
+            document.getElementById('timeInfo').innerText = 
+                formatTime(audio.currentTime) + " / " + formatTime(audio.duration);
         }
-        
-        const info = document.createElement('div');
-        info.className = 'layer-info';
-        
-        const name = document.createElement('div');
-        name.className = 'layer-name';
-        if (layer.type === 'text') {
-          name.textContent = layer.content.substring(0, 20) + (layer.content.length > 20 ? '...' : '');
-        } else if (layer.type === 'emoji') {
-          name.textContent = layer.content + ' Emoji';
-        } else if (layer.type === 'image') {
-          name.textContent = '🖼️ Image ' + (index + 1);
+
+        requestAnimationFrame(render);
+    }
+
+    function formatTime(s) {
+        const m = Math.floor(s/60);
+        const sec = Math.floor(s%60);
+        return m.toString().padStart(2,'0') + ":" + sec.toString().padStart(2,'0');
+    }
+
+    function showTab(id) {
+        document.querySelectorAll('.tab-content').forEach(t => t.style.display = 'none');
+        document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+        document.getElementById(id).style.display = 'block';
+        event.target.classList.add('active');
+    }
+
+    // --- RECORDING LOGIC ---
+    let mediaRecorder;
+    let recordedChunks = [];
+    document.getElementById('recordBtn').onclick = () => {
+        if(mediaRecorder && mediaRecorder.state === "recording") {
+            mediaRecorder.stop();
+            document.getElementById('recordBtn').innerText = "START RECORDING";
+            document.getElementById('recInd').style.display = "none";
+        } else {
+            recordedChunks = [];
+            const stream = canvas.captureStream(60);
+            
+            // Add audio to stream
+            if(audioCtx) {
+                const dest = audioCtx.createMediaStreamDestination();
+                source.connect(dest);
+                stream.addTrack(dest.stream.getAudioTracks()[0]);
+            }
+
+            mediaRecorder = new MediaRecorder(stream, { mimeType: 'video/webm;codecs=vp9' });
+            mediaRecorder.ondataavailable = e => recordedChunks.push(e.data);
+            mediaRecorder.onstop = () => {
+                const blob = new Blob(recordedChunks, { type: 'video/webm' });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url; a.download = 'viz_video.webm'; a.click();
+            };
+            mediaRecorder.start();
+            document.getElementById('recordBtn').innerText = "STOP & SAVE";
+            document.getElementById('recInd').style.display = "flex";
+            if(audio.paused) document.getElementById('playBtn').click();
         }
-        
-        const type = document.createElement('div');
-        type.className = 'layer-type';
-        type.textContent = layer.type.toUpperCase();
-        
-        info.appendChild(name);
-        info.appendChild(type);
-        
-        const actions = document.createElement('div');
-        actions.className = 'layer-actions';
-        
-        const visBtn = document.createElement('button');
-        visBtn.className = 'layer-btn';
-        visBtn.textContent = layer.visible ? '👁️' : '🚫';
-        visBtn.title = layer.visible ? 'Hide' : 'Show';
-        visBtn.onclick = (e) => {
-          e.stopPropagation();
-          layer.visible = !layer.visible;
-          const el = overlay.querySelector(`[data-layer-id="${layer.id}"]`);
-          if (el) el.style.display = layer.visible ? 'block' : 'none';
-          updateLayersList();
-        };
-        
-        const delBtn = document.createElement('button');
-        delBtn.className = 'layer-btn';
-        delBtn.textContent = '🗑️';
-        delBtn.title = 'Delete';
-        delBtn.onclick = (e) => {
-          e.stopPropagation();
-          layers = layers.filter(l => l.id !== layer.id);
-          const el = overlay.querySelector(`[data-layer-id="${layer.id}"]`);
-          if (el) el.remove();
-          if (selectedLayer && selectedLayer.id === layer.id) {
-            selectedLayer = null;
-            document.getElementById('editSection').style.display = 'none';
-          }
-          updateLayersList();
-        };
-        
-        actions.appendChild(visBtn);
-        actions.appendChild(delBtn);
-        
-        item.appendChild(info);
-        item.appendChild(actions);
-        
-        item.onclick = () => selectLayer(layer);
-        
-        list.appendChild(item);
-      });
-    }
+    };
 
-    // ========================================
-    // 🎬 RECORDING
-    // ========================================
-    
-    document.getElementById('recordBtn').addEventListener('click', () => {
-      if (isRecording) {
-        stopRecording();
-      } else {
-        startRecording();
-      }
-    });
+    init();
+</script>
 
-    function startRecording() {
-      if (!audioBuffer) {
-        updateStatus('Please load audio first', 'error');
-        return;
-      }
-
-      const fps = parseInt(document.getElementById('fps').value) || 30;
-      const stream = canvas.captureStream(fps);
-      
-      // Add audio track
-      const audioDestination = audioContext.createMediaStreamDestination();
-      analyser.connect(audioDestination);
-      
-      const audioTrack = audioDestination.stream.getAudioTracks()[0];
-      if (audioTrack) {
-        stream.addTrack(audioTrack);
-      }
-
-      const options = {
-        mimeType: 'video/webm;codecs=vp9,opus',
-        videoBitsPerSecond: 8000000
-      };
-
-      try {
-        mediaRecorder = new MediaRecorder(stream, options);
-      } catch (e) {
-        // Fallback to default codec
-        mediaRecorder = new MediaRecorder(stream);
-      }
-
-      recordedChunks = [];
-
-      mediaRecorder.ondataavailable = (e) => {
-        if (e.data.size > 0) {
-          recordedChunks.push(e.data);
-        }
-      };
-
-      mediaRecorder.onstop = () => {
-        const blob = new Blob(recordedChunks, { type: 'video/webm' });
-        const url = URL.createObjectURL(blob);
-        
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = `video-${Date.now()}.webm`;
-        a.click();
-        
-        URL.revokeObjectURL(url);
-        updateStatus('Video downloaded!', 'active');
-        
-        setTimeout(() => {
-          updateStatus('Ready', 'default');
-        }, 3000);
-      };
-
-      mediaRecorder.start(100);
-      isRecording = true;
-      
-      document.getElementById('recordBtn').innerHTML = '<span>⏹️</span><span>Stop</span>';
-      document.getElementById('recordingIndicator').classList.add('active');
-      
-      updateStatus('Recording...', 'active');
-      
-      // Auto-start playback
-      if (!isPlaying) {
-        seekTo(0);
-        startPlayback();
-      }
-    }
-
-    function stopRecording() {
-      if (mediaRecorder && isRecording) {
-        mediaRecorder.stop();
-        isRecording = false;
-        
-        document.getElementById('recordBtn').innerHTML = '<span>⏺️</span><span>Record</span>';
-        document.getElementById('recordingIndicator').classList.remove('active');
-        
-        if (isPlaying) {
-          pausePlayback();
-        }
-        
-        updateStatus('Processing video...', 'active');
-      }
-    }
-
-    // ========================================
-    // 💾 EXPORT (Alternative method)
-    // ========================================
-    
-    document.getElementById('exportBtn').addEventListener('click', () => {
-      if (isRecording) {
-        alert('Recording in progress! Please stop recording first.');
-        return;
-      }
-      
-      if (confirm('Start recording the video? This will play the audio from the beginning and record it.')) {
-        startRecording();
-      }
-    });
-
-    // ========================================
-    // 🔧 UTILITY FUNCTIONS
-    // ========================================
-    
-    function updateStatus(text, state = 'default') {
-      const statusText = document.getElementById('statusText');
-      const statusIndicator = document.getElementById('statusIndicator');
-      
-      statusText.textContent = text;
-      statusIndicator.className = 'status-indicator';
-      
-      if (state === 'active') {
-        statusIndicator.classList.add('active');
-      }
-    }
-
-    // ========================================
-    // 🎨 AUTO RENDER WHEN NOT PLAYING
-    // ========================================
-    
-    function continuousRender() {
-      if (!isPlaying && (audioBuffer || layers.length > 0)) {
-        render();
-      }
-      requestAnimationFrame(continuousRender);
-    }
-
-    continuousRender();
-
-    // ========================================
-    // ⌨️ KEYBOARD SHORTCUTS
-    // ========================================
-    
-    document.addEventListener('keydown', (e) => {
-      // Space = Play/Pause
-      if (e.code === 'Space' && !e.target.matches('input, textarea')) {
-        e.preventDefault();
-        togglePlayback();
-      }
-      
-      // Delete = Delete selected layer
-      if (e.code === 'Delete' && selectedLayer) {
-        layers = layers.filter(l => l.id !== selectedLayer.id);
-        const el = overlay.querySelector(`[data-layer-id="${selectedLayer.id}"]`);
-        if (el) el.remove();
-        selectedLayer = null;
-        document.getElementById('editSection').style.display = 'none';
-        updateLayersList();
-      }
-      
-      // Arrow keys = Move selected layer
-      if (selectedLayer && ['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(e.code)) {
-        e.preventDefault();
-        const step = e.shiftKey ? 10 : 1;
-        
-        switch (e.code) {
-          case 'ArrowUp':
-            selectedLayer.y = Math.max(0, selectedLayer.y - step);
-            break;
-          case 'ArrowDown':
-            selectedLayer.y = Math.min(canvas.height, selectedLayer.y + step);
-            break;
-          case 'ArrowLeft':
-            selectedLayer.x = Math.max(0, selectedLayer.x - step);
-            break;
-          case 'ArrowRight':
-            selectedLayer.x = Math.min(canvas.width, selectedLayer.x + step);
-            break;
-        }
-        
-        updateDraggablePosition(selectedLayer);
-      }
-    });
-
-    // ========================================
-    // 🎉 INITIALIZATION
-    // ========================================
-    
-    console.log('%c🎬 Super Video Creator Loaded!', 'color: #ff4da6; font-size: 20px; font-weight: bold;');
-    console.log('%c📝 Tips:', 'color: #00d1ff; font-size: 14px; font-weight: bold;');
-    console.log('• Drag elements to move them');
-    console.log('• Drag the bottom-right handle to resize');
-    console.log('• Double-click to select and edit');
-    console.log('• Use arrow keys to move selected element');
-    console.log('• Press Space to play/pause');
-    console.log('• Press Delete to remove selected element');
-    console.log('• Click Record to capture your creation!');
-    
-    updateStatus('Ready to create! Load audio to start 🎵', 'default');
-  </script>
 </body>
 </html>
