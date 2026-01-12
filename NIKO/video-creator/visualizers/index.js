@@ -3,18 +3,18 @@ import radial from './radial.js';
 import neon from './neon.js';
 import cyberTunnel from './cyberTunnel.js';
 
-export const visualizers = {
+const visualizers = {
   circular,
   radial,
   neon,
-  tunnel: cyberTunnel
+  cyberTunnel
 };
 
-export function renderVisualizer(type, ctx, centerX, centerY, dataArray, rotation) {
+export function renderVisualizer(type, ctx, dataArray, state) {
   const visualizer = visualizers[type];
   if (visualizer) {
-    visualizer(ctx, centerX, centerY, dataArray, rotation);
+    visualizer(ctx, dataArray, state);
   }
 }
 
-export default { visualizers, renderVisualizer };
+export default { renderVisualizer };
