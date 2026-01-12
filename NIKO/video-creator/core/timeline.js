@@ -1,78 +1,156 @@
-import state from './state.js';
+import { state } from './state.js';
+import { seekTo } from './audio.js';
 
-export function initTimeline() {
-  state.timelineCanvas = document.getElementById('timeline');
-  state.timelineCtx = state.timelineCanvas.getContext('2d');
+export function initTimelineInteraction() {
+  const ruler = document.getElementById('timelineRuler');
+  const playhead = document.getElementById('playhead');
   
-  if (state.audioElement) {
-    state.audioElement.addEventListener('timeupdate', drawTimeline);
-  }
+  // Click to seek
+  ruler.addEventListener('click', (e) => {
+    const rect = ruler.getBoundingClientRect();
+    const x = e.clientX - rect.left;
+    const time = x / state.timelineScale;
+    seekTo(time);
+  });
+  
+  // Drag playhead
+  playhead.addEventListener('mousedown', (e) => {
+    e.stopPropagation();
+    state.isDraggingPlayhead = true;
+    
+    const onMove = (e) => {
+      if (!state.isDraggingPlayhead) return;
+      
+      const rect = ruler.getBoundingClientRect();
+      const x = e.clientX - rect.left;
+      const time = Math.max(0, Math.min(x / state.timelineScale, state.duration));
+      seekTo(time);
+    };
+    
+    const onUp = () => {
+      state.isDraggingPlayhead = false;
+      document.removeEventListener('mousemove', onMove);
+      document.removeEventListener('mouseup', onUp);
+    };
+    
+    document.addEventListener('mousemove', onMove);
+    document.addEventListener('mouseup', onUp);
+  });
 }
 
-export function drawTimeline() {
-  if (!state.timelineCtx || !state.audioElement) return;
+export function addLayerToTimeline(layer) {
+  const tracks = document.getElementById('timelineTracks');
   
-  const ctx = state.timelineCtx;
-  const canvas = state.timelineCanvas;
-  const audio = state.audioElement;
+  const track = document.createElement('div');
+  track.className = 'timeline-track';
+  track.dataset.layerId = layer.id;
   
-  ctx.clearRect(0, 0, canvas.width, canvas.height);
+  const clip = document.createElement('div');
+  clip.className = 'timeline-clip';
+  clip.style.left = (layer.startTime * state.timelineScale) + 'px';
+  clip.style.width = ((layer.endTime - layer.startTime) * state.timelineScale) + 'px';
+  clip.style.background = layer.type === 'text' ? 'rgba(255, 0, 255, 0.5)' : 'rgba(0, 255, 255, 0.5)';
   
-  // Background
-  ctx.fillStyle = 'rgba(0, 0, 0, 0.5)';
-  ctx.fillRect(0, 0, canvas.width, canvas.height);
+  const label = document.createElement('div');
+  label.className = 'timeline-clip-label';
+  label.textContent = layer.name;
+  clip.appendChild(label);
   
-  // Waveform (если есть dataArray)
-  if (state.dataArray) {
-    ctx.beginPath();
-    const sliceWidth = canvas.width / state.dataArray.length;
-    let x = 0;
+  // Handles for trimming
+  const handleLeft = document.createElement('div');
+  handleLeft.className = 'timeline-clip-handle left';
+  clip.appendChild(handleLeft);
+  
+  const handleRight = document.createElement('div');
+  handleRight.className = 'timeline-clip-handle right';
+  clip.appendChild(handleRight);
+  
+  // Drag clip
+  initClipDrag(clip, layer);
+  
+  // Trim handles
+  initClipTrim(handleLeft, clip, layer, 'start');
+  initClipTrim(handleRight, clip, layer, 'end');
+  
+  track.appendChild(clip);
+  tracks.appendChild(track);
+}
+
+function initClipDrag(clip, layer) {
+  clip.addEventListener('mousedown', (e) => {
+    if (e.target.classList.contains('timeline-clip-handle')) return;
     
-    for (let i = 0; i < state.dataArray.length; i++) {
-      const v = state.dataArray[i] / 255;
-      const y = canvas.height / 2 + (v - 0.5) * canvas.height * 0.8;
+    e.stopPropagation();
+    const startX = e.clientX;
+    const startLeft = parseFloat(clip.style.left);
+    
+    const onMove = (e) => {
+      const dx = e.clientX - startX;
+      const newLeft = Math.max(0, startLeft + dx);
+      const newTime = newLeft / state.timelineScale;
       
-      if (i === 0) {
-        ctx.moveTo(x, y);
-      } else {
-        ctx.lineTo(x, y);
+      if (newTime + (layer.endTime - layer.startTime) <= state.duration) {
+        clip.style.left = newLeft + 'px';
+        const duration = layer.endTime - layer.startTime;
+        layer.startTime = newTime;
+        layer.endTime = newTime + duration;
       }
-      
-      x += sliceWidth;
-    }
+    };
     
-    ctx.strokeStyle = '#00d1ff';
-    ctx.lineWidth = 2;
-    ctx.stroke();
-  }
-  
-  // Progress bar
-  const progress = audio.currentTime / audio.duration;
-  const progressX = progress * canvas.width;
-  
-  ctx.fillStyle = 'rgba(255, 77, 166, 0.3)';
-  ctx.fillRect(0, 0, progressX, canvas.height);
-  
-  // Current time marker
-  ctx.strokeStyle = '#ff4da6';
-  ctx.lineWidth = 2;
-  ctx.beginPath();
-  ctx.moveTo(progressX, 0);
-  ctx.lineTo(progressX, canvas.height);
-  ctx.stroke();
-  
-  // Time labels
-  ctx.fillStyle = '#fff';
-  ctx.font = '10px monospace';
-  ctx.fillText(formatTime(audio.currentTime), 5, 15);
-  ctx.fillText(formatTime(audio.duration), canvas.width - 35, 15);
+    const onUp = () => {
+      document.removeEventListener('mousemove', onMove);
+      document.removeEventListener('mouseup', onUp);
+    };
+    
+    document.addEventListener('mousemove', onMove);
+    document.addEventListener('mouseup', onUp);
+  });
 }
 
-function formatTime(seconds) {
-  if (isNaN(seconds)) return '0:00';
-  const mins = Math.floor(seconds / 60);
-  const secs = Math.floor(seconds % 60);
-  return `${mins}:${secs.toString().padStart(2, '0')}`;
+function initClipTrim(handle, clip, layer, side) {
+  handle.addEventListener('mousedown', (e) => {
+    e.stopPropagation();
+    const startX = e.clientX;
+    const startLeft = parseFloat(clip.style.left);
+    const startWidth = parseFloat(clip.style.width);
+    
+    const onMove = (e) => {
+      const dx = e.clientX - startX;
+      
+      if (side === 'start') {
+        const newLeft = Math.max(0, startLeft + dx);
+        const newWidth = startWidth - dx;
+        
+        if (newWidth > 10) {
+          clip.style.left = newLeft + 'px';
+          clip.style.width = newWidth + 'px';
+          layer.startTime = newLeft / state.timelineScale;
+        }
+      } else {
+        const newWidth = Math.max(10, startWidth + dx);
+        clip.style.width = newWidth + 'px';
+        layer.endTime = layer.startTime + (newWidth / state.timelineScale);
+      }
+    };
+    
+    const onUp = () => {
+      document.removeEventListener('mousemove', onMove);
+      document.removeEventListener('mouseup', onUp);
+    };
+    
+    document.addEventListener('mousemove', onMove);
+    document.addEventListener('mouseup', onUp);
+  });
 }
 
-export default { initTimeline, drawTimeline };
+export function updateTimelineClip(layer) {
+  const tracks = document.getElementById('timelineTracks');
+  const track = tracks.querySelector(`[data-layer-id="${layer.id}"]`);
+  if (!track) return;
+  
+  const clip = track.querySelector('.timeline-clip');
+  clip.style.left = (layer.startTime * state.timelineScale) + 'px';
+  clip.style.width = ((layer.endTime - layer.startTime) * state.timelineScale) + 'px';
+}
+
+export default { initTimelineInteraction, addLayerToTimeline, updateTimelineClip };
