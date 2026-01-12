@@ -1,27 +1,40 @@
-export default function radial(ctx, centerX, centerY, dataArray, rotation) {
-  const lines = 80;
-  const maxRadius = Math.min(ctx.canvas.width, ctx.canvas.height) * 0.4;
+export default function radial(ctx, dataArray, state) {
+  const canvas = ctx.canvas;
+  const centerX = canvas.width / 2;
+  const centerY = canvas.height * (state.vizY / 100);
   
-  for (let i = 0; i < lines; i++) {
-    const angle = (i / lines) * Math.PI * 2 + rotation;
-    const freqIndex = Math.floor(i / lines * dataArray.length);
-    const value = dataArray[freqIndex] || 0;
-    const lineLength = (value / 255) * maxRadius;
+  const maxRadius = Math.min(canvas.width, canvas.height) * 0.4 * state.vizScale;
+  const points = 256;
+  
+  ctx.save();
+  ctx.translate(centerX, centerY);
+  
+  // Outer wave
+  ctx.beginPath();
+  for (let i = 0; i <= points; i++) {
+    const value = dataArray[Math.floor(i * dataArray.length / points)];
+    const radius = maxRadius + (value / 255) * maxRadius * 0.5;
+    const angle = (i / points) * Math.PI * 2;
+    const x = Math.cos(angle) * radius;
+    const y = Math.sin(angle) * radius;
     
-    const x = centerX + Math.cos(angle) * lineLength;
-    const y = centerY + Math.sin(angle) * lineLength;
-    
-    ctx.beginPath();
-    ctx.moveTo(centerX, centerY);
-    ctx.lineTo(x, y);
-    ctx.lineWidth = 2;
-    
-    const hue = (i / lines) * 360;
-    ctx.strokeStyle = `hsl(${hue}, 100%, 60%)`;
-    ctx.shadowBlur = 15;
-    ctx.shadowColor = ctx.strokeStyle;
-    ctx.stroke();
+    if (i === 0) {
+      ctx.moveTo(x, y);
+    } else {
+      ctx.lineTo(x, y);
+    }
   }
+  ctx.closePath();
   
-  ctx.shadowBlur = 0;
+  ctx.strokeStyle = state.vizColor;
+  ctx.lineWidth = 3;
+  ctx.shadowBlur = state.vizGlow;
+  ctx.shadowColor = state.vizColor;
+  ctx.stroke();
+  
+  // Inner fill
+  ctx.fillStyle = state.vizColor + '33';
+  ctx.fill();
+  
+  ctx.restore();
 }
