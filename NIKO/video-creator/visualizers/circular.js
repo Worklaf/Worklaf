@@ -1,27 +1,31 @@
-export default function circular(ctx, centerX, centerY, dataArray, rotation) {
-  const bars = 120;
-  const radius = Math.min(ctx.canvas.width, ctx.canvas.height) * 0.25;
+export default function circular(ctx, dataArray, state) {
+  const canvas = ctx.canvas;
+  const centerX = canvas.width / 2;
+  const centerY = canvas.height * (state.vizY / 100);
   
-  for (let i = 0; i < bars; i++) {
-    const angle = (i / bars) * Math.PI * 2 + rotation;
-    const freqIndex = Math.floor(i / bars * dataArray.length);
-    const value = dataArray[freqIndex] || 0;
-    const barHeight = (value / 255) * (radius * 0.8);
+  const radius = Math.min(canvas.width, canvas.height) * 0.15 * state.vizScale;
+  const barCount = 128;
+  const barWidth = (Math.PI * 2 * radius) / barCount;
+  
+  ctx.save();
+  ctx.translate(centerX, centerY);
+  
+  for (let i = 0; i < barCount; i++) {
+    const value = dataArray[Math.floor(i * dataArray.length / barCount)];
+    const height = (value / 255) * radius * 1.5;
+    const angle = (i / barCount) * Math.PI * 2;
     
-    const x1 = centerX + Math.cos(angle) * radius;
-    const y1 = centerY + Math.sin(angle) * radius;
-    const x2 = centerX + Math.cos(angle) * (radius + barHeight);
-    const y2 = centerY + Math.sin(angle) * (radius + barHeight);
+    ctx.save();
+    ctx.rotate(angle);
     
-    ctx.beginPath();
-    ctx.moveTo(x1, y1);
-    ctx.lineTo(x2, y2);
-    ctx.lineWidth = 3;
-    ctx.strokeStyle = `hsl(${(i / bars) * 360}, 100%, 60%)`;
-    ctx.shadowBlur = 10;
-    ctx.shadowColor = ctx.strokeStyle;
-    ctx.stroke();
+    // Bar
+    ctx.fillStyle = state.vizColor;
+    ctx.shadowBlur = state.vizGlow;
+    ctx.shadowColor = state.vizColor;
+    ctx.fillRect(radius, -barWidth / 2, height, barWidth);
+    
+    ctx.restore();
   }
   
-  ctx.shadowBlur = 0;
+  ctx.restore();
 }
