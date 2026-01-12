@@ -1,63 +1,68 @@
 // Глобальное состояние приложения
 export const state = {
-  // Audio
-  audioContext: null,
-  analyser: null,
-  dataArray: null,
-  source: null,
-  audioElement: null,
-  isPlaying: false,
-  
   // Canvas
   canvas: null,
   ctx: null,
-  
-  // Config
   width: 1920,
   height: 1080,
-  fps: 60,
+  
+  // Audio
+  audio: null,
+  audioContext: null,
+  analyser: null,
+  dataArray: null,
+  bufferLength: 0,
+  source: null,
+  isPlaying: false,
+  duration: 0,
+  currentTime: 0,
+  
+  // Background
+  bgColor: '#1a0033',
+  bgImage: null,
+  bgImageOpacity: 1,
+  bgBlur: 0,
+  bgBright: 100,
+  bgZoom: 1.0,
   
   // Visualizer
   visualizerType: 'circular',
-  vizColor: '#00d1ff',
+  vizColor: '#ff00ff',
   vizGlow: 20,
-  vizScale: 1,
-  vizY: 0.5,
-  audioSmooth: 0.7,
-  rotation: 0,
-  
-  // Background
-  bgColor: '#000000',
-  bgBlur: 0,
-  bgBright: 100,
-  bgReact: 0,
-  bgImage: null,
+  vizScale: 1.0,
+  vizY: 50,
+  audioSmoothing: 0.8,
   
   // Particles
-  partType: 'none',
-  partAmount: 50,
+  particleType: 'none',
+  particleAmount: 50,
   particles: [],
-  
-  // Emblem
-  emblemImage: null,
-  emblemSize: 0.15,
-  emblemX: 0.5,
-  emblemY: 0.5,
-  emblemCircle: false,
   
   // Layers
   layers: [],
   selectedLayer: null,
-  layerIdCounter: 0,
-  
-  // Recording
-  mediaRecorder: null,
-  recordedChunks: [],
-  isRecording: false,
+  layerIdCounter: 1,
   
   // Timeline
-  timelineCanvas: null,
-  timelineCtx: null
+  timelineScale: 100, // pixels per second
+  timelineOffset: 0,
+  isDraggingPlayhead: false,
+  
+  // Recording
+  recorder: null,
+  isRecording: false,
+  recordedChunks: [],
+  
+  // FPS
+  fps: 60,
+  
+  // Transform
+  isDragging: false,
+  isResizing: false,
+  dragStartX: 0,
+  dragStartY: 0,
+  resizeHandle: null,
+  initialBounds: null
 };
 
 export default state;
