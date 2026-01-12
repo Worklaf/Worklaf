@@ -858,43 +858,104 @@ const Visualizers = {
     ctx.shadowBlur = 0;
   },
 
-  tunnel(ctx, centerX, centerY, dataArray) {
+    tunnel(ctx, centerX, centerY, dataArray) {
+    // Защита: проверяем входные данные и зависимости
+    if (!ctx || !canvas || !Array.isArray(dataArray) || dataArray.length === 0) return;
+
+    ctx.save();
+
     const radius = Math.min(config.width, config.height) * 0.25 * state.vizScale;
     const bars = 90;
-    
-    const avgBass = dataArray.slice(0, 10).reduce((a, b) => a + b, 0) / 10;
+    const barWidth = 4;
+
+    // Фон: радиальный градиент (можно закомментировать, если фон рисуется отдельно)
+    const bgGradient = ctx.createRadialGradient(centerX, centerY, 0, centerX, centerY, radius * 3);
+    bgGradient.addColorStop(0, 'rgba(20, 0, 40, 1)');
+    bgGradient.addColorStop(1, 'rgba(0, 0, 0, 1)');
+    ctx.fillStyle = bgGradient;
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+    // Пульсирующий центр (avg bass)
+    const sliceCount = Math.min(10, dataArray.length);
+    const avgBass = dataArray.slice(0, sliceCount).reduce((a, b) => a + b, 0) / sliceCount;
     const pulseRadius = radius * 0.25 + (avgBass / 255) * 30;
-    
+
     ctx.beginPath();
     ctx.arc(centerX, centerY, pulseRadius, 0, Math.PI * 2);
-    ctx.fillStyle = '#FF00E5';
+    ctx.fillStyle = (typeof neonColors !== 'undefined' && neonColors.pink) ? neonColors.pink : '#FF00E5';
     ctx.shadowBlur = 30;
-    ctx.shadowColor = '#FF00E5';
+    ctx.shadowColor = ctx.fillStyle;
     ctx.fill();
     ctx.shadowBlur = 0;
-    
+
+    // Круговые полосы (туннель)
     for (let i = 0; i < bars; i++) {
-      const angle = (i / bars) * Math.PI * 2 + rotation * -1;
-      const freqIndex = Math.floor(i / bars * dataArray.length * 0.5);
+      const angle = (i / bars) * Math.PI * 2 + (rotation || 0) * -1;
+      const freqIndex = Math.min(Math.floor(i / bars * dataArray.length * 0.5), dataArray.length - 1);
       const value = dataArray[freqIndex] || 0;
       const barHeight = (value / 255) * (radius * 0.8);
-      
+
       const x1 = centerX + Math.cos(angle) * radius;
       const y1 = centerY + Math.sin(angle) * radius;
       const x2 = centerX + Math.cos(angle) * (radius + barHeight);
       const y2 = centerY + Math.sin(angle) * (radius + barHeight);
-      
+
       ctx.beginPath();
       ctx.moveTo(x1, y1);
       ctx.lineTo(x2, y2);
-      ctx.lineWidth = 4;
-      ctx.strokeStyle = state.vizColor;
-      ctx.shadowBlur = state.vizGlow;
-      ctx.shadowColor = state.vizColor;
+      ctx.lineWidth = barWidth;
+      ctx.lineCap = 'round';
+
+      // Цвет полосы: базовый неон или белый при сильном сигнале
+      const baseColor = (typeof neonColors !== 'undefined' && neonColors.cyan) ? neonColors.cyan : 'rgba(0,229,255,1)';
+      if (value > 150) {
+        ctx.strokeStyle = '#ffffff';
+        ctx.shadowBlur = 10;
+        ctx.shadowColor = '#ffffff';
+      } else {
+        ctx.strokeStyle = baseColor;
+        ctx.shadowBlur = state.vizGlow || 0;
+        ctx.shadowColor = baseColor;
+      }
+
+      ctx.stroke();
+      ctx.shadowBlur = 0;
+    }
+
+    // Концентрические кольца для глубины
+    for (let ring = 1; ring <= 4; ring++) {
+      const ringRadius = radius * (0.3 + ring * 0.15);
+      ctx.beginPath();
+      ctx.arc(centerX, centerY, ringRadius, 0, Math.PI * 2);
+      ctx.strokeStyle = `rgba(0, 229, 255, ${Math.max(0, 0.3 - ring * 0.05)})`;
+      ctx.lineWidth = 2;
       ctx.stroke();
     }
-    ctx.shadowBlur = 0;
+
+    // Лучи от центра (реагируют на низкие частоты)
+    const rayCount = 8;
+    for (let i = 0; i < rayCount; i++) {
+      const angle = (i / rayCount) * Math.PI * 2 + (rotation || 0) * 2;
+      const freqIndex = Math.min(Math.floor(i / rayCount * dataArray.length * 0.3), dataArray.length - 1);
+      const value = (dataArray[freqIndex] || 0) / 255;
+
+      if (value > 0.5) {
+        const rayLength = radius * 1.5 * value;
+        ctx.beginPath();
+        ctx.moveTo(centerX, centerY);
+        ctx.lineTo(centerX + Math.cos(angle) * rayLength, centerY + Math.sin(angle) * rayLength);
+        ctx.strokeStyle = `rgba(255, 0, 229, ${value * 0.5})`;
+        ctx.lineWidth = 3;
+        ctx.shadowBlur = 20;
+        ctx.shadowColor = (typeof neonColors !== 'undefined' && neonColors.pink) ? neonColors.pink : '#FF00E5';
+        ctx.stroke();
+        ctx.shadowBlur = 0;
+      }
+    }
+
+    ctx.restore();
   }
+
 };
 
 // =============================================
