@@ -1,966 +1,1414 @@
-<!doctype html>
 <html lang="en">
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>N1K∅ — Video Creator</title>
-  <link rel="stylesheet" href="https://unpkg.com/modern-normalize/modern-normalize.css">
-  <style>
-    :root{
-      --bg:#07060a;
-      --card:#0b0b10;
-      --muted:#bfc3d6;
-      --accent:#ff4da6;
-      --accent2:#00d1ff;
-      --radius:12px;
-    }
-    
-    * {
-      box-sizing: border-box;
-    }
-    
-    html,body{
-      height:100%;
-      margin:0;
-      font-family:Inter,system-ui,Arial,Helvetica,sans-serif;
-      background:var(--bg);
-      color:#eaeaf2;
-      -webkit-font-smoothing:antialiased;
-      -moz-osx-font-smoothing:grayscale;
-    }
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>N1K∅ — Advanced Video Creator</title>
+<link rel="stylesheet" href="https://unpkg.com/modern-normalize/modern-normalize.css">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+<style>
+ :root {
+ --bg: #07060a;
+ --card: #0b0b10;
+ --muted: #bfc3d6;
+ --accent: #ff4da6;
+ --accent2: #00d1ff;
+ --radius:12px;
+ }
+ * {
+ box-sizing: border-box;
+ }
+ html, body {
+ height:100%;
+ margin:0;
+ font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+ background: var(--bg);
+ color: #eaeaf2;
+ -webkit-font-smoothing: antialiased;
+ overflow-x: hidden;
+ }
 
-    body {
-      display: flex;
-      flex-direction: column;
-      overflow-x: hidden;
-    }
+ body {
+ display: flex;
+ flex-direction: column;
+ }
 
-    .header {
-      padding: 20px;
-      background: linear-gradient(180deg, var(--card), var(--bg));
-      border-bottom: 1px solid rgba(255,255,255,0.05);
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      gap: 12px;
-      flex-wrap: wrap;
-    }
+ /* HEADER */
+ .header {
+ padding:16px24px;
+ background: linear-gradient(180deg, rgba(11,11,16,0.95), transparent);
+ backdrop-filter: blur(10px);
+ border-bottom:1px solid rgba(255,255,255,0.05);
+ display: flex;
+ align-items: center;
+ justify-content: space-between;
+ flex-wrap: wrap;
+ gap:16px;
+ position: sticky;
+ top:0;
+ z-index:100;
+ }
 
-    .header h1 {
-      margin: 0;
-      font-size: 24px;
-      color: #fff;
-      display: flex;
-      align-items: center;
-      gap: 10px;
-    }
+ .header-title {
+ display: flex;
+ align-items: center;
+ gap:12px;
+ }
 
-    .back-btn {
-      background: rgba(255,255,255,0.05);
-      border: 1px solid rgba(255,255,255,0.1);
-      color: #fff;
-      padding: 8px 16px;
-      border-radius: 10px;
-      cursor: pointer;
-      text-decoration: none;
-      display: inline-flex;
-      align-items: center;
-      gap: 6px;
-      transition: all 0.2s;
-      font-size: 14px;
-      font-weight: 600;
-    }
+ .header-title h1 {
+ margin:0;
+ font-size:22px;
+ background: linear-gradient(90deg, var(--accent), var(--accent2));
+ -webkit-background-clip: text;
+ background-clip: text;
+ color: transparent;
+ font-weight:800;
+ }
 
-    .back-btn:hover {
-      background: rgba(255,255,255,0.1);
-      transform: translateY(-2px);
-    }
+ .header-controls {
+ display: flex;
+ gap:12px;
+ align-items: center;
+ }
 
-    .container {
-      flex: 1;
-      padding: 20px;
-      max-width: 1400px;
-      width: 100%;
-      margin: 0 auto;
-      display: flex;
-      flex-direction: column;
-      gap: 20px;
-    }
+ /* MAIN CONTAINER */
+ .main-container {
+ display: flex;
+ flex:1;
+ padding:0;
+ overflow: hidden;
+ }
 
-    .controls-panel {
-      background: var(--card);
-      border-radius: var(--radius);
-      padding: 20px;
-      border: 1px solid rgba(255,255,255,0.05);
-      box-shadow: 0 10px 30px rgba(0,0,0,0.3);
-    }
+ /* SIDEBAR */
+ .sidebar {
+ width:280px;
+ background: var(--card);
+ border-right:1px solid rgba(255,255,255,0.05);
+ padding:20px;
+ overflow-y: auto;
+ display: flex;
+ flex-direction: column;
+ gap:24px;
+ }
 
-    .control-row {
-      display: flex;
-      gap: 12px;
-      margin-bottom: 16px;
-      flex-wrap: wrap;
-      align-items: center;
-    }
+ @media (max-width:1024px) {
+ .sidebar {
+ width:260px;
+ }
+ }
 
-    .control-row:last-child {
-      margin-bottom: 0;
-    }
+ @media (max-width:768px) {
+ .sidebar {
+ display: none;
+ }
+ .sidebar.active {
+ display: flex;
+ position: fixed;
+ top:0;
+ left:0;
+ width:100%;
+ height:100%;
+ z-index:1000;
+ background: var(--bg);
+ }
+ }
 
-    .control-label {
-      color: var(--muted);
-      font-size: 13px;
-      font-weight: 600;
-      margin-bottom: 6px;
-      display: block;
-    }
+ /* PANELS */
+ .panel {
+ background: rgba(0,0,0,0.3);
+ border-radius: var(--radius);
+ padding:16px;
+ border:1px solid rgba(255,255,255,0.05);
+ }
 
-    .control-group {
-      flex: 1;
-      min-width: 200px;
-    }
+ .panel-title {
+ display: flex;
+ align-items: center;
+ justify-content: space-between;
+ margin-bottom:16px;
+ }
 
-    .input {
-      width: 100%;
-      padding: 10px 12px;
-      border-radius: 10px;
-      border: 1px solid rgba(255,255,255,0.08);
-      background: rgba(0,0,0,0.3);
-      color: #fff;
-      font-size: 14px;
-      transition: all 0.2s;
-    }
+ .panel-title h3 {
+ margin:0;
+ font-size:16px;
+ color: #fff;
+ font-weight:600;
+ display: flex;
+ align-items: center;
+ gap:8px;
+ }
 
-    .input:focus {
-      outline: none;
-      border-color: var(--accent);
-      box-shadow: 0 0 0 3px rgba(255,77,166,0.1);
-    }
+ .panel-title .icon {
+ color: var(--accent);
+ font-size:14px;
+ }
 
-    select.input {
-      cursor: pointer;
-    }
+ /* BUTTONS */
+ .btn {
+ display: inline-flex;
+ align-items: center;
+ justify-content: center;
+ gap:8px;
+ padding:10px18px;
+ border-radius:10px;
+ font-size:14px;
+ font-weight:600;
+ cursor: pointer;
+ transition: all0.2s;
+ border: none;
+ outline: none;
+ }
 
-    .btn {
-      background: linear-gradient(90deg, var(--accent), var(--accent2));
-      color: #fff;
-      border: none;
-      padding: 12px 24px;
-      border-radius: 10px;
-      font-size: 14px;
-      font-weight: 700;
-      cursor: pointer;
-      transition: all 0.2s;
-      display: inline-flex;
-      align-items: center;
-      gap: 8px;
-      box-shadow: 0 4px 12px rgba(255,77,166,0.3);
-    }
+ .btn-primary {
+ background: linear-gradient(90deg, var(--accent), var(--accent2));
+ color: white;
+ box-shadow:04px12px rgba(255,77,166,0.3);
+ }
 
-    .btn:hover:not(:disabled) {
-      transform: translateY(-2px);
-      box-shadow: 0 6px 20px rgba(255,77,166,0.4);
-    }
+ .btn-primary:hover:not(:disabled) {
+ transform: translateY(-2px);
+ box-shadow:06px20px rgba(255,77,166,0.4);
+ }
 
-    .btn:disabled {
-      opacity: 0.5;
-      cursor: not-allowed;
-    }
+ .btn-secondary {
+ background: rgba(255,255,255,0.08);
+ color: var(--muted);
+ border:1px solid rgba(255,255,255,0.1);
+ }
 
-    .btn-secondary {
-      background: rgba(255,255,255,0.05);
-      border: 1px solid rgba(255,255,255,0.1);
-      color: var(--muted);
-      box-shadow: none;
-    }
+ .btn-secondary:hover:not(:disabled) {
+ background: rgba(255,255,255,0.12);
+ color: white;
+ }
 
-    .btn-secondary:hover:not(:disabled) {
-      background: rgba(255,255,255,0.1);
-      color: #fff;
-    }
+ .btn-sm {
+ padding:6px12px;
+ font-size:12px;
+ }
 
-    .preview-area {
-      background: #000;
-      border-radius: var(--radius);
-      overflow: hidden;
-      position: relative;
-      aspect-ratio: 16/9;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      border: 1px solid rgba(255,255,255,0.1);
-      box-shadow: 0 10px 40px rgba(0,0,0,0.5);
-    }
+ .btn:disabled {
+ opacity:0.5;
+ cursor: not-allowed;
+ }
 
-    #videoCanvas {
-      width: 100%;
-      height: 100%;
-      object-fit: contain;
-    }
+ /* INPUTS */
+ .input-group {
+ margin-bottom:16px;
+ }
 
-    .status-bar {
-      background: rgba(0,0,0,0.8);
-      padding: 12px 16px;
-      border-radius: 10px;
-      color: var(--muted);
-      font-size: 13px;
-      display: flex;
-      align-items: center;
-      gap: 12px;
-      border: 1px solid rgba(255,255,255,0.05);
-    }
+ .input-group:last-child {
+ margin-bottom:0;
+ }
 
-    .status-indicator {
-      width: 8px;
-      height: 8px;
-      border-radius: 50%;
-      background: #666;
-      animation: pulse 2s infinite;
-    }
+ .input-label {
+ display: block;
+ color: var(--muted);
+ font-size:13px;
+ font-weight:500;
+ margin-bottom:6px;
+ }
 
-    .status-indicator.active {
-      background: #00ff00;
-      box-shadow: 0 0 10px #00ff00;
-    }
+ .input {
+ width:100%;
+ padding:10px12px;
+ border-radius:8px;
+ border:1px solid rgba(255,255,255,0.08);
+ background: rgba(0,0,0,0.4);
+ color: white;
+ font-size:14px;
+ transition: all0.2s;
+ }
 
-    .status-indicator.error {
-      background: #ff0000;
-      box-shadow: 0 0 10px #ff0000;
-    }
+ .input:focus {
+ outline: none;
+ border-color: var(--accent);
+ box-shadow:0003px rgba(255,77,166,0.1);
+ }
 
-    @keyframes pulse {
-      0%, 100% { opacity: 1; }
-      50% { opacity: 0.5; }
-    }
+ /* VISUALIZER SELECTION */
+ .viz-grid {
+ display: grid;
+ grid-template-columns: repeat(2,1fr);
+ gap:8px;
+ margin-top:12px;
+ }
 
-    .visualizer-select {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-      gap: 12px;
-      margin-top: 12px;
-    }
+ .viz-card {
+ background: rgba(255,255,255,0.03);
+ border:2px solid rgba(255,255,255,0.08);
+ border-radius:8px;
+ padding:12px;
+ cursor: pointer;
+ transition: all0.2s;
+ text-align: center;
+ }
 
-    .viz-card {
-      background: rgba(255,255,255,0.03);
-      border: 2px solid rgba(255,255,255,0.08);
-      border-radius: 10px;
-      padding: 16px;
-      cursor: pointer;
-      transition: all 0.2s;
-      text-align: center;
-    }
+ .viz-card:hover {
+ background: rgba(255,255,255,0.08);
+ border-color: rgba(255,255,255,0.15);
+ }
 
-    .viz-card:hover {
-      background: rgba(255,255,255,0.08);
-      border-color: rgba(255,255,255,0.15);
-      transform: translateY(-2px);
-    }
+ .viz-card.active {
+ background: linear-gradient(135deg, rgba(255,77,166,0.2), rgba(0,209,255,0.2));
+ border-color: var(--accent);
+ box-shadow:04px12px rgba(255,77,166,0.3);
+ }
 
-    .viz-card.active {
-      background: linear-gradient(135deg, rgba(255,77,166,0.2), rgba(0,209,255,0.2));
-      border-color: var(--accent);
-      box-shadow: 0 4px 20px rgba(255,77,166,0.3);
-    }
+ .viz-icon {
+ font-size:24px;
+ margin-bottom:6px;
+ }
 
-    .viz-icon {
-      font-size: 32px;
-      margin-bottom: 8px;
-    }
+ .viz-name {
+ font-size:12px;
+ font-weight:600;
+ color: white;
+ }
 
-    .viz-name {
-      font-weight: 600;
-      color: #fff;
-      font-size: 14px;
-    }
+ /* CONTENT AREA */
+ .content-area {
+ flex:1;
+ display: flex;
+ flex-direction: column;
+ padding:20px;
+ gap:20px;
+ overflow-y: auto;
+ }
 
-    .progress-bar {
-      width: 100%;
-      height: 6px;
-      background: rgba(255,255,255,0.1);
-      border-radius: 3px;
-      overflow: hidden;
-      margin-top: 12px;
-    }
+ /* CANVAS CONTAINER */
+ .canvas-container {
+ flex:1;
+ background: #000;
+ border-radius: var(--radius);
+ overflow: hidden;
+ position: relative;
+ border:1px solid rgba(255,255,255,0.1);
+ box-shadow:010px40px rgba(0,0,0,0.5);
+ min-height:400px;
+ }
 
-    .progress-fill {
-      height: 100%;
-      background: linear-gradient(90deg, var(--accent), var(--accent2));
-      width: 0%;
-      transition: width 0.3s;
-      box-shadow: 0 0 10px var(--accent);
-    }
+ #videoCanvas {
+ width:100%;
+ height:100%;
+ display: block;
+ }
 
-    .help-text {
-      color: var(--muted);
-      font-size: 12px;
-      margin-top: 6px;
-      font-style: italic;
-    }
+ /* TEXT EDITOR OVERLAY */
+ .text-editor {
+ position: absolute;
+ top:20px;
+ left:20px;
+ z-index:10;
+ background: rgba(0,0,0,0.8);
+ border-radius:8px;
+ padding:16px;
+ width:300px;
+ border:1px solid rgba(255,255,255,0.1);
+ backdrop-filter: blur(10px);
+ display: none;
+ }
 
-    @media (max-width: 768px) {
-      .header {
-        padding: 12px;
-      }
+ .text-editor.active {
+ display: block;
+ }
 
-      .header h1 {
-        font-size: 18px;
-      }
+ .text-editor-header {
+ display: flex;
+ justify-content: space-between;
+ align-items: center;
+ margin-bottom:12px;
+ }
 
-      .container {
-        padding: 12px;
-        gap: 12px;
-      }
+ .text-editor-title {
+ font-size:14px;
+ font-weight:600;
+ color: white;
+ }
 
-      .controls-panel {
-        padding: 12px;
-      }
+ .text-controls {
+ display: grid;
+ grid-template-columns: repeat(2,1fr);
+ gap:8px;
+ margin-bottom:12px;
+ }
 
-      .control-row {
-        flex-direction: column;
-        gap: 8px;
-      }
+ .color-picker {
+ display: flex;
+ gap:6px;
+ margin-bottom:12px;
+ }
 
-      .control-group {
-        min-width: 100%;
-      }
+ .color-option {
+ width:24px;
+ height:24px;
+ border-radius:50%;
+ cursor: pointer;
+ border:2px solid transparent;
+ transition: all0.2s;
+ }
 
-      .btn {
-        width: 100%;
-        justify-content: center;
-      }
+ .color-option:hover {
+ transform: scale(1.1);
+ }
 
-      .visualizer-select {
-        grid-template-columns: 1fr 1fr;
-        gap: 8px;
-      }
+ .color-option.active {
+ border-color: white;
+ box-shadow:0002px rgba(255,255,255,0.5);
+ }
 
-      .viz-icon {
-        font-size: 24px;
-      }
+ /* TIMELINE */
+ .timeline-container {
+ background: var(--card);
+ border-radius: var(--radius);
+ padding:16px;
+ border:1px solid rgba(255,255,255,0.05);
+ }
 
-      .viz-name {
-        font-size: 12px;
-      }
-    }
-  </style>
+ .timeline-header {
+ display: flex;
+ justify-content: space-between;
+ align-items: center;
+ margin-bottom:12px;
+ }
+
+ .timeline-title {
+ font-size:14px;
+ font-weight:600;
+ color: white;
+ display: flex;
+ align-items: center;
+ gap:8px;
+ }
+
+ .timeline {
+ height:100px;
+ background: rgba(0,0,0,0.3);
+ border-radius:6px;
+ position: relative;
+ overflow: hidden;
+ }
+
+ .timeline-waveform {
+ position: absolute;
+ top:0;
+ left:0;
+ width:100%;
+ height:100%;
+ opacity:0.3;
+ }
+
+ .timeline-progress {
+ position: absolute;
+ top:0;
+ left:0;
+ width:0%;
+ height:100%;
+ background: rgba(255,77,166,0.2);
+ pointer-events: none;
+ }
+
+ .timeline-cursor {
+ position: absolute;
+ top:0;
+ left:0;
+ width:2px;
+ height:100%;
+ background: var(--accent);
+ pointer-events: none;
+ box-shadow:0010px var(--accent);
+ }
+
+ /* ELEMENTS PANEL */
+ .elements-panel {
+ background: var(--card);
+ border-radius: var(--radius);
+ padding:16px;
+ border:1px solid rgba(255,255,255,0.05);
+ }
+
+ .elements-list {
+ display: flex;
+ flex-direction: column;
+ gap:8px;
+ }
+
+ .element-item {
+ display: flex;
+ align-items: center;
+ justify-content: space-between;
+ padding:10px12px;
+ background: rgba(255,255,255,0.03);
+ border-radius:6px;
+ cursor: pointer;
+ transition: all0.2s;
+ }
+
+ .element-item:hover {
+ background: rgba(255,255,255,0.08);
+ }
+
+ .element-item.active {
+ background: rgba(255,77,166,0.1);
+ border-left:3px solid var(--accent);
+ }
+
+ .element-info {
+ display: flex;
+ align-items: center;
+ gap:10px;
+ }
+
+ .element-icon {
+ color: var(--accent);
+ font-size:14px;
+ }
+
+ .element-name {
+ font-size:13px;
+ color: white;
+ }
+
+ .element-actions {
+ display: flex;
+ gap:6px;
+ }
+
+ /* EMOJI PICKER */
+ .emoji-picker {
+ position: absolute;
+ bottom:100px;
+ right:20px;
+ background: rgba(0,0,0,0.9);
+ border-radius:12px;
+ padding:16px;
+ width:300px;
+ border:1px solid rgba(255,255,255,0.1);
+ backdrop-filter: blur(10px);
+ z-index:100;
+ display: none;
+ }
+
+ .emoji-picker.active {
+ display: block;
+ }
+
+ .emoji-grid {
+ display: grid;
+ grid-template-columns: repeat(6,1fr);
+ gap:8px;
+ margin-top:12px;
+ max-height:200px;
+ overflow-y: auto;
+ }
+
+ .emoji-item {
+ font-size:24px;
+ text-align: center;
+ cursor: pointer;
+ padding:6px;
+ border-radius:6px;
+ transition: all0.2s;
+ }
+
+ .emoji-item:hover {
+ background: rgba(255,255,255,0.1);
+ transform: scale(1.2);
+ }
+
+ /* STATUS BAR */
+ .status-bar {
+ background: rgba(0,0,0,0.8);
+ padding:10px16px;
+ border-radius:8px;
+ color: var(--muted);
+ font-size:12px;
+ display: flex;
+ align-items: center;
+ gap:12px;
+ border:1px solid rgba(255,255,255,0.05);
+ }
+
+ .status-indicator {
+ width:8px;
+ height:8px;
+ border-radius:50%;
+ background: #666;
+ animation: pulse2s infinite;
+ }
+
+ .status-indicator.active {
+ background: #00ff88;
+ box-shadow:0010px #00ff88;
+ }
+
+ .status-indicator.error {
+ background: #ff5555;
+ box-shadow:0010px #ff5555;
+ }
+
+ @keyframes pulse {
+0%,100% { opacity:1; }
+50% { opacity:0.5; }
+ }
+
+ /* MOBILE MENU */
+ .mobile-menu-btn {
+ display: none;
+ background: rgba(255,255,255,0.08);
+ border:1px solid rgba(255,255,255,0.1);
+ color: white;
+ padding:10px;
+ border-radius:8px;
+ cursor: pointer;
+ font-size:16px;
+ }
+
+ @media (max-width:768px) {
+ .mobile-menu-btn {
+ display: block;
+ }
+ .header-controls {
+ flex:1;
+ justify-content: flex-end;
+ }
+ }
+
+ /* HELP TEXT */
+ .help-text {
+ color: var(--muted);
+ font-size:11px;
+ margin-top:4px;
+ font-style: italic;
+ }
+
+ /* SCROLLBAR */
+ ::-webkit-scrollbar {
+ width:6px;
+ height:6px;
+ }
+
+ ::-webkit-scrollbar-track {
+ background: rgba(255,255,255,0.05);
+ border-radius:3px;
+ }
+
+ ::-webkit-scrollbar-thumb {
+ background: rgba(255,255,255,0.2);
+ border-radius:3px;
+ }
+
+ ::-webkit-scrollbar-thumb:hover {
+ background: rgba(255,255,255,0.3);
+ }
+ </style>
 </head>
 <body>
-  <div class="header">
-    <h1>
-      <span>🎬</span>
-      <span>Video Creator</span>
-    </h1>
-    <a href="index.html" class="back-btn">
-      <span>←</span>
-      <span>Back to Tracks</span>
-    </a>
-  </div>
+ <!-- HEADER -->
+<div class="header">
+<div class="header-title">
+<button class="mobile-menu-btn" id="mobileMenuBtn">
+<i class="fas fa-bars"></i>
+ </button>
+<h1>Advanced Video Creator</h1>
+ </div>
+<div class="header-controls">
+<button class="btn btn-secondary" id="backBtn">
+<i class="fas fa-arrow-left"></i>
+ Back </button>
+<button class="btn btn-primary" id="recordBtn">
+<i class="fas fa-video"></i>
+ Record Video </button>
+ </div>
+ </div>
 
-  <div class="container">
-    <!-- ПАНЕЛЬ УПРАВЛЕНИЯ -->
-    <div class="controls-panel">
-      <div class="control-row">
-        <div class="control-group">
-          <label class="control-label">Audio File (MP3)</label>
-          <input type="file" id="audioFile" accept="audio/mp3" class="input">
-          <p class="help-text">Select your track MP3 file</p>
-        </div>
-        
-        <div class="control-group">
-          <label class="control-label">Video Title</label>
-          <input type="text" id="videoTitle" class="input" placeholder="My Awesome Track" value="N1K∅ - Cyber Music">
-          <p class="help-text">Will be displayed on the video</p>
-        </div>
-      </div>
+ <!-- MAIN CONTAINER -->
+<div class="main-container">
+ <!-- SIDEBAR -->
+<div class="sidebar" id="sidebar">
+ <!-- AUDIO PANEL -->
+<div class="panel">
+<div class="panel-title">
+<h3><i class="fas fa-music icon"></i> Audio Track</h3>
+ </div>
+<div class="input-group">
+<label class="input-label">Select MP3 File</label>
+<input type="file" id="audioFile" accept="audio/mp3" class="input">
+<p class="help-text">Upload your music file (MP3 format)</p>
+ </div>
+<div class="input-group">
+<label class="input-label">Video Title</label>
+<input type="text" id="videoTitle" class="input" value="N1K∅ - Cyber Music">
+ </div>
+ </div>
 
-      <div class="control-row">
-        <div class="control-group">
-          <label class="control-label">Resolution</label>
-          <select id="resolution" class="input">
-            <option value="1920x1080">1920x1080 (Full HD)</option>
-            <option value="1280x720">1280x720 (HD)</option>
-            <option value="3840x2160">3840x2160 (4K)</option>
-          </select>
-        </div>
+ <!-- VISUALIZER PANEL -->
+<div class="panel">
+<div class="panel-title">
+<h3><i class="fas fa-eye icon"></i> Visualizer Style</h3>
+ </div>
+<div class="viz-grid">
+<div class="viz-card active" data-viz="circular">
+<div class="viz-icon">⭕</div>
+<div class="viz-name">Circular Spectrum</div>
+ </div>
+<div class="viz-card" data-viz="radial">
+<div class="viz-icon">🌈</div>
+<div class="viz-name">Radial Spectrum</div>
+ </div>
+<div class="viz-card" data-viz="neon">
+<div class="viz-icon">💫</div>
+<div class="viz-name">Neon Circle</div>
+ </div>
+<div class="viz-card" data-viz="tunnel">
+<div class="viz-icon">🚀</div>
+<div class="viz-name">Cyber Tunnel</div>
+ </div>
+ </div>
+ </div>
 
-        <div class="control-group">
-          <label class="control-label">Frame Rate</label>
-          <select id="fps" class="input">
-            <option value="24">24 FPS (Cinematic)</option>
-            <option value="30" selected>30 FPS (Standard)</option>
-            <option value="60">60 FPS (Smooth)</option>
-          </select>
-        </div>
-      </div>
+ <!-- BACKGROUND PANEL -->
+<div class="panel">
+<div class="panel-title">
+<h3><i class="fas fa-image icon"></i> Background Image</h3>
+<button class="btn btn-sm btn-secondary" id="clearBgBtn">
+<i class="fas fa-times"></i>
+ </button>
+ </div>
+<div class="input-group">
+<label class="input-label">Upload Image</label>
+<input type="file" id="bgImageFile" accept="image/*" class="input">
+ </div>
+<div class="input-group">
+<label class="input-label">Image Opacity</label>
+<input type="range" id="bgOpacity" min="0" max="100" value="50" class="input">
+ </div>
+<div class="input-group">
+<label class="input-label">Image Style</label>
+<select id="bgStyle" class="input">
+<option value="cover">Cover</option>
+<option value="contain">Contain</option>
+<option value="circle">Circle</option>
+<option value="blur">Blur Effect</option>
+ </select>
+ </div>
+ </div>
 
-      <!-- ВЫБОР ВИЗУАЛИЗАТОРА -->
-      <div class="control-group">
-        <label class="control-label">Choose Visualizer</label>
-        <div class="visualizer-select">
-          <div class="viz-card active" data-viz="circular">
-            <div class="viz-icon">⭕</div>
-            <div class="viz-name">Circular Spectrum</div>
-          </div>
-          <div class="viz-card" data-viz="radial">
-            <div class="viz-icon">🌈</div>
-            <div class="viz-name">Radial Spectrum</div>
-          </div>
-          <div class="viz-card" data-viz="neon">
-            <div class="viz-icon">💫</div>
-            <div class="viz-name">Neon Circle</div>
-          </div>
-          <div class="viz-card" data-viz="tunnel">
-            <div class="viz-icon">🚀</div>
-            <div class="viz-name">Cyber Tunnel</div>
-          </div>
-        </div>
-      </div>
+ <!-- TEXT PANEL -->
+<div class="panel">
+<div class="panel-title">
+<h3><i class="fas fa-font icon"></i> Text & Subtitles</h3>
+<button class="btn btn-sm btn-primary" id="addTextBtn">
+<i class="fas fa-plus"></i> Add </button>
+ </div>
+<div class="input-group">
+<label class="input-label">Text Content</label>
+<input type="text" id="textContent" class="input" placeholder="Enter your text">
+ </div>
+<div class="input-group">
+<label class="input-label">Font Size</label>
+<input type="range" id="textSize" min="10" max="100" value="30" class="input">
+ </div>
+<div class="input-group">
+<label class="input-label">Text Color</label>
+<div class="color-picker">
+<div class="color-option active" style="background: #ffffff;"></div>
+<div class="color-option" style="background: #ff4da6;"></div>
+<div class="color-option" style="background: #00d1ff;"></div>
+<div class="color-option" style="background: #ffcc00;"></div>
+<div class="color-option" style="background: #00ff88;"></div>
+ </div>
+ </div>
+<button class="btn btn-secondary" id="addEmojiBtn">
+<i class="fas fa-smile"></i> Add Emoji </button>
+ </div>
+ </div>
 
-      <!-- КНОПКИ ДЕЙСТВИЙ -->
-      <div class="control-row" style="margin-top: 20px">
-        <button id="previewBtn" class="btn btn-secondary">
-          <span>👁️</span>
-          <span>Preview</span>
-        </button>
-        <button id="renderBtn" class="btn" disabled>
-          <span>🎥</span>
-          <span>Render Video</span>
-        </button>
-      </div>
+ <!-- CONTENT AREA -->
+<div class="content-area">
+ <!-- CANVAS CONTAINER -->
+<div class="canvas-container">
+<canvas id="videoCanvas"></canvas>
+ <!-- TEXT EDITOR OVERLAY -->
+<div class="text-editor" id="textEditor">
+<div class="text-editor-header">
+<div class="text-editor-title">Edit Text</div>
+<button class="btn btn-sm btn-secondary" id="closeTextEditor">
+<i class="fas fa-times"></i>
+ </button>
+ </div>
+<div class="text-controls">
+<input type="text" id="editTextContent" class="input" placeholder="Text">
+<input type="number" id="editTextSize" class="input" placeholder="Size" value="30">
+ </div>
+<div class="color-picker">
+<div class="color-option active" style="background: #ffffff;"></div>
+<div class="color-option" style="background: #ff4da6;"></div>
+<div class="color-option" style="background: #00d1ff;"></div>
+<div class="color-option" style="background: #ffcc00;"></div>
+<div class="color-option" style="background: #00ff88;"></div>
+ </div>
+ </div>
+ <!-- EMOJI PICKER -->
+<div class="emoji-picker" id="emojiPicker">
+<div class="text-editor-header">
+<div class="text-editor-title">Select Emoji</div>
+<button class="btn btn-sm btn-secondary" id="closeEmojiPicker">
+<i class="fas fa-times"></i>
+ </button>
+ </div>
+<div class="emoji-grid">
+<div class="emoji-item">😀</div>
+<div class="emoji-item">😎</div>
+<div class="emoji-item">🔥</div>
+<div class="emoji-item">💥</div>
+<div class="emoji-item">✨</div>
+<div class="emoji-item">🌟</div>
+<div class="emoji-item">🎵</div>
+<div class="emoji-item">🎶</div>
+<div class="emoji-item">🎧</div>
+<div class="emoji-item">🎸</div>
+<div class="emoji-item">👾</div>
+<div class="emoji-item">🚀</div>
+<div class="emoji-item">💫</div>
+<div class="emoji-item">🌈</div>
+<div class="emoji-item">⭐</div>
+<div class="emoji-item">⚡</div>
+<div class="emoji-item">💯</div>
+<div class="emoji-item">🦄</div>
+ </div>
+ </div>
+ </div>
 
-      <!-- ПРОГРЕСС БАР -->
-      <div id="progressContainer" style="display:none">
-        <div class="progress-bar">
-          <div class="progress-fill" id="progressFill"></div>
-        </div>
-        <p class="help-text" id="progressText">Processing: 0%</p>
-      </div>
-    </div>
+ <!-- TIMELINE -->
+<div class="timeline-container">
+<div class="timeline-header">
+<div class="timeline-title">
+<i class="fas fa-sliders-h"></i>
+ Timeline & Playback </div>
+<div class="timeline-controls">
+<button class="btn btn-sm btn-secondary" id="playBtn">
+<i class="fas fa-play"></i>
+ </button>
+<button class="btn btn-sm btn-secondary" id="pauseBtn">
+<i class="fas fa-pause"></i>
+ </button>
+<button class="btn btn-sm btn-secondary" id="stopBtn">
+<i class="fas fa-stop"></i>
+ </button>
+ </div>
+ </div>
+<div class="timeline" id="timeline">
+<div class="timeline-waveform" id="timelineWaveform"></div>
+<div class="timeline-progress" id="timelineProgress"></div>
+<div class="timeline-cursor" id="timelineCursor"></div>
+ </div>
+<div class="timeline-info">
+<span id="currentTime">0:00</span> /<span id="durationTime">0:00</span>
+ </div>
+ </div>
 
-    <!-- ПРЕВЬЮ ВИДЕО -->
-    <div class="preview-area">
-      <canvas id="videoCanvas"></canvas>
-    </div>
+ <!-- ELEMENTS PANEL -->
+<div class="elements-panel">
+<div class="panel-title">
+<h3><i class="fas fa-layer-group icon"></i> Elements</h3>
+<button class="btn btn-sm btn-secondary" id="deleteElementBtn">
+<i class="fas fa-trash"></i> Delete </button>
+ </div>
+<div class="elements-list" id="elementsList">
+ <!-- Elements will be added here dynamically -->
+ </div>
+ </div>
 
-    <!-- СТАТУС БАР -->
-    <div class="status-bar">
-      <div class="status-indicator" id="statusIndicator"></div>
-      <span id="statusText">Ready to create video</span>
-    </div>
-  </div>
+ <!-- STATUS BAR -->
+<div class="status-bar">
+<div class="status-indicator" id="statusIndicator"></div>
+<span id="statusText">Ready to create video</span>
+<span style="margin-left: auto;" id="resolutionInfo">1920x1080</span>
+ </div>
+ </div>
+ </div>
 
-  <script src="https://cdn.jsdelivr.net/npm/@ffmpeg/ffmpeg@0.12.6/dist/umd/ffmpeg.js"></script>
-  
-  <script>
-    let selectedVisualizer = 'circular';
-    let audioContext = null;
-    let analyser = null;
-    let dataArray = null;
-    let animationId = null;
-    let audioFile = null;
-    let isRendering = false;
+ <!-- SCRIPT -->
+<script>
+ // Global variables let selectedVisualizer = 'circular';
+ let audioContext = null;
+ let analyser = null;
+ let dataArray = null;
+ let animationId = null;
+ let audioFile = null;
+ let audioSource = null;
+ let isPlaying = false;
+ let startTime =0;
+ let pausedTime =0;
+ let bgImage = null;
+ let bgOpacity =50;
+ let bgStyle = 'cover';
+ let elements = [];
+ let selectedElement = null;
+ let emojiPickerActive = false;
+ let textEditorActive = false;
+ let mediaRecorder = null;
+ let recordedChunks = [];
+ let isRecording = false;
 
-    const canvas = document.getElementById('videoCanvas');
-    const ctx = canvas.getContext('2d');
-    
-    // НАСТРОЙКА CANVAS
-    function setCanvasResolution() {
-      const resolution = document.getElementById('resolution').value;
-      const [width, height] = resolution.split('x').map(Number);
-      canvas.width = width;
-      canvas.height = height;
-    }
+ const canvas = document.getElementById('videoCanvas');
+ const ctx = canvas.getContext('2d');
+ canvas.width =1920;
+ canvas.height =1080;
 
-    setCanvasResolution();
+ // DOM Elements const statusIndicator = document.getElementById('statusIndicator');
+ const statusText = document.getElementById('statusText');
+ const elementsList = document.getElementById('elementsList');
+ const timeline = document.getElementById('timeline');
+ const timelineProgress = document.getElementById('timelineProgress');
+ const timelineCursor = document.getElementById('timelineCursor');
+ const currentTimeEl = document.getElementById('currentTime');
+ const durationTimeEl = document.getElementById('durationTime');
+ const sidebar = document.getElementById('sidebar');
+ const mobileMenuBtn = document.getElementById('mobileMenuBtn');
+ const textEditor = document.getElementById('textEditor');
+ const emojiPicker = document.getElementById('emojiPicker');
 
-    // ВЫБОР ВИЗУАЛИЗАТОРА
-    document.querySelectorAll('.viz-card').forEach(card => {
-      card.addEventListener('click', () => {
-        document.querySelectorAll('.viz-card').forEach(c => c.classList.remove('active'));
-        card.classList.add('active');
-        selectedVisualizer = card.dataset.viz;
-        updateStatus(`Selected: ${card.querySelector('.viz-name').textContent}`, 'active');
-      });
-    });
+ // Initialize function init() {
+ setupEventListeners();
+ updateStatus('Ready to create video', 'default');
+ updateResolutionInfo();
+ }
 
-    // ЗАГРУЗКА АУДИО
-    document.getElementById('audioFile').addEventListener('change', (e) => {
-      audioFile = e.target.files[0];
-      if (audioFile) {
-        document.getElementById('renderBtn').disabled = false;
-        updateStatus(`Audio loaded: ${audioFile.name}`, 'active');
-      }
-    });
+ // Setup event listeners function setupEventListeners() {
+ // Visualizer selection document.querySelectorAll('.viz-card').forEach(card => {
+ card.addEventListener('click', () => {
+ document.querySelectorAll('.viz-card').forEach(c => c.classList.remove('active'));
+ card.classList.add('active');
+ selectedVisualizer = card.dataset.viz;
+ updateStatus(`Visualizer: ${card.querySelector('.viz-name').textContent}`, 'active');
+ });
+ });
 
-    // ОБНОВЛЕНИЕ РАЗРЕШЕНИЯ
-    document.getElementById('resolution').addEventListener('change', setCanvasResolution);
+ // Audio file upload document.getElementById('audioFile').addEventListener('change', (e) => {
+ audioFile = e.target.files[0];
+ if (audioFile) {
+ updateStatus(`Audio loaded: ${audioFile.name}`, 'active');
+ loadAudioForPreview();
+ }
+ });
 
-    // ФУНКЦИЯ ОБНОВЛЕНИЯ СТАТУСА
-    function updateStatus(text, type = 'default') {
-      const statusText = document.getElementById('statusText');
-      const statusIndicator = document.getElementById('statusIndicator');
-      
-      statusText.textContent = text;
-      
-      statusIndicator.className = 'status-indicator';
-      if (type === 'active') statusIndicator.classList.add('active');
-      if (type === 'error') statusIndicator.classList.add('error');
-    }
+ // Background image document.getElementById('bgImageFile').addEventListener('change', (e) => {
+ const file = e.target.files[0];
+ if (file) {
+ const reader = new FileReader();
+ reader.onload = (e) => {
+ bgImage = new Image();
+ bgImage.onload = () => {
+ updateStatus('Background image loaded', 'active');
+ };
+ bgImage.src = e.target.result;
+ };
+ reader.readAsDataURL(file);
+ }
+ });
 
-    // ПРЕВЬЮ
-    document.getElementById('previewBtn').addEventListener('click', async () => {
-      if (!audioFile) {
-        updateStatus('Please select audio file first', 'error');
-        return;
-      }
+ // Background controls document.getElementById('bgOpacity').addEventListener('input', (e) => {
+ bgOpacity = e.target.value;
+ });
 
-      updateStatus('Loading preview...', 'active');
+ document.getElementById('bgStyle').addEventListener('change', (e) => {
+ bgStyle = e.target.value;
+ });
 
-      try {
-        if (audioContext) {
-          audioContext.close();
-        }
+ document.getElementById('clearBgBtn').addEventListener('click', () => {
+ bgImage = null;
+ document.getElementById('bgImageFile').value = '';
+ });
 
-        audioContext = new (window.AudioContext || window.webkitAudioContext)();
-        analyser = audioContext.createAnalyser();
-        analyser.fftSize = 1024;
-        analyser.smoothingTimeConstant = 0.85;
+ // Text controls document.getElementById('addTextBtn').addEventListener('click', addTextElement);
+ document.getElementById('addEmojiBtn').addEventListener('click', () => {
+ emojiPicker.classList.toggle('active');
+ emojiPickerActive = !emojiPickerActive;
+ });
 
-        const arrayBuffer = await audioFile.arrayBuffer();
-        const audioBuffer = await audioContext.decodeAudioData(arrayBuffer);
-        
-        const source = audioContext.createBufferSource();
-        source.buffer = audioBuffer;
-        source.connect(analyser);
-        analyser.connect(audioContext.destination);
-        
-        dataArray = new Uint8Array(analyser.frequencyBinCount);
-        
-        source.start(0);
-        startVisualization();
-        
-        updateStatus('Preview playing...', 'active');
-      } catch (error) {
-        console.error('Preview error:', error);
-        updateStatus('Preview error: ' + error.message, 'error');
-      }
-    });
+ // Color picker document.querySelectorAll('.color-option').forEach(option => {
+ option.addEventListener('click', (e) => {
+ document.querySelectorAll('.color-option').forEach(o => o.classList.remove('active'));
+ e.target.classList.add('active');
+ });
+ });
 
-    // ВИЗУАЛИЗАЦИЯ
-    let rotation = 0;
-    let time = 0;
+ // Timeline controls document.getElementById('playBtn').addEventListener('click', playAudio);
+ document.getElementById('pauseBtn').addEventListener('click', pauseAudio);
+ document.getElementById('stopBtn').addEventListener('click', stopAudio);
 
-    function startVisualization() {
-      if (animationId) cancelAnimationFrame(animationId);
-      animate();
-    }
+ timeline.addEventListener('click', (e) => {
+ const rect = timeline.getBoundingClientRect();
+ const x = e.clientX - rect.left;
+ const percent = x / rect.width;
+ if (audioContext && audioSource) {
+ const duration = audioSource.buffer.duration;
+ const seekTime = duration * percent;
+ seekAudio(seekTime);
+ }
+ });
 
-    function animate() {
-      if (!analyser) return;
-      
-      animationId = requestAnimationFrame(animate);
-      analyser.getByteFrequencyData(dataArray);
-      
-      rotation += 0.005;
-      time += 0.01;
-      
-      ctx.clearRect(0, 0, canvas.width, canvas.height);
-      
-      const centerX = canvas.width / 2;
-      const centerY = canvas.height / 2;
-      
-      switch (selectedVisualizer) {
-        case 'circular':
-          drawCircularSpectrum(ctx, centerX, centerY);
-          break;
-        case 'radial':
-          drawRadialSpectrum(ctx, centerX, centerY);
-          break;
-        case 'neon':
-          drawNeonCircle(ctx, centerX, centerY);
-          break;
-        case 'tunnel':
-          drawCyberTunnel(ctx, centerX, centerY);
-          break;
-      }
-      
-      // ДОБАВЛЯЕМ НАЗВАНИЕ ТРЕКА
-      const title = document.getElementById('videoTitle').value;
-      if (title) {
-        ctx.fillStyle = '#fff';
-        ctx.font = `bold ${canvas.width * 0.03}px Arial`;
-        ctx.textAlign = 'center';
-        ctx.shadowBlur = 10;
-        ctx.shadowColor = '#000';
-        ctx.fillText(title, centerX, canvas.height - 40);
-        ctx.shadowBlur = 0;
-      }
-    }
+ // Elements list document.getElementById('deleteElementBtn').addEventListener('click', deleteSelectedElement);
 
-    // ========================================
-    // 🎨 ВИЗУАЛИЗАТОРЫ
-    // ========================================
+ // Text editor document.getElementById('closeTextEditor').addEventListener('click', () => {
+ textEditor.classList.remove('active');
+ textEditorActive = false;
+ });
 
-    // 1. ⭕ CIRCULAR SPECTRUM
-    function drawCircularSpectrum(ctx, centerX, centerY) {
-      const radius = Math.min(canvas.width, canvas.height) * 0.25;
-      const bars = 180;
-      const barWidth = 3;
-      
-      const bgGradient = ctx.createRadialGradient(centerX, centerY, 0, centerX, centerY, radius * 2);
-      bgGradient.addColorStop(0, 'rgba(0, 0, 0, 0.8)');
-      bgGradient.addColorStop(1, 'rgba(0, 0, 0, 0)');
-      
-      ctx.fillStyle = bgGradient;
-      ctx.fillRect(0, 0, canvas.width, canvas.height);
-      
-      const avgBass = dataArray.slice(0, 10).reduce((a, b) => a + b, 0) / 10;
-      const pulseRadius = radius * 0.25 + (avgBass / 255) * 20;
-      
-      ctx.beginPath();
-      ctx.arc(centerX, centerY, pulseRadius, 0, Math.PI * 2);
-      ctx.fillStyle = 'rgba(255, 255, 255, 0.05)';
-      ctx.fill();
-      
-      for (let i = 0; i < bars; i++) {
-        const angle = (i / bars) * Math.PI * 2;
-        const freqIndex = Math.floor(i / bars * dataArray.length * 0.8);
-        const value = dataArray[freqIndex] || 0;
-        const barHeight = (value / 255) * (radius * 0.7);
-        const hue = (i / bars) * 360;
-        
-        const x1 = centerX + Math.cos(angle) * radius;
-        const y1 = centerY + Math.sin(angle) * radius;
-        const x2 = centerX + Math.cos(angle) * (radius + barHeight);
-        const y2 = centerY + Math.sin(angle) * (radius + barHeight);
-        
-        ctx.beginPath();
-        ctx.moveTo(x1, y1);
-        ctx.lineTo(x2, y2);
-        ctx.lineWidth = barWidth;
-        ctx.lineCap = 'round';
-        ctx.strokeStyle = `hsl(${hue}, 100%, 50%)`;
-        ctx.shadowBlur = 10;
-        ctx.shadowColor = `hsl(${hue}, 100%, 50%)`;
-        ctx.stroke();
-        
-        if (value > 200) {
-          ctx.beginPath();
-          ctx.arc(x2, y2, barWidth + 1, 0, Math.PI * 2);
-          ctx.fillStyle = `hsl(${hue}, 100%, 80%)`;
-          ctx.shadowBlur = 15;
-          ctx.fill();
-        }
-      }
-      
-      for (let ring = 0; ring < 3; ring++) {
-        const ringRadius = radius * (1 + ring * 0.1) + Math.sin(Date.now() * 0.001) * 5;
-        ctx.beginPath();
-        ctx.arc(centerX, centerY, ringRadius, 0, Math.PI * 2);
-        ctx.strokeStyle = `rgba(255, 255, 255, ${0.1 - ring * 0.03})`;
-        ctx.lineWidth = 1;
-        ctx.stroke();
-      }
-      
-      ctx.shadowBlur = 0;
-    }
+ // Emoji picker document.getElementById('closeEmojiPicker').addEventListener('click', () => {
+ emojiPicker.classList.remove('active');
+ emojiPickerActive = false;
+ });
 
-    // 2. 🌈 RADIAL SPECTRUM
-    function drawRadialSpectrum(ctx, centerX, centerY) {
-      const outerRadius = Math.min(canvas.width, canvas.height) * 0.35;
-      const innerRadius = outerRadius * 0.2;
-      const bars = 240;
-      
-      ctx.fillStyle = '#000000';
-      ctx.fillRect(0, 0, canvas.width, canvas.height);
-      
-      ctx.beginPath();
-      ctx.arc(centerX, centerY, innerRadius, 0, Math.PI * 2);
-      ctx.fillStyle = '#000000';
-      ctx.fill();
-      ctx.strokeStyle = 'rgba(255, 255, 255, 0.2)';
-      ctx.lineWidth = 1;
-      ctx.stroke();
-      
-      for (let i = 0; i < bars; i++) {
-        const angle = (i / bars) * Math.PI * 2 + rotation;
-        const freqIndex = Math.floor((i / bars) * dataArray.length * 0.8);
-        const value = dataArray[freqIndex] || 0;
-        const lineLength = innerRadius + (value / 255) * (outerRadius - innerRadius);
-        
-        const x1 = centerX + Math.cos(angle) * innerRadius;
-        const y1 = centerY + Math.sin(angle) * innerRadius;
-        const x2 = centerX + Math.cos(angle) * lineLength;
-        const y2 = centerY + Math.sin(angle) * lineLength;
-        
-        const hue = (i / bars) * 360;
-        
-        ctx.beginPath();
-        ctx.moveTo(x1, y1);
-        ctx.lineTo(x2, y2);
-        ctx.strokeStyle = `hsl(${hue}, 100%, 50%)`;
-        ctx.lineWidth = 1.5;
-        ctx.lineCap = 'round';
-        ctx.shadowBlur = 5;
-        ctx.shadowColor = `hsl(${hue}, 100%, 50%)`;
-        ctx.stroke();
-      }
-      
-      ctx.beginPath();
-      ctx.arc(centerX, centerY, outerRadius, 0, Math.PI * 2);
-      ctx.strokeStyle = 'rgba(255, 255, 255, 0.1)';
-      ctx.lineWidth = 1;
-      ctx.stroke();
-      
-      ctx.shadowBlur = 0;
-    }
+ document.querySelectorAll('.emoji-item').forEach(emoji => {
+ emoji.addEventListener('click', (e) => {
+ if (selectedElement && selectedElement.type === 'text') {
+ selectedElement.content += e.target.textContent;
+ emojiPicker.classList.remove('active');
+ emojiPickerActive = false;
+ }
+ });
+ });
 
-    // 3. 💫 NEON CIRCLE
-    function drawNeonCircle(ctx, centerX, centerY) {
-      const radius = Math.min(canvas.width, canvas.height) * 0.25;
-      
-      ctx.fillStyle = '#000000';
-      ctx.fillRect(0, 0, canvas.width, canvas.height);
-      
-      const bassAvg = dataArray.slice(0, 10).reduce((a, b) => a + b, 0) / 10 / 255;
-      const trebleAvg = dataArray.slice(80, 120).reduce((a, b) => a + b, 0) / 40 / 255;
-      
-      const barCount = 64;
-      const barWidth = canvas.width / barCount;
-      const barMaxHeight = canvas.height * 0.15;
-      
-      for (let i = 0; i < barCount; i++) {
-        const value = dataArray[i] / 255;
-        const barHeight = value * barMaxHeight;
-        
-        const gradient = ctx.createLinearGradient(0, centerY + radius, 0, centerY + radius + barHeight);
-        gradient.addColorStop(0, 'rgba(255, 50, 0, 0.8)');
-        gradient.addColorStop(1, 'rgba(255, 150, 0, 0.4)');
-        
-        ctx.fillStyle = gradient;
-        ctx.shadowBlur = 15;
-        ctx.shadowColor = 'rgba(255, 100, 0, 0.8)';
-        ctx.fillRect(i * barWidth, centerY + radius, barWidth - 1, barHeight);
-      }
-      
-      for (let i = 0; i < barCount; i++) {
-        const value = dataArray[barCount + i] / 255;
-        const barHeight = value * barMaxHeight;
-        
-        const gradient = ctx.createLinearGradient(0, centerY - radius - barHeight, 0, centerY - radius);
-        gradient.addColorStop(0, 'rgba(100, 0, 255, 0.4)');
-        gradient.addColorStop(1, 'rgba(0, 150, 255, 0.8)');
-        
-        ctx.fillStyle = gradient;
-        ctx.shadowBlur = 15;
-        ctx.shadowColor = 'rgba(50, 100, 255, 0.8)';
-        ctx.fillRect(i * barWidth, centerY - radius - barHeight, barWidth - 1, barHeight);
-      }
-      
-      const circleGradient = ctx.createLinearGradient(
-        centerX - radius, centerY, centerX + radius, centerY
-      );
-      circleGradient.addColorStop(0, '#00E5FF');
-      circleGradient.addColorStop(0.5, '#9D00FF');
-      circleGradient.addColorStop(1, '#FF00E5');
-      
-      ctx.beginPath();
-      ctx.arc(centerX, centerY, radius * 0.9, 0, Math.PI * 2);
-      ctx.fillStyle = '#000000';
-      ctx.fill();
-      
-      ctx.beginPath();
-      ctx.arc(centerX, centerY, radius, 0, Math.PI * 2);
-      ctx.strokeStyle = circleGradient;
-      ctx.lineWidth = 3 + bassAvg * 5;
-      ctx.shadowBlur = 20 + trebleAvg * 20;
-      ctx.shadowColor = '#00E5FF';
-      ctx.stroke();
-      
-      for (let i = 1; i <= 2; i++) {
-        ctx.beginPath();
-        ctx.arc(centerX, centerY, radius * (1 + i * 0.1), 0, Math.PI * 2);
-        ctx.strokeStyle = `rgba(255, 255, 255, ${0.1 - i * 0.05})`;
-        ctx.lineWidth = 1;
-        ctx.stroke();
-      }
-      
-      ctx.beginPath();
-      ctx.arc(centerX, centerY, 5 + bassAvg * 10, 0, Math.PI * 2);
-      ctx.fillStyle = '#00E5FF';
-      ctx.shadowBlur = 30;
-      ctx.shadowColor = '#00E5FF';
-      ctx.fill();
-      
-      ctx.shadowBlur = 0;
-    }
+ // Mobile menu mobileMenuBtn.addEventListener('click', () => {
+ sidebar.classList.toggle('active');
+ });
 
-    // 4. 🚀 CYBER TUNNEL
-    function drawCyberTunnel(ctx, centerX, centerY) {
-      const radius = Math.min(canvas.width, canvas.height) * 0.25;
-      const bars = 90;
-      const barWidth = 4;
-      
-      const bgGradient = ctx.createRadialGradient(centerX, centerY, 0, centerX, centerY, radius * 3);
-      bgGradient.addColorStop(0, 'rgba(20, 0, 40, 1)');
-      bgGradient.addColorStop(1, 'rgba(0, 0, 0, 1)');
-      
-      ctx.fillStyle = bgGradient;
-      ctx.fillRect(0, 0, canvas.width, canvas.height);
-      
-      const avgBass = dataArray.slice(0, 10).reduce((a, b) => a + b, 0) / 10;
-      const pulseRadius = radius * 0.25 + (avgBass / 255) * 30;
-      
-      ctx.beginPath();
-      ctx.arc(centerX, centerY, pulseRadius, 0, Math.PI * 2);
-      ctx.fillStyle = '#FF00E5';
-      ctx.shadowBlur = 30;
-      ctx.shadowColor = '#FF00E5';
-      ctx.fill();
-      ctx.shadowBlur = 0;
-      
-      for (let i = 0; i < bars; i++) {
-        const angle = (i / bars) * Math.PI * 2 + rotation * -1;
-        const freqIndex = Math.floor(i / bars * dataArray.length * 0.5);
-        const value = dataArray[freqIndex] || 0;
-        const barHeight = (value / 255) * (radius * 0.8);
-        
-        const x1 = centerX + Math.cos(angle) * radius;
-        const y1 = centerY + Math.sin(angle) * radius;
-        const x2 = centerX + Math.cos(angle) * (radius + barHeight);
-        const y2 = centerY + Math.sin(angle) * (radius + barHeight);
-        
-        ctx.beginPath();
-        ctx.moveTo(x1, y1);
-        ctx.lineTo(x2, y2);
-        ctx.lineWidth = barWidth;
-        ctx.strokeStyle = '#00E5FF';
-        
-        if (value > 150) {
-          ctx.strokeStyle = '#fff';
-          ctx.shadowBlur = 10;
-          ctx.shadowColor = '#fff';
-        }
-        
-        ctx.stroke();
-        ctx.shadowBlur = 0;
-      }
-      
-      for (let ring = 1; ring <= 4; ring++) {
-        const ringRadius = radius * (0.3 + ring * 0.15);
-        
-        ctx.beginPath();
-        ctx.arc(centerX, centerY, ringRadius, 0, Math.PI * 2);
-        ctx.strokeStyle = `rgba(0, 229, 255, ${0.3 - ring * 0.05})`;
-        ctx.lineWidth = 2;
-        ctx.stroke();
-      }
-      
-      const rayCount = 8;
-      for (let i = 0; i < rayCount; i++) {
-        const angle = (i / rayCount) * Math.PI * 2 + rotation * 2;
-        const freqIndex = Math.floor(i / rayCount * dataArray.length * 0.3);
-        const value = dataArray[freqIndex] / 255;
-        
-        if (value > 0.5) {
-          const rayLength = radius * 1.5 * value;
-          
-          ctx.beginPath();
-          ctx.moveTo(centerX, centerY);
-          ctx.lineTo(
-            centerX + Math.cos(angle) * rayLength,
-            centerY + Math.sin(angle) * rayLength
-          );
-          
-          ctx.strokeStyle = `rgba(255, 0, 229, ${value * 0.5})`;
-          ctx.lineWidth = 3;
-          ctx.shadowBlur = 20;
-          ctx.shadowColor = '#FF00E5';
-          ctx.stroke();
-          ctx.shadowBlur = 0;
-        }
-      }
-    }
+ // Back button document.getElementById('backBtn').addEventListener('click', () => {
+ window.location.href = 'index.html';
+ });
 
-    // ========================================
-    // 🎥 РЕНДЕРИНГ ВИДЕО
-    // ========================================
-    
-    document.getElementById('renderBtn').addEventListener('click', async () => {
-      if (!audioFile) {
-        updateStatus('Please select audio file first', 'error');
-        return;
-      }
+ // Record button document.getElementById('recordBtn').addEventListener('click', toggleRecording);
+ }
 
-      if (isRendering) {
-        updateStatus('Rendering already in progress', 'error');
-        return;
-      }
+ // Update status function updateStatus(text, type = 'default') {
+ statusText.textContent = text;
+ statusIndicator.className = 'status-indicator';
+ if (type === 'active') statusIndicator.classList.add('active');
+ if (type === 'error') statusIndicator.classList.add('error');
+ }
 
-      isRendering = true;
-      document.getElementById('renderBtn').disabled = true;
-      document.getElementById('progressContainer').style.display = 'block';
-      
-      updateStatus('Preparing render...', 'active');
+ // Update resolution info function updateResolutionInfo() {
+ document.getElementById('resolutionInfo').textContent = `${canvas.width}x${canvas.height}`;
+ }
 
-      try {
-        // Подготовка FFmpeg
-        const { FFmpeg } = FFmpegWASM;
-        const ffmpeg = new FFmpeg();
-        
-        ffmpeg.on('log', ({ message }) => {
-          console.log(message);
-        });
+ // Load audio for preview async function loadAudioForPreview() {
+ if (!audioFile) return;
+ try {
+ if (audioContext) {
+ audioContext.close();
+ }
+ audioContext = new (window.AudioContext || window.webkitAudioContext)();
+ const arrayBuffer = await audioFile.arrayBuffer();
+ const audioBuffer = await audioContext.decodeAudioData(arrayBuffer);
+ // Update duration display const duration = audioBuffer.duration;
+ durationTimeEl.textContent = formatTime(duration);
+ updateStatus('Audio loaded successfully', 'active');
+ } catch (error) {
+ console.error('Error loading audio:', error);
+ updateStatus('Error loading audio', 'error');
+ }
+ }
 
-        ffmpeg.on('progress', ({ progress }) => {
-          const percent = Math.round(progress * 100);
-          document.getElementById('progressFill').style.width = percent + '%';
-          document.getElementById('progressText').textContent = `Processing: ${percent}%`;
-        });
+ // Play audio function playAudio() {
+ if (!audioFile || !audioContext) {
+ updateStatus('Please load audio first', 'error');
+ return;
+ }
+ if (isPlaying) {
+ return;
+ }
+ audioFile.arrayBuffer().then(arrayBuffer => {
+ audioContext.decodeAudioData(arrayBuffer).then(audioBuffer => {
+ audioSource = audioContext.createBufferSource();
+ audioSource.buffer = audioBuffer;
+ analyser = audioContext.createAnalyser();
+ analyser.fftSize =2048;
+ analyser.smoothingTimeConstant =0.8;
+ audioSource.connect(analyser);
+ analyser.connect(audioContext.destination);
+ dataArray = new Uint8Array(analyser.frequencyBinCount);
+ if (pausedTime >0) {
+ audioSource.start(0, pausedTime);
+ startTime = audioContext.currentTime - pausedTime;
+ } else {
+ audioSource.start(0);
+ startTime = audioContext.currentTime;
+ }
+ isPlaying = true;
+ startVisualization();
+ updateStatus('Playing...', 'active');
+ audioSource.onended = () => {
+ isPlaying = false;
+ pausedTime =0;
+ updateStatus('Playback finished', 'default');
+ };
+ });
+ });
+ }
 
-        updateStatus('Loading FFmpeg...', 'active');
-        await ffmpeg.load();
+ // Pause audio function pauseAudio() {
+ if (!isPlaying || !audioSource) return;
+ pausedTime = audioContext.currentTime - startTime;
+ audioSource.stop();
+ isPlaying = false;
+ updateStatus('Paused', 'default');
+ }
 
-        // Создание аудио контекста для рендеринга
-        const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-        const arrayBuffer = await audioFile.arrayBuffer();
-        const audioBuffer = await audioCtx.decodeAudioData(arrayBuffer);
-        
-        const duration = audioBuffer.duration;
-        const fps = parseInt(document.getElementById('fps').value);
-        const totalFrames = Math.ceil(duration * fps);
-        
-        updateStatus(`Rendering ${totalFrames} frames...`, 'active');
+ // Stop audio function stopAudio() {
+ if (!isPlaying && pausedTime ===0) return;
+ if (audioSource) {
+ audioSource.stop();
+ }
+ isPlaying = false;
+ pausedTime =0;
+ timelineProgress.style.width = '0%';
+ timelineCursor.style.left = '0px';
+ currentTimeEl.textContent = '0:00';
+ updateStatus('Stopped', 'default');
+ }
 
-        // Создание фреймов
-        const analyserNode = audioCtx.createAnalyser();
-        analyserNode.fftSize = 1024;
-        const bufferLength = analyserNode.frequencyBinCount;
-        const tempDataArray = new Uint8Array(bufferLength);
-        
-        const source = audioCtx.createBufferSource();
-        source.buffer = audioBuffer;
-        source.connect(analyserNode);
-        analyserNode.connect(audioCtx.destination);
+ // Seek audio function seekAudio(time) {
+ if (!audioFile || !audioContext) return;
+ const wasPlaying = isPlaying;
+ if (isPlaying) {
+ audioSource.stop();
+ isPlaying = false;
+ }
+ pausedTime = time;
+ if (wasPlaying) {
+ playAudio();
+ }
+ }
 
-        // Здесь нужна реализация покадрового рендеринга
-        // Это сложная задача, требующая дополнительных библиотек
-        
-        updateStatus('Video rendering is a complex feature that requires server-side processing', 'error');
-        alert('⚠️ Full video rendering requires server-side processing.\n\nFor now, you can:\n1. Use screen recording software\n2. Record the preview\n3. Or integrate with cloud rendering services');
+ // Format time (seconds to mm:ss)
+ function formatTime(seconds) {
+ const mins = Math.floor(seconds /60);
+ const secs = Math.floor(seconds %60);
+ return `${mins}:${secs.toString().padStart(2, '0')}`;
+ }
 
-      } catch (error) {
-        console.error('Render error:', error);
-        updateStatus('Render error: ' + error.message, 'error');
-      } finally {
-        isRendering = false;
-        document.getElementById('renderBtn').disabled = false;
-        document.getElementById('progressContainer').style.display = 'none';
-      }
-    });
+ // Add text element function addTextElement() {
+ const content = document.getElementById('textContent').value || 'Sample Text';
+ const size = parseInt(document.getElementById('textSize').value);
+ const color = document.querySelector('.color-option.active').style.backgroundColor;
+ const element = {
+ id: 'element_' + Date.now(),
+ type: 'text',
+ content: content,
+ x: canvas.width /2,
+ y: canvas.height /2,
+ size: size,
+ color: color,
+ rotation:0,
+ opacity:100 };
+ elements.push(element);
+ updateElementsList();
+ updateStatus('Text element added', 'active');
+ }
 
-    // Инициализация
-    updateStatus('Ready to create video', 'default');
-  </script>
+ // Update elements list function updateElementsList() {
+ elementsList.innerHTML = '';
+ elements.forEach(element => {
+ const item = document.createElement('div');
+ item.className = 'element-item';
+ if (selectedElement && selectedElement.id === element.id) {
+ item.classList.add('active');
+ }
+ item.innerHTML = `
+<div class="element-info">
+<i class="fas fa-font element-icon"></i>
+<span class="element-name">${element.content.substring(0,20)}${element.content.length >20 ? '...' : ''}</span>
+ </div>
+<div class="element-actions">
+<button class="btn btn-sm btn-secondary edit-element" data-id="${element.id}">
+<i class="fas fa-edit"></i>
+ </button>
+ </div>
+ `;
+ item.addEventListener('click', (e) => {
+ if (!e.target.closest('.edit-element')) {
+ selectElement(element);
+ }
+ });
+ const editBtn = item.querySelector('.edit-element');
+ editBtn.addEventListener('click', (e) => {
+ e.stopPropagation();
+ editElement(element);
+ });
+ elementsList.appendChild(item);
+ });
+ }
+
+ // Select element function selectElement(element) {
+ selectedElement = element;
+ updateElementsList();
+ }
+
+ // Edit element function editElement(element) {
+ selectedElement = element;
+ textEditorActive = true;
+ textEditor.classList.add('active');
+ document.getElementById('editTextContent').value = element.content;
+ document.getElementById('editTextSize').value = element.size;
+ // Update element when inputs change document.getElementById('editTextContent').addEventListener('input', (e) => {
+ element.content = e.target.value;
+ });
+ document.getElementById('editTextSize').addEventListener('input', (e) => {
+ element.size = parseInt(e.target.value);
+ });
+ }
+
+ // Delete selected element function deleteSelectedElement() {
+ if (!selectedElement) {
+ updateStatus('No element selected', 'error');
+ return;
+ }
+ elements = elements.filter(el => el.id !== selectedElement.id);
+ selectedElement = null;
+ updateElementsList();
+ updateStatus('Element deleted', 'active');
+ }
+
+ // Start visualization function startVisualization() {
+ if (animationId) cancelAnimationFrame(animationId);
+ animate();
+ }
+
+ // Main animation loop function animate() {
+ animationId = requestAnimationFrame(animate);
+ // Update timeline if (isPlaying && audioContext && startTime) {
+ const currentTime = audioContext.currentTime - startTime;
+ const duration = audioSource.buffer.duration;
+ const progress = (currentTime / duration) *100;
+ timelineProgress.style.width = progress + '%';
+ timelineCursor.style.left = progress + '%';
+ currentTimeEl.textContent = formatTime(currentTime);
+ }
+ // Get audio data if (analyser && dataArray) {
+ analyser.getByteFrequencyData(dataArray);
+ }
+ // Clear canvas ctx.clearRect(0,0, canvas.width, canvas.height);
+ // Draw background image if (bgImage) {
+ ctx.save();
+ ctx.globalAlpha = bgOpacity /100;
+ if (bgStyle === 'cover') {
+ // Calculate dimensions to cover canvas const scale = Math.max(canvas.width / bgImage.width, canvas.height / bgImage.height);
+ const x = (canvas.width - bgImage.width * scale) /2;
+ const y = (canvas.height - bgImage.height * scale) /2;
+ ctx.drawImage(bgImage, x, y, bgImage.width * scale, bgImage.height * scale);
+ } else if (bgStyle === 'contain') {
+ // Calculate dimensions to contain within canvas const scale = Math.min(canvas.width / bgImage.width, canvas.height / bgImage.height);
+ const x = (canvas.width - bgImage.width * scale) /2;
+ const y = (canvas.height - bgImage.height * scale) /2;
+ ctx.drawImage(bgImage, x, y, bgImage.width * scale, bgImage.height * scale);
+ } else if (bgStyle === 'circle') {
+ // Draw as circle const size = Math.min(canvas.width, canvas.height) *0.5;
+ const x = canvas.width /2;
+ const y = canvas.height /2;
+ ctx.beginPath();
+ ctx.arc(x, y, size /2,0, Math.PI *2);
+ ctx.closePath();
+ ctx.clip();
+ const scale = size / Math.min(bgImage.width, bgImage.height);
+ const imgX = x - (bgImage.width * scale) /2;
+ const imgY = y - (bgImage.height * scale) /2;
+ ctx.drawImage(bgImage, imgX, imgY, bgImage.width * scale, bgImage.height * scale);
+ }
+ ctx.restore();
+ }
+ // Draw visualizer const centerX = canvas.width /2;
+ const centerY = canvas.height /2;
+ switch (selectedVisualizer) {
+ case 'circular':
+ drawCircularSpectrum();
+ break;
+ case 'radial':
+ drawRadialSpectrum();
+ break;
+ case 'neon':
+ drawNeonCircle();
+ break;
+ case 'tunnel':
+ drawCyberTunnel();
+ break;
+ }
+ // Draw elements drawElements();
+ }
+
+ // Draw circular spectrum visualizer function drawCircularSpectrum() {
+ const radius = Math.min(canvas.width, canvas.height) *0.25;
+ const bars =180;
+ // Draw center pulse const bass = dataArray ? dataArray.slice(0,10).reduce((a, b) => a + b,0) /10 :0;
+ const pulseRadius = radius *0.25 + (bass /255) *30;
+ const gradient = ctx.createRadialGradient(
+ canvas.width /2, canvas.height /2,0,
+ canvas.width /2, canvas.height /2, pulseRadius );
+ gradient.addColorStop(0, 'rgba(255,77,166,0.8)');
+ gradient.addColorStop(1, 'rgba(255,77,166,0)');
+ ctx.beginPath();
+ ctx.arc(canvas.width /2, canvas.height /2, pulseRadius,0, Math.PI *2);
+ ctx.fillStyle = gradient;
+ ctx.fill();
+ // Draw bars for (let i =0; i< bars; i++) {
+ const angle = (i / bars) * Math.PI *2;
+ const freqIndex = dataArray ? Math.floor((i / bars) * (dataArray.length *0.8)) :0;
+ const value = dataArray ? dataArray[freqIndex] :0;
+ const barHeight = (value /255) * (radius *0.5);
+ const x1 = canvas.width /2 + Math.cos(angle) * radius;
+ const y1 = canvas.height /2 + Math.sin(angle) * radius;
+ const x2 = canvas.width /2 + Math.cos(angle) * (radius + barHeight);
+ const y2 = canvas.height /2 + Math.sin(angle) * (radius + barHeight);
+ ctx.beginPath();
+ ctx.moveTo(x1, y1);
+ ctx.lineTo(x2, y2);
+ ctx.lineWidth =2;
+ ctx.lineCap = 'round';
+ ctx.strokeStyle = `hsl(${(i / bars) *360},100%,60%)`;
+ ctx.stroke();
+ }
+ }
+
+ // Draw radial spectrum visualizer function drawRadialSpectrum() {
+ const radius = Math.min(canvas.width, canvas.height) *0.35;
+ const bars =120;
+ // Draw center ctx.beginPath();
+ ctx.arc(canvas.width /2, canvas.height /2, radius *0.1,0, Math.PI *2);
+ ctx.fillStyle = 'rgba(0,209,255,0.3)';
+ ctx.fill();
+ // Draw radial lines for (let i =0; i< bars; i++) {
+ const angle = (i / bars) * Math.PI *2 + Date.now() *0.0005;
+ const freqIndex = dataArray ? Math.floor((i / bars) * (dataArray.length *0.6)) :0;
+ const value = dataArray ? dataArray[freqIndex] :0;
+ const lineLength = radius *0.1 + (value /255) * (radius *0.9);
+ const x1 = canvas.width /2 + Math.cos(angle) * (radius *0.1);
+ const y1 = canvas.height /2 + Math.sin(angle) * (radius *0.1);
+ const x2 = canvas.width /2 + Math.cos(angle) * lineLength;
+ const y2 = canvas.height /2 + Math.sin(angle) * lineLength;
+ ctx.beginPath();
+ ctx.moveTo(x1, y1);
+ ctx.lineTo(x2, y2);
+ ctx.lineWidth =1;
+ ctx.strokeStyle = `rgba(0,209,255, ${0.2 + (value /255) *0.8})`;
+ ctx.stroke();
+ }
+ }
+
+ // Draw neon circle visualizer function drawNeonCircle() {
+ const radius = Math.min(canvas.width, canvas.height) *0.3;
+ // Draw outer glow const gradient = ctx.createRadialGradient(
+ canvas.width /2, canvas.height /2, radius *0.8,
+ canvas.width /2, canvas.height /2, radius *1.2 );
+ gradient.addColorStop(0, 'rgba(255,77,166,0.5)');
+ gradient.addColorStop(1, 'rgba(255,77,166,0)');
+ ctx.beginPath();
+ ctx.arc(canvas.width /2, canvas.height /2, radius *1.1,0, Math.PI *2);
+ ctx.fillStyle = gradient;
+ ctx.fill();
+ // Draw circle with pulse effect const bass = dataArray ? dataArray.slice(0,20).reduce((a, b) => a + b,0) /20 :0;
+ const pulse =1 + (bass /255) *0.2;
+ ctx.beginPath();
+ ctx.arc(canvas.width /2, canvas.height /2, radius * pulse,0, Math.PI *2);
+ ctx.strokeStyle = '#00d1ff';
+ ctx.lineWidth =4;
+ ctx.shadowBlur =20;
+ ctx.shadowColor = '#00d1ff';
+ ctx.stroke();
+ ctx.shadowBlur =0;
+ }
+
+ // Draw cyber tunnel visualizer function drawCyberTunnel() {
+ const radius = Math.min(canvas.width, canvas.height) *0.25;
+ const rings =8;
+ // Draw tunnel rings for (let i =0; i< rings; i++) {
+ const ringRadius = radius * (1 - i / rings) + (Date.now() *0.002 %1) *20;
+ const opacity =0.1 + (i / rings) *0.4;
+ ctx.beginPath();
+ ctx.arc(canvas.width /2, canvas.height /2, ringRadius,0, Math.PI *2);
+ ctx.strokeStyle = `rgba(0,209,255, ${opacity})`;
+ ctx.lineWidth =2;
+ ctx.stroke();
+ }
+ // Draw center const bass = dataArray ? dataArray.slice(0,30).reduce((a, b) => a + b,0) /30 :0;
+ const centerSize =20 + (bass /255) *40;
+ ctx.beginPath();
+ ctx.arc(canvas.width /2, canvas.height /2, centerSize,0, Math.PI *2);
+ ctx.fillStyle = '#ff4da6';
+ ctx.shadowBlur =30;
+ ctx.shadowColor = '#ff4da6';
+ ctx.fill();
+ ctx.shadowBlur =0;
+ }
+
+ // Draw elements function drawElements() {
+ elements.forEach(element => {
+ if (element.type === 'text') {
+ ctx.save();
+ ctx.globalAlpha = element.opacity /100;
+ ctx.font = `bold ${element.size}px Arial`;
+ ctx.fillStyle = element.color;
+ ctx.textAlign = 'center';
+ ctx.textBaseline = 'middle';
+ // Add shadow for better visibility ctx.shadowBlur =10;
+ ctx.shadowColor = 'rgba(0,0,0,0.5)';
+ ctx.fillText(element.content, element.x, element.y);
+ ctx.restore();
+ }
+ });
+ }
+
+ // Toggle recording function toggleRecording() {
+ if (!isRecording) {
+ startRecording();
+ } else {
+ stopRecording();
+ }
+ }
+
+ // Start recording function startRecording() {
+ if (!isPlaying) {
+ updateStatus('Please play audio first to record', 'error');
+ return;
+ }
+ try {
+ const stream = canvas.captureStream(30);
+ mediaRecorder = new MediaRecorder(stream, {
+ mimeType: 'video/webm;codecs=vp9'
+ });
+ recordedChunks = [];
+ mediaRecorder.ondataavailable = (event) => {
+ if (event.data.size >0) {
+ recordedChunks.push(event.data);
+ }
+ };
+ mediaRecorder.onstop = () => {
+ const blob = new Blob(recordedChunks, { type: 'video/webm' });
+ const url = URL.createObjectURL(blob);
+ const a = document.createElement('a');
+ a.href = url;
+ a.download = `video-${Date.now()}.webm`;
+ a.click();
+ URL.revokeObjectURL(url);
+ };
+ mediaRecorder.start();
+ isRecording = true;
+ updateStatus('Recording... Click again to stop', 'active');
+ document.getElementById('recordBtn').innerHTML = '<i class="fas fa-stop"></i> Stop Recording';
+ } catch (error) {
+ console.error('Recording error:', error);
+ updateStatus('Recording failed: ' + error.message, 'error');
+ }
+ }
+
+ // Stop recording function stopRecording() {
+ if (!mediaRecorder || !isRecording) return;
+ mediaRecorder.stop();
+ isRecording = false;
+ updateStatus('Recording saved as WebM file', 'active');
+ document.getElementById('recordBtn').innerHTML = '<i class="fas fa-video"></i> Record Video';
+ }
+
+ // Initialize the application init();
+ </script>
 </body>
 </html>
