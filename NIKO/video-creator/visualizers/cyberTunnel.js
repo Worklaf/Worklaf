@@ -9,13 +9,6 @@ export default function cyberTunnel(ctx, centerX, centerY, dataArray, rotation) 
     cyan: '#00e5ff'
   };
   
-  // Темный фон с градиентом
-  const bgGradient = ctx.createRadialGradient(centerX, centerY, 0, centerX, centerY, radius * 3);
-  bgGradient.addColorStop(0, 'rgba(20, 0, 40, 1)');
-  bgGradient.addColorStop(1, 'rgba(0, 0, 0, 1)');
-  
-  ctx.fillStyle = bgGradient;
-  ctx.fillRect(0, 0, canvas.width, canvas.height);
   
   // Внутренний круг с пульсацией
   const avgBass = dataArray.slice(0, 10).reduce((a, b) => a + b, 0) / 10;
