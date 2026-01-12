@@ -1,0 +1,966 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>N1K∅ — Video Creator</title>
+  <link rel="stylesheet" href="https://unpkg.com/modern-normalize/modern-normalize.css">
+  <style>
+    :root{
+      --bg:#07060a;
+      --card:#0b0b10;
+      --muted:#bfc3d6;
+      --accent:#ff4da6;
+      --accent2:#00d1ff;
+      --radius:12px;
+    }
+    
+    * {
+      box-sizing: border-box;
+    }
+    
+    html,body{
+      height:100%;
+      margin:0;
+      font-family:Inter,system-ui,Arial,Helvetica,sans-serif;
+      background:var(--bg);
+      color:#eaeaf2;
+      -webkit-font-smoothing:antialiased;
+      -moz-osx-font-smoothing:grayscale;
+    }
+
+    body {
+      display: flex;
+      flex-direction: column;
+      overflow-x: hidden;
+    }
+
+    .header {
+      padding: 20px;
+      background: linear-gradient(180deg, var(--card), var(--bg));
+      border-bottom: 1px solid rgba(255,255,255,0.05);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+
+    .header h1 {
+      margin: 0;
+      font-size: 24px;
+      color: #fff;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .back-btn {
+      background: rgba(255,255,255,0.05);
+      border: 1px solid rgba(255,255,255,0.1);
+      color: #fff;
+      padding: 8px 16px;
+      border-radius: 10px;
+      cursor: pointer;
+      text-decoration: none;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      transition: all 0.2s;
+      font-size: 14px;
+      font-weight: 600;
+    }
+
+    .back-btn:hover {
+      background: rgba(255,255,255,0.1);
+      transform: translateY(-2px);
+    }
+
+    .container {
+      flex: 1;
+      padding: 20px;
+      max-width: 1400px;
+      width: 100%;
+      margin: 0 auto;
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+    }
+
+    .controls-panel {
+      background: var(--card);
+      border-radius: var(--radius);
+      padding: 20px;
+      border: 1px solid rgba(255,255,255,0.05);
+      box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+    }
+
+    .control-row {
+      display: flex;
+      gap: 12px;
+      margin-bottom: 16px;
+      flex-wrap: wrap;
+      align-items: center;
+    }
+
+    .control-row:last-child {
+      margin-bottom: 0;
+    }
+
+    .control-label {
+      color: var(--muted);
+      font-size: 13px;
+      font-weight: 600;
+      margin-bottom: 6px;
+      display: block;
+    }
+
+    .control-group {
+      flex: 1;
+      min-width: 200px;
+    }
+
+    .input {
+      width: 100%;
+      padding: 10px 12px;
+      border-radius: 10px;
+      border: 1px solid rgba(255,255,255,0.08);
+      background: rgba(0,0,0,0.3);
+      color: #fff;
+      font-size: 14px;
+      transition: all 0.2s;
+    }
+
+    .input:focus {
+      outline: none;
+      border-color: var(--accent);
+      box-shadow: 0 0 0 3px rgba(255,77,166,0.1);
+    }
+
+    select.input {
+      cursor: pointer;
+    }
+
+    .btn {
+      background: linear-gradient(90deg, var(--accent), var(--accent2));
+      color: #fff;
+      border: none;
+      padding: 12px 24px;
+      border-radius: 10px;
+      font-size: 14px;
+      font-weight: 700;
+      cursor: pointer;
+      transition: all 0.2s;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      box-shadow: 0 4px 12px rgba(255,77,166,0.3);
+    }
+
+    .btn:hover:not(:disabled) {
+      transform: translateY(-2px);
+      box-shadow: 0 6px 20px rgba(255,77,166,0.4);
+    }
+
+    .btn:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+
+    .btn-secondary {
+      background: rgba(255,255,255,0.05);
+      border: 1px solid rgba(255,255,255,0.1);
+      color: var(--muted);
+      box-shadow: none;
+    }
+
+    .btn-secondary:hover:not(:disabled) {
+      background: rgba(255,255,255,0.1);
+      color: #fff;
+    }
+
+    .preview-area {
+      background: #000;
+      border-radius: var(--radius);
+      overflow: hidden;
+      position: relative;
+      aspect-ratio: 16/9;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border: 1px solid rgba(255,255,255,0.1);
+      box-shadow: 0 10px 40px rgba(0,0,0,0.5);
+    }
+
+    #videoCanvas {
+      width: 100%;
+      height: 100%;
+      object-fit: contain;
+    }
+
+    .status-bar {
+      background: rgba(0,0,0,0.8);
+      padding: 12px 16px;
+      border-radius: 10px;
+      color: var(--muted);
+      font-size: 13px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      border: 1px solid rgba(255,255,255,0.05);
+    }
+
+    .status-indicator {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: #666;
+      animation: pulse 2s infinite;
+    }
+
+    .status-indicator.active {
+      background: #00ff00;
+      box-shadow: 0 0 10px #00ff00;
+    }
+
+    .status-indicator.error {
+      background: #ff0000;
+      box-shadow: 0 0 10px #ff0000;
+    }
+
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.5; }
+    }
+
+    .visualizer-select {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 12px;
+      margin-top: 12px;
+    }
+
+    .viz-card {
+      background: rgba(255,255,255,0.03);
+      border: 2px solid rgba(255,255,255,0.08);
+      border-radius: 10px;
+      padding: 16px;
+      cursor: pointer;
+      transition: all 0.2s;
+      text-align: center;
+    }
+
+    .viz-card:hover {
+      background: rgba(255,255,255,0.08);
+      border-color: rgba(255,255,255,0.15);
+      transform: translateY(-2px);
+    }
+
+    .viz-card.active {
+      background: linear-gradient(135deg, rgba(255,77,166,0.2), rgba(0,209,255,0.2));
+      border-color: var(--accent);
+      box-shadow: 0 4px 20px rgba(255,77,166,0.3);
+    }
+
+    .viz-icon {
+      font-size: 32px;
+      margin-bottom: 8px;
+    }
+
+    .viz-name {
+      font-weight: 600;
+      color: #fff;
+      font-size: 14px;
+    }
+
+    .progress-bar {
+      width: 100%;
+      height: 6px;
+      background: rgba(255,255,255,0.1);
+      border-radius: 3px;
+      overflow: hidden;
+      margin-top: 12px;
+    }
+
+    .progress-fill {
+      height: 100%;
+      background: linear-gradient(90deg, var(--accent), var(--accent2));
+      width: 0%;
+      transition: width 0.3s;
+      box-shadow: 0 0 10px var(--accent);
+    }
+
+    .help-text {
+      color: var(--muted);
+      font-size: 12px;
+      margin-top: 6px;
+      font-style: italic;
+    }
+
+    @media (max-width: 768px) {
+      .header {
+        padding: 12px;
+      }
+
+      .header h1 {
+        font-size: 18px;
+      }
+
+      .container {
+        padding: 12px;
+        gap: 12px;
+      }
+
+      .controls-panel {
+        padding: 12px;
+      }
+
+      .control-row {
+        flex-direction: column;
+        gap: 8px;
+      }
+
+      .control-group {
+        min-width: 100%;
+      }
+
+      .btn {
+        width: 100%;
+        justify-content: center;
+      }
+
+      .visualizer-select {
+        grid-template-columns: 1fr 1fr;
+        gap: 8px;
+      }
+
+      .viz-icon {
+        font-size: 24px;
+      }
+
+      .viz-name {
+        font-size: 12px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <h1>
+      <span>🎬</span>
+      <span>Video Creator</span>
+    </h1>
+    <a href="index.html" class="back-btn">
+      <span>←</span>
+      <span>Back to Tracks</span>
+    </a>
+  </div>
+
+  <div class="container">
+    <!-- ПАНЕЛЬ УПРАВЛЕНИЯ -->
+    <div class="controls-panel">
+      <div class="control-row">
+        <div class="control-group">
+          <label class="control-label">Audio File (MP3)</label>
+          <input type="file" id="audioFile" accept="audio/mp3" class="input">
+          <p class="help-text">Select your track MP3 file</p>
+        </div>
+        
+        <div class="control-group">
+          <label class="control-label">Video Title</label>
+          <input type="text" id="videoTitle" class="input" placeholder="My Awesome Track" value="N1K∅ - Cyber Music">
+          <p class="help-text">Will be displayed on the video</p>
+        </div>
+      </div>
+
+      <div class="control-row">
+        <div class="control-group">
+          <label class="control-label">Resolution</label>
+          <select id="resolution" class="input">
+            <option value="1920x1080">1920x1080 (Full HD)</option>
+            <option value="1280x720">1280x720 (HD)</option>
+            <option value="3840x2160">3840x2160 (4K)</option>
+          </select>
+        </div>
+
+        <div class="control-group">
+          <label class="control-label">Frame Rate</label>
+          <select id="fps" class="input">
+            <option value="24">24 FPS (Cinematic)</option>
+            <option value="30" selected>30 FPS (Standard)</option>
+            <option value="60">60 FPS (Smooth)</option>
+          </select>
+        </div>
+      </div>
+
+      <!-- ВЫБОР ВИЗУАЛИЗАТОРА -->
+      <div class="control-group">
+        <label class="control-label">Choose Visualizer</label>
+        <div class="visualizer-select">
+          <div class="viz-card active" data-viz="circular">
+            <div class="viz-icon">⭕</div>
+            <div class="viz-name">Circular Spectrum</div>
+          </div>
+          <div class="viz-card" data-viz="radial">
+            <div class="viz-icon">🌈</div>
+            <div class="viz-name">Radial Spectrum</div>
+          </div>
+          <div class="viz-card" data-viz="neon">
+            <div class="viz-icon">💫</div>
+            <div class="viz-name">Neon Circle</div>
+          </div>
+          <div class="viz-card" data-viz="tunnel">
+            <div class="viz-icon">🚀</div>
+            <div class="viz-name">Cyber Tunnel</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- КНОПКИ ДЕЙСТВИЙ -->
+      <div class="control-row" style="margin-top: 20px">
+        <button id="previewBtn" class="btn btn-secondary">
+          <span>👁️</span>
+          <span>Preview</span>
+        </button>
+        <button id="renderBtn" class="btn" disabled>
+          <span>🎥</span>
+          <span>Render Video</span>
+        </button>
+      </div>
+
+      <!-- ПРОГРЕСС БАР -->
+      <div id="progressContainer" style="display:none">
+        <div class="progress-bar">
+          <div class="progress-fill" id="progressFill"></div>
+        </div>
+        <p class="help-text" id="progressText">Processing: 0%</p>
+      </div>
+    </div>
+
+    <!-- ПРЕВЬЮ ВИДЕО -->
+    <div class="preview-area">
+      <canvas id="videoCanvas"></canvas>
+    </div>
+
+    <!-- СТАТУС БАР -->
+    <div class="status-bar">
+      <div class="status-indicator" id="statusIndicator"></div>
+      <span id="statusText">Ready to create video</span>
+    </div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/@ffmpeg/ffmpeg@0.12.6/dist/umd/ffmpeg.js"></script>
+  
+  <script>
+    let selectedVisualizer = 'circular';
+    let audioContext = null;
+    let analyser = null;
+    let dataArray = null;
+    let animationId = null;
+    let audioFile = null;
+    let isRendering = false;
+
+    const canvas = document.getElementById('videoCanvas');
+    const ctx = canvas.getContext('2d');
+    
+    // НАСТРОЙКА CANVAS
+    function setCanvasResolution() {
+      const resolution = document.getElementById('resolution').value;
+      const [width, height] = resolution.split('x').map(Number);
+      canvas.width = width;
+      canvas.height = height;
+    }
+
+    setCanvasResolution();
+
+    // ВЫБОР ВИЗУАЛИЗАТОРА
+    document.querySelectorAll('.viz-card').forEach(card => {
+      card.addEventListener('click', () => {
+        document.querySelectorAll('.viz-card').forEach(c => c.classList.remove('active'));
+        card.classList.add('active');
+        selectedVisualizer = card.dataset.viz;
+        updateStatus(`Selected: ${card.querySelector('.viz-name').textContent}`, 'active');
+      });
+    });
+
+    // ЗАГРУЗКА АУДИО
+    document.getElementById('audioFile').addEventListener('change', (e) => {
+      audioFile = e.target.files[0];
+      if (audioFile) {
+        document.getElementById('renderBtn').disabled = false;
+        updateStatus(`Audio loaded: ${audioFile.name}`, 'active');
+      }
+    });
+
+    // ОБНОВЛЕНИЕ РАЗРЕШЕНИЯ
+    document.getElementById('resolution').addEventListener('change', setCanvasResolution);
+
+    // ФУНКЦИЯ ОБНОВЛЕНИЯ СТАТУСА
+    function updateStatus(text, type = 'default') {
+      const statusText = document.getElementById('statusText');
+      const statusIndicator = document.getElementById('statusIndicator');
+      
+      statusText.textContent = text;
+      
+      statusIndicator.className = 'status-indicator';
+      if (type === 'active') statusIndicator.classList.add('active');
+      if (type === 'error') statusIndicator.classList.add('error');
+    }
+
+    // ПРЕВЬЮ
+    document.getElementById('previewBtn').addEventListener('click', async () => {
+      if (!audioFile) {
+        updateStatus('Please select audio file first', 'error');
+        return;
+      }
+
+      updateStatus('Loading preview...', 'active');
+
+      try {
+        if (audioContext) {
+          audioContext.close();
+        }
+
+        audioContext = new (window.AudioContext || window.webkitAudioContext)();
+        analyser = audioContext.createAnalyser();
+        analyser.fftSize = 1024;
+        analyser.smoothingTimeConstant = 0.85;
+
+        const arrayBuffer = await audioFile.arrayBuffer();
+        const audioBuffer = await audioContext.decodeAudioData(arrayBuffer);
+        
+        const source = audioContext.createBufferSource();
+        source.buffer = audioBuffer;
+        source.connect(analyser);
+        analyser.connect(audioContext.destination);
+        
+        dataArray = new Uint8Array(analyser.frequencyBinCount);
+        
+        source.start(0);
+        startVisualization();
+        
+        updateStatus('Preview playing...', 'active');
+      } catch (error) {
+        console.error('Preview error:', error);
+        updateStatus('Preview error: ' + error.message, 'error');
+      }
+    });
+
+    // ВИЗУАЛИЗАЦИЯ
+    let rotation = 0;
+    let time = 0;
+
+    function startVisualization() {
+      if (animationId) cancelAnimationFrame(animationId);
+      animate();
+    }
+
+    function animate() {
+      if (!analyser) return;
+      
+      animationId = requestAnimationFrame(animate);
+      analyser.getByteFrequencyData(dataArray);
+      
+      rotation += 0.005;
+      time += 0.01;
+      
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      
+      const centerX = canvas.width / 2;
+      const centerY = canvas.height / 2;
+      
+      switch (selectedVisualizer) {
+        case 'circular':
+          drawCircularSpectrum(ctx, centerX, centerY);
+          break;
+        case 'radial':
+          drawRadialSpectrum(ctx, centerX, centerY);
+          break;
+        case 'neon':
+          drawNeonCircle(ctx, centerX, centerY);
+          break;
+        case 'tunnel':
+          drawCyberTunnel(ctx, centerX, centerY);
+          break;
+      }
+      
+      // ДОБАВЛЯЕМ НАЗВАНИЕ ТРЕКА
+      const title = document.getElementById('videoTitle').value;
+      if (title) {
+        ctx.fillStyle = '#fff';
+        ctx.font = `bold ${canvas.width * 0.03}px Arial`;
+        ctx.textAlign = 'center';
+        ctx.shadowBlur = 10;
+        ctx.shadowColor = '#000';
+        ctx.fillText(title, centerX, canvas.height - 40);
+        ctx.shadowBlur = 0;
+      }
+    }
+
+    // ========================================
+    // 🎨 ВИЗУАЛИЗАТОРЫ
+    // ========================================
+
+    // 1. ⭕ CIRCULAR SPECTRUM
+    function drawCircularSpectrum(ctx, centerX, centerY) {
+      const radius = Math.min(canvas.width, canvas.height) * 0.25;
+      const bars = 180;
+      const barWidth = 3;
+      
+      const bgGradient = ctx.createRadialGradient(centerX, centerY, 0, centerX, centerY, radius * 2);
+      bgGradient.addColorStop(0, 'rgba(0, 0, 0, 0.8)');
+      bgGradient.addColorStop(1, 'rgba(0, 0, 0, 0)');
+      
+      ctx.fillStyle = bgGradient;
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+      
+      const avgBass = dataArray.slice(0, 10).reduce((a, b) => a + b, 0) / 10;
+      const pulseRadius = radius * 0.25 + (avgBass / 255) * 20;
+      
+      ctx.beginPath();
+      ctx.arc(centerX, centerY, pulseRadius, 0, Math.PI * 2);
+      ctx.fillStyle = 'rgba(255, 255, 255, 0.05)';
+      ctx.fill();
+      
+      for (let i = 0; i < bars; i++) {
+        const angle = (i / bars) * Math.PI * 2;
+        const freqIndex = Math.floor(i / bars * dataArray.length * 0.8);
+        const value = dataArray[freqIndex] || 0;
+        const barHeight = (value / 255) * (radius * 0.7);
+        const hue = (i / bars) * 360;
+        
+        const x1 = centerX + Math.cos(angle) * radius;
+        const y1 = centerY + Math.sin(angle) * radius;
+        const x2 = centerX + Math.cos(angle) * (radius + barHeight);
+        const y2 = centerY + Math.sin(angle) * (radius + barHeight);
+        
+        ctx.beginPath();
+        ctx.moveTo(x1, y1);
+        ctx.lineTo(x2, y2);
+        ctx.lineWidth = barWidth;
+        ctx.lineCap = 'round';
+        ctx.strokeStyle = `hsl(${hue}, 100%, 50%)`;
+        ctx.shadowBlur = 10;
+        ctx.shadowColor = `hsl(${hue}, 100%, 50%)`;
+        ctx.stroke();
+        
+        if (value > 200) {
+          ctx.beginPath();
+          ctx.arc(x2, y2, barWidth + 1, 0, Math.PI * 2);
+          ctx.fillStyle = `hsl(${hue}, 100%, 80%)`;
+          ctx.shadowBlur = 15;
+          ctx.fill();
+        }
+      }
+      
+      for (let ring = 0; ring < 3; ring++) {
+        const ringRadius = radius * (1 + ring * 0.1) + Math.sin(Date.now() * 0.001) * 5;
+        ctx.beginPath();
+        ctx.arc(centerX, centerY, ringRadius, 0, Math.PI * 2);
+        ctx.strokeStyle = `rgba(255, 255, 255, ${0.1 - ring * 0.03})`;
+        ctx.lineWidth = 1;
+        ctx.stroke();
+      }
+      
+      ctx.shadowBlur = 0;
+    }
+
+    // 2. 🌈 RADIAL SPECTRUM
+    function drawRadialSpectrum(ctx, centerX, centerY) {
+      const outerRadius = Math.min(canvas.width, canvas.height) * 0.35;
+      const innerRadius = outerRadius * 0.2;
+      const bars = 240;
+      
+      ctx.fillStyle = '#000000';
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+      
+      ctx.beginPath();
+      ctx.arc(centerX, centerY, innerRadius, 0, Math.PI * 2);
+      ctx.fillStyle = '#000000';
+      ctx.fill();
+      ctx.strokeStyle = 'rgba(255, 255, 255, 0.2)';
+      ctx.lineWidth = 1;
+      ctx.stroke();
+      
+      for (let i = 0; i < bars; i++) {
+        const angle = (i / bars) * Math.PI * 2 + rotation;
+        const freqIndex = Math.floor((i / bars) * dataArray.length * 0.8);
+        const value = dataArray[freqIndex] || 0;
+        const lineLength = innerRadius + (value / 255) * (outerRadius - innerRadius);
+        
+        const x1 = centerX + Math.cos(angle) * innerRadius;
+        const y1 = centerY + Math.sin(angle) * innerRadius;
+        const x2 = centerX + Math.cos(angle) * lineLength;
+        const y2 = centerY + Math.sin(angle) * lineLength;
+        
+        const hue = (i / bars) * 360;
+        
+        ctx.beginPath();
+        ctx.moveTo(x1, y1);
+        ctx.lineTo(x2, y2);
+        ctx.strokeStyle = `hsl(${hue}, 100%, 50%)`;
+        ctx.lineWidth = 1.5;
+        ctx.lineCap = 'round';
+        ctx.shadowBlur = 5;
+        ctx.shadowColor = `hsl(${hue}, 100%, 50%)`;
+        ctx.stroke();
+      }
+      
+      ctx.beginPath();
+      ctx.arc(centerX, centerY, outerRadius, 0, Math.PI * 2);
+      ctx.strokeStyle = 'rgba(255, 255, 255, 0.1)';
+      ctx.lineWidth = 1;
+      ctx.stroke();
+      
+      ctx.shadowBlur = 0;
+    }
+
+    // 3. 💫 NEON CIRCLE
+    function drawNeonCircle(ctx, centerX, centerY) {
+      const radius = Math.min(canvas.width, canvas.height) * 0.25;
+      
+      ctx.fillStyle = '#000000';
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+      
+      const bassAvg = dataArray.slice(0, 10).reduce((a, b) => a + b, 0) / 10 / 255;
+      const trebleAvg = dataArray.slice(80, 120).reduce((a, b) => a + b, 0) / 40 / 255;
+      
+      const barCount = 64;
+      const barWidth = canvas.width / barCount;
+      const barMaxHeight = canvas.height * 0.15;
+      
+      for (let i = 0; i < barCount; i++) {
+        const value = dataArray[i] / 255;
+        const barHeight = value * barMaxHeight;
+        
+        const gradient = ctx.createLinearGradient(0, centerY + radius, 0, centerY + radius + barHeight);
+        gradient.addColorStop(0, 'rgba(255, 50, 0, 0.8)');
+        gradient.addColorStop(1, 'rgba(255, 150, 0, 0.4)');
+        
+        ctx.fillStyle = gradient;
+        ctx.shadowBlur = 15;
+        ctx.shadowColor = 'rgba(255, 100, 0, 0.8)';
+        ctx.fillRect(i * barWidth, centerY + radius, barWidth - 1, barHeight);
+      }
+      
+      for (let i = 0; i < barCount; i++) {
+        const value = dataArray[barCount + i] / 255;
+        const barHeight = value * barMaxHeight;
+        
+        const gradient = ctx.createLinearGradient(0, centerY - radius - barHeight, 0, centerY - radius);
+        gradient.addColorStop(0, 'rgba(100, 0, 255, 0.4)');
+        gradient.addColorStop(1, 'rgba(0, 150, 255, 0.8)');
+        
+        ctx.fillStyle = gradient;
+        ctx.shadowBlur = 15;
+        ctx.shadowColor = 'rgba(50, 100, 255, 0.8)';
+        ctx.fillRect(i * barWidth, centerY - radius - barHeight, barWidth - 1, barHeight);
+      }
+      
+      const circleGradient = ctx.createLinearGradient(
+        centerX - radius, centerY, centerX + radius, centerY
+      );
+      circleGradient.addColorStop(0, '#00E5FF');
+      circleGradient.addColorStop(0.5, '#9D00FF');
+      circleGradient.addColorStop(1, '#FF00E5');
+      
+      ctx.beginPath();
+      ctx.arc(centerX, centerY, radius * 0.9, 0, Math.PI * 2);
+      ctx.fillStyle = '#000000';
+      ctx.fill();
+      
+      ctx.beginPath();
+      ctx.arc(centerX, centerY, radius, 0, Math.PI * 2);
+      ctx.strokeStyle = circleGradient;
+      ctx.lineWidth = 3 + bassAvg * 5;
+      ctx.shadowBlur = 20 + trebleAvg * 20;
+      ctx.shadowColor = '#00E5FF';
+      ctx.stroke();
+      
+      for (let i = 1; i <= 2; i++) {
+        ctx.beginPath();
+        ctx.arc(centerX, centerY, radius * (1 + i * 0.1), 0, Math.PI * 2);
+        ctx.strokeStyle = `rgba(255, 255, 255, ${0.1 - i * 0.05})`;
+        ctx.lineWidth = 1;
+        ctx.stroke();
+      }
+      
+      ctx.beginPath();
+      ctx.arc(centerX, centerY, 5 + bassAvg * 10, 0, Math.PI * 2);
+      ctx.fillStyle = '#00E5FF';
+      ctx.shadowBlur = 30;
+      ctx.shadowColor = '#00E5FF';
+      ctx.fill();
+      
+      ctx.shadowBlur = 0;
+    }
+
+    // 4. 🚀 CYBER TUNNEL
+    function drawCyberTunnel(ctx, centerX, centerY) {
+      const radius = Math.min(canvas.width, canvas.height) * 0.25;
+      const bars = 90;
+      const barWidth = 4;
+      
+      const bgGradient = ctx.createRadialGradient(centerX, centerY, 0, centerX, centerY, radius * 3);
+      bgGradient.addColorStop(0, 'rgba(20, 0, 40, 1)');
+      bgGradient.addColorStop(1, 'rgba(0, 0, 0, 1)');
+      
+      ctx.fillStyle = bgGradient;
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+      
+      const avgBass = dataArray.slice(0, 10).reduce((a, b) => a + b, 0) / 10;
+      const pulseRadius = radius * 0.25 + (avgBass / 255) * 30;
+      
+      ctx.beginPath();
+      ctx.arc(centerX, centerY, pulseRadius, 0, Math.PI * 2);
+      ctx.fillStyle = '#FF00E5';
+      ctx.shadowBlur = 30;
+      ctx.shadowColor = '#FF00E5';
+      ctx.fill();
+      ctx.shadowBlur = 0;
+      
+      for (let i = 0; i < bars; i++) {
+        const angle = (i / bars) * Math.PI * 2 + rotation * -1;
+        const freqIndex = Math.floor(i / bars * dataArray.length * 0.5);
+        const value = dataArray[freqIndex] || 0;
+        const barHeight = (value / 255) * (radius * 0.8);
+        
+        const x1 = centerX + Math.cos(angle) * radius;
+        const y1 = centerY + Math.sin(angle) * radius;
+        const x2 = centerX + Math.cos(angle) * (radius + barHeight);
+        const y2 = centerY + Math.sin(angle) * (radius + barHeight);
+        
+        ctx.beginPath();
+        ctx.moveTo(x1, y1);
+        ctx.lineTo(x2, y2);
+        ctx.lineWidth = barWidth;
+        ctx.strokeStyle = '#00E5FF';
+        
+        if (value > 150) {
+          ctx.strokeStyle = '#fff';
+          ctx.shadowBlur = 10;
+          ctx.shadowColor = '#fff';
+        }
+        
+        ctx.stroke();
+        ctx.shadowBlur = 0;
+      }
+      
+      for (let ring = 1; ring <= 4; ring++) {
+        const ringRadius = radius * (0.3 + ring * 0.15);
+        
+        ctx.beginPath();
+        ctx.arc(centerX, centerY, ringRadius, 0, Math.PI * 2);
+        ctx.strokeStyle = `rgba(0, 229, 255, ${0.3 - ring * 0.05})`;
+        ctx.lineWidth = 2;
+        ctx.stroke();
+      }
+      
+      const rayCount = 8;
+      for (let i = 0; i < rayCount; i++) {
+        const angle = (i / rayCount) * Math.PI * 2 + rotation * 2;
+        const freqIndex = Math.floor(i / rayCount * dataArray.length * 0.3);
+        const value = dataArray[freqIndex] / 255;
+        
+        if (value > 0.5) {
+          const rayLength = radius * 1.5 * value;
+          
+          ctx.beginPath();
+          ctx.moveTo(centerX, centerY);
+          ctx.lineTo(
+            centerX + Math.cos(angle) * rayLength,
+            centerY + Math.sin(angle) * rayLength
+          );
+          
+          ctx.strokeStyle = `rgba(255, 0, 229, ${value * 0.5})`;
+          ctx.lineWidth = 3;
+          ctx.shadowBlur = 20;
+          ctx.shadowColor = '#FF00E5';
+          ctx.stroke();
+          ctx.shadowBlur = 0;
+        }
+      }
+    }
+
+    // ========================================
+    // 🎥 РЕНДЕРИНГ ВИДЕО
+    // ========================================
+    
+    document.getElementById('renderBtn').addEventListener('click', async () => {
+      if (!audioFile) {
+        updateStatus('Please select audio file first', 'error');
+        return;
+      }
+
+      if (isRendering) {
+        updateStatus('Rendering already in progress', 'error');
+        return;
+      }
+
+      isRendering = true;
+      document.getElementById('renderBtn').disabled = true;
+      document.getElementById('progressContainer').style.display = 'block';
+      
+      updateStatus('Preparing render...', 'active');
+
+      try {
+        // Подготовка FFmpeg
+        const { FFmpeg } = FFmpegWASM;
+        const ffmpeg = new FFmpeg();
+        
+        ffmpeg.on('log', ({ message }) => {
+          console.log(message);
+        });
+
+        ffmpeg.on('progress', ({ progress }) => {
+          const percent = Math.round(progress * 100);
+          document.getElementById('progressFill').style.width = percent + '%';
+          document.getElementById('progressText').textContent = `Processing: ${percent}%`;
+        });
+
+        updateStatus('Loading FFmpeg...', 'active');
+        await ffmpeg.load();
+
+        // Создание аудио контекста для рендеринга
+        const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        const arrayBuffer = await audioFile.arrayBuffer();
+        const audioBuffer = await audioCtx.decodeAudioData(arrayBuffer);
+        
+        const duration = audioBuffer.duration;
+        const fps = parseInt(document.getElementById('fps').value);
+        const totalFrames = Math.ceil(duration * fps);
+        
+        updateStatus(`Rendering ${totalFrames} frames...`, 'active');
+
+        // Создание фреймов
+        const analyserNode = audioCtx.createAnalyser();
+        analyserNode.fftSize = 1024;
+        const bufferLength = analyserNode.frequencyBinCount;
+        const tempDataArray = new Uint8Array(bufferLength);
+        
+        const source = audioCtx.createBufferSource();
+        source.buffer = audioBuffer;
+        source.connect(analyserNode);
+        analyserNode.connect(audioCtx.destination);
+
+        // Здесь нужна реализация покадрового рендеринга
+        // Это сложная задача, требующая дополнительных библиотек
+        
+        updateStatus('Video rendering is a complex feature that requires server-side processing', 'error');
+        alert('⚠️ Full video rendering requires server-side processing.\n\nFor now, you can:\n1. Use screen recording software\n2. Record the preview\n3. Or integrate with cloud rendering services');
+
+      } catch (error) {
+        console.error('Render error:', error);
+        updateStatus('Render error: ' + error.message, 'error');
+      } finally {
+        isRendering = false;
+        document.getElementById('renderBtn').disabled = false;
+        document.getElementById('progressContainer').style.display = 'none';
+      }
+    });
+
+    // Инициализация
+    updateStatus('Ready to create video', 'default');
+  </script>
+</body>
+</html>
