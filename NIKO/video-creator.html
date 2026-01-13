@@ -571,6 +571,22 @@ input[type="color"] {
           <span class="viz-icon">⚡</span>
           <div class="viz-name">Electric Wave</div>
         </div>
+        <div class="viz-card" onclick="selectViz('rippleWaves', this)">
+  <span class="viz-icon">🌊</span>
+  <div class="viz-name">Ripple Waves</div>
+</div>
+<div class="viz-card" onclick="selectViz('cosmicVortex', this)">
+  <span class="viz-icon">🌀</span>
+  <div class="viz-name">Cosmic Vortex</div>
+</div>
+<div class="viz-card" onclick="selectViz('orbitalSpheres', this)">
+  <span class="viz-icon">🪐</span>
+  <div class="viz-name">Orbital Spheres</div>
+</div>
+<div class="viz-card" onclick="selectViz('geoMatrix', this)">
+  <span class="viz-icon">🔮</span>
+  <div class="viz-name">Geometric Matrix</div>
+</div>
       </div>
     </div>
 
@@ -606,7 +622,42 @@ input[type="color"] {
       </div>
     </div>
   </div>
-
+<!-- НОВЫЕ ЭЛЕМЕНТЫ УПРАВЛЕНИЯ ДЛЯ 3D ВИЗУАЛИЗАТОРОВ -->
+<div class="section" id="rippleWavesControls" style="display:none;">
+  <div class="section-title">Ripple Waves Settings</div>
+  <div class="slider-group">
+    <div class="slider-label"><span>Wave Count</span><span id="waveCountVal">5</span></div>
+    <input type="range" class="slider" id="waveCount" min="1" max="15" value="5">
+  </div>
+  <div class="slider-group">
+    <div class="slider-label"><span>Wave Speed</span><span id="waveSpeedVal">1.0</span></div>
+    <input type="range" class="slider" id="waveSpeed" min="0.2" max="3" step="0.1" value="1.0">
+  </div>
+  <div class="slider-group">
+    <div class="slider-label"><span>Base Opacity</span><span id="waveOpacityVal">0.7</span></div>
+    <input type="range" class="slider" id="waveOpacity" min="0.1" max="1" step="0.1" value="0.7">
+  </div>
+</div>
+<!-- НОВЫЕ ЭЛЕМЕНТЫ УПРАВЛЕНИЯ ДЛЯ 3D ВИЗУАЛИЗАТОРОВ -->
+<div class="section" id="3dControls" style="display:none;">
+  <div class="section-title">3D Visualization Settings</div>
+  <div class="slider-group">
+    <div class="slider-label"><span>Depth Effect</span><span id="depthVal">1.0</span></div>
+    <input type="range" class="slider" id="depthEffect" min="0.2" max="2" step="0.1" value="1.0">
+  </div>
+  <div class="slider-group">
+    <div class="slider-label"><span>Rotation Speed</span><span id="rotSpeedVal">1.0</span></div>
+    <input type="range" class="slider" id="rotationSpeed" min="0.2" max="3" step="0.1" value="1.0">
+  </div>
+  <div class="slider-group">
+    <div class="slider-label"><span>Particle Count</span><span id="particleCountVal">100</span></div>
+    <input type="range" class="slider" id="particleCount" min="20" max="300" value="100">
+  </div>
+  <div class="slider-group">
+    <div class="slider-label"><span>Color Shift Speed</span><span id="colorShiftVal">1.0</span></div>
+    <input type="range" class="slider" id="colorShiftSpeed" min="0.2" max="3" step="0.1" value="1.0">
+  </div>
+</div>
   <!-- TAB: EFFECTS -->
   <div class="tab-content" id="tab-fx">
     <div class="section">
@@ -698,6 +749,14 @@ let state = {
   emblemX: 0.5,
   emblemY: 0.5,
   emblemCircle: true,
+  // Добавить в объект state:
+waveCount: 5,
+waveSpeed: 1.0, 
+waveOpacity: 0.7,
+depthEffect: 1.0,
+rotationSpeed: 1.0,
+particleCount: 100,
+colorShiftSpeed: 1.0,
   tunnelColors: ['#00E5FF', '#FF00E5', '#00FFAA'] // Начальная палитра для туннеля
 };
 
@@ -1131,7 +1190,515 @@ const Visualizers = {
     ctx.restore();
     ctx.shadowBlur = 0;
   },
+// НОВЫЕ ВИЗУАЛИЗАТОРЫ - добавить в объект Visualizers
 
+// 1. Ripple Waves - волны, расходящиеся от центра
+rippleWaves(ctx, centerX, centerY, dataArray) {
+  const maxRadius = Math.min(config.width, config.height) * 0.45 * state.vizScale;
+  const centerRadius = maxRadius * 0.15;
+  const waveCount = state.waveCount;
+  const baseOpacity = state.waveOpacity;
+  const speedFactor = state.waveSpeed;
+  
+  // Анализ аудио для определения интенсивности
+  const bassIntensity = dataArray.slice(0, 5).reduce((a, b) => a + b, 0) / (5 * 255);
+  const midIntensity = dataArray.slice(20, 60).reduce((a, b) => a + b, 0) / (40 * 255);
+  const highIntensity = dataArray.slice(80, 120).reduce((a, b) => a + b, 0) / (40 * 255);
+  
+  // Рисуем центральный круг
+  ctx.save();
+  const pulseRadius = centerRadius * (1 + bassIntensity * 0.3);
+  
+  // Создаем градиент для центрального круга
+  const centerGradient = ctx.createRadialGradient(
+    centerX, centerY, 0,
+    centerX, centerY, pulseRadius
+  );
+  centerGradient.addColorStop(0, hexToRgba(state.vizColor, 0.9));
+  centerGradient.addColorStop(1, hexToRgba(state.vizColor, 0.1));
+  
+  ctx.beginPath();
+  ctx.arc(centerX, centerY, pulseRadius, 0, Math.PI * 2);
+  ctx.fillStyle = centerGradient;
+  ctx.shadowBlur = state.vizGlow * 1.5;
+  ctx.shadowColor = state.vizColor;
+  ctx.fill();
+  
+  // Рисуем расходящиеся волны
+  for (let i = 0; i < waveCount; i++) {
+    // Выбираем разные части аудио-спектра для разных волн
+    const freqIndex = Math.floor(i * dataArray.length / waveCount);
+    const audioValue = dataArray[freqIndex] / 255;
+    
+    // Фаза волны - определяет ее положение
+    const phase = (time * speedFactor * 0.5 + i / waveCount) % 1;
+    // Радиус волны - от центра до максимума
+    const waveRadius = centerRadius + phase * (maxRadius - centerRadius);
+    // Чем дальше волна, тем она прозрачнее
+    const opacity = baseOpacity * (1 - phase) * (0.5 + audioValue * 0.5);
+    
+    // Толщина волны зависит от громкости и фазы
+    const waveThickness = 2 + audioValue * 15 * (1 - phase * 0.5);
+    
+    ctx.beginPath();
+    ctx.arc(centerX, centerY, waveRadius, 0, Math.PI * 2);
+    ctx.lineWidth = waveThickness;
+    ctx.strokeStyle = hexToRgba(state.vizColor, opacity);
+    
+    // Добавляем свечение волнам
+    ctx.shadowBlur = state.vizGlow * opacity * 2;
+    ctx.shadowColor = state.vizColor;
+    
+    // Делаем волны прерывистыми в зависимости от интенсивности высоких частот
+    if (highIntensity > 0.5 && i % 2 === 0) {
+      ctx.setLineDash([5, 5 * (1 + highIntensity)]); 
+    } else {
+      ctx.setLineDash([]);
+    }
+    
+    ctx.stroke();
+    ctx.setLineDash([]);
+  }
+  
+  // Рисуем "всплески" - дополнительные эффекты для визуальной динамики
+  const splashCount = Math.floor(5 * bassIntensity) + Math.floor(5 * midIntensity);
+  
+  for (let i = 0; i < splashCount; i++) {
+    const angle = Math.random() * Math.PI * 2;
+    const distance = Math.random() * maxRadius * 0.8;
+    const size = 1 + Math.random() * 5 * midIntensity;
+    
+    const x = centerX + Math.cos(angle) * distance;
+    const y = centerY + Math.sin(angle) * distance;
+    
+    ctx.beginPath();
+    ctx.arc(x, y, size, 0, Math.PI * 2);
+    ctx.fillStyle = hexToRgba(state.vizColor, 0.7);
+    ctx.fill();
+  }
+  
+  ctx.restore();
+  ctx.shadowBlur = 0;
+},
+
+// 2. Cosmic Vortex - 3D-эффект вращающегося вихря
+cosmicVortex(ctx, centerX, centerY, dataArray) {
+  const radius = Math.min(config.width, config.height) * 0.4 * state.vizScale;
+  const depthEffect = state.depthEffect;
+  const particleCount = state.particleCount;
+  const rotSpeed = state.rotationSpeed;
+  
+  // Анализ аудио
+  const bassIntensity = dataArray.slice(0, 10).reduce((a, b) => a + b, 0) / (10 * 255);
+  const midIntensity = dataArray.slice(10, 100).reduce((a, b) => a + b, 0) / (90 * 255);
+  
+  // Фоновое свечение для всего вихря
+  const bgGradient = ctx.createRadialGradient(
+    centerX, centerY, 0,
+    centerX, centerY, radius * 1.5
+  );
+  bgGradient.addColorStop(0, hexToRgba(state.vizColor, 0.3 * bassIntensity));
+  bgGradient.addColorStop(0.5, hexToRgba(state.vizColor, 0.1 * midIntensity));
+  bgGradient.addColorStop(1, 'rgba(0, 0, 0, 0)');
+  
+  ctx.fillStyle = bgGradient;
+  ctx.fillRect(0, 0, config.width, config.height);
+  
+  // Частицы в трехмерном пространстве
+  for (let i = 0; i < particleCount; i++) {
+    // Создаем эффект трехмерности с помощью полярных координат и смещения во времени
+    const particleBaseAngle = (i / particleCount) * Math.PI * 2;
+    const particleTime = (time * rotSpeed * 0.5 + i / particleCount * 10) % 1;
+    
+    // Z-координата (глубина) определяет как далеко частица в 3D пространстве
+    const zDepth = particleTime * 2 - 1; // от -1 (далеко) до 1 (близко)
+    
+    // Эффект спирального вращения
+    const angle = particleBaseAngle + zDepth * 5 * Math.PI * depthEffect;
+    
+    // Радиус увеличивается, когда частица приближается (z → 1)
+    const distance = radius * (0.1 + 0.9 * (1 + zDepth) * 0.5);
+    
+    // Позиция частицы с учетом 3D-искажения
+    const x = centerX + Math.cos(angle) * distance;
+    const y = centerY + Math.sin(angle) * distance;
+    
+    // Размер частицы зависит от ее глубины и громкости соответствующей частоты
+    const freqIndex = Math.floor(i * dataArray.length / particleCount);
+    const audioValue = dataArray[freqIndex] / 255;
+    
+    // Частицы увеличиваются при приближении и при увеличении громкости
+    const particleSize = 1 + (1 + zDepth) * 5 * depthEffect * (0.5 + audioValue * 0.5);
+    
+    // Цвет частицы зависит от глубины и от спектра
+    const hue = (particleBaseAngle / (Math.PI * 2) * 360 + time * state.colorShiftSpeed * 100) % 360;
+    const saturation = 80 + 20 * audioValue;
+    const lightness = 50 + 20 * audioValue + 10 * (1 + zDepth);
+    const opacity = 0.2 + 0.8 * (1 + zDepth) * 0.5 * (0.3 + audioValue * 0.7);
+    
+    ctx.beginPath();
+    ctx.arc(x, y, particleSize, 0, Math.PI * 2);
+    ctx.fillStyle = `hsla(${hue}, ${saturation}%, ${lightness}%, ${opacity})`;
+    
+    if (zDepth > 0) {
+      // Только ближним частицам добавляем свечение
+      ctx.shadowBlur = state.vizGlow * zDepth;
+      ctx.shadowColor = `hsl(${hue}, ${saturation}%, ${lightness}%)`;
+    }
+    
+    ctx.fill();
+    ctx.shadowBlur = 0;
+    
+    // Добавляем "трейлы" к частицам для эффекта движения
+    if (zDepth > 0.7 && audioValue > 0.5) {
+      const trailLength = 5 + 20 * audioValue;
+      const trailAngle = angle - Math.PI * 0.1 * (1 - zDepth);
+      
+      ctx.beginPath();
+      ctx.moveTo(x, y);
+      ctx.lineTo(
+        x - Math.cos(trailAngle) * trailLength,
+        y - Math.sin(trailAngle) * trailLength
+      );
+      ctx.strokeStyle = `hsla(${hue}, ${saturation}%, ${lightness}%, ${opacity * 0.5})`;
+      ctx.lineWidth = particleSize * 0.7;
+      ctx.lineCap = 'round';
+      ctx.stroke();
+    }
+  }
+  
+  // Центральное ядро вихря
+  const coreSize = radius * 0.15 * (1 + bassIntensity * 0.3);
+  const coreGradient = ctx.createRadialGradient(
+    centerX, centerY, 0,
+    centerX, centerY, coreSize
+  );
+  coreGradient.addColorStop(0, hexToRgba('#ffffff', 0.9));
+  coreGradient.addColorStop(0.5, hexToRgba(state.vizColor, 0.7));
+  coreGradient.addColorStop(1, 'rgba(0, 0, 0, 0)');
+  
+  ctx.beginPath();
+  ctx.arc(centerX, centerY, coreSize, 0, Math.PI * 2);
+  ctx.fillStyle = coreGradient;
+  ctx.shadowBlur = state.vizGlow * 2;
+  ctx.shadowColor = state.vizColor;
+  ctx.fill();
+},
+
+// 3. Orbital Spheres - система сфер, вращающихся по орбитам
+orbitalSpheres(ctx, centerX, centerY, dataArray) {
+  const maxRadius = Math.min(config.width, config.height) * 0.4 * state.vizScale;
+  const depthEffect = state.depthEffect;
+  const rotationSpeed = state.rotationSpeed;
+  
+  // Центральная сфера (звезда)
+  const centralBassValue = dataArray.slice(0, 5).reduce((a, b) => a + b, 0) / (5 * 255);
+  const centralRadius = maxRadius * 0.15 * (1 + centralBassValue * 0.3);
+  
+  // Рисуем "свечение" центральной звезды
+  const starGlow = ctx.createRadialGradient(
+    centerX, centerY, 0,
+    centerX, centerY, centralRadius * 3
+  );
+  starGlow.addColorStop(0, hexToRgba(state.vizColor, 0.5 * centralBassValue));
+  starGlow.addColorStop(0.3, hexToRgba(state.vizColor, 0.2 * centralBassValue));
+  starGlow.addColorStop(1, 'rgba(0, 0, 0, 0)');
+  
+  ctx.fillStyle = starGlow;
+  ctx.fillRect(0, 0, config.width, config.height);
+  
+  // Рисуем центральную звезду
+  ctx.beginPath();
+  ctx.arc(centerX, centerY, centralRadius, 0, Math.PI * 2);
+  ctx.fillStyle = hexToRgba('#ffffff', 0.9);
+  ctx.shadowBlur = state.vizGlow * 2;
+  ctx.shadowColor = state.vizColor;
+  ctx.fill();
+  ctx.shadowBlur = 0;
+  
+  // Определяем количество орбит
+  const orbitCount = 4;
+  
+  // Для каждой орбиты
+  for (let orbit = 1; orbit <= orbitCount; orbit++) {
+    // Радиус орбиты
+    const orbitRadius = maxRadius * (0.3 + 0.2 * orbit);
+    
+    // Частота для этой орбиты
+    const frequencyBand = orbit === 1 ? dataArray.slice(5, 20) :
+                          orbit === 2 ? dataArray.slice(20, 60) :
+                          orbit === 3 ? dataArray.slice(60, 100) : 
+                                       dataArray.slice(100, 200);
+    
+    const frequencyIntensity = frequencyBand.reduce((a, b) => a + b, 0) / (frequencyBand.length * 255);
+    
+    // Рисуем орбитальную линию
+    ctx.beginPath();
+    ctx.arc(centerX, centerY, orbitRadius, 0, Math.PI * 2);
+    ctx.strokeStyle = hexToRgba(state.vizColor, 0.1 + 0.2 * frequencyIntensity);
+    ctx.lineWidth = 1 + frequencyIntensity * 2;
+    ctx.stroke();
+    
+    // Количество планет на орбите
+    const planetCount = 1 + Math.floor(orbit * 3);
+    
+    // Размещаем планеты по орбите
+    for (let p = 0; p < planetCount; p++) {
+      const planetAngle = (p / planetCount) * Math.PI * 2 + 
+                          time * rotationSpeed * (orbit === 1 ? 0.5 : 0.3 / orbit);
+      
+      // Вычисляем позицию с эффектом эллиптической орбиты
+      const orbitEccentricity = 0.1 * depthEffect;
+      const adjustedRadius = orbitRadius * (1 + orbitEccentricity * Math.sin(planetAngle * 2));
+      
+      const planetX = centerX + Math.cos(planetAngle) * adjustedRadius;
+      const planetY = centerY + Math.sin(planetAngle) * adjustedRadius;
+      
+      // Выбираем размер "планеты" в зависимости от орбиты и громкости
+      const planetFreqIndex = Math.floor((orbit * 40 + p * 10) % dataArray.length);
+      const planetAudioValue = dataArray[planetFreqIndex] / 255;
+      
+      // Базовый размер уменьшается с номером орбиты
+      const basePlanetSize = maxRadius * (0.08 - 0.01 * orbit);
+      const planetSize = basePlanetSize * (1 + planetAudioValue * 0.5);
+      
+      // Рисуем планету
+      ctx.beginPath();
+      ctx.arc(planetX, planetY, planetSize, 0, Math.PI * 2);
+      
+      // Цвет планеты зависит от орбиты
+      const hue = (orbit * 60 + time * state.colorShiftSpeed * 20) % 360;
+      ctx.fillStyle = `hsl(${hue}, 80%, ${50 + 20 * planetAudioValue}%)`;
+      ctx.shadowBlur = state.vizGlow * (0.5 + planetAudioValue * 0.5);
+      ctx.shadowColor = `hsl(${hue}, 80%, 60%)`;
+      ctx.fill();
+      
+      // Рисуем луны для больших планет
+      if (planetSize > basePlanetSize * 1.2 && orbit > 1) {
+        const moonCount = orbit === 2 ? 1 : 2;
+        
+        for (let m = 0; m < moonCount; m++) {
+          const moonAngle = (m / moonCount) * Math.PI * 2 + 
+                           time * rotationSpeed * 2 * (1 + 0.5 * m);
+          
+          const moonDistance = planetSize * 2.5;
+          const moonX = planetX + Math.cos(moonAngle) * moonDistance;
+          const moonY = planetY + Math.sin(moonAngle) * moonDistance;
+          const moonSize = planetSize * 0.3;
+          
+          ctx.beginPath();
+          ctx.arc(moonX, moonY, moonSize, 0, Math.PI * 2);
+          ctx.fillStyle = `hsl(${(hue + 30) % 360}, 70%, 70%)`;
+          ctx.shadowBlur = state.vizGlow * 0.5;
+          ctx.shadowColor = `hsl(${(hue + 30) % 360}, 70%, 70%)`;
+          ctx.fill();
+        }
+      }
+    }
+  }
+  
+  // Рисуем случайные звезды на заднем фоне
+  const starCount = 100;
+  for (let i = 0; i < starCount; i++) {
+    const starAngle = Math.random() * Math.PI * 2;
+    const starDist = maxRadius * 1.2 + Math.random() * maxRadius;
+    
+    const starX = centerX + Math.cos(starAngle) * starDist;
+    const starY = centerY + Math.sin(starAngle) * starDist;
+    
+    const starSize = 0.5 + Math.random() * 1.5;
+    const starBrightness = 70 + Math.random() * 30;
+    
+    ctx.beginPath();
+    ctx.arc(starX, starY, starSize, 0, Math.PI * 2);
+    ctx.fillStyle = `rgba(${starBrightness}, ${starBrightness}, ${starBrightness}, 0.8)`;
+    ctx.fill();
+  }
+},
+
+// 4. Geometric Matrix - 3D-поле из геометрических объектов
+geoMatrix(ctx, centerX, centerY, dataArray) {
+  const maxDist = Math.min(config.width, config.height) * 0.4 * state.vizScale;
+  const depthEffect = state.depthEffect;
+  const rotSpeed = state.rotationSpeed;
+  const count = state.particleCount;
+  
+  // Общие параметры для всего поля
+  const fieldWidth = maxDist * 2;
+  const fieldHeight = maxDist * 1.2;
+  const fieldDepth = maxDist * 1.5; // Виртуальная глубина
+  
+  // Аудио-анализ
+  const bassResponse = dataArray.slice(0, 10).reduce((a, b) => a + b, 0) / (10 * 255);
+  const midResponse = dataArray.slice(10, 60).reduce((a, b) => a + b, 0) / (50 * 255);
+  const highResponse = dataArray.slice(60, 100).reduce((a, b) => a + b, 0) / (40 * 255);
+  
+  // Смещение и вращение всего поля
+  const fieldOffsetX = Math.sin(time * 0.2) * 20 * depthEffect;
+  const fieldOffsetY = Math.cos(time * 0.3) * 15 * depthEffect;
+  const fieldRotationX = Math.sin(time * rotSpeed * 0.3) * 0.2 * depthEffect;
+  const fieldRotationY = time * rotSpeed * 0.2;
+  const fieldRotationZ = Math.cos(time * rotSpeed * 0.4) * 0.1 * depthEffect;
+  
+  // Вспомогательная функция для 3D-проекции
+  function project3D(x, y, z) {
+    // Упрощенная 3D проекция - более отдаленные точки (z) меньше и ближе к центру
+    const perspective = 800; // Эффект перспективы
+    const scale = perspective / (perspective + z * depthEffect);
+    
+    // Вращение X - вокруг горизонтальной оси
+    const ry = y * Math.cos(fieldRotationX) - z * Math.sin(fieldRotationX);
+    const rz = y * Math.sin(fieldRotationX) + z * Math.cos(fieldRotationX);
+    
+    // Вращение Y - вокруг вертикальной оси
+    const rx = x * Math.cos(fieldRotationY) - rz * Math.sin(fieldRotationY);
+    const rz2 = x * Math.sin(fieldRotationY) + rz * Math.cos(fieldRotationY);
+    
+    // Вращение Z - вокруг оси глубины
+    const rx2 = rx * Math.cos(fieldRotationZ) - ry * Math.sin(fieldRotationZ);
+    const ry2 = rx * Math.sin(fieldRotationZ) + ry * Math.cos(fieldRotationZ);
+    
+    return {
+      x: centerX + (rx2 * scale) + fieldOffsetX,
+      y: centerY + (ry2 * scale) + fieldOffsetY,
+      z: rz2,
+      scale: scale
+    };
+  }
+  
+  // Функция для рисования разных геометрических форм
+    function drawShape(x, y, size, type, color, opacity) {
+    ctx.fillStyle = hexToRgba(color, opacity);
+    
+    switch (type) {
+      case 0: // Квадрат
+        ctx.fillRect(x - size/2, y - size/2, size, size);
+        break;
+      case 1: // Круг
+        ctx.beginPath();
+        ctx.arc(x, y, size/2, 0, Math.PI * 2);
+        ctx.fill();
+        break;
+      case 2: // Треугольник
+        ctx.beginPath();
+        ctx.moveTo(x, y - size/2);
+        ctx.lineTo(x + size/2, y + size/2);
+        ctx.lineTo(x - size/2, y + size/2);
+        ctx.closePath();
+        ctx.fill();
+        break;
+      case 3: // Ромб
+        ctx.beginPath();
+        ctx.moveTo(x, y - size/2);
+        ctx.lineTo(x + size/2, y);
+        ctx.lineTo(x, y + size/2);
+        ctx.lineTo(x - size/2, y);
+        ctx.closePath();
+        ctx.fill();
+        break;
+      case 4: // Пятиугольник
+        ctx.beginPath();
+        for (let i = 0; i < 5; i++) {
+          const angle = (i / 5) * Math.PI * 2 - Math.PI / 2;
+          const px = x + Math.cos(angle) * size/2;
+          const py = y + Math.sin(angle) * size/2;
+          if (i === 0) ctx.moveTo(px, py);
+          else ctx.lineTo(px, py);
+        }
+        ctx.closePath();
+        ctx.fill();
+        break;
+    }
+  }
+  
+  // Массив объектов для рендеринга - создаем только один раз
+  const objects = [];
+  
+  // Инициализируем объекты, если еще не сделано
+  if (objects.length === 0) {
+    for (let i = 0; i < count; i++) {
+      // Равномерно распределяем объекты в 3D-пространстве
+      const x = (Math.random() * 2 - 1) * fieldWidth/2;
+      const y = (Math.random() * 2 - 1) * fieldHeight/2;
+      const z = (Math.random() * 2 - 1) * fieldDepth/2;
+      
+      // Случайно выбираем тип фигуры
+      const shape = Math.floor(Math.random() * 5);
+      
+      // Начальный цвет с небольшой вариацией от основного цвета
+      const hue = parseInt(state.vizColor.slice(1, 3), 16);
+      const sat = parseInt(state.vizColor.slice(3, 5), 16);
+      const val = parseInt(state.vizColor.slice(5, 7), 16);
+      
+      // Добавляем объект в массив
+      objects.push({ x, y, z, shape, hue, sat, val });
+    }
+  }
+  
+  // Сортируем объекты по Z-координате для правильного рендеринга (от дальних к ближним)
+  const sortedObjects = [...objects].map(obj => {
+    // Обновляем z-координату с учетом времени для создания движения
+    const newZ = (obj.z + time * rotSpeed * 100) % fieldDepth - fieldDepth/2;
+    return { ...obj, z: newZ };
+  }).sort((a, b) => b.z - a.z);
+  
+  // Отрисовываем все объекты
+  for (const obj of sortedObjects) {
+    // Получаем проецированные 2D-координаты
+    const projected = project3D(obj.x, obj.y, obj.z);
+    
+    // Объекты, находящиеся за "камерой", не отображаем
+    if (projected.z > -100) {
+      // Выбираем полосу частот в зависимости от положения объекта
+      const zNorm = (obj.z + fieldDepth/2) / fieldDepth; // 0..1
+      const freqIndex = Math.floor(zNorm * dataArray.length * 0.8);
+      const audioValue = dataArray[freqIndex] / 255;
+      
+      // Размер объекта зависит от глубины, аудио и характеристик
+      const baseSize = 15 * projected.scale * state.vizScale;
+      const sizeWithAudio = baseSize * (1 + audioValue * 0.5);
+      
+      // Цвет меняется в зависимости от положения и аудио
+      let hue = (obj.hue + time * state.colorShiftSpeed * 100) % 360;
+      // Более яркие цвета для более громких звуков
+      const sat = 80 + audioValue * 20;
+      const lightness = 40 + audioValue * 30 + 20 * projected.scale;
+      
+      // Непрозрачность увеличивается при приближении объекта
+      const opacity = 0.2 + 0.8 * projected.scale * (0.3 + audioValue * 0.7);
+      
+      // Рисуем объект с тенью для большего эффекта глубины
+      ctx.save();
+      ctx.shadowColor = `hsl(${hue}, ${sat}%, ${lightness}%)`;
+      ctx.shadowBlur = state.vizGlow * projected.scale;
+      
+      // Рисуем фигуру
+      const color = `hsl(${hue}, ${sat}%, ${lightness}%)`;
+      drawShape(projected.x, projected.y, sizeWithAudio, obj.shape, color, opacity);
+      
+      // Если аудио сигнал сильный, добавляем световой эффект вокруг фигуры
+      if (audioValue > 0.7) {
+        ctx.beginPath();
+        ctx.arc(projected.x, projected.y, sizeWithAudio * 1.5, 0, Math.PI * 2);
+        ctx.fillStyle = hexToRgba(color, opacity * 0.3);
+        ctx.fill();
+      }
+      
+      ctx.restore();
+    }
+  }
+  
+  // Добавляем эффект "тумана" для усиления ощущения глубины
+  const fogGradient = ctx.createRadialGradient(
+    centerX, centerY, 0,
+    centerX, centerY, maxDist
+  );
+  fogGradient.addColorStop(0, 'rgba(0,0,0,0)');
+  fogGradient.addColorStop(1, `rgba(0,0,0,${0.7 - bassResponse * 0.4})`);
+  
+  ctx.fillStyle = fogGradient;
+  ctx.fillRect(0, 0, config.width, config.height);
+}
   // НОВЫЙ ВИЗУАЛИЗАТОР: Electric Wave (inspired by Image 7)
   electricWave(ctx, centerX, centerY, dataArray) {
     const samples = 256;
@@ -1564,10 +2131,22 @@ function switchTab(tab, el) {
   document.getElementById('tab-' + tab).classList.add('active');
 }
 
+// Обновить функцию selectViz, чтобы показывать соответствующие контроллеры
 function selectViz(viz, el) {
   state.visualizer = viz;
   document.querySelectorAll('.viz-card').forEach(c => c.classList.remove('active'));
   el.classList.add('active');
+  
+  // Скрыть все контроллеры визуализаторов
+  document.getElementById('rippleWavesControls').style.display = 'none';
+  document.getElementById('3dControls').style.display = 'none';
+  
+  // Показать нужные контроллеры в зависимости от выбранного визуализатора
+  if (viz === 'rippleWaves') {
+    document.getElementById('rippleWavesControls').style.display = 'block';
+  } else if (['cosmicVortex', 'orbitalSpheres', 'geoMatrix'].includes(viz)) {
+    document.getElementById('3dControls').style.display = 'block';
+  }
 }
 
 function updateResolution() {
@@ -1600,6 +2179,42 @@ document.getElementById('emblemX').oninput = (e) => { state.emblemX = e.target.v
 document.getElementById('emblemY').oninput = (e) => { state.emblemY = e.target.value; document.getElementById('emblemYVal').textContent = parseFloat(e.target.value).toFixed(2); };
 document.getElementById('emblemCircle').onchange = (e) => { state.emblemCircle = e.target.checked; };
 
+  // Добавить обработчики событий для новых контроллеров
+document.getElementById('waveCount').oninput = (e) => { 
+  state.waveCount = parseInt(e.target.value); 
+  document.getElementById('waveCountVal').textContent = e.target.value; 
+};
+
+document.getElementById('waveSpeed').oninput = (e) => { 
+  state.waveSpeed = parseFloat(e.target.value); 
+  document.getElementById('waveSpeedVal').textContent = parseFloat(e.target.value).toFixed(1); 
+};
+
+document.getElementById('waveOpacity').oninput = (e) => { 
+  state.waveOpacity = parseFloat(e.target.value); 
+  document.getElementById('waveOpacityVal').textContent = parseFloat(e.target.value).toFixed(1); 
+};
+
+document.getElementById('depthEffect').oninput = (e) => { 
+  state.depthEffect = parseFloat(e.target.value); 
+  document.getElementById('depthVal').textContent = parseFloat(e.target.value).toFixed(1); 
+};
+
+document.getElementById('rotationSpeed').oninput = (e) => { 
+  state.rotationSpeed = parseFloat(e.target.value); 
+  document.getElementById('rotSpeedVal').textContent = parseFloat(e.target.value).toFixed(1); 
+};
+
+document.getElementById('particleCount').oninput = (e) => { 
+  state.particleCount = parseInt(e.target.value); 
+  document.getElementById('particleCountVal').textContent = e.target.value; 
+};
+
+document.getElementById('colorShiftSpeed').oninput = (e) => { 
+  state.colorShiftSpeed = parseFloat(e.target.value); 
+  document.getElementById('colorShiftVal').textContent = parseFloat(e.target.value).toFixed(1); 
+};
+  
 document.getElementById('fps').onchange = (e) => { config.fps = parseInt(e.target.value); };
 
 // ОБНОВЛЕННАЯ ЛОГИКА ДЛЯ ЦВЕТОВ КИБЕР-ТУННЕЛЯ
