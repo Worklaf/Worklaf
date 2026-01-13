@@ -436,6 +436,30 @@ input[type="color"] {
     min-width: auto;
   }
 }
+  .color-palette {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 10px;
+}
+
+.color-preset {
+  width: 60px;
+  height: 30px;
+  border-radius: 5px;
+  cursor: pointer;
+  border: 2px solid var(--border);
+  transition: all 0.2s;
+}
+
+.color-preset:hover {
+  transform: scale(1.05);
+  border-color: var(--accent);
+}
+
+.color-preset.active {
+  border-color: white;
+  box-shadow: 0 0 10px rgba(255,255,255,0.5);
+}
 </style>
 </head>
 <body>
@@ -562,6 +586,18 @@ input[type="color"] {
           <span class="viz-icon">🎯</span>
           <div class="viz-name">Tech HUD</div>
         </div>
+        <div class="viz-card" onclick="selectViz('dolphinWave', this)">
+  <span class="viz-icon">🐬</span>
+  <div class="viz-name">Dolphin Wave</div>
+</div>
+<div class="viz-card" onclick="selectViz('rainbowCircular', this)">
+  <span class="viz-icon">🌈</span>
+  <div class="viz-name">Rainbow Ring</div>
+</div>
+<div class="viz-card" onclick="selectViz('landscapeSpectrum', this)">
+  <span class="viz-icon">🏔️</span>
+  <div class="viz-name">3D Landscape</div>
+</div>
         <!-- НОВЫЕ ВИЗУАЛИЗАТОРЫ -->
         <div class="viz-card" onclick="selectViz('landscape3D', this)">
           <span class="viz-icon">🏞️</span>
@@ -589,20 +625,18 @@ input[type="color"] {
         <div class="slider-label"><span>Position Y</span><span id="vizYVal">0.5</span></div>
         <input type="range" class="slider" id="vizY" min="0" max="1" step="0.01" value="0.5">
       </div>
-      <!-- ОБНОВЛЕННЫЙ ВЫБОР ЦВЕТА ДЛЯ КИБЕР-ТУННЕЛЯ -->
-      <div class="slider-group">
-        <div class="slider-label"><span>Cyber Tunnel Colors</span></div>
-        <select id="tunnelPalettePreset" class="input" style="margin-bottom:8px;">
-          <option value="custom">Custom (Hex list)</option>
-          <option value="cyberpunk">Cyberpunk (#00E5FF,#FF00E5,#00FFAA)</option>
-          <option value="ocean">Ocean (#00FFFF,#00AAFF,#0000FF)</option>
-          <option value="lava">Lava (#FF4500,#FF8C00,#FFD700)</option>
-          <option value="emerald">Emerald (#00FF7F,#7FFF00,#008080)</option>
-        </select>
-        <input type="text" id="tunnelColorsInput" class="input" value="#00E5FF,#FF00E5,#00FFAA">
-        <div style="font-size:10px;color:var(--muted);margin-top:-6px;">
-          Hex цвета через запятую: #RRGGBB,#RRGGBB,...
-        </div>
+       <!-- Replace text input -->
+<div class="section-title">Tunnel Colors</div>
+<div class="color-palette">
+  <div class="color-preset" style="background-image: linear-gradient(90deg, #00E5FF, #FF00E5, #00FFAA)" 
+       onclick="selectColorPreset(['#00E5FF', '#FF00E5', '#00FFAA'])"></div>
+  <div class="color-preset" style="background-image: linear-gradient(90deg, #FF5733, #C70039, #900C3F)" 
+       onclick="selectColorPreset(['#FF5733', '#C70039', '#900C3F'])"></div>
+  <div class="color-preset" style="background-image: linear-gradient(90deg, #4CAF50, #8BC34A, #CDDC39)" 
+       onclick="selectColorPreset(['#4CAF50', '#8BC34A', '#CDDC39'])"></div>
+  <div class="color-preset" style="background-image: linear-gradient(90deg, #9C27B0, #673AB7, #3F51B5)" 
+       onclick="selectColorPreset(['#9C27B0', '#673AB7', '#3F51B5'])"></div>
+</div>
       </div>
     </div>
   </div>
@@ -832,6 +866,168 @@ const Visualizers = {
     ctx.shadowBlur = 0;
   },
 
+  landscapeSpectrum(ctx, centerX, centerY, dataArray) {
+  const width = config.width;
+  const depth = 150;
+  const baseY = centerY + 50;
+  
+  // Create perspective grid
+  const lines = 20;
+  const lineWidth = width / 20;
+  
+  // Get average bass for pulse effect
+  const bassAvg = dataArray.slice(0, 5).reduce((a, b) => a + b, 0) / 5;
+  const bassScale = bassAvg / 255;
+  
+  // Draw 3D spectrum landscape
+  for (let z = lines; z > 0; z--) {
+    const depth = z / lines;
+    const perspectiveWidth = width * (0.5 + depth * 0.5);
+    const perspectiveX = centerX - perspectiveWidth / 2;
+    const yOffset = depth * 120;
+    
+    const opacity = 1 - depth * 0.7;
+    const segmentWidth = perspectiveWidth / 40;
+    
+    // Draw bars for this row
+    for (let i = 0; i < 40; i++) {
+      const freqIdx = Math.floor((i / 40) * dataArray.length * 0.8);
+      const value = dataArray[freqIdx] || 0;
+      const hue = (i / 40) * 300 + time * 10;
+      
+      // Scale height based on audio data and perspective
+      const barHeight = (value / 255) * 100 * (1 - depth * 0.5) + 5;
+      
+      // Position with perspective
+      const x = perspectiveX + i * segmentWidth;
+      const y = baseY - barHeight + yOffset;
+      
+      // Draw bar
+      ctx.fillStyle = `hsla(${hue}, 100%, 50%, ${opacity})`;
+      ctx.fillRect(
+        x, 
+        baseY + yOffset, 
+        segmentWidth - 1, 
+        -barHeight
+      );
+      
+      // Add glow for high frequencies
+      if (value > 180) {
+        ctx.shadowBlur = state.vizGlow;
+        ctx.shadowColor = `hsl(${hue}, 100%, 50%)`;
+      } else {
+        ctx.shadowBlur = 0;
+      }
+    }
+    ctx.shadowBlur = 0;
+  }
+  
+  // Draw horizon line
+  ctx.beginPath();
+  ctx.moveTo(0, baseY);
+  ctx.lineTo(width, baseY);
+  ctx.strokeStyle = hexToRgba(state.vizColor, 0.5);
+  ctx.lineWidth = 2;
+  ctx.stroke();
+}
+  rainbowCircular(ctx, centerX, centerY, dataArray) {
+  const radius = Math.min(config.width, config.height) * 0.3 * state.vizScale;
+  const centerRadius = radius * 0.2;
+  const segments = 360;
+  
+  // Draw central hole
+  ctx.beginPath();
+  ctx.arc(centerX, centerY, centerRadius, 0, Math.PI * 2);
+  ctx.fillStyle = 'rgba(0,0,0,0.8)';
+  ctx.fill();
+  
+  // Draw spectrum bars in circular arrangement
+  for (let i = 0; i < segments; i++) {
+    const angle = (i / segments) * Math.PI * 2;
+    const freqIndex = Math.floor((i / segments) * dataArray.length);
+    const value = dataArray[freqIndex] || 0;
+    const height = (value / 255) * radius * 0.6 + radius * 0.1;
+    
+    const hue = (i / segments) * 360;
+    
+    ctx.beginPath();
+    ctx.moveTo(
+      centerX + Math.cos(angle) * centerRadius,
+      centerY + Math.sin(angle) * centerRadius
+    );
+    ctx.lineTo(
+      centerX + Math.cos(angle) * height,
+      centerY + Math.sin(angle) * height
+    );
+    
+    ctx.strokeStyle = `hsl(${hue}, 100%, 50%)`;
+    ctx.lineWidth = 2;
+    ctx.stroke();
+  }
+  
+  // Add connecting ring
+  ctx.beginPath();
+  ctx.arc(centerX, centerY, radius * 0.95, 0, Math.PI * 2);
+  ctx.strokeStyle = 'rgba(255,255,255,0.3)';
+  ctx.lineWidth = 1;
+  ctx.stroke();
+}
+  dolphinWave(ctx, centerX, centerY, dataArray) {
+  const width = config.width;
+  const height = config.height * 0.3;
+  
+  // Create blue gradient
+  const gradient = ctx.createLinearGradient(0, centerY - height, 0, centerY + height);
+  gradient.addColorStop(0, 'rgba(0,60,120,0)');
+  gradient.addColorStop(0.5, 'rgba(0,160,255,0.8)');
+  gradient.addColorStop(1, 'rgba(0,60,120,0)');
+  
+  // Draw wave
+  const samples = 200;
+  ctx.beginPath();
+  for (let i = 0; i <= samples; i++) {
+    const t = i / samples;
+    const x = t * width;
+    
+    // Use audio data to create wave pattern
+    const idx = Math.floor(t * dataArray.length * 0.8);
+    const freq = dataArray[idx] || 0;
+    const amp = (freq / 255) * height * 0.8;
+    
+    // Add sine wave movement for fluidity
+    const wave = Math.sin(t * Math.PI * 4 + time * 2) * height * 0.1;
+    
+    const y = centerY + wave + amp * Math.sin(t * 10 + time);
+    
+    if (i === 0) ctx.moveTo(x, y);
+    else ctx.lineTo(x, y);
+  }
+  
+  // Style and draw
+  ctx.strokeStyle = hexToRgba(state.vizColor, 0.9);
+  ctx.lineWidth = 4;
+  ctx.shadowBlur = state.vizGlow * 1.5;
+  ctx.shadowColor = state.vizColor;
+  ctx.stroke();
+  ctx.shadowBlur = 0;
+  
+  // Add circular dolphin silhouette
+  const dolphinRadius = height * 0.5;
+  const bassIntensity = dataArray[1] / 255;
+  
+  ctx.beginPath();
+  ctx.arc(centerX, centerY, dolphinRadius * (1 + bassIntensity * 0.2), 0, Math.PI * 2);
+  ctx.fillStyle = 'rgba(0,150,255,0.2)';
+  ctx.fill();
+  
+  // Add ring
+  ctx.beginPath();
+  ctx.arc(centerX, centerY, dolphinRadius * 1.1, 0, Math.PI * 2);
+  ctx.strokeStyle = hexToRgba(state.vizColor, 0.6);
+  ctx.lineWidth = 2;
+  ctx.stroke();
+}
+  
   // 4. Кибер‑туннель с лучами и палитрой
   tunnel(ctx, centerX, centerY, dataArray) {
     const radius = Math.min(config.width, config.height) * 0.3 * state.vizScale;
@@ -848,11 +1044,6 @@ const Visualizers = {
       accent: palette[2] || palette[1] || palette[0] || '#00FFAA'
     };
 
-    const bgGradient = ctx.createRadialGradient(centerX, centerY, 0, centerX, centerY, radius * 3);
-    bgGradient.addColorStop(0, 'rgba(20, 0, 40, 1)');
-    bgGradient.addColorStop(1, 'rgba(0, 0, 0, 1)');
-    ctx.fillStyle = bgGradient;
-    ctx.fillRect(0, 0, config.width, config.height);
 
     const avgBass = dataArray.slice(0, 10).reduce((a, b) => a + b, 0) / 10;
     const pulseRadius = radius * 0.25 + (avgBass / 255) * 30;
@@ -1333,25 +1524,26 @@ function togglePlay() {
 
 function seekToPercent(percent, restart) {
   if (!audioBuffer || !audioCtx) return;
+  
   percent = Math.max(0, Math.min(1, percent));
-  const newPauseTime = percent * duration;
-
-  const wasPlayingBeforeSeek = isPlaying;
-
-  if (wasPlayingBeforeSeek) {
-    programmaticStop = true; // Отмечаем остановку как программную
-    if (source) {
-      try { source.stop(0); } catch (e) {}
-    }
-    isPlaying = false; // Временно устанавливаем false, будет true снова при startPlayback
-  }
-
-  pauseTime = newPauseTime; // Обновляем глобальное время паузы
+  pauseTime = percent * duration;
   currentTime = pauseTime;
   updateTimeDisplay();
-
-  if (wasPlayingBeforeSeek && restart) { // Если играло и нужно перезапустить
-    startPlayback();
+  
+  // Only restart playback if currently playing and requested
+  if (restart && isPlaying) {
+    // Make sure we properly clean up before starting new playback
+    if (source) {
+      try {
+        source.stop(0);
+        source.disconnect();
+      } catch (e) {}
+    }
+    
+    // Short timeout to ensure proper cleanup before restart
+    setTimeout(() => {
+      startPlayback();
+    }, 10);
   }
 }
 
@@ -1569,7 +1761,13 @@ function switchTab(tab, el) {
   el.classList.add('active');
   document.getElementById('tab-' + tab).classList.add('active');
 }
-
+function selectColorPreset(colors) {
+  state.tunnelColors = colors;
+  document.querySelectorAll('.color-preset').forEach(el => {
+    el.classList.remove('active');
+  });
+  event.currentTarget.classList.add('active');
+}
 function selectViz(viz, el) {
   state.visualizer = viz;
   document.querySelectorAll('.viz-card').forEach(c => c.classList.remove('active'));
