@@ -347,7 +347,7 @@ input[type="color"] {
 .timeline-handle {
   position: absolute;
   top: 50%;
-  right: -8px;
+  right: -8px; /* This makes it move with the progress bar */
   transform: translateY(-50%);
   width: 16px;
   height: 16px;
@@ -562,6 +562,15 @@ input[type="color"] {
           <span class="viz-icon">🎯</span>
           <div class="viz-name">Tech HUD</div>
         </div>
+        <!-- НОВЫЕ ВИЗУАЛИЗАТОРЫ -->
+        <div class="viz-card" onclick="selectViz('landscape3D', this)">
+          <span class="viz-icon">🏞️</span>
+          <div class="viz-name">3D Landscape</div>
+        </div>
+        <div class="viz-card" onclick="selectViz('electricWave', this)">
+          <span class="viz-icon">⚡</span>
+          <div class="viz-name">Electric Wave</div>
+        </div>
       </div>
     </div>
 
@@ -580,11 +589,19 @@ input[type="color"] {
         <div class="slider-label"><span>Position Y</span><span id="vizYVal">0.5</span></div>
         <input type="range" class="slider" id="vizY" min="0" max="1" step="0.01" value="0.5">
       </div>
+      <!-- ОБНОВЛЕННЫЙ ВЫБОР ЦВЕТА ДЛЯ КИБЕР-ТУННЕЛЯ -->
       <div class="slider-group">
         <div class="slider-label"><span>Cyber Tunnel Colors</span></div>
-        <input type="text" id="tunnelColors" class="input" value="#00E5FF,#FF00E5,#00FFAA">
+        <select id="tunnelPalettePreset" class="input" style="margin-bottom:8px;">
+          <option value="custom">Custom (Hex list)</option>
+          <option value="cyberpunk">Cyberpunk (#00E5FF,#FF00E5,#00FFAA)</option>
+          <option value="ocean">Ocean (#00FFFF,#00AAFF,#0000FF)</option>
+          <option value="lava">Lava (#FF4500,#FF8C00,#FFD700)</option>
+          <option value="emerald">Emerald (#00FF7F,#7FFF00,#008080)</option>
+        </select>
+        <input type="text" id="tunnelColorsInput" class="input" value="#00E5FF,#FF00E5,#00FFAA">
         <div style="font-size:10px;color:var(--muted);margin-top:-6px;">
-          Hex цвета через запятую: #00e5ff,#ff00e5,#00ffaa …
+          Hex цвета через запятую: #RRGGBB,#RRGGBB,...
         </div>
       </div>
     </div>
@@ -662,6 +679,8 @@ let rotation = 0, time = 0;
 let mediaRecorder, recordedChunks = [], isRecording = false;
 let recordDest = null;
 
+let programmaticStop = false; // Флаг для управления onended событием
+
 let state = {
   visualizer: 'circular',
   bgColor: '#000000',
@@ -679,7 +698,7 @@ let state = {
   emblemX: 0.5,
   emblemY: 0.5,
   emblemCircle: true,
-  tunnelColors: ['#00E5FF', '#FF00E5', '#00FFAA']
+  tunnelColors: ['#00E5FF', '#FF00E5', '#00FFAA'] // Начальная палитра для туннеля
 };
 
 // =============================================
@@ -828,6 +847,12 @@ const Visualizers = {
       pink: palette[1] || palette[0] || '#FF00E5',
       accent: palette[2] || palette[1] || palette[0] || '#00FFAA'
     };
+
+    const bgGradient = ctx.createRadialGradient(centerX, centerY, 0, centerX, centerY, radius * 3);
+    bgGradient.addColorStop(0, 'rgba(20, 0, 40, 1)');
+    bgGradient.addColorStop(1, 'rgba(0, 0, 0, 1)');
+    ctx.fillStyle = bgGradient;
+    ctx.fillRect(0, 0, config.width, config.height);
 
     const avgBass = dataArray.slice(0, 10).reduce((a, b) => a + b, 0) / 10;
     const pulseRadius = radius * 0.25 + (avgBass / 255) * 30;
@@ -1067,6 +1092,101 @@ const Visualizers = {
 
     ctx.restore();
     ctx.shadowBlur = 0;
+  },
+
+  // НОВЫЙ ВИЗУАЛИЗАТОР: 3D Landscape (inspired by Image 3 & 5)
+  landscape3D(ctx, centerX, centerY, dataArray) {
+    const barCount = 100;
+    const maxBarHeight = config.height * 0.4 * state.vizScale; // Общая максимальная высота
+    const baseLineY = centerY; // Использование глобального centerY, скорректированного state.vizY
+    const barWidth = config.width / barCount;
+    const gradientColors = [
+      '#4E00FF', '#9D00FF', '#FF00E5', '#FFAA00', '#FFFF00', '#00FF00', '#00FFFF'
+    ];
+
+    ctx.save();
+
+    for (let i = 0; i < barCount; i++) {
+      const freqIndex = Math.floor(i / barCount * dataArray.length);
+      const value = dataArray[freqIndex] || 0;
+      const barHeight = (value / 255) * maxBarHeight;
+
+      const x = i * barWidth;
+      const barActualWidth = barWidth * 0.9; // Небольшой зазор между столбцами
+
+      // Цвет на основе позиции в спектре
+      const colorIdx = Math.floor((i / barCount) * gradientColors.length);
+      const barColor = gradientColors[colorIdx] || gradientColors[0];
+
+      // Рисуем основной столбец вверх от baseLineY
+      ctx.beginPath();
+      ctx.rect(x, baseLineY - barHeight, barActualWidth, barHeight);
+      ctx.fillStyle = barColor;
+      ctx.shadowBlur = state.vizGlow;
+      ctx.shadowColor = barColor;
+      ctx.fill();
+
+      // Рисуем отражение вниз от baseLineY
+      ctx.beginPath();
+      ctx.rect(x, baseLineY, barActualWidth, barHeight * 0.5); // Отражение в половину высоты
+      ctx.fillStyle = hexToRgba(barColor, 0.2); // Полупрозрачное отражение
+      ctx.shadowBlur = state.vizGlow / 2; // Меньше свечения для отражения
+      ctx.shadowColor = hexToRgba(barColor, 0.5);
+      ctx.fill();
+    }
+    ctx.restore();
+    ctx.shadowBlur = 0;
+  },
+
+  // НОВЫЙ ВИЗУАЛИЗАТОР: Electric Wave (inspired by Image 7)
+  electricWave(ctx, centerX, centerY, dataArray) {
+    const samples = 256;
+    const width = config.width * 0.9;
+    const startX = (config.width - width) / 2;
+    const amplitude = config.height * 0.15 * state.vizScale; // Используем vizScale для амплитуды
+    const waveCenterY = centerY; // Использование глобального centerY, скорректированного state.vizY
+    const glowColor = state.vizColor;
+
+    ctx.save();
+    ctx.beginPath();
+    ctx.moveTo(startX, waveCenterY);
+
+    for (let i = 0; i < samples; i++) {
+      const t = i / (samples - 1);
+      const freqIndex = Math.floor(t * dataArray.length * 0.7);
+      const value = dataArray[freqIndex] || 0;
+      const displacement = (value / 255) * amplitude * (Math.sin(t * Math.PI * 4 + time * 0.5) * 0.5 + 0.5); // Добавляем синусоиду для более динамичного вида
+      const x = startX + t * width;
+      const y = waveCenterY + Math.sin(t * Math.PI * 8 + time * 2) * displacement; // Извилистая линия
+
+      ctx.lineTo(x, y);
+    }
+
+    ctx.strokeStyle = glowColor;
+    ctx.lineWidth = 4;
+    ctx.shadowBlur = state.vizGlow * 2; // Более интенсивное свечение для электрического эффекта
+    ctx.shadowColor = glowColor;
+    ctx.stroke();
+
+    // Добавляем маленькие искры/точки для дополнительного электрического эффекта
+    for (let i = 0; i < 20; i++) {
+      const randT = Math.random();
+      const freqIndex = Math.floor(randT * dataArray.length * 0.7);
+      const value = dataArray[freqIndex] || 0;
+      if (value > 150) { // Показываем искры только при высоких значениях аудио
+        const x = startX + randT * width;
+        const y = waveCenterY + Math.sin(randT * Math.PI * 8 + time * 2) * (value / 255) * amplitude;
+        ctx.beginPath();
+        ctx.arc(x + (Math.random() - 0.5) * 20, y + (Math.random() - 0.5) * 20, Math.random() * 2 + 1, 0, Math.PI * 2);
+        ctx.fillStyle = hexToRgba(glowColor, Math.random());
+        ctx.shadowBlur = 10;
+        ctx.shadowColor = glowColor;
+        ctx.fill();
+      }
+    }
+
+    ctx.restore();
+    ctx.shadowBlur = 0;
   }
 };
 
@@ -1144,6 +1264,7 @@ document.getElementById('audioFile').onchange = async (e) => {
     updateTimeDisplay();
   } catch (err) {
     console.error('Audio load error:', err);
+    alert('Ошибка загрузки аудио: ' + err.message);
   }
 };
 
@@ -1153,7 +1274,12 @@ document.getElementById('audioFile').onchange = async (e) => {
 function startPlayback() {
   if (!audioBuffer || !audioCtx || !analyser) return;
 
+  if (audioCtx.state === 'suspended') {
+    audioCtx.resume();
+  }
+
   if (source) {
+    programmaticStop = true; // Устанавливаем флаг, что остановка программная
     try { source.stop(0); } catch (e) {}
   }
 
@@ -1167,13 +1293,14 @@ function startPlayback() {
   }
 
   source.onended = () => {
-    if (!isRecording) {
+    if (!programmaticStop) { // Если остановка не программная (т.е. аудио закончилось само)
       isPlaying = false;
       document.getElementById('playBtn').textContent = '▶️';
       currentTime = 0;
       pauseTime = 0;
       updateTimeDisplay();
     }
+    programmaticStop = false; // Сбрасываем флаг
   };
 
   startTime = audioCtx.currentTime - pauseTime;
@@ -1195,6 +1322,7 @@ function togglePlay() {
     isPlaying = false;
     document.getElementById('playBtn').textContent = '▶️';
     if (source) {
+      programmaticStop = true; // Устанавливаем флаг, что остановка программная
       try { source.stop(0); } catch (e) {}
     }
     pauseTime = audioCtx.currentTime - startTime;
@@ -1206,10 +1334,23 @@ function togglePlay() {
 function seekToPercent(percent, restart) {
   if (!audioBuffer || !audioCtx) return;
   percent = Math.max(0, Math.min(1, percent));
-  pauseTime = percent * duration;
+  const newPauseTime = percent * duration;
+
+  const wasPlayingBeforeSeek = isPlaying;
+
+  if (wasPlayingBeforeSeek) {
+    programmaticStop = true; // Отмечаем остановку как программную
+    if (source) {
+      try { source.stop(0); } catch (e) {}
+    }
+    isPlaying = false; // Временно устанавливаем false, будет true снова при startPlayback
+  }
+
+  pauseTime = newPauseTime; // Обновляем глобальное время паузы
   currentTime = pauseTime;
   updateTimeDisplay();
-  if (restart && isPlaying) {
+
+  if (wasPlayingBeforeSeek && restart) { // Если играло и нужно перезапустить
     startPlayback();
   }
 }
@@ -1218,7 +1359,7 @@ function seekTimeline(e) {
   if (!audioBuffer) return;
   const rect = e.currentTarget.getBoundingClientRect();
   const percent = (e.clientX - rect.left) / rect.width;
-  seekToPercent(percent, true);
+  seekToPercent(percent, true); // Перемотка с перезапуском, если играло
 }
 
 function updateTimeDisplay() {
@@ -1251,7 +1392,7 @@ canvas.addEventListener('pointermove', (e) => {
   pointerMovedDuringScrub = true;
   const rect = canvas.getBoundingClientRect();
   const percent = (e.clientX - rect.left) / rect.width;
-  seekToPercent(percent, false);
+  seekToPercent(percent, false); // Перемотка без перезапуска во время драга
 });
 
 ['pointerup', 'pointercancel', 'pointerleave'].forEach(ev => {
@@ -1262,11 +1403,9 @@ canvas.addEventListener('pointermove', (e) => {
     if (!pointerMovedDuringScrub) {
       // простой клик — Play/Pause
       togglePlay();
-    } else if (isPlaying) {
-      // если тянули во время воспроизведения — продолжить с новой позиции
-      startPlayback();
     }
     isCanvasScrubbing = false;
+    pointerMovedDuringScrub = false; // Сбросить флаг после завершения взаимодействия
   });
 });
 
@@ -1293,7 +1432,7 @@ function animate() {
 
 function render() {
   const centerX = config.width / 2;
-  const centerY = config.height * state.vizY;
+  const centerY = config.height * state.vizY; // Использование state.vizY для глобальной Y-позиции
   const bass = dataArray ? dataArray[2] : 0;
 
   // 1. Background
@@ -1354,7 +1493,7 @@ function render() {
 
 // Continuous render for preview when pause
 function continuousRender() {
-  if (!isPlaying) render();
+  if (!isPlaying) render(); // Рендерим, если не играем, для отображения статики
   requestAnimationFrame(continuousRender);
 }
 
@@ -1387,7 +1526,7 @@ function toggleRecord() {
     recordDest = null;
     document.getElementById('recordBtn').innerHTML = '⏺️ Start Recording';
     document.getElementById('recIndicator').classList.remove('active');
-    if (isPlaying) togglePlay();
+    if (isPlaying) togglePlay(); // Остановить воспроизведение после записи
   } else {
     if (!audioBuffer) return alert('Load audio first!');
 
@@ -1469,7 +1608,33 @@ document.getElementById('emblemCircle').onchange = (e) => { state.emblemCircle =
 
 document.getElementById('fps').onchange = (e) => { config.fps = parseInt(e.target.value); };
 
-document.getElementById('tunnelColors').oninput = (e) => {
+// ОБНОВЛЕННАЯ ЛОГИКА ДЛЯ ЦВЕТОВ КИБЕР-ТУННЕЛЯ
+document.getElementById('tunnelPalettePreset').onchange = (e) => {
+  const preset = e.target.value;
+  const tunnelColorsInput = document.getElementById('tunnelColorsInput');
+  switch (preset) {
+    case 'cyberpunk':
+      tunnelColorsInput.value = '#00E5FF,#FF00E5,#00FFAA';
+      break;
+    case 'ocean':
+      tunnelColorsInput.value = '#00FFFF,#00AAFF,#0000FF';
+      break;
+    case 'lava':
+      tunnelColorsInput.value = '#FF4500,#FF8C00,#FFD700';
+      break;
+    case 'emerald':
+      tunnelColorsInput.value = '#00FF7F,#7FFF00,#008080';
+      break;
+    case 'custom':
+    default:
+      // Оставляем текущее значение, если выбран "Custom"
+      break;
+  }
+  // Запускаем событие input вручную, чтобы обновить state.tunnelColors
+  tunnelColorsInput.dispatchEvent(new Event('input'));
+};
+
+document.getElementById('tunnelColorsInput').oninput = (e) => {
   state.tunnelColors = e.target.value
     .split(',')
     .map(c => c.trim())
@@ -1495,6 +1660,11 @@ function init() {
 
   Effects.initParticles();
   continuousRender();
+
+  // Инициализация предустановленных цветов Кибер-туннеля
+  document.getElementById('tunnelPalettePreset').value = 'cyberpunk';
+  document.getElementById('tunnelColorsInput').value = '#00E5FF,#FF00E5,#00FFAA';
+  document.getElementById('tunnelColorsInput').dispatchEvent(new Event('input'));
 }
 
 init();
