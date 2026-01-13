@@ -600,6 +600,46 @@ input[type="color"] {
   <span class="viz-icon">〰️</span>
   <div class="viz-name">Music Wave</div>
 </div>
+        <div class="viz-card" onclick="selectViz('img1_RainbowRings', this)">
+  <span class="viz-icon">🌈</span>
+  <div class="viz-name">3D Rainbow</div>
+</div>
+
+<!-- 2. Urban Segment (Фото 2) -->
+<div class="viz-card" onclick="selectViz('img2_UrbanPulse', this)">
+  <span class="viz-icon">🏙️</span>
+  <div class="viz-name">Urban Pulse</div>
+</div>
+
+<!-- 3. Deep Core (Фото 3) -->
+<div class="viz-card" onclick="selectViz('img3_DeepCore', this)">
+  <span class="viz-icon">🟣</span>
+  <div class="viz-name">Deep Core</div>
+</div>
+
+<!-- 4. Retro Sun & Waves (Фото 4) -->
+<div class="viz-card" onclick="selectViz('img4_RetroBurst', this)">
+  <span class="viz-icon">☀️</span>
+  <div class="viz-name">Retro Burst</div>
+</div>
+
+<!-- 5. Fluid Network (Фото 5) -->
+<div class="viz-card" onclick="selectViz('img5_FluidNet', this)">
+  <span class="viz-icon">🧬</span>
+  <div class="viz-name">Fluid Network</div>
+</div>
+
+<!-- 6. Magnetic Orb (Фото 6) -->
+<div class="viz-card" onclick="selectViz('img6_MagOrb', this)">
+  <span class="viz-icon">🔮</span>
+  <div class="viz-name">Magnetic Orb</div>
+</div>
+
+<!-- 7. Speed Tunnel (Фото 7) -->
+<div class="viz-card" onclick="selectViz('img7_SpeedTunnel', this)">
+  <span class="viz-icon">🚄</span>
+  <div class="viz-name">Speed Tunnel</div>
+</div>
       </div>
     </div>
 
@@ -652,6 +692,10 @@ input[type="color"] {
   <option value="notes">Music Notes</option>
   <option value="glitter">Glitter</option>
   <option value="plasma">Plasma Orbs</option>
+  <option value="rain">Cyber Rain</option>
+  <option value="emb-particles">Embers (Fire)</option>
+  <option value="matrix">Matrix Code</option>
+  <option value="bubbles">Rising Bubbles</option>
 </select>
       <div class="slider-group">
         <div class="slider-label"><span>Amount</span><span id="partAmountVal">150</span></div>
@@ -1694,6 +1738,387 @@ musicWave(ctx, centerX, centerY, dataArray) {
   ctx.restore();
   ctx.shadowBlur = 0;
 },
+    // --- ФОТО 1: 3D RAINBOW RINGS ---
+  img1_RainbowRings(ctx, centerX, centerY, dataArray) {
+    // Имитация наклона 3D через scale Y
+    ctx.save();
+    ctx.translate(centerX, centerY);
+    ctx.scale(1, 0.6); // Сплющиваем для эффекта перспективы
+
+    const rings = 10;
+    const maxRadius = Math.min(config.width, config.height) * 0.45 * state.vizScale;
+    
+    // Рисуем кольца от внешнего к внутреннему
+    for (let r = 0; r < rings; r++) {
+      const ringProgress = r / rings;
+      const radius = maxRadius * (1 - ringProgress * 0.8);
+      // Выбираем диапазон частот для этого кольца
+      const dataIdx = Math.floor(ringProgress * dataArray.length * 0.5);
+      const val = dataArray[dataIdx] || 0;
+      
+      // Градиент радуги (Red -> Blue)
+      const hue = 360 * ringProgress; 
+      const color = `hsla(${hue}, 100%, 50%, ${0.3 + (val/255)*0.7})`;
+      
+      ctx.beginPath();
+      // Толщина зависит от баса
+      const thickness = (val / 255) * 20 + 2;
+      ctx.arc(0, 0, radius, 0, Math.PI * 2);
+      ctx.lineWidth = thickness;
+      ctx.strokeStyle = color;
+      ctx.shadowBlur = state.vizGlow + (val/255)*10;
+      ctx.shadowColor = color;
+      ctx.stroke();
+    }
+    
+    // Центральный "цилиндр" (эквалайзер внутри)
+    const centerBarCount = 20;
+    for(let i=0; i<centerBarCount; i++){
+        const h = (dataArray[i*2] / 255) * 100;
+        ctx.fillStyle = `hsl(${i*10}, 100%, 50%)`;
+        ctx.fillRect(-100 + i*10, -h/2, 8, h);
+    }
+    
+    ctx.restore();
+  },
+
+  // --- ФОТО 2: URBAN PULSE (Сегментированный круг) ---
+  img2_UrbanPulse(ctx, centerX, centerY, dataArray) {
+    const radius = Math.min(config.width, config.height) * 0.25 * state.vizScale;
+    const bars = 64; // Меньше баров, но они толще (блочные)
+    
+    // Градиент как на фото (Радужный, но сегментами)
+    // Рисуем "крылья" по бокам
+    const wingData = dataArray.slice(0, 20).reduce((a,b)=>a+b,0)/20;
+    if(wingData > 50) {
+        ctx.save();
+        ctx.translate(centerX, centerY);
+        ctx.globalCompositeOperation = 'screen';
+        const wingGrad = ctx.createLinearGradient(-radius*2, 0, radius*2, 0);
+        wingGrad.addColorStop(0, 'rgba(0,255,255,0)');
+        wingGrad.addColorStop(0.2, 'rgba(0,255,255,0.5)');
+        wingGrad.addColorStop(0.8, 'rgba(255,0,128,0.5)');
+        wingGrad.addColorStop(1, 'rgba(255,0,128,0)');
+        
+        ctx.fillStyle = wingGrad;
+        const wingH = (wingData/255) * 20;
+        ctx.fillRect(-radius*2, -wingH, radius*4, wingH*2);
+        ctx.restore();
+    }
+
+    // Круг
+    for (let i = 0; i < bars; i++) {
+      const angle = (i / bars) * Math.PI * 2 - Math.PI/2;
+      const val = dataArray[Math.floor(i / bars * dataArray.length * 0.8)] || 0;
+      
+      const barH = (val / 255) * (radius * 0.5);
+      // Цвет меняется по кругу: Cyan -> Green -> Yellow -> Red -> Purple
+      const hue = 180 + (i/bars) * 180; 
+      
+      const x1 = centerX + Math.cos(angle) * radius;
+      const y1 = centerY + Math.sin(angle) * radius;
+      const x2 = centerX + Math.cos(angle) * (radius + barH);
+      const y2 = centerY + Math.sin(angle) * (radius + barH);
+      
+      ctx.beginPath();
+      ctx.moveTo(x1, y1);
+      ctx.lineTo(x2, y2);
+      ctx.lineWidth = 8; // Толстые линии
+      ctx.strokeStyle = `hsl(${hue}, 100%, 50%)`;
+      ctx.lineCap = 'butt'; // Квадратные концы
+      ctx.shadowBlur = state.vizGlow;
+      ctx.shadowColor = `hsl(${hue}, 100%, 50%)`;
+      ctx.stroke();
+    }
+  },
+
+  // --- ФОТО 3: DEEP CORE (Фиолетовый Техно-туннель) ---
+  img3_DeepCore(ctx, centerX, centerY, dataArray) {
+    const r1 = Math.min(config.width, config.height) * 0.2 * state.vizScale;
+    const r2 = r1 * 1.6;
+    const bars = 120;
+    
+    // Темно-фиолетовый фон в центре
+    const grad = ctx.createRadialGradient(centerX, centerY, 0, centerX, centerY, r2);
+    grad.addColorStop(0, '#000000');
+    grad.addColorStop(0.8, '#1a0033');
+    grad.addColorStop(1, '#4b0082');
+    
+    ctx.beginPath();
+    ctx.arc(centerX, centerY, r2 + 20, 0, Math.PI*2);
+    ctx.fillStyle = grad;
+    ctx.fill();
+
+    // Внутреннее кольцо (внутрь смотрит)
+    ctx.strokeStyle = '#00d1ff';
+    for (let i = 0; i < bars; i++) {
+        const val = dataArray[i] || 0;
+        const angle = (i/bars) * Math.PI * 2;
+        const len = (val/255) * 30;
+        ctx.beginPath();
+        ctx.moveTo(centerX + Math.cos(angle)*r1, centerY + Math.sin(angle)*r1);
+        ctx.lineTo(centerX + Math.cos(angle)*(r1-len), centerY + Math.sin(angle)*(r1-len));
+        ctx.lineWidth = 2;
+        ctx.stroke();
+    }
+
+    // Внешнее кольцо (наружу) + Лучи
+    for (let i = 0; i < bars; i++) {
+        const val = dataArray[i + 10] || 0;
+        const angle = (i/bars) * Math.PI * 2 + rotation*0.5;
+        const len = (val/255) * 60;
+        
+        const isBeat = val > 200;
+        
+        ctx.beginPath();
+        const startR = r2;
+        // Если бит - рисуем длинный луч
+        const endR = isBeat ? r2 + len * 4 : r2 + len;
+        
+        ctx.moveTo(centerX + Math.cos(angle)*startR, centerY + Math.sin(angle)*startR);
+        ctx.lineTo(centerX + Math.cos(angle)*endR, centerY + Math.sin(angle)*endR);
+        
+        ctx.strokeStyle = isBeat ? '#ff00ff' : '#6600cc';
+        ctx.lineWidth = isBeat ? 3 : 2;
+        ctx.shadowBlur = isBeat ? 20 : 0;
+        ctx.shadowColor = '#ff00ff';
+        ctx.stroke();
+        ctx.shadowBlur = 0;
+    }
+  },
+
+  // --- ФОТО 4: RETRO BURST (Солнце + Волны) ---
+  img4_RetroBurst(ctx, centerX, centerY, dataArray) {
+    // 1. Боковые волны (слева и справа)
+    const waveW = config.width * 0.35;
+    ctx.strokeStyle = '#00ffff';
+    ctx.lineWidth = 3;
+    ctx.shadowBlur = 10;
+    ctx.shadowColor = '#00ffff';
+    
+    // Левая волна
+    ctx.beginPath();
+    for(let i=0; i<50; i++) {
+        const x = (i/50) * waveW;
+        const val = dataArray[i] || 0;
+        const y = centerY + (Math.sin(i + time*5) * val * 0.2);
+        if(i===0) ctx.moveTo(x, y); else ctx.lineTo(x,y);
+    }
+    ctx.stroke();
+    
+    // Правая волна
+    ctx.beginPath();
+    for(let i=0; i<50; i++) {
+        const x = config.width - ((i/50) * waveW);
+        const val = dataArray[i] || 0;
+        const y = centerY + (Math.sin(i - time*5) * val * 0.2);
+        if(i===0) ctx.moveTo(x, y); else ctx.lineTo(x,y);
+    }
+    ctx.stroke();
+
+    // 2. Центральный "Ёж" (Spiky Sun)
+    const radius = 60 * state.vizScale;
+    const spikes = 60;
+    
+    // Центральный глаз
+    ctx.beginPath();
+    ctx.arc(centerX, centerY, radius, 0, Math.PI*2);
+    ctx.fillStyle = '#000';
+    ctx.strokeStyle = '#fff';
+    ctx.lineWidth = 4;
+    ctx.fill();
+    ctx.stroke();
+    
+    // Лучи (Желтый -> Красный -> Зеленый)
+    for(let i=0; i<spikes; i++) {
+        const angle = (i/spikes) * Math.PI*2 - Math.PI/2;
+        const val = dataArray[i*2] || 0;
+        const len = (val/255) * 150 + 20;
+        
+        // Цвета как на фото: Желтый, Красный, Зеленый, Синий
+        let col = '#ffff00'; // Yellow
+        if (i > 15) col = '#ff0000'; // Red
+        if (i > 30) col = '#00ff00'; // Green
+        if (i > 45) col = '#0000ff'; // Blue
+        
+        ctx.beginPath();
+        ctx.moveTo(centerX + Math.cos(angle)*radius, centerY + Math.sin(angle)*radius);
+        ctx.lineTo(centerX + Math.cos(angle)*(radius+len), centerY + Math.sin(angle)*(radius+len));
+        ctx.strokeStyle = col;
+        ctx.lineWidth = 4;
+        ctx.lineCap = 'round';
+        ctx.stroke();
+    }
+  },
+
+  // --- ФОТО 5: FLUID NETWORK (Волны + Точки) ---
+  img5_FluidNet(ctx, centerX, centerY, dataArray) {
+    // 1. Две большие плавные волны
+    const points = 100;
+    const width = config.width;
+    
+    function drawWave(color, speed, amplitudeMult, phaseShift) {
+        ctx.beginPath();
+        ctx.strokeStyle = color;
+        ctx.lineWidth = 2;
+        for(let i=0; i<=points; i++) {
+            const x = (i/points) * width;
+            const dataIdx = Math.floor((i/points) * dataArray.length * 0.5);
+            const val = dataArray[dataIdx] || 0;
+            
+            // Смешиваем синус и данные аудио
+            const y = centerY + Math.sin(i*0.1 + time*speed + phaseShift) * 100 + (val/255)*amplitudeMult * Math.sin(i);
+            if(i===0) ctx.moveTo(x,y); else ctx.lineTo(x,y);
+        }
+        ctx.shadowBlur = 10;
+        ctx.shadowColor = color;
+        ctx.stroke();
+    }
+
+    drawWave('#00ffff', 2, 100, 0); // Cyan wave
+    drawWave('#ff00ff', 3, -100, Math.PI); // Purple wave
+
+    // 2. Центральная "Сетевая" звезда
+    const radius = 100 * state.vizScale;
+    const nodes = 16;
+    ctx.shadowBlur = 0;
+    
+    const nodeCoords = [];
+    for(let i=0; i<nodes; i++) {
+        const angle = (i/nodes) * Math.PI * 2 + rotation;
+        const val = dataArray[i*4] || 0;
+        const r = radius + (val/255)*50;
+        nodeCoords.push({
+            x: centerX + Math.cos(angle)*r,
+            y: centerY + Math.sin(angle)*r
+        });
+    }
+
+    ctx.strokeStyle = 'rgba(255,255,255,0.3)';
+    ctx.lineWidth = 1;
+    // Соединяем все со всеми (эффект паутины)
+    ctx.beginPath();
+    for(let i=0; i<nodes; i++) {
+        for(let j=i+1; j<nodes; j++) {
+            ctx.moveTo(nodeCoords[i].x, nodeCoords[i].y);
+            ctx.lineTo(nodeCoords[j].x, nodeCoords[j].y);
+        }
+    }
+    ctx.stroke();
+
+    // Точки на вершинах
+    ctx.fillStyle = '#fff';
+    for(let p of nodeCoords) {
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, 3, 0, Math.PI*2);
+        ctx.fill();
+    }
+  },
+
+  // --- ФОТО 6: MAGNETIC ORB (Орбиты и шар) ---
+  img6_MagOrb(ctx, centerX, centerY, dataArray) {
+    const bass = dataArray[2] || 0;
+    const coreR = 60 * state.vizScale + (bass/255)*20;
+
+    // 1. Центральный шар (Градиент Розовый-Персиковый)
+    const grad = ctx.createRadialGradient(centerX, centerY, coreR*0.2, centerX, centerY, coreR);
+    grad.addColorStop(0, '#ff9a9e');
+    grad.addColorStop(1, '#ff0055'); // Pinkish
+
+    ctx.beginPath();
+    ctx.arc(centerX, centerY, coreR, 0, Math.PI*2);
+    ctx.fillStyle = grad;
+    ctx.shadowBlur = 40;
+    ctx.shadowColor = '#ff0055';
+    ctx.fill();
+
+    // 2. Магнитные линии вокруг (Искаженные эллипсы)
+    const lines = 12;
+    ctx.shadowBlur = 5;
+    ctx.lineWidth = 2;
+    
+    for(let i=0; i<lines; i++) {
+        const offset = i * 15;
+        const val = dataArray[i*5] || 0;
+        
+        ctx.beginPath();
+        // Рисуем сложные кривые
+        const rX = coreR + 40 + offset + (val/255)*30;
+        const rY = coreR + 20 + offset * 0.5;
+        
+        // Немного поворачиваем каждый эллипс
+        ctx.save();
+        ctx.translate(centerX, centerY);
+        ctx.rotate(Math.sin(time + i*0.2) * 0.2); // Покачивание
+        
+        ctx.ellipse(0, 0, rX, rY, 0, 0, Math.PI*2);
+        ctx.strokeStyle = `rgba(255, 100, 200, ${1 - i/lines})`;
+        ctx.stroke();
+        ctx.restore();
+    }
+  },
+
+  // --- ФОТО 7: SPEED TUNNEL (Тоннель баров) ---
+  img7_SpeedTunnel(ctx, centerX, centerY, dataArray) {
+    // Центр светится синим
+    ctx.shadowBlur = 50;
+    ctx.shadowColor = '#0066ff';
+    ctx.fillStyle = '#000';
+    ctx.beginPath();
+    ctx.arc(centerX, centerY, 30, 0, Math.PI*2);
+    ctx.fill();
+    ctx.shadowBlur = 0;
+
+    // Рисуем бары по спирали от центра к краям
+    const count = 80;
+    const layers = 5; // Слои глубины
+    
+    for(let l=0; l<layers; l++) {
+        const depth = 1 - (l/layers); // 1 = близко, 0 = далеко
+        const radius = (100 + l * 80) * state.vizScale; 
+        
+        for(let i=0; i<count; i++) {
+            // Берем данные, смещаясь по спектру для разных слоев
+            const idx = (i + l*10) % dataArray.length;
+            const val = dataArray[idx] || 0;
+            if(val < 50) continue;
+
+            const angle = (i/count) * Math.PI * 2 + rotation * (l+1); // Слои вращаются с разной скоростью
+            
+            const barW = 10 * depth;
+            const barH = (val/255) * 40 * depth;
+            
+            const x = centerX + Math.cos(angle) * radius;
+            const y = centerY + Math.sin(angle) * radius;
+            
+            // Поворачиваем контекст чтобы бар смотрел из центра
+            ctx.save();
+            ctx.translate(x, y);
+            ctx.rotate(angle);
+            
+            // Цвета радуги по кругу
+            const hue = (i/count)*360 + l*50;
+            ctx.fillStyle = `hsla(${hue}, 100%, 50%, ${depth})`;
+            
+            ctx.fillRect(0, -barW/2, barH, barW); // Рисуем прямоугольник
+            ctx.restore();
+        }
+    }
+    
+    // Эффект скорости (полоски из центра)
+    const bass = dataArray[2] || 0;
+    if(bass > 180) {
+        ctx.strokeStyle = 'rgba(255,255,255,0.5)';
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        for(let i=0; i<10; i++){
+            const a = Math.random() * Math.PI * 2;
+            ctx.moveTo(centerX, centerY);
+            ctx.lineTo(centerX + Math.cos(a)*config.width, centerY + Math.sin(a)*config.height);
+        }
+        ctx.stroke();
+    }
+  },
   // НОВЫЙ ВИЗУАЛИЗАТОР: Electric Wave (inspired by Image 7)
   electricWave(ctx, centerX, centerY, dataArray) {
     const samples = 256;
