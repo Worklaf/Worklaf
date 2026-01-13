@@ -571,6 +571,35 @@ input[type="color"] {
           <span class="viz-icon">⚡</span>
           <div class="viz-name">Electric Wave</div>
         </div>
+        <!-- Добавьте в секцию с viz-grid после существующих визуализаторов -->
+<div class="viz-card" onclick="selectViz('soundPressure', this)">
+  <span class="viz-icon">🎚️</span>
+  <div class="viz-name">Sound Pressure</div>
+</div>
+<div class="viz-card" onclick="selectViz('waveformCircle', this)">
+  <span class="viz-icon">🎵</span>
+  <div class="viz-name">Waveform Circle</div>
+</div>
+<div class="viz-card" onclick="selectViz('purpleSpiral', this)">
+  <span class="viz-icon">🌀</span>
+  <div class="viz-name">Purple Spiral</div>
+</div>
+<div class="viz-card" onclick="selectViz('eyeSpectrum', this)">
+  <span class="viz-icon">👁️</span>
+  <div class="viz-name">Eye Spectrum</div>
+</div>
+<div class="viz-card" onclick="selectViz('infinityBass', this)">
+  <span class="viz-icon">∞</span>
+  <div class="viz-name">Infinity Bass</div>
+</div>
+<div class="viz-card" onclick="selectViz('radialBurst', this)">
+  <span class="viz-icon">💫</span>
+  <div class="viz-name">Radial Burst</div>
+</div>
+<div class="viz-card" onclick="selectViz('musicWave', this)">
+  <span class="viz-icon">〰️</span>
+  <div class="viz-name">Music Wave</div>
+</div>
       </div>
     </div>
 
@@ -611,11 +640,19 @@ input[type="color"] {
   <div class="tab-content" id="tab-fx">
     <div class="section">
       <div class="section-title">Particles</div>
-      <select id="partType" class="input">
-        <option value="none">None</option>
-        <option value="snow">Snowflakes</option>
-        <option value="stars">Stars</option>
-      </select>
+     <!-- Замените select для partType на этот расширенный вариант -->
+<select id="partType" class="input">
+  <option value="none">None</option>
+  <option value="snow">Snowflakes</option>
+  <option value="stars">Stars</option>
+  <option value="bubbles">Bubbles</option>
+  <option value="fireflies">Fireflies</option>
+  <option value="matrix">Matrix Rain</option>
+  <option value="hearts">Hearts</option>
+  <option value="notes">Music Notes</option>
+  <option value="glitter">Glitter</option>
+  <option value="plasma">Plasma Orbs</option>
+</select>
       <div class="slider-group">
         <div class="slider-label"><span>Amount</span><span id="partAmountVal">150</span></div>
         <input type="range" class="slider" id="partAmount" min="0" max="500" value="150">
@@ -1131,7 +1168,532 @@ const Visualizers = {
     ctx.restore();
     ctx.shadowBlur = 0;
   },
+// Добавьте эти новые визуализаторы после существующих в объекте Visualizers:
 
+// Визуализатор 1: Sound Pressure (как на изображении 1)
+soundPressure(ctx, centerX, centerY, dataArray) {
+  const radius = Math.min(config.width, config.height) * 0.2 * state.vizScale;
+  const bass = dataArray[2] || 0;
+  
+  // Центральный элемент управления
+  ctx.save();
+  
+  // Фоновый круг с градиентом
+  const bgGradient = ctx.createRadialGradient(centerX, centerY, 0, centerX, centerY, radius * 1.5);
+  bgGradient.addColorStop(0, 'rgba(0,200,255,0.1)');
+  bgGradient.addColorStop(1, 'rgba(255,0,150,0.05)');
+  ctx.fillStyle = bgGradient;
+  ctx.fillRect(0, 0, config.width, config.height);
+  
+  // Центральная ручка регулятора
+  const knobRadius = radius * 0.3;
+  ctx.beginPath();
+  ctx.arc(centerX, centerY, knobRadius, 0, Math.PI * 2);
+  const knobGradient = ctx.createLinearGradient(centerX - knobRadius, centerY, centerX + knobRadius, centerY);
+  knobGradient.addColorStop(0, '#1a1a2e');
+  knobGradient.addColorStop(0.5, '#16213e');
+  knobGradient.addColorStop(1, '#0f3460');
+  ctx.fillStyle = knobGradient;
+  ctx.fill();
+  
+  // Круговые полосы спектра
+  const bars = 120;
+  for (let i = 0; i < bars; i++) {
+    const angle = (i / bars) * Math.PI * 2 - Math.PI / 2;
+    const freqIndex = Math.floor(i / bars * dataArray.length * 0.6);
+    const value = dataArray[freqIndex] || 0;
+    const barHeight = (value / 255) * radius * 0.8;
+    
+    const hue = 180 + (i / bars) * 180; // От голубого к розовому
+    
+    const x1 = centerX + Math.cos(angle) * (radius * 0.7);
+    const y1 = centerY + Math.sin(angle) * (radius * 0.7);
+    const x2 = centerX + Math.cos(angle) * (radius * 0.7 + barHeight);
+    const y2 = centerY + Math.sin(angle) * (radius * 0.7 + barHeight);
+    
+    ctx.beginPath();
+    ctx.moveTo(x1, y1);
+    ctx.lineTo(x2, y2);
+    ctx.lineWidth = 4;
+    ctx.lineCap = 'round';
+    ctx.strokeStyle = `hsl(${hue}, 100%, ${50 + value/10}%)`;
+    ctx.shadowBlur = state.vizGlow;
+    ctx.shadowColor = `hsl(${hue}, 100%, 50%)`;
+    ctx.stroke();
+  }
+  
+  // Нижняя панель управления
+  const panelY = centerY + radius * 1.8;
+  const panelWidth = radius * 3;
+  
+  ctx.fillStyle = 'rgba(20,20,30,0.8)';
+  ctx.fillRect(centerX - panelWidth/2, panelY, panelWidth, 40);
+  
+  // Индикаторы уровня
+  for (let i = 0; i < 5; i++) {
+    const x = centerX - panelWidth/2 + 20 + i * 60;
+    const level = dataArray[i * 20] || 0;
+    const height = (level / 255) * 30;
+    
+    ctx.fillStyle = level > 200 ? '#ff0000' : level > 150 ? '#ffaa00' : '#00ff00';
+    ctx.fillRect(x, panelY + 35 - height, 40, height);
+  }
+  
+  ctx.restore();
+  ctx.shadowBlur = 0;
+},
+
+// Визуализатор 2: Waveform Circle (как на изображении 2)
+waveformCircle(ctx, centerX, centerY, dataArray) {
+  const radius = Math.min(config.width, config.height) * 0.25 * state.vizScale;
+  
+  // Фоновый эффект с голубым свечением
+  ctx.save();
+  const bgGradient = ctx.createRadialGradient(centerX, centerY, 0, centerX, centerY, radius * 2);
+  bgGradient.addColorStop(0, 'rgba(0,150,255,0.2)');
+  bgGradient.addColorStop(0.5, 'rgba(0,255,255,0.1)');
+  bgGradient.addColorStop(1, 'rgba(0,0,0,0)');
+  ctx.fillStyle = bgGradient;
+  ctx.fillRect(0, 0, config.width, config.height);
+  
+  // Центральная форма волны в круге
+  const samples = 360;
+  ctx.beginPath();
+  for (let i = 0; i <= samples; i++) {
+    const angle = (i / samples) * Math.PI * 2;
+    const freqIndex = Math.floor(i / samples * dataArray.length);
+    const value = dataArray[freqIndex] || 0;
+    const waveRadius = radius + (value / 255) * radius * 0.5 * Math.sin(angle * 4 + time * 2);
+    
+    const x = centerX + Math.cos(angle) * waveRadius;
+    const y = centerY + Math.sin(angle) * waveRadius;
+    
+    if (i === 0) ctx.moveTo(x, y);
+    else ctx.lineTo(x, y);
+  }
+  ctx.closePath();
+  
+  const gradient = ctx.createLinearGradient(centerX - radius, centerY, centerX + radius, centerY);
+  gradient.addColorStop(0, '#00ffff');
+  gradient.addColorStop(0.5, '#0099ff');
+  gradient.addColorStop(1, '#00ffff');
+  
+  ctx.strokeStyle = gradient;
+  ctx.lineWidth = 3;
+  ctx.shadowBlur = state.vizGlow * 2;
+  ctx.shadowColor = '#00ffff';
+  ctx.stroke();
+  
+  // Внутренний пульсирующий круг
+  const bass = dataArray[2] || 0;
+  const innerRadius = radius * 0.3 + (bass / 255) * 30;
+  
+  ctx.beginPath();
+  ctx.arc(centerX, centerY, innerRadius, 0, Math.PI * 2);
+  ctx.fillStyle = 'rgba(0,200,255,0.3)';
+  ctx.fill();
+  
+  // Желтая центральная линия волны
+  ctx.beginPath();
+  ctx.moveTo(centerX - radius, centerY);
+  for (let i = 0; i < dataArray.length / 2; i++) {
+    const x = centerX - radius + (i / (dataArray.length/2)) * radius * 2;
+    const y = centerY + (dataArray[i] / 255 - 0.5) * radius * 0.5;
+    ctx.lineTo(x, y);
+  }
+  ctx.strokeStyle = '#ffff00';
+  ctx.lineWidth = 2;
+  ctx.shadowBlur = 10;
+  ctx.shadowColor = '#ffff00';
+  ctx.stroke();
+  
+  ctx.restore();
+  ctx.shadowBlur = 0;
+},
+
+// Визуализатор 3: Purple Spiral (как на изображении 3)
+purpleSpiral(ctx, centerX, centerY, dataArray) {
+  const maxRadius = Math.min(config.width, config.height) * 0.4 * state.vizScale;
+  
+  ctx.save();
+  
+  // Спиральные круги
+  const circles = 5;
+  for (let c = 0; c < circles; c++) {
+    const circleRadius = (maxRadius / circles) * (c + 1);
+    const segments = 180;
+    
+    ctx.beginPath();
+    for (let i = 0; i <= segments; i++) {
+      const angle = (i / segments) * Math.PI * 2 + rotation * (c % 2 ? 1 : -1);
+      const freqIndex = Math.floor((i / segments) * dataArray.length * 0.5) + c * 20;
+      const value = dataArray[freqIndex % dataArray.length] || 0;
+      const offset = (value / 255) * 40;
+      
+      const r = circleRadius + offset * Math.sin(angle * 3 + time * 2);
+      const x = centerX + Math.cos(angle) * r;
+      const y = centerY + Math.sin(angle) * r;
+      
+      if (i === 0) ctx.moveTo(x, y);
+      else ctx.lineTo(x, y);
+    }
+    
+    const hue = 280 - c * 20; // Фиолетовые оттенки
+    ctx.strokeStyle = `hsl(${hue}, 100%, ${60 - c * 5}%)`;
+    ctx.lineWidth = 3 - c * 0.4;
+    ctx.shadowBlur = state.vizGlow;
+    ctx.shadowColor = `hsl(${hue}, 100%, 50%)`;
+    ctx.stroke();
+  }
+  
+  // Точечные элементы
+  const dots = 60;
+  for (let i = 0; i < dots; i++) {
+    const angle = (i / dots) * Math.PI * 2;
+    const freqIndex = Math.floor(i / dots * dataArray.length);
+    const value = dataArray[freqIndex] || 0;
+    
+    if (value > 100) {
+      const r = maxRadius * 0.8 + (value / 255) * maxRadius * 0.3;
+      const x = centerX + Math.cos(angle + rotation) * r;
+      const y = centerY + Math.sin(angle + rotation) * r;
+      
+      ctx.beginPath();
+      ctx.arc(x, y, 2 + value / 100, 0, Math.PI * 2);
+      ctx.fillStyle = `hsl(280, 100%, ${50 + value / 5}%)`;
+      ctx.fill();
+    }
+  }
+  
+  ctx.restore();
+  ctx.shadowBlur = 0;
+},
+
+// Визуализатор 4: Eye Spectrum (как на изображении 4)
+eyeSpectrum(ctx, centerX, centerY, dataArray) {
+  const radius = Math.min(config.width, config.height) * 0.22 * state.vizScale;
+  
+  ctx.save();
+  
+  // Центральный "глаз"
+  const bass = dataArray[2] || 0;
+  const eyeRadius = radius * 0.15 + (bass / 255) * 20;
+  
+  const eyeGradient = ctx.createRadialGradient(centerX, centerY, 0, centerX, centerY, eyeRadius);
+  eyeGradient.addColorStop(0, '#ffffff');
+  eyeGradient.addColorStop(0.3, '#00ffff');
+  eyeGradient.addColorStop(1, '#0000ff');
+  
+  ctx.beginPath();
+  ctx.arc(centerX, centerY, eyeRadius, 0, Math.PI * 2);
+  ctx.fillStyle = eyeGradient;
+  ctx.shadowBlur = 30;
+  ctx.shadowColor = '#00ffff';
+  ctx.fill();
+  
+  // Радиальные лучи
+  const rays = 180;
+  for (let i = 0; i < rays; i++) {
+    const angle = (i / rays) * Math.PI * 2;
+    const freqIndex = Math.floor(i / rays * dataArray.length * 0.7);
+    const value = dataArray[freqIndex] || 0;
+    const rayLength = (value / 255) * radius * 1.2;
+    
+    const hue = (i / rays) * 360;
+    
+    const x1 = centerX + Math.cos(angle) * (eyeRadius + 10);
+    const y1 = centerY + Math.sin(angle) * (eyeRadius + 10);
+    const x2 = centerX + Math.cos(angle) * (eyeRadius + 10 + rayLength);
+    const y2 = centerY + Math.sin(angle) * (eyeRadius + 10 + rayLength);
+    
+    ctx.beginPath();
+    ctx.moveTo(x1, y1);
+    ctx.lineTo(x2, y2);
+    ctx.lineWidth = 2;
+    ctx.strokeStyle = `hsl(${hue}, 100%, 50%)`;
+    ctx.stroke();
+  }
+  
+  // Горизонтальные волны слева и справа
+  const waveWidth = radius * 1.5;
+  const samples = 100;
+  
+  // Левая волна
+  ctx.beginPath();
+  for (let i = 0; i < samples; i++) {
+    const t = i / samples;
+    const x = centerX - radius * 1.5 - waveWidth * (1 - t);
+    const freqIndex = Math.floor(t * dataArray.length * 0.5);
+    const value = dataArray[freqIndex] || 0;
+    const y = centerY + (value / 255 - 0.5) * radius;
+    
+    if (i === 0) ctx.moveTo(x, y);
+    else ctx.lineTo(x, y);
+  }
+  ctx.strokeStyle = '#00ffff';
+  ctx.lineWidth = 3;
+  ctx.shadowBlur = state.vizGlow;
+  ctx.shadowColor = '#00ffff';
+  ctx.stroke();
+  
+  // Правая волна
+  ctx.beginPath();
+  for (let i = 0; i < samples; i++) {
+    const t = i / samples;
+    const x = centerX + radius * 1.5 + waveWidth * t;
+    const freqIndex = Math.floor(t * dataArray.length * 0.5);
+    const value = dataArray[freqIndex] || 0;
+    const y = centerY + (value / 255 - 0.5) * radius;
+    
+    if (i === 0) ctx.moveTo(x, y);
+    else ctx.lineTo(x, y);
+  }
+  ctx.stroke();
+  
+  ctx.restore();
+  ctx.shadowBlur = 0;
+},
+
+// Визуализатор 5: Infinity Bass (как на изображении 6)
+infinityBass(ctx, centerX, centerY, dataArray) {
+  const size = Math.min(config.width, config.height) * 0.3 * state.vizScale;
+  
+  ctx.save();
+  
+  // Фоновый градиент
+  const bgGradient = ctx.createRadialGradient(centerX, centerY, 0, centerX, centerY, size * 1.5);
+  bgGradient.addColorStop(0, 'rgba(138,43,226,0.2)');
+  bgGradient.addColorStop(0.5, 'rgba(255,20,147,0.1)');
+  bgGradient.addColorStop(1, 'rgba(0,0,0,0)');
+  ctx.fillStyle = bgGradient;
+  ctx.fillRect(0, 0, config.width, config.height);
+  
+  // Волнообразная бесконечность
+  const drawInfinity = (scale, alpha) => {
+    ctx.beginPath();
+    for (let t = 0; t <= Math.PI * 2; t += 0.01) {
+      const freqIndex = Math.floor((t / (Math.PI * 2)) * dataArray.length * 0.5);
+      const value = dataArray[freqIndex] || 0;
+      const offset = (value / 255) * 30;
+      
+      const x = centerX + scale * (Math.cos(t) / (1 + Math.sin(t) * Math.sin(t))) * size + offset * Math.sin(t * 4);
+      const y = centerY + scale * (Math.sin(t) * Math.cos(t) / (1 + Math.sin(t) * Math.sin(t))) * size * 0.6;
+      
+      if (t === 0) ctx.moveTo(x, y);
+      else ctx.lineTo(x, y);
+    }
+    
+    const gradient = ctx.createLinearGradient(centerX - size, centerY, centerX + size, centerY);
+    gradient.addColorStop(0, '#8a2be2');
+    gradient.addColorStop(0.5, '#ff1493');
+    gradient.addColorStop(1, '#ff69b4');
+    
+    ctx.strokeStyle = gradient;
+    ctx.lineWidth = 4 * scale;
+    ctx.globalAlpha = alpha;
+    ctx.shadowBlur = state.vizGlow * scale;
+    ctx.shadowColor = '#ff1493';
+    ctx.stroke();
+  };
+  
+  // Множественные слои
+  drawInfinity(1.2, 0.3);
+  drawInfinity(1.0, 0.6);
+  drawInfinity(0.8, 1.0);
+  
+  // Центральный круг
+  const bass = dataArray[2] || 0;
+  const centerRadius = size * 0.15 + (bass / 255) * 20;
+  
+  ctx.globalAlpha = 1;
+  ctx.beginPath();
+  ctx.arc(centerX, centerY, centerRadius, 0, Math.PI * 2);
+  const centerGradient = ctx.createRadialGradient(centerX, centerY, 0, centerX, centerY, centerRadius);
+  centerGradient.addColorStop(0, '#ffffff');
+  centerGradient.addColorStop(0.5, '#ff69b4');
+  centerGradient.addColorStop(1, '#8a2be2');
+  ctx.fillStyle = centerGradient;
+  ctx.fill();
+  
+  // Нижние индикаторы (как на изображении)
+  const indicators = 4;
+  const indicatorWidth = size * 2 / indicators;
+  for (let i = 0; i < indicators; i++) {
+    const x = centerX - size + i * indicatorWidth + indicatorWidth * 0.25;
+    const y = centerY + size * 0.8;
+    const value = dataArray[i * 30] || 0;
+    const height = (value / 255) * 40;
+    
+    ctx.fillStyle = `hsl(${280 + i * 20}, 100%, 50%)`;
+    ctx.fillRect(x, y + 20 - height, indicatorWidth * 0.5, height);
+    
+    ctx.font = '10px monospace';
+    ctx.fillStyle = '#ffffff';
+    ctx.fillText(`${(value / 2.55).toFixed(0)}`, x, y + 35);
+  }
+  
+  ctx.restore();
+  ctx.shadowBlur = 0;
+},
+
+// Визуализатор 6: Radial Burst (как на изображении 7)
+radialBurst(ctx, centerX, centerY, dataArray) {
+  const radius = Math.min(config.width, config.height) * 0.35 * state.vizScale;
+  
+  ctx.save();
+  
+  // Центральный взрыв лучей
+  const rays = 360;
+  for (let i = 0; i < rays; i++) {
+    const angle = (i / rays) * Math.PI * 2;
+    const freqIndex = Math.floor(i / rays * dataArray.length);
+    const value = dataArray[freqIndex] || 0;
+    
+    if (value > 50) {
+      const rayLength = (value / 255) * radius * 1.5;
+      const hue = (i / rays) * 360;
+      
+      // Создаем градиент для каждого луча
+      const x1 = centerX;
+      const y1 = centerY;
+      const x2 = centerX + Math.cos(angle) * rayLength;
+      const y2 = centerY + Math.sin(angle) * rayLength;
+      
+      const rayGradient = ctx.createLinearGradient(x1, y1, x2, y2);
+      rayGradient.addColorStop(0, `hsla(${hue}, 100%, 50%, 0)`);
+      rayGradient.addColorStop(0.5, `hsla(${hue}, 100%, 50%, ${value/255})`);
+      rayGradient.addColorStop(1, `hsla(${hue}, 100%, 70%, 0)`);
+      
+      ctx.beginPath();
+      ctx.moveTo(x1, y1);
+      ctx.lineTo(x2, y2);
+      ctx.strokeStyle = rayGradient;
+      ctx.lineWidth = 2;
+      ctx.stroke();
+    }
+  }
+  
+  // Центральный круг с пульсацией
+  const bass = dataArray[2] || 0;
+  const centerRadius = radius * 0.1 + (bass / 255) * 30;
+  
+  ctx.beginPath();
+  ctx.arc(centerX, centerY, centerRadius, 0, Math.PI * 2);
+  const centerGradient = ctx.createRadialGradient(centerX, centerY, 0, centerX, centerY, centerRadius);
+  centerGradient.addColorStop(0, '#ffffff');
+  centerGradient.addColorStop(0.5, '#00ffff');
+  centerGradient.addColorStop(1, 'rgba(0,0,255,0)');
+  ctx.fillStyle = centerGradient;
+  ctx.shadowBlur = 40;
+  ctx.shadowColor = '#00ffff';
+  ctx.fill();
+  
+  // Внешнее кольцо
+  ctx.beginPath();
+  ctx.arc(centerX, centerY, radius, 0, Math.PI * 2);
+  ctx.strokeStyle = 'rgba(0,255,255,0.3)';
+  ctx.lineWidth = 2;
+  ctx.stroke();
+  
+  ctx.restore();
+  ctx.shadowBlur = 0;
+},
+
+// Визуализатор 7: Music Wave (как на изображении 5)
+musicWave(ctx, centerX, centerY, dataArray) {
+  const width = config.width * 0.8;
+  const amplitude = config.height * 0.2 * state.vizScale;
+  const startX = (config.width - width) / 2;
+  
+  ctx.save();
+  
+  // Центральный круг с надписью MUSIC
+  const circleRadius = Math.min(config.width, config.height) * 0.15 * state.vizScale;
+  
+  // Круг с радиальными индикаторами
+  const segments = 90;
+  for (let i = 0; i < segments; i++) {
+    const angle = (i / segments) * Math.PI * 2;
+    const freqIndex = Math.floor(i / segments * dataArray.length * 0.5);
+    const value = dataArray[freqIndex] || 0;
+    const barHeight = (value / 255) * circleRadius * 0.5;
+    
+    const x1 = centerX + Math.cos(angle) * circleRadius;
+    const y1 = centerY + Math.sin(angle) * circleRadius;
+    const x2 = centerX + Math.cos(angle) * (circleRadius + barHeight);
+    const y2 = centerY + Math.sin(angle) * (circleRadius + barHeight);
+    
+    const gradient = ctx.createLinearGradient(x1, y1, x2, y2);
+    gradient.addColorStop(0, '#00e5ff');
+    gradient.addColorStop(0.5, '#ff00e5');
+    gradient.addColorStop(1, '#ffaa00');
+    
+    ctx.beginPath();
+    ctx.moveTo(x1, y1);
+    ctx.lineTo(x2, y2);
+    ctx.strokeStyle = gradient;
+    ctx.lineWidth = 3;
+    ctx.lineCap = 'round';
+    ctx.stroke();
+  }
+  
+  // Центральный круг
+  ctx.beginPath();
+  ctx.arc(centerX, centerY, circleRadius * 0.8, 0, Math.PI * 2);
+  ctx.fillStyle = 'rgba(0,0,0,0.8)';
+  ctx.fill();
+  ctx.strokeStyle = '#00e5ff';
+  ctx.lineWidth = 2;
+  ctx.stroke();
+  
+  // Текст MUSIC
+  ctx.font = `bold ${circleRadius * 0.3}px Arial`;
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.fillStyle = '#ffffff';
+  ctx.shadowBlur = 20;
+  ctx.shadowColor = '#00e5ff';
+  ctx.fillText('MUSIC', centerX, centerY);
+  
+  // Волна сверху
+  ctx.beginPath();
+  for (let i = 0; i < dataArray.length / 2; i++) {
+    const x = startX + (i / (dataArray.length / 2)) * width;
+    const value = dataArray[i] || 0;
+    const y = centerY - circleRadius * 1.5 - (value / 255) * amplitude;
+    
+    if (i === 0) ctx.moveTo(x, y);
+    else ctx.lineTo(x, y);
+  }
+  
+  const waveGradient = ctx.createLinearGradient(startX, 0, startX + width, 0);
+  waveGradient.addColorStop(0, '#00ffff');
+  waveGradient.addColorStop(0.5, '#ff00ff');
+  waveGradient.addColorStop(1, '#00ffff');
+  
+  ctx.strokeStyle = waveGradient;
+  ctx.lineWidth = 3;
+  ctx.shadowBlur = state.vizGlow;
+  ctx.shadowColor = '#00ffff';
+  ctx.stroke();
+  
+  // Волна снизу (зеркальная)
+  ctx.beginPath();
+  for (let i = 0; i < dataArray.length / 2; i++) {
+    const x = startX + (i / (dataArray.length / 2)) * width;
+    const value = dataArray[i] || 0;
+    const y = centerY + circleRadius * 1.5 + (value / 255) * amplitude;
+    
+    if (i === 0) ctx.moveTo(x, y);
+    else ctx.lineTo(x, y);
+  }
+  ctx.strokeStyle = waveGradient;
+  ctx.globalAlpha = 0.7;
+  ctx.stroke();
+  
+  ctx.restore();
+  ctx.shadowBlur = 0;
+},
   // НОВЫЙ ВИЗУАЛИЗАТОР: Electric Wave (inspired by Image 7)
   electricWave(ctx, centerX, centerY, dataArray) {
     const samples = 256;
@@ -1187,6 +1749,7 @@ const Visualizers = {
 // =============================================
 // 🎨 EFFECTS
 // =============================================
+// Замените весь объект Effects на этот расширенный вариант:
 const Effects = {
   initParticles() {
     particles = [];
@@ -1196,31 +1759,210 @@ const Effects = {
         y: Math.random() * config.height,
         size: Math.random() * 3 + 1,
         speed: Math.random() * 2 + 0.5,
-        opacity: Math.random()
+        opacity: Math.random(),
+        angle: Math.random() * Math.PI * 2,
+        hue: Math.random() * 360,
+        char: String.fromCharCode(0x30A0 + Math.random() * 96), // Для Matrix
+        noteType: Math.floor(Math.random() * 3) // Для нот
       });
     }
   },
 
   drawParticles(ctx, bass) {
     if (state.partType === 'none') return;
+    const count = Math.min(state.partAmount, particles.length);
 
-    const count = state.partAmount;
-    ctx.fillStyle =
-      state.partType === 'snow'
-        ? 'rgba(255,255,255,0.8)'
-        : 'rgba(255,255,200,0.9)';
+    switch(state.partType) {
+      case 'snow':
+        ctx.fillStyle = 'rgba(255,255,255,0.8)';
+        for (let i = 0; i < count; i++) {
+          let p = particles[i];
+          ctx.beginPath();
+          ctx.arc(p.x, p.y, p.size * (1 + bass / 500), 0, Math.PI * 2);
+          ctx.fill();
+          p.y += p.speed * (1 + bass / 200);
+          p.x += Math.sin(p.angle) * 0.5;
+          p.angle += 0.01;
+          if (p.y > config.height) {
+            p.y = -10;
+            p.x = Math.random() * config.width;
+          }
+        }
+        break;
 
-    for (let i = 0; i < count; i++) {
-      let p = particles[i];
-      ctx.beginPath();
-      ctx.arc(p.x, p.y, p.size * (1 + bass / 500), 0, Math.PI * 2);
-      ctx.fill();
+      case 'stars':
+        for (let i = 0; i < count; i++) {
+          let p = particles[i];
+          ctx.save();
+          ctx.translate(p.x, p.y);
+          ctx.rotate(p.angle);
+          const sparkle = Math.sin(time * 5 + i) * 0.5 + 0.5;
+          ctx.fillStyle = `rgba(255,255,200,${p.opacity * sparkle})`;
+          ctx.fillRect(-p.size/2, -p.size/2, p.size, p.size);
+          ctx.restore();
+          p.angle += 0.02;
+          p.y += p.speed * 0.3;
+          if (p.y > config.height) {
+            p.y = -10;
+            p.x = Math.random() * config.width;
+          }
+        }
+        break;
 
-      p.y += p.speed * (1 + bass / 200);
-      if (p.y > config.height) {
-        p.y = -10;
-        p.x = Math.random() * config.width;
-      }
+      case 'bubbles':
+        for (let i = 0; i < count; i++) {
+          let p = particles[i];
+          ctx.beginPath();
+          ctx.arc(p.x, p.y, p.size * 2 + bass / 100, 0, Math.PI * 2);
+          const gradient = ctx.createRadialGradient(p.x, p.y, 0, p.x, p.y, p.size * 2);
+          gradient.addColorStop(0, `rgba(255,255,255,${p.opacity * 0.3})`);
+          gradient.addColorStop(0.7, `rgba(100,200,255,${p.opacity * 0.2})`);
+          gradient.addColorStop(1, `rgba(50,150,255,0)`);
+          ctx.fillStyle = gradient;
+          ctx.fill();
+          p.y -= p.speed;
+          p.x += Math.sin(p.angle) * 2;
+          p.angle += 0.05;
+          if (p.y < -20) {
+            p.y = config.height + 20;
+            p.x = Math.random() * config.width;
+          }
+        }
+        break;
+
+      case 'fireflies':
+        for (let i = 0; i < count; i++) {
+          let p = particles[i];
+          const glow = Math.sin(time * 3 + i * 0.5) * 0.5 + 0.5;
+          ctx.beginPath();
+          ctx.arc(p.x, p.y, 2, 0, Math.PI * 2);
+          ctx.fillStyle = `rgba(255,255,100,${glow})`;
+          ctx.shadowBlur = 20;
+          ctx.shadowColor = `rgba(255,255,0,${glow})`;
+          ctx.fill();
+          p.x += Math.cos(p.angle) * 2;
+          p.y += Math.sin(p.angle) * 2;
+          p.angle += (Math.random() - 0.5) * 0.2;
+          if (p.x < 0 || p.x > config.width || p.y < 0 || p.y > config.height) {
+            p.x = Math.random() * config.width;
+            p.y = Math.random() * config.height;
+            p.angle = Math.random() * Math.PI * 2;
+          }
+        }
+        ctx.shadowBlur = 0;
+        break;
+
+      case 'matrix':
+        ctx.font = '12px monospace';
+        for (let i = 0; i < count; i++) {
+          let p = particles[i];
+          ctx.fillStyle = `rgba(0,255,0,${p.opacity * (1 - p.y / config.height)})`;
+          ctx.fillText(p.char, p.x, p.y);
+          p.y += p.speed * 3;
+          if (p.y > config.height) {
+            p.y = -10;
+            p.x = Math.random() * config.width;
+            p.char = String.fromCharCode(0x30A0 + Math.random() * 96);
+          }
+        }
+        break;
+
+      case 'hearts':
+        for (let i = 0; i < count; i++) {
+          let p = particles[i];
+          ctx.save();
+          ctx.translate(p.x, p.y);
+          ctx.scale(p.size * 0.5, p.size * 0.5);
+          ctx.fillStyle = `hsla(${p.hue}, 100%, 50%, ${p.opacity})`;
+          ctx.beginPath();
+          ctx.moveTo(0, -5);
+          ctx.bezierCurveTo(-5, -10, -10, -5, -10, 0);
+          ctx.bezierCurveTo(-10, 5, -5, 10, 0, 15);
+          ctx.bezierCurveTo(5, 10, 10, 5, 10, 0);
+          ctx.bezierCurveTo(10, -5, 5, -10, 0, -5);
+          ctx.fill();
+          ctx.restore();
+          p.y -= p.speed;
+          p.x += Math.sin(p.angle) * 1;
+          p.angle += 0.05;
+          p.hue = (p.hue + 1) % 360;
+          if (p.y < -20) {
+            p.y = config.height + 20;
+            p.x = Math.random() * config.width;
+          }
+        }
+        break;
+
+      case 'notes':
+        for (let i = 0; i < count; i++) {
+          let p = particles[i];
+          ctx.save();
+          ctx.translate(p.x, p.y);
+          ctx.rotate(Math.sin(time + i) * 0.2);
+          ctx.font = `${p.size * 10}px Arial`;
+          ctx.fillStyle = `hsla(${p.hue}, 100%, 50%, ${p.opacity})`;
+          const notes = ['♪', '♫', '♬'];
+          ctx.fillText(notes[p.noteType], 0, 0);
+          ctx.restore();
+          p.y -= p.speed;
+          p.x += Math.sin(p.angle) * 2;
+          p.angle += 0.03;
+          if (p.y < -20) {
+            p.y = config.height + 20;
+            p.x = Math.random() * config.width;
+          }
+        }
+        break;
+
+      case 'glitter':
+        for (let i = 0; i < count; i++) {
+          let p = particles[i];
+          const sparkle = Math.random();
+          if (sparkle > 0.95) {
+            ctx.save();
+            ctx.translate(p.x, p.y);
+            ctx.rotate(p.angle);
+            const size = p.size * (1 + bass / 200);
+            ctx.strokeStyle = `hsla(${p.hue}, 100%, 70%, ${p.opacity})`;
+            ctx.lineWidth = 1;
+            ctx.beginPath();
+            ctx.moveTo(-size, 0);
+            ctx.lineTo(size, 0);
+            ctx.moveTo(0, -size);
+            ctx.lineTo(0, size);
+            ctx.stroke();
+            ctx.restore();
+          }
+          p.x = (p.x + p.speed * Math.cos(p.angle)) % config.width;
+          p.y = (p.y + p.speed * Math.sin(p.angle)) % config.height;
+          p.angle += (Math.random() - 0.5) * 0.1;
+          p.hue = (p.hue + 2) % 360;
+        }
+        break;
+
+      case 'plasma':
+        for (let i = 0; i < count; i++) {
+          let p = particles[i];
+          const plasma = Math.sin(time * 2 + i) * 0.5 + 0.5;
+          ctx.beginPath();
+          ctx.arc(p.x, p.y, p.size * 3 * plasma, 0, Math.PI * 2);
+          const gradient = ctx.createRadialGradient(p.x, p.y, 0, p.x, p.y, p.size * 3);
+          gradient.addColorStop(0, `hsla(${p.hue + plasma * 60}, 100%, 50%, ${p.opacity})`);
+          gradient.addColorStop(0.5, `hsla(${p.hue + 30}, 100%, 40%, ${p.opacity * 0.5})`);
+          gradient.addColorStop(1, `hsla(${p.hue}, 100%, 30%, 0)`);
+          ctx.fillStyle = gradient;
+          ctx.fill();
+          p.x += Math.cos(p.angle) * p.speed;
+          p.y += Math.sin(p.angle) * p.speed;
+          p.angle += 0.1;
+          p.hue = (p.hue + 1) % 360;
+          if (p.x < -20 || p.x > config.width + 20 || p.y < -20 || p.y > config.height + 20) {
+            p.x = config.width / 2 + (Math.random() - 0.5) * 100;
+            p.y = config.height / 2 + (Math.random() - 0.5) * 100;
+            p.angle = Math.random() * Math.PI * 2;
+          }
+        }
+        break;
     }
   },
 
