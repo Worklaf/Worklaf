@@ -557,17 +557,17 @@ input[type="color"] {
           <span class="viz-icon">📡</span>
           <div class="viz-name">Mirror Landscape</div>
         </div>
-        <div class="viz-card" onclick="selectViz('circular3D', this)">3D Circular</div>
-<div class="viz-card" onclick="selectViz('hyperTunnel', this)">Hyper Tunnel</div>
-<div class="viz-card" onclick="selectViz('liquidClock', this)">Liquid Clock</div>
+        <div class="viz-card" onclick="selectViz('neuralDiffusion', this)">Neural Diffusion</div>
+<div class="viz-card" onclick="selectViz('pixelSortFlow', this)">Pixel-Sort Flow</div>
+<div class="viz-card" onclick="selectViz('liquidNeonRings', this)">Liquid Neon Rings</div>
 <div class="viz-card" onclick="selectViz('neonCity3D', this)">Neon City 3D</div>
         <div class="viz-card" onclick="selectViz('waveformCircle', this)">
           <span class="viz-icon">🎵</span>
           <div class="viz-name">Waveform Circle</div>
         </div>
        <div class="viz-card" onclick="selectViz('spectralHelix', this)">Spectral Helix</div>
-<div class="viz-card" onclick="selectViz('crystalBloom', this)">Crystal Bloom</div>
-<div class="viz-card" onclick="selectViz('plasmaDNA', this)">Plasma DNA</div>
+<div class="viz-card" onclick="selectViz('faceTrackWave', this)">Face-Track Wave</div>
+<div class="viz-card" onclick="selectViz('aiStyleBars', this)">AI-Style Bars</div>
         <div class="viz-card" onclick="selectViz('radialBurst', this)">
           <span class="viz-icon">💫</span>
           <div class="viz-name">Radial Burst</div>
@@ -584,14 +584,14 @@ input[type="color"] {
           <span class="viz-icon">🏙️</span>
           <div class="viz-name">Urban Pulse</div>
         </div>
-       <div class="viz-card" onclick="selectViz('cosmicWeb', this)">Cosmic Web</div>
+      <div class="viz-card" onclick="selectViz('digitalAurora', this)">Digital Aurora</div>
         <div class="viz-card" onclick="selectViz('img4_RetroBurst', this)">
           <span class="viz-icon">☀️</span>
           <div class="viz-name">Retro Burst</div>
         </div>
-        <div class="viz-card" onclick="selectViz('oceanHorizon', this)">Ocean Horizon</div>
-        <div class="viz-card" onclick="selectViz('auroraCore', this)">Aurora Core</div>
-        <div class="viz-card" onclick="selectViz('meteorShower', this)">Meteor Shower</div>
+        <div class="viz-card" onclick="selectViz('volumetricFlame', this)">Volumetric Flame</div>
+<div class="viz-card" onclick="selectViz('hologramGrid', this)">Hologram Grid</div>
+<div class="viz-card" onclick="selectViz('chaosSpiral', this)">Chaos Spiral</div>
         <!-- ДОБАВЛЕННЫЕ НОВЫЕ ВИЗУАЛИЗАТОРЫ -->
         <div class="viz-card" onclick="selectViz('neonPulse', this)">Neon Pulse</div>
 <div class="viz-card" onclick="selectViz('glitchGrid', this)">Glitch Grid</div>
@@ -1071,85 +1071,68 @@ const Visualizers = {
     ctx.fill();
   },
 
-  /* 7  3-D Circular Bars  --------------------------------------------------- */
-circular3D(ctx,cx,cy,data){
-  const R     = Math.min(config.width,config.height)*0.28*state.vizScale,
-        bars  = 200,
-        depth = 40;                                               // «толщина»
+ /* 7  Neural Diffusion  ---------------------------------------------------- */
+neuralDiffusion(ctx,cx,cy,data){
+  const sz  = Math.min(config.width,config.height),
+        res = 80,            // «нейро-решётка»
+        cell= sz/res;
 
-  for(let i=0;i<bars;i++){
-    const ang  = (i/bars)*Math.PI*2,
-          freq = Math.floor(i/bars*data.length),
-          val  = data[freq]/255,
-          h    = val*R*0.8,
-          x1   = cx+Math.cos(ang)*R,
-          y1   = cy+Math.sin(ang)*R,
-          x2   = cx+Math.cos(ang)*(R+h),
-          y2   = cy+Math.sin(ang)*(R+h);
+  for(let y=0;y<res;y++){
+    for(let x=0;x<res;x++){
+      const idx = Math.floor((x+y)/res*data.length),
+            v   = data[idx]/255,
+            hue = (x+y)*3+time*60;
 
-    // боковая грань (даёт объём)
-    ctx.fillStyle = `hsl(${ang*180/Math.PI},90%,30%)`;
-    ctx.beginPath();
-    ctx.moveTo(x1,y1); ctx.lineTo(x2,y2);
-    ctx.lineTo(x2+depth*Math.cos(ang+Math.PI/2),y2+depth*Math.sin(ang+Math.PI/2));
-    ctx.lineTo(x1+depth*Math.cos(ang+Math.PI/2),y1+depth*Math.sin(ang+Math.PI/2));
-    ctx.closePath(); ctx.fill();
-
-    // front-face
-    ctx.fillStyle = `hsl(${ang*180/Math.PI},100%,60%)`;
-    ctx.beginPath(); ctx.moveTo(x1,y1); ctx.lineTo(x2,y2);
-    ctx.lineTo(x2+depth*Math.cos(ang-Math.PI/2),y2+depth*Math.sin(ang-Math.PI/2));
-    ctx.lineTo(x1+depth*Math.cos(ang-Math.PI/2),y1+depth*Math.sin(ang-Math.PI/2));
-    ctx.closePath(); ctx.fill();
+      ctx.fillStyle = `hsla(${hue},90%,${30+v*50}%,${v*0.8})`;
+      ctx.beginPath();
+      ctx.roundRect(cx-sz/2+x*cell,cy-sz/2+y*cell,cell-2,cell-2,cell/3);
+      ctx.fill();
+    }
   }
 },
 
-/* 8  Hyper-Tunnel  -------------------------------------------------------- */
-hyperTunnel(ctx,cx,cy,data){
-  const rings = 25, maxR = Math.min(config.width,config.height)*0.45*state.vizScale;
-  for(let r=0;r<rings;r++){
-    const depth = r/rings,                                       // 0…1
-          radius= maxR*(1-depth*0.9),
-          dataIdx = Math.floor(depth*data.length),
-          val     = data[dataIdx]/255,
-          w       = 8+val*12,
-          hue     = (depth*360+time*80)%360;
+/* 8  Pixel-Sort Flow  ----------------------------------------------------- */
+pixelSortFlow(ctx,cx,cy,data){
+  const bands = 60,
+        bw    = config.width/bands,
+        amp   = config.height*0.4*state.vizScale;
 
-    ctx.strokeStyle=`hsla(${hue},100%,50%,${1-depth})`;
-    ctx.lineWidth  = w*(1-depth);
-    ctx.shadowBlur = state.vizGlow*(1-depth);
-    ctx.shadowColor= `hsl(${hue},100%,50%)`;
+  for(let b=0;b<bands;b++){
+    const val = data[Math.floor(b/bands*data.length)]/255,
+          y   = cy + Math.sin(b*0.3+time*2)*amp*val,
+          h   = 10+val*50;
+
+    const grad = ctx.createLinearGradient(0,y,0,y+h);
+    grad.addColorStop(0,`hsla(${(b/bands)*360},100%,50%,0)`);
+    grad.addColorStop(0.5,`hsla(${(b/bands)*360},100%,60%,${val})`);
+    grad.addColorStop(1,`hsla(${(b/bands)*360},100%,50%,0)`);
+
+    ctx.fillStyle = grad;
+    ctx.fillRect(b*bw,y,bw-2,h);
+  }
+},
+
+/* 9  Liquid Neon Rings  --------------------------------------------------- */
+liquidNeonRings(ctx,cx,cy,data){
+  const rings = 12,
+        bass  = data[2]/255,
+        maxR  = Math.min(config.width,config.height)*0.4*state.vizScale;
+
+  for(let r=0;r<rings;r++){
+    const radius = maxR*(0.3+r/rings*0.7),
+          w      = 8+bass*20*(1-r/rings),
+          hue    = (r*30+time*120)%360,
+          pulse  = Math.sin(time*4+r)*10*bass;
+
+    ctx.strokeStyle = `hsla(${hue},100%,50%,${1-r/rings})`;
+    ctx.lineWidth   = w;
+    ctx.shadowBlur  = state.vizGlow*(1-r/rings);
+    ctx.shadowColor = ctx.strokeStyle;
     ctx.beginPath();
-    ctx.arc(cx,cy,radius,0,Math.PI*2);
+    ctx.arc(cx,cy,radius+pulse,0,Math.PI*2);
     ctx.stroke();
   }
   ctx.shadowBlur=0;
-},
-
-/* 9  Liquid Bass-Clock  --------------------------------------------------- */
-liquidClock(ctx,cx,cy,data){
-  const bass = data[2]/255,
-        arms = 12,
-        len  = Math.min(config.width,config.height)*0.35*state.vizScale*(0.5+bass);
-
-  for(let a=0;a<arms;a++){
-    const ang  = (a/arms)*Math.PI*2 + time*2,
-          amp  = data[Math.floor(a/arms*data.length)]/255,
-          x2   = cx+Math.cos(ang)*len*amp,
-          y2   = cy+Math.sin(ang)*len*amp,
-          grad = ctx.createLinearGradient(cx,cy,x2,y2);
-
-    grad.addColorStop(0,`hsla(${ang*180/Math.PI},100%,70%,0.1)`);
-    grad.addColorStop(1,`hsla(${ang*180/Math.PI},100%,60%,0.9)`);
-
-    ctx.fillStyle = grad;
-    ctx.beginPath();
-    ctx.moveTo(cx,cy);
-    ctx.lineTo(x2,y2);
-    ctx.arc(x2,y2,15*(0.3+amp),0,Math.PI*2);
-    ctx.closePath();
-    ctx.fill();
-  }
 },
 
 /* 10  Neon City 3-D  ------------------------------------------------------ */
@@ -1288,60 +1271,54 @@ spectralHelix(ctx,cx,cy,data){
   ctx.shadowBlur=0;
 },
 
-/* 13  Crystal Bloom  ------------------------------------------------------ */
-crystalBloom(ctx,cx,cy,data){
-  const petals = 16,
-        layers = 6;
+/* 13  Face-Track Wave  ---------------------------------------------------- */
+faceTrackWave(ctx,cx,cy,data){
+  // «волна» тянется за воображаемым «центром лица» (cx,cy)
+  const pts   = 200,
+        width = config.width*0.8,
+        start = cx-width/2,
+        amp   = config.height*0.25*state.vizScale;
 
-  for(let l=0;l<layers;l++){
-    const depth = l/layers,
-          size= Math.min(config.width,config.height)*0.4*state.vizScale*(1-depth),
-          val = data[Math.floor(depth*data.length)]/255,
-          hue = (depth*360+time*50)%360;
+  ctx.beginPath();
+  for(let i=0;i<=pts;i++){
+    const t   = i/pts,
+          idx = Math.floor(t*data.length),
+          val = data[idx]/255,
+          x   = start+t*width,
+          y   = cy+Math.sin(t*Math.PI*6+time*3)*amp*val;
 
-    ctx.save();
-    ctx.translate(cx,cy);
-    ctx.rotate(time*(l%2?1:-1)*0.5);
-
-    for(let p=0;p<petals;p++){
-      const ang = (p/petals)*Math.PI*2;
-      ctx.fillStyle = `hsla(${hue},100%,${50+val*30}%,${1-depth})`;
-      ctx.beginPath();
-      ctx.moveTo(0,0);
-      ctx.lineTo(Math.cos(ang)*size,Math.sin(ang)*size);
-      ctx.arc(0,0,size,ang,ang+Math.PI*2/petals);
-      ctx.closePath();
-      ctx.fill();
-    }
-    ctx.restore();
+    i?ctx.lineTo(x,y):ctx.moveTo(x,y);
   }
+  const grad=ctx.createLinearGradient(start,cy,start+width,cy);
+  grad.addColorStop(0,'#00ffff'); grad.addColorStop(0.5,'#ff00ff'); grad.addColorStop(1,'#00ffff');
+  ctx.strokeStyle = grad;
+  ctx.lineWidth   = 4;
+  ctx.shadowBlur  = state.vizGlow;
+  ctx.shadowColor = grad;
+  ctx.stroke();
+  ctx.shadowBlur=0;
 },
 
-/* 14  Plasma DNA  --------------------------------------------------------- */
-plasmaDNA(ctx,cx,cy,data){
-  const strands = 2,
-        pts   = 200,
-        R     = Math.min(config.width,config.height)*0.35*state.vizScale,
-        step  = Math.PI*4/pts;
+/* 14  AI-Style Bars  ------------------------------------------------------ */
+aiStyleBars(ctx,cx,cy,data){
+  const bars = 120,
+        bw   = config.width/bars,
+        amp  = config.height*0.4*state.vizScale;
 
-  for(let s=0;s<strands;s++){
-    ctx.beginPath();
-    for(let i=0;i<=pts;i++){
-      const t  = i/pts,
-            ang= i*step + s*Math.PI,
-            val= data[Math.floor(t*data.length)]/255,
-            r  = R*(0.5+val*0.5),
-            x  = cx+r*Math.cos(ang),
-            y  = cy+r*Math.sin(ang)*0.4;
+  for(let b=0;b<bars;b++){
+    const val = data[Math.floor(b/bars*data.length)]/255,
+          h   = val*amp,
+          x   = b*bw,
+          hue = (b/bars*360+time*60)%360;
 
-      ctx[lineTo/moveTo](x,y);
-    }
-    ctx.strokeStyle = `hsla(${s*180+time*100},100%,50%,0.8)`;
-    ctx.lineWidth = 5;
-    ctx.shadowBlur = state.vizGlow;
-    ctx.shadowColor = ctx.strokeStyle;
-    ctx.stroke();
-    ctx.shadowBlur=0;
+    // основной бар
+    ctx.fillStyle = `hsl(${hue},100%,50%)`;
+    ctx.fillRect(x,cy-h/2,bw-2,h);
+
+    // «ИИ-глоу» подсветка
+    ctx.fillStyle = `hsla(${hue},100%,70%,${val*0.3})`;
+    ctx.fillRect(x,cy-h/2-5,bw-2,5);
+    ctx.fillRect(x,cy+h/2,bw-2,5);
   }
 },
 
@@ -1586,45 +1563,27 @@ plasmaDNA(ctx,cx,cy,data){
     }
   },
 
-  /* 19  Cosmic Web  --------------------------------------------------------- */
-cosmicWeb(ctx,cx,cy,data){
-  const nodes = 40,
-        maxR  = Math.min(config.width,config.height)*0.4*state.vizScale;
+ /* 19  Digital Aurora  ---------------------------------------------------- */
+digitalAurora(ctx,cx,cy,data){
+  const layers = 10,
+        maxR   = Math.min(config.width,config.height)*0.5*state.vizScale;
 
-  // генерируем узлы
-  const pts = [];
-  for(let i=0;i<nodes;i++){
-    const ang = Math.random()*Math.PI*2,
-          r   = Math.random()*maxR,
-          val = data[Math.floor(Math.random()*data.length)]/255,
-          x   = cx+r*Math.cos(ang),
-          y   = cy+r*Math.sin(ang);
-    pts.push({x,y,val});
-  }
+  for(let l=0;l<layers;l++){
+    const depth = l/layers,
+          radius= maxR*(1-depth),
+          w     = 20*(1-depth),
+          val   = data[Math.floor(depth*data.length)]/255,
+          hue   = (depth*60+time*50)%360;
 
-  // рисуем линии
-  ctx.lineWidth = 1;
-  ctx.beginPath();
-  for(let i=0;i<nodes;i++){
-    for(let j=i+1;j<nodes;j++){
-      const d = Math.hypot(pts[i].x-pts[j].x,pts[i].y-pts[j].y);
-      if(d<maxR*0.5){
-        const alpha = (1-d/(maxR*0.5))*0.6;
-        ctx.strokeStyle = `hsla(${200+pts[i].val*160},100%,50%,${alpha})`;
-        ctx.moveTo(pts[i].x,pts[i].y);
-        ctx.lineTo(pts[j].x,pts[j].y);
-      }
-    }
-  }
-  ctx.stroke();
-
-  // узлы
-  pts.forEach(p=>{
+    ctx.strokeStyle = `hsla(${hue},100%,70%,${0.8-depth})`;
+    ctx.lineWidth   = w;
+    ctx.shadowBlur  = state.vizGlow*(1-depth);
+    ctx.shadowColor = ctx.strokeStyle;
     ctx.beginPath();
-    ctx.arc(p.x,p.y,2+p.val*4,0,Math.PI*2);
-    ctx.fillStyle = `hsl(${200+p.val*160},100%,60%)`;
-    ctx.fill();
-  });
+    ctx.arc(cx,cy,radius+Math.sin(time*2+l)*15*val,0,Math.PI*2);
+    ctx.stroke();
+  }
+  ctx.shadowBlur=0;
 },
 
   // 20. Retro Burst
@@ -1884,34 +1843,60 @@ rainbowHelix(ctx,cx,cy,data){
   ctx.stroke();
   ctx.shadowBlur=0;
 },
+/* ===== центральная «YouTube-волна» (спектр от центра в стороны) ========= */
+drawCentralWave(ctx){
+  if(!dataArray) return;
+  const pts   = 256,
+        width = config.width*0.9,
+        start = (config.width-width)/2,
+        amp   = config.height*0.15*state.vizScale,
+        cy    = config.height*0.85;        // нижняя треть
 
-/* ===== таймер воспроизведения прямо на канве (12-14)  ==================== */
-drawPlaybackTimer(ctx){
-  if(!isPlaying || !duration) return;
-  const pad = 20,
-        w   = 220,
-        h   = 50,
-        x   = config.width - w - pad,
-        y   = pad,
-        prog= currentTime/duration;
+  ctx.beginPath();
+  for(let i=0;i<=pts;i++){
+    const t   = i/pts,
+          idx = Math.floor(t*dataArray.length),
+          val = dataArray[idx]/255,
+          x   = start+t*width,
+          y   = cy-Math.sin(t*Math.PI*4+time*2)*amp*val;
+
+    i?ctx.lineTo(x,y):ctx.moveTo(x,y);
+  }
+  const grad=ctx.createLinearGradient(start,cy,start+width,cy);
+  grad.addColorStop(0,'#00ffff'); grad.addColorStop(0.5,'#ff00ff'); grad.addColorStop(1,'#00ffff');
+  ctx.strokeStyle = grad;
+  ctx.lineWidth   = 4;
+  ctx.shadowBlur  = state.vizGlow;
+  ctx.shadowColor = grad;
+  ctx.stroke();
+  ctx.shadowBlur=0;
+},
+
+/* ===== плавающий таймер (только «now», без общей длины) =================== */
+drawFloatingTimer(ctx){
+  if(!isPlaying || !audioCtx) return;
+
+  // позиция из localStorage (если юзер двигал)
+  let tx = Number(localStorage.getItem('timerX') || config.width/2-60),
+      ty = Number(localStorage.getItem('timerY') || 60);
+
+  const fmt = t => `${Math.floor(t/60)}:${Math.floor(t%60).toString().padStart(2,'0')}`,
+        txt = fmt(currentTime),
+        w   = ctx.measureText(txt).width+20,
+        h   = 36;
 
   // фон
-  ctx.fillStyle = 'rgba(0,0,0,0.6)';
+  ctx.fillStyle = 'rgba(0,0,0,0.5)';
   ctx.beginPath();
-  ctx.roundRect(x,y,w,h,15);
+  ctx.roundRect(tx,ty,w,h,18);
   ctx.fill();
 
-  // прогресс-линия
-  ctx.fillStyle = '#00ffcc';
-  ctx.fillRect(x+10,y+h-10,(w-20)*prog,4);
-
-  // текста
+  // текст
   ctx.font = 'bold 18px monospace';
   ctx.fillStyle = '#fff';
   ctx.textAlign = 'center';
   ctx.textBaseline = 'middle';
-  const fmt = t => `${Math.floor(t/60)}:${Math.floor(t%60).toString().padStart(2,'0')}`;
-  ctx.fillText(`${fmt(currentTime)} / ${fmt(duration)}`,x+w/2,y+h/2-6);
+  ctx.fillText(txt,tx+w/2,ty+h/2);
 },
 
   // 28. Neon City
@@ -2412,6 +2397,10 @@ function render() {
   Effects.drawFlicker(ctx, bass);
   // рисуем таймер на канве
 Visualizers.drawPlaybackTimer(ctx);
+  // центральная «YouTube-волна» спектр
+Visualizers.drawCentralWave(ctx);
+// плавающий таймер (drag-and-drop)
+Visualizers.drawFloatingTimer(ctx);
 }
 
 // Continuous render
@@ -2586,7 +2575,27 @@ function init() {
   document.getElementById('tunnelColorsInput').value = '#00E5FF,#FF00E5,#00FFAA';
   document.getElementById('tunnelColorsInput').dispatchEvent(new Event('input'));
 }
-
+// drag-and-drop для таймера
+let timerDragging = false;
+canvas.addEventListener('pointerdown', e => {
+  const tx = Number(localStorage.getItem('timerX') || config.width/2-60),
+        ty = Number(localStorage.getItem('timerY') || 60),
+        rect = canvas.getBoundingClientRect(),
+        x = e.clientX - rect.left,
+        y = e.clientY - rect.top;
+  if(x>=tx && x<=tx+140 && y>=ty && y<=ty+40) timerDragging = true;
+});
+canvas.addEventListener('pointermove', e => {
+  if(!timerDragging) return;
+  const rect = canvas.getBoundingClientRect();
+  let x = e.clientX - rect.left - 70,
+      y = e.clientY - rect.top - 20;
+  x = Math.max(0, Math.min(config.width-140, x));
+  y = Math.max(0, Math.min(config.height-40, y));
+  localStorage.setItem('timerX', x);
+  localStorage.setItem('timerY', y);
+});
+canvas.addEventListener('pointerup', () => timerDragging = false);
 init();
 </script>
 </body>
