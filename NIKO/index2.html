@@ -861,6 +861,7 @@ function hexToRgba(hex, alpha) {
 // 🎨 VISUALIZERS (только основные для теста)
 // =============================================
 const Visualizers = {
+  // 1. Classic circular multi-color bars
   circular(ctx, centerX, centerY, dataArray) {
     const radius = Math.min(config.width, config.height) * 0.25 * state.vizScale;
     const bars = 180;
@@ -899,6 +900,7 @@ const Visualizers = {
     ctx.shadowBlur = 0;
   },
 
+  // 2. Radial rotating lines
   radial(ctx, centerX, centerY, dataArray) {
     const outerRadius = Math.min(config.width, config.height) * 0.35 * state.vizScale;
     const innerRadius = outerRadius * 0.2;
@@ -930,6 +932,7 @@ const Visualizers = {
     ctx.shadowBlur = 0;
   },
 
+  // 3. Neon Ring
   neon(ctx, centerX, centerY, dataArray) {
     const radius = Math.min(config.width, config.height) * 0.25 * state.vizScale;
     const segments = 360;
@@ -971,6 +974,7 @@ const Visualizers = {
     ctx.shadowBlur = 0;
   },
 
+  // 4. Cyber Tunnel
   tunnel(ctx, centerX, centerY, dataArray) {
     const radius = Math.min(config.width, config.height) * 0.3 * state.vizScale;
     const bars = 90;
@@ -1036,6 +1040,7 @@ const Visualizers = {
     }
   },
 
+  // 5. Ring Wave
   ringWave(ctx, centerX, centerY, dataArray) {
     const radius = Math.min(config.width, config.height) * 0.23 * state.vizScale;
     const bass = dataArray[1] || 0;
@@ -1087,6 +1092,7 @@ const Visualizers = {
     ctx.stroke();
   },
 
+  // 6. Mirror Landscape
   mirrorWave(ctx, centerX, centerY, dataArray) {
     const baseY = centerY;
     const width = config.width;
@@ -1134,38 +1140,30 @@ const Visualizers = {
     ctx.fill();
   },
 
+  // 7. 3D Tech HUD
   hudTech3D(ctx, centerX, centerY, dataArray) {
     const mainR = Math.min(config.width, config.height) * 0.2 * state.vizScale;
-    const sideR = mainR * 0.8;
 
-    const drawDial3D = (cx, cy, r, offset, freqOffset = 0, depth = 0) => {
+    const drawDial3D = (cx, cy, r, offset, freqOffset = 0) => {
       const ticks = 60;
       for (let i = 0; i < ticks; i++) {
         const t = i / ticks;
         const angle = t * Math.PI * 2 + rotation * 2 + offset;
         const idx = Math.floor((t + freqOffset) * dataArray.length) % dataArray.length;
         const v = dataArray[idx] || 0;
-
-        const perspectiveScale = 1 - depth * 0.1;
-        const inner = r * (0.75 + 0.1 * Math.sin(i / 5 + time)) * perspectiveScale;
-        const outer = inner + (v / 255) * r * 0.8 * perspectiveScale;
+        
+        const inner = r * 0.75;
+        const outer = inner + (v / 255) * r * 0.8;
 
         const x1 = cx + Math.cos(angle) * inner;
-        const y1 = cy + Math.sin(angle) * inner + depth * 10;
+        const y1 = cy + Math.sin(angle) * inner;
         const x2 = cx + Math.cos(angle) * outer;
-        const y2 = cy + Math.sin(angle) * outer + depth * 10;
-
-        ctx.beginPath();
-        ctx.moveTo(x1 + 3, y1 + 3);
-        ctx.lineTo(x2 + 3, y2 + 3);
-        ctx.strokeStyle = 'rgba(0,0,0,0.3)';
-        ctx.lineWidth = 3;
-        ctx.stroke();
+        const y2 = cy + Math.sin(angle) * outer;
 
         ctx.beginPath();
         ctx.moveTo(x1, y1);
         ctx.lineTo(x2, y2);
-        ctx.strokeStyle = hexToRgba(state.vizColor, 0.8 + 0.2 * t - depth * 0.1);
+        ctx.strokeStyle = hexToRgba(state.vizColor, 0.8 + 0.2 * t);
         ctx.lineWidth = 2;
         ctx.shadowBlur = state.vizGlow;
         ctx.shadowColor = state.vizColor;
@@ -1173,10 +1171,10 @@ const Visualizers = {
       }
 
       for (let ring = 0; ring < 3; ring++) {
-        const ringR = r * (0.3 + ring * 0.15) * (1 - depth * 0.1);
+        const ringR = r * (0.3 + ring * 0.15);
         ctx.beginPath();
-        ctx.arc(cx, cy + depth * 10, ringR, 0, Math.PI * 2);
-        ctx.strokeStyle = hexToRgba('#ffffff', 0.2 - ring * 0.05 - depth * 0.05);
+        ctx.arc(cx, cy, ringR, 0, Math.PI * 2);
+        ctx.strokeStyle = hexToRgba('#ffffff', 0.2 - ring * 0.05);
         ctx.lineWidth = 1;
         ctx.stroke();
       }
@@ -1186,18 +1184,17 @@ const Visualizers = {
     ctx.shadowBlur = state.vizGlow;
     ctx.shadowColor = state.vizColor;
 
-    drawDial3D(centerX, centerY, mainR * 1.1, 0, 0, 2);
-    drawDial3D(centerX, centerY, mainR * 1.1, 0, 0, 1);
-    drawDial3D(centerX, centerY, mainR * 1.1, 0, 0, 0);
+    drawDial3D(centerX, centerY, mainR * 1.1, 0, 0);
 
     const offset = mainR * 1.8;
-    drawDial3D(centerX - offset, centerY, sideR, Math.PI / 4, 0.2, 1);
-    drawDial3D(centerX + offset, centerY, sideR, -Math.PI / 4, 0.5, 1);
+    drawDial3D(centerX - offset, centerY, mainR * 0.8, Math.PI / 4, 0.2);
+    drawDial3D(centerX + offset, centerY, mainR * 0.8, -Math.PI / 4, 0.5);
 
     ctx.restore();
     ctx.shadowBlur = 0;
   },
 
+  // 8. 3D Landscape
   landscape3D(ctx, centerX, centerY, dataArray) {
     const barCount = 100;
     const maxBarHeight = config.height * 0.4 * state.vizScale;
@@ -1250,6 +1247,7 @@ const Visualizers = {
     ctx.shadowBlur = 0;
   },
 
+  // 9. Electric Wave
   electricWave(ctx, centerX, centerY, dataArray) {
     const samples = 256;
     const width = config.width * 0.9;
@@ -1299,57 +1297,36 @@ const Visualizers = {
     ctx.shadowBlur = 0;
   },
 
+  // 10. 3D Sound Pressure Board
   soundPressure3D(ctx, centerX, centerY, dataArray) {
     const radius = Math.min(config.width, config.height) * 0.2 * state.vizScale;
     const bass = dataArray[2] || 0;
 
     ctx.save();
 
-    const panelLayers = 3;
-    for (let layer = 0; layer < panelLayers; layer++) {
-      const layerRadius = radius * (1.5 - layer * 0.2);
-      const layerAlpha = 0.1 - layer * 0.02;
-      const layerOffset = layer * 15;
+    const bgGradient = ctx.createRadialGradient(centerX, centerY, 0, centerX, centerY, radius * 1.5);
+    bgGradient.addColorStop(0, 'rgba(0,200,255,0.1)');
+    bgGradient.addColorStop(1, 'rgba(255,0,150,0.05)');
+    
+    ctx.beginPath();
+    ctx.arc(centerX, centerY, radius * 1.5, 0, Math.PI * 2);
+    ctx.fillStyle = bgGradient;
+    ctx.fill();
 
-      const bgGradient = ctx.createRadialGradient(
-        centerX, centerY + layerOffset,
-        0,
-        centerX, centerY + layerOffset,
-        layerRadius
-      );
-      bgGradient.addColorStop(0, `rgba(0,200,255,${layerAlpha})`);
-      bgGradient.addColorStop(1, `rgba(255,0,150,${layerAlpha / 2})`);
-
-      ctx.beginPath();
-      ctx.arc(centerX, centerY + layerOffset, layerRadius, 0, Math.PI * 2);
-      ctx.fillStyle = bgGradient;
-      ctx.fill();
-    }
-
-    for (let layer = 2; layer >= 0; layer--) {
-      const knobRadius = radius * (0.3 - layer * 0.05);
-      const knobY = centerY + layer * 5;
-
-      ctx.beginPath();
-      ctx.arc(centerX, knobY, knobRadius, 0, Math.PI * 2);
-
-      const knobGradient = ctx.createLinearGradient(
-        centerX - knobRadius, knobY,
-        centerX + knobRadius, knobY
-      );
-      knobGradient.addColorStop(0, layer === 0 ? '#2a2a3e' : '#1a1a2e');
-      knobGradient.addColorStop(0.5, layer === 0 ? '#36336e' : '#16213e');
-      knobGradient.addColorStop(1, layer === 0 ? '#1f3460' : '#0f3460');
-
-      ctx.fillStyle = knobGradient;
-      ctx.fill();
-
-      if (layer === 0) {
-        ctx.strokeStyle = 'rgba(255,255,255,0.2)';
-        ctx.lineWidth = 1;
-        ctx.stroke();
-      }
-    }
+    const knobRadius = radius * 0.3;
+    ctx.beginPath();
+    ctx.arc(centerX, centerY, knobRadius, 0, Math.PI * 2);
+    
+    const knobGradient = ctx.createLinearGradient(centerX - knobRadius, centerY, centerX + knobRadius, centerY);
+    knobGradient.addColorStop(0, '#2a2a3e');
+    knobGradient.addColorStop(0.5, '#36336e');
+    knobGradient.addColorStop(1, '#1f3460');
+    
+    ctx.fillStyle = knobGradient;
+    ctx.fill();
+    ctx.strokeStyle = 'rgba(255,255,255,0.2)';
+    ctx.lineWidth = 1;
+    ctx.stroke();
 
     const bars = 120;
     for (let i = 0; i < bars; i++) {
@@ -1360,31 +1337,20 @@ const Visualizers = {
 
       const hue = 180 + (i / bars) * 180;
 
-      for (let layer = 2; layer >= 0; layer--) {
-        const layerScale = 1 - layer * 0.1;
-        const layerOffset = layer * 3;
+      const x1 = centerX + Math.cos(angle) * (radius * 0.7);
+      const y1 = centerY + Math.sin(angle) * (radius * 0.7);
+      const x2 = centerX + Math.cos(angle) * (radius * 0.7 + barHeight);
+      const y2 = centerY + Math.sin(angle) * (radius * 0.7 + barHeight);
 
-        const x1 = centerX + Math.cos(angle) * (radius * 0.7) * layerScale;
-        const y1 = centerY + Math.sin(angle) * (radius * 0.7) * layerScale + layerOffset;
-        const x2 = centerX + Math.cos(angle) * (radius * 0.7 + barHeight * layerScale);
-        const y2 = centerY + Math.sin(angle) * (radius * 0.7 + barHeight * layerScale) + layerOffset;
-
-        ctx.beginPath();
-        ctx.moveTo(x1, y1);
-        ctx.lineTo(x2, y2);
-        ctx.lineWidth = 4 * layerScale;
-        ctx.lineCap = 'round';
-
-        if (layer === 0) {
-          ctx.strokeStyle = `hsl(${hue}, 100%, ${50 + value/10}%)`;
-          ctx.shadowBlur = state.vizGlow;
-          ctx.shadowColor = `hsl(${hue}, 100%, 50%)`;
-        } else {
-          ctx.strokeStyle = `hsla(${hue}, 100%, ${30 + value/15}%, ${0.3 - layer * 0.1})`;
-          ctx.shadowBlur = 0;
-        }
-        ctx.stroke();
-      }
+      ctx.beginPath();
+      ctx.moveTo(x1, y1);
+      ctx.lineTo(x2, y2);
+      ctx.lineWidth = 4;
+      ctx.lineCap = 'round';
+      ctx.strokeStyle = `hsl(${hue}, 100%, ${50 + value/10}%)`;
+      ctx.shadowBlur = state.vizGlow;
+      ctx.shadowColor = `hsl(${hue}, 100%, 50%)`;
+      ctx.stroke();
     }
 
     const panelY = centerY + radius * 1.8;
@@ -1398,7 +1364,7 @@ const Visualizers = {
     panelGradient.addColorStop(0, 'rgba(30,30,40,0.9)');
     panelGradient.addColorStop(0.5, 'rgba(20,20,30,0.8)');
     panelGradient.addColorStop(1, 'rgba(10,10,20,0.7)');
-
+    
     ctx.fillStyle = panelGradient;
     ctx.fillRect(centerX - panelWidth/2, panelY, panelWidth, panelHeight);
 
@@ -1407,26 +1373,322 @@ const Visualizers = {
       const levelWidth = 8;
       const levelHeight = 30;
       const levelY = panelY + 15;
-
+      
       const freqIndex = Math.floor(i / 20 * dataArray.length * 0.5);
       const value = dataArray[freqIndex] || 0;
       const levelFill = (value / 255) * levelHeight;
-
+      
       ctx.fillStyle = 'rgba(10,10,10,0.8)';
       ctx.fillRect(levelX, levelY, levelWidth, levelHeight);
-
+      
       const levelGradient = ctx.createLinearGradient(levelX, levelY + levelHeight, levelX, levelY);
       const hue = 120 - (levelFill / levelHeight) * 120;
       levelGradient.addColorStop(0, `hsla(${hue}, 100%, 50%, 0.8)`);
       levelGradient.addColorStop(1, `hsla(${hue}, 100%, 70%, 0.9)`);
-
+      
       ctx.fillStyle = levelGradient;
       ctx.fillRect(levelX, levelY + levelHeight - levelFill, levelWidth, levelFill);
-
+      
       ctx.fillStyle = 'rgba(255,255,255,0.2)';
       ctx.fillRect(levelX, levelY, 2, levelHeight);
     }
 
+    ctx.restore();
+    ctx.shadowBlur = 0;
+  },
+
+  // Добавляем простые заглушки для остальных визуализаторов
+  waveformCircle(ctx, centerX, centerY, dataArray) {
+    const radius = Math.min(config.width, config.height) * 0.25 * state.vizScale;
+    
+    ctx.beginPath();
+    for (let i = 0; i < 360; i++) {
+      const angle = (i / 360) * Math.PI * 2;
+      const freqIndex = Math.floor(i / 360 * dataArray.length);
+      const value = dataArray[freqIndex] || 0;
+      const r = radius + (value / 255) * 50;
+      const x = centerX + Math.cos(angle) * r;
+      const y = centerY + Math.sin(angle) * r;
+      if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+    }
+    ctx.closePath();
+    ctx.strokeStyle = state.vizColor;
+    ctx.lineWidth = 3;
+    ctx.shadowBlur = state.vizGlow;
+    ctx.shadowColor = state.vizColor;
+    ctx.stroke();
+    ctx.shadowBlur = 0;
+  },
+
+  purpleSpiral(ctx, centerX, centerY, dataArray) {
+    const maxRadius = Math.min(config.width, config.height) * 0.3 * state.vizScale;
+    const turns = 5;
+    
+    ctx.beginPath();
+    for (let i = 0; i < 500; i++) {
+      const t = i / 500;
+      const angle = t * turns * Math.PI * 2 + rotation;
+      const freqIndex = Math.floor(t * dataArray.length);
+      const value = dataArray[freqIndex] || 0;
+      const r = t * maxRadius + (value / 255) * 30;
+      const x = centerX + Math.cos(angle) * r;
+      const y = centerY + Math.sin(angle) * r;
+      if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+    }
+    ctx.strokeStyle = '#9D00FF';
+    ctx.lineWidth = 2;
+    ctx.shadowBlur = state.vizGlow;
+    ctx.shadowColor = '#9D00FF';
+    ctx.stroke();
+    ctx.shadowBlur = 0;
+  },
+
+ eyeSpectrum3D(ctx, centerX, centerY, dataArray) {
+    const radius = Math.min(config.width, config.height) * 0.2 * state.vizScale;
+    
+    // Радужка
+    ctx.beginPath();
+    ctx.arc(centerX, centerY, radius, 0, Math.PI * 2);
+    ctx.fillStyle = state.vizColor;
+    ctx.fill();
+    
+    // Спектр по кругу
+    for (let i = 0; i < 120; i++) {
+      const angle = (i / 120) * Math.PI * 2 + rotation;
+      const freqIndex = Math.floor(i / 120 * dataArray.length);
+      const value = dataArray[freqIndex] || 0;
+      const barHeight = (value / 255) * radius * 0.5;
+      
+      const x1 = centerX + Math.cos(angle) * radius;
+      const y1 = centerY + Math.sin(angle) * radius;
+      const x2 = centerX + Math.cos(angle) * (radius + barHeight);
+      const y2 = centerY + Math.sin(angle) * (radius + barHeight);
+      
+      ctx.beginPath();
+      ctx.moveTo(x1, y1);
+      ctx.lineTo(x2, y2);
+      ctx.strokeStyle = state.vizColor;
+      ctx.lineWidth = 3;
+      ctx.shadowBlur = state.vizGlow;
+      ctx.shadowColor = state.vizColor;
+      ctx.stroke();
+    }
+    
+    // Зрачок
+    ctx.beginPath();
+    ctx.arc(centerX, centerY, radius * 0.3, 0, Math.PI * 2);
+    ctx.fillStyle = '#000000';
+    ctx.fill();
+    ctx.shadowBlur = 0;
+  },
+
+  // Остальные визуализаторы
+  centralBars(ctx, centerX, centerY, dataArray) {
+    const barWidth = 4;
+    const barGap = 2;
+    const totalBars = Math.floor(config.width / (barWidth + barGap));
+    const startX = centerX - (totalBars * (barWidth + barGap)) / 2;
+    
+    for (let i = 0; i < totalBars; i++) {
+      const freqIndex = Math.floor(i / totalBars * dataArray.length);
+      const value = dataArray[freqIndex] || 0;
+      const barHeight = (value / 255) * config.height * 0.4 * state.vizScale;
+      
+      const x = startX + i * (barWidth + barGap);
+      const y = centerY - barHeight / 2;
+      
+      const hue = (i / totalBars) * 360;
+      
+      ctx.beginPath();
+      ctx.rect(x, y, barWidth, barHeight);
+      ctx.fillStyle = `hsl(${hue}, 100%, 50%)`;
+      ctx.shadowBlur = state.vizGlow;
+      ctx.shadowColor = `hsl(${hue}, 100%, 50%)`;
+      ctx.fill();
+    }
+    ctx.shadowBlur = 0;
+  },
+
+  doubleBars(ctx, centerX, centerY, dataArray) {
+    const barWidth = 3;
+    const barGap = 1;
+    const barsPerSide = 60;
+    const maxHeight = config.height * 0.3 * state.vizScale;
+    
+    for (let i = 0; i < barsPerSide; i++) {
+      const freqIndex = Math.floor(i / barsPerSide * dataArray.length * 0.8);
+      const value = dataArray[freqIndex] || 0;
+      const barHeight = (value / 255) * maxHeight;
+      
+      const x = centerX - (barsPerSide * (barWidth + barGap)) / 2 + i * (barWidth + barGap);
+      const hue = (i / barsPerSide) * 360;
+      const color = `hsl(${hue}, 100%, 50%)`;
+      
+      // Верхние бары
+      ctx.beginPath();
+      ctx.rect(x, centerY - barHeight - 10, barWidth, barHeight);
+      ctx.fillStyle = color;
+      ctx.shadowBlur = state.vizGlow;
+      ctx.shadowColor = color;
+      ctx.fill();
+      
+      // Нижние бары (отражение)
+      ctx.beginPath();
+      ctx.rect(x, centerY + 10, barWidth, barHeight);
+      ctx.fillStyle = hexToRgba(color.replace('hsl', 'hsla').replace(')', ', 0.6)'));
+      ctx.shadowBlur = state.vizGlow * 0.5;
+      ctx.shadowColor = color;
+      ctx.fill();
+    }
+    ctx.shadowBlur = 0;
+  },
+
+  modernSpectrum(ctx, centerX, centerY, dataArray) {
+    const bars = 64;
+    const barWidth = config.width / bars;
+    const maxHeight = config.height * 0.4 * state.vizScale;
+    
+    for (let i = 0; i < bars; i++) {
+      const freqIndex = Math.floor(i / bars * dataArray.length);
+      const value = dataArray[freqIndex] || 0;
+      const barHeight = (value / 255) * maxHeight;
+      
+      const x = i * barWidth;
+      const gradient = ctx.createLinearGradient(x, centerY, x, centerY - barHeight);
+      gradient.addColorStop(0, '#FF00FF');
+      gradient.addColorStop(0.5, '#00FFFF');
+      gradient.addColorStop(1, '#FFFF00');
+      
+      ctx.beginPath();
+      ctx.rect(x, centerY - barHeight, barWidth * 0.8, barHeight);
+      ctx.fillStyle = gradient;
+      ctx.shadowBlur = state.vizGlow;
+      ctx.shadowColor = '#FF00FF';
+      ctx.fill();
+    }
+    ctx.shadowBlur = 0;
+  },
+
+  snowFlake(ctx, centerX, centerY, dataArray) {
+    const arms = 8;
+    const maxRadius = Math.min(config.width, config.height) * 0.25 * state.vizScale;
+    
+    for (let arm = 0; arm < arms; arm++) {
+      const armAngle = (arm / arms) * Math.PI * 2 + rotation;
+      
+      for (let i = 0; i < 20; i++) {
+        const t = i / 20;
+        const freqIndex = Math.floor((arm * 20 + i) / (arms * 20) * dataArray.length);
+        const value = dataArray[freqIndex] || 0;
+        const radius = t * maxRadius + (value / 255) * 20;
+        
+        const x = centerX + Math.cos(armAngle) * radius;
+        const y = centerY + Math.sin(armAngle) * radius;
+        
+        ctx.beginPath();
+        ctx.arc(x, y, 2 + (value / 255) * 3, 0, Math.PI * 2);
+        ctx.fillStyle = state.vizColor;
+        ctx.shadowBlur = state.vizGlow;
+        ctx.shadowColor = state.vizColor;
+        ctx.fill();
+      }
+    }
+    ctx.shadowBlur = 0;
+  },
+
+  rippleWaves(ctx, centerX, centerY, dataArray) {
+    const bass = dataArray.slice(0, 10).reduce((a, b) => a + b, 0) / 10;
+    const maxRadius = Math.min(config.width, config.height) * 0.4 * state.vizScale;
+    
+    for (let ring = 0; ring < 8; ring++) {
+      const t = ring / 8;
+      const radius = t * maxRadius + Math.sin(time * 3 + ring) * 20;
+      const opacity = 1 - t;
+      
+      ctx.beginPath();
+      ctx.arc(centerX, centerY, radius, 0, Math.PI * 2);
+      ctx.strokeStyle = hexToRgba(state.vizColor, opacity * 0.8);
+      ctx.lineWidth = 3;
+      ctx.shadowBlur = state.vizGlow * opacity;
+      ctx.shadowColor = state.vizColor;
+      ctx.stroke();
+    }
+    ctx.shadowBlur = 0;
+  },
+
+  galaxySpiral(ctx, centerX, centerY, dataArray) {
+    const maxRadius = Math.min(config.width, config.height) * 0.3 * state.vizScale;
+    const arms = 3;
+    
+    for (let arm = 0; arm < arms; arm++) {
+      ctx.beginPath();
+      for (let i = 0; i < 200; i++) {
+        const t = i / 200;
+        const angle = t * Math.PI * 6 + (arm / arms) * Math.PI * 2 + rotation * 0.5;
+        const freqIndex = Math.floor(t * dataArray.length);
+        const value = dataArray[freqIndex] || 0;
+        const radius = t * maxRadius + (value / 255) * 15;
+        
+        const x = centerX + Math.cos(angle) * radius;
+        const y = centerY + Math.sin(angle) * radius;
+        
+        if (i === 0) ctx.moveTo(x, y);
+        else ctx.lineTo(x, y);
+      }
+      
+      const hue = (arm / arms) * 360;
+      ctx.strokeStyle = `hsl(${hue}, 100%, 50%)`;
+      ctx.lineWidth = 2;
+      ctx.shadowBlur = state.vizGlow;
+      ctx.shadowColor = `hsl(${hue}, 100%, 50%)`;
+      ctx.stroke();
+    }
+    ctx.shadowBlur = 0;
+  },
+
+  particleField(ctx, centerX, centerY, dataArray) {
+    const particles = 100;
+    const fieldRadius = Math.min(config.width, config.height) * 0.4 * state.vizScale;
+    
+    for (let i = 0; i < particles; i++) {
+      const angle = (i / particles) * Math.PI * 2 + rotation * 0.2;
+      const freqIndex = Math.floor(i / particles * dataArray.length);
+      const value = dataArray[freqIndex] || 0;
+      const radius = (Math.random() * 0.5 + 0.5) * fieldRadius;
+      const size = 1 + (value / 255) * 4;
+      
+      const x = centerX + Math.cos(angle) * radius;
+      const y = centerY + Math.sin(angle) * radius;
+      
+      ctx.beginPath();
+      ctx.arc(x, y, size, 0, Math.PI * 2);
+      ctx.fillStyle = state.vizColor;
+      ctx.shadowBlur = state.vizGlow;
+      ctx.shadowColor = state.vizColor;
+      ctx.fill();
+    }
+    ctx.shadowBlur = 0;
+  },
+
+  heartBeat(ctx, centerX, centerY, dataArray) {
+    const bass = dataArray.slice(0, 5).reduce((a, b) => a + b, 0) / 5;
+    const scale = 1 + (bass / 255) * 0.5;
+    const size = Math.min(config.width, config.height) * 0.15 * state.vizScale * scale;
+    
+    ctx.save();
+    ctx.translate(centerX, centerY);
+    ctx.scale(scale, scale);
+    
+    ctx.beginPath();
+    ctx.moveTo(0, -size * 0.3);
+    ctx.bezierCurveTo(-size * 0.5, -size * 0.8, -size * 0.8, -size * 0.3, 0, size * 0.2);
+    ctx.bezierCurveTo(size * 0.8, -size * 0.3, size * 0.5, -size * 0.8, 0, -size * 0.3);
+    
+    ctx.fillStyle = state.vizColor;
+    ctx.shadowBlur = state.vizGlow * 2;
+    ctx.shadowColor = state.vizColor;
+    ctx.fill();
+    
     ctx.restore();
     ctx.shadowBlur = 0;
   }
