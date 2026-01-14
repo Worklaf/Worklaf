@@ -928,9 +928,509 @@ const Visualizers = {
       ctx.stroke();
     }
     ctx.shadowBlur = 0;
+  },
+
+  neon(ctx, centerX, centerY, dataArray) {
+    const radius = Math.min(config.width, config.height) * 0.25 * state.vizScale;
+    const segments = 360;
+    const bass = dataArray[2] || 0;
+
+    const gradient = ctx.createLinearGradient(centerX - radius, centerY, centerX + radius, centerY);
+    gradient.addColorStop(0, '#00E5FF');
+    gradient.addColorStop(0.5, '#9D00FF');
+    gradient.addColorStop(1, '#FF00E5');
+
+    ctx.save();
+    ctx.beginPath();
+    for (let i = 0; i <= segments; i++) {
+      const t = i / segments;
+      const angle = t * Math.PI * 2 + rotation * 1.5;
+      const idx = Math.floor(t * dataArray.length);
+      const v = dataArray[idx] || 0;
+      const offset = (v / 255) * radius * 0.6;
+      const r = radius + offset;
+      const x = centerX + Math.cos(angle) * r;
+      const y = centerY + Math.sin(angle) * r;
+      if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+    }
+    ctx.closePath();
+    ctx.strokeStyle = gradient;
+    ctx.lineWidth = 3;
+    ctx.shadowBlur = state.vizGlow + (bass / 255) * 30;
+    ctx.shadowColor = '#00E5FF';
+    ctx.stroke();
+
+    const innerRadius = radius * 0.4 + (bass / 255) * 20;
+    ctx.beginPath();
+    ctx.arc(centerX, centerY, innerRadius, 0, Math.PI * 2);
+    ctx.fillStyle = 'rgba(0,0,0,0.85)';
+    ctx.shadowBlur = state.vizGlow;
+    ctx.shadowColor = '#9D00FF';
+    ctx.fill();
+    ctx.restore();
+    ctx.shadowBlur = 0;
+  },
+
+  tunnel(ctx, centerX, centerY, dataArray) {
+    const radius = Math.min(config.width, config.height) * 0.3 * state.vizScale;
+    const bars = 90;
+    const barWidth = 4;
+
+    const neonColors = {
+      cyan: '#00E5FF',
+      pink: '#FF00E5',
+      accent: '#00FFAA'
+    };
+
+    const avgBass = dataArray.slice(0, 10).reduce((a, b) => a + b, 0) / 10;
+    const pulseRadius = radius * 0.25 + (avgBass / 255) * 30;
+
+    ctx.save();
+    ctx.beginPath();
+    ctx.arc(centerX, centerY, pulseRadius, 0, Math.PI * 2);
+    ctx.fillStyle = neonColors.pink;
+    ctx.shadowBlur = 30 + state.vizGlow;
+    ctx.shadowColor = neonColors.pink;
+    ctx.fill();
+    ctx.restore();
+    ctx.shadowBlur = 0;
+
+    for (let i = 0; i < bars; i++) {
+      const angle = (i / bars) * Math.PI * 2 + rotation * -1.5;
+      const freqIndex = Math.floor(i / bars * dataArray.length * 0.7);
+      const value = dataArray[freqIndex] || 0;
+      const barHeight = (value / 255) * (radius * 0.9) + 10;
+
+      const x1 = centerX + Math.cos(angle) * radius;
+      const y1 = centerY + Math.sin(angle) * radius;
+      const x2 = centerX + Math.cos(angle) * (radius + barHeight);
+      const y2 = centerY + Math.sin(angle) * (radius + barHeight);
+
+      const colorIndex = Math.floor((i / bars) * 3);
+      const barColor = [neonColors.cyan, neonColors.pink, neonColors.accent][colorIndex];
+
+      ctx.beginPath();
+      ctx.moveTo(x1, y1);
+      ctx.lineTo(x2, y2);
+      ctx.lineWidth = barWidth;
+      ctx.strokeStyle = barColor;
+      ctx.shadowBlur = state.vizGlow * 0.7;
+      ctx.shadowColor = barColor;
+
+      if (value > 190) {
+        ctx.strokeStyle = '#ffffff';
+        ctx.shadowBlur = 25;
+        ctx.shadowColor = '#ffffff';
+      }
+      ctx.stroke();
+      ctx.shadowBlur = 0;
+    }
+
+    for (let ring = 1; ring <= 4; ring++) {
+      const ringRadius = radius * (0.4 + ring * 0.18);
+      ctx.beginPath();
+      ctx.arc(centerX, centerY, ringRadius + Math.sin(time * 2 + ring) * 5, 0, Math.PI * 2);
+      ctx.strokeStyle = hexToRgba(neonColors.cyan, 0.35 - ring * 0.06);
+      ctx.lineWidth = 2;
+      ctx.stroke();
+    }
+  },
+
+  ringWave(ctx, centerX, centerY, dataArray) {
+    const radius = Math.min(config.width, config.height) * 0.23 * state.vizScale;
+    const bass = dataArray[1] || 0;
+
+    const gradient = ctx.createLinearGradient(centerX - radius * 2, centerY, centerX + radius * 2, centerY);
+    gradient.addColorStop(0, '#ff4da6');
+    gradient.addColorStop(0.5, '#00e5ff');
+    gradient.addColorStop(1, '#7cff00');
+
+    ctx.beginPath();
+    ctx.arc(centerX, centerY, radius, 0, Math.PI * 2);
+    ctx.strokeStyle = gradient;
+    ctx.lineWidth = 4;
+    ctx.shadowBlur = state.vizGlow + bass / 2;
+    ctx.shadowColor = '#ff4da6';
+    ctx.stroke();
+    ctx.shadowBlur = 0;
+
+    const samples = 128;
+    const width = radius * 2.4;
+    const startX = centerX - width / 2;
+
+    ctx.beginPath();
+    for (let i = 0; i < samples; i++) {
+      const t = i / (samples - 1);
+      const idx = Math.floor(t * dataArray.length * 0.7);
+      const v = dataArray[idx] || 0;
+      const amp = (v / 255) * radius * 0.8;
+      const x = startX + t * width;
+      const y = centerY - amp;
+      if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+    }
+    ctx.strokeStyle = gradient;
+    ctx.lineWidth = 2;
+    ctx.stroke();
+
+    ctx.beginPath();
+    for (let i = 0; i < samples; i++) {
+      const t = i / (samples - 1);
+      const idx = Math.floor(t * dataArray.length * 0.7);
+      const v = dataArray[idx] || 0;
+      const amp = (v / 255) * radius * 0.8;
+      const x = startX + t * width;
+      const y = centerY + amp;
+      if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+    }
+    ctx.strokeStyle = hexToRgba('#00e5ff', 0.7);
+    ctx.lineWidth = 2;
+    ctx.stroke();
+  },
+
+  mirrorWave(ctx, centerX, centerY, dataArray) {
+    const baseY = centerY;
+    const width = config.width;
+    const height = config.height * 0.25;
+    const samples = 200;
+
+    const gradientTop = ctx.createLinearGradient(0, baseY - height, 0, baseY);
+    gradientTop.addColorStop(0, hexToRgba(state.vizColor, 0.0));
+    gradientTop.addColorStop(1, hexToRgba(state.vizColor, 0.9));
+
+    const gradientBottom = ctx.createLinearGradient(0, baseY, 0, baseY + height);
+    gradientBottom.addColorStop(0, hexToRgba(state.vizColor, 0.7));
+    gradientBottom.addColorStop(1, 'rgba(0,0,0,0)');
+
+    ctx.beginPath();
+    ctx.moveTo(0, baseY);
+    for (let i = 0; i <= samples; i++) {
+      const t = i / samples;
+      const idx = Math.floor(t * dataArray.length * 0.9);
+      const v = dataArray[idx] || 0;
+      const amp = (v / 255) * height * 1.2;
+      const x = t * width;
+      const y = baseY - amp;
+      ctx.lineTo(x, y);
+    }
+    ctx.lineTo(width, baseY);
+    ctx.closePath();
+    ctx.fillStyle = gradientTop;
+    ctx.fill();
+
+    ctx.beginPath();
+    ctx.moveTo(0, baseY);
+    for (let i = 0; i <= samples; i++) {
+      const t = i / samples;
+      const idx = Math.floor(t * dataArray.length * 0.9);
+      const v = dataArray[idx] || 0;
+      const amp = (v / 255) * height * 0.9;
+      const x = t * width;
+      const y = baseY + amp;
+      ctx.lineTo(x, y);
+    }
+    ctx.lineTo(width, baseY);
+    ctx.closePath();
+    ctx.fillStyle = gradientBottom;
+    ctx.fill();
+  },
+
+  hudTech3D(ctx, centerX, centerY, dataArray) {
+    const mainR = Math.min(config.width, config.height) * 0.2 * state.vizScale;
+    const sideR = mainR * 0.8;
+
+    const drawDial3D = (cx, cy, r, offset, freqOffset = 0, depth = 0) => {
+      const ticks = 60;
+      for (let i = 0; i < ticks; i++) {
+        const t = i / ticks;
+        const angle = t * Math.PI * 2 + rotation * 2 + offset;
+        const idx = Math.floor((t + freqOffset) * dataArray.length) % dataArray.length;
+        const v = dataArray[idx] || 0;
+
+        const perspectiveScale = 1 - depth * 0.1;
+        const inner = r * (0.75 + 0.1 * Math.sin(i / 5 + time)) * perspectiveScale;
+        const outer = inner + (v / 255) * r * 0.8 * perspectiveScale;
+
+        const x1 = cx + Math.cos(angle) * inner;
+        const y1 = cy + Math.sin(angle) * inner + depth * 10;
+        const x2 = cx + Math.cos(angle) * outer;
+        const y2 = cy + Math.sin(angle) * outer + depth * 10;
+
+        ctx.beginPath();
+        ctx.moveTo(x1 + 3, y1 + 3);
+        ctx.lineTo(x2 + 3, y2 + 3);
+        ctx.strokeStyle = 'rgba(0,0,0,0.3)';
+        ctx.lineWidth = 3;
+        ctx.stroke();
+
+        ctx.beginPath();
+        ctx.moveTo(x1, y1);
+        ctx.lineTo(x2, y2);
+        ctx.strokeStyle = hexToRgba(state.vizColor, 0.8 + 0.2 * t - depth * 0.1);
+        ctx.lineWidth = 2;
+        ctx.shadowBlur = state.vizGlow;
+        ctx.shadowColor = state.vizColor;
+        ctx.stroke();
+      }
+
+      for (let ring = 0; ring < 3; ring++) {
+        const ringR = r * (0.3 + ring * 0.15) * (1 - depth * 0.1);
+        ctx.beginPath();
+        ctx.arc(cx, cy + depth * 10, ringR, 0, Math.PI * 2);
+        ctx.strokeStyle = hexToRgba('#ffffff', 0.2 - ring * 0.05 - depth * 0.05);
+        ctx.lineWidth = 1;
+        ctx.stroke();
+      }
+    };
+
+    ctx.save();
+    ctx.shadowBlur = state.vizGlow;
+    ctx.shadowColor = state.vizColor;
+
+    drawDial3D(centerX, centerY, mainR * 1.1, 0, 0, 2);
+    drawDial3D(centerX, centerY, mainR * 1.1, 0, 0, 1);
+    drawDial3D(centerX, centerY, mainR * 1.1, 0, 0, 0);
+
+    const offset = mainR * 1.8;
+    drawDial3D(centerX - offset, centerY, sideR, Math.PI / 4, 0.2, 1);
+    drawDial3D(centerX + offset, centerY, sideR, -Math.PI / 4, 0.5, 1);
+
+    ctx.restore();
+    ctx.shadowBlur = 0;
+  },
+
+  landscape3D(ctx, centerX, centerY, dataArray) {
+    const barCount = 100;
+    const maxBarHeight = config.height * 0.4 * state.vizScale;
+    const baseLineY = centerY;
+    const barWidth = config.width / barCount;
+    const gradientColors = [
+      '#4E00FF', '#9D00FF', '#FF00E5', '#FFAA00', '#FFFF00', '#00FF00', '#00FFFF'
+    ];
+
+    ctx.save();
+
+    for (let i = 0; i < barCount; i++) {
+      const freqIndex = Math.floor(i / barCount * dataArray.length);
+      const value = dataArray[freqIndex] || 0;
+      const barHeight = (value / 255) * maxBarHeight;
+
+      const x = i * barWidth;
+      const barActualWidth = barWidth * 0.9;
+
+      const colorIdx = Math.floor((i / barCount) * gradientColors.length);
+      const barColor = gradientColors[colorIdx] || gradientColors[0];
+
+      const perspective = 1 - (i / barCount) * 0.3;
+      const finalHeight = barHeight * perspective;
+
+      ctx.beginPath();
+      ctx.rect(x, baseLineY - finalHeight, barActualWidth, finalHeight);
+      ctx.fillStyle = barColor;
+      ctx.shadowBlur = state.vizGlow;
+      ctx.shadowColor = barColor;
+      ctx.fill();
+
+      ctx.beginPath();
+      ctx.moveTo(x, baseLineY - finalHeight);
+      ctx.lineTo(x + barActualWidth, baseLineY - finalHeight);
+      ctx.lineTo(x + barActualWidth + 5, baseLineY - finalHeight - 5);
+      ctx.lineTo(x + 5, baseLineY - finalHeight - 5);
+      ctx.closePath();
+      ctx.fillStyle = hexToRgba(barColor, 0.8);
+      ctx.fill();
+
+      ctx.beginPath();
+      ctx.rect(x, baseLineY, barActualWidth, finalHeight * 0.5);
+      ctx.fillStyle = hexToRgba(barColor, 0.2);
+      ctx.shadowBlur = state.vizGlow / 2;
+      ctx.shadowColor = hexToRgba(barColor, 0.5);
+      ctx.fill();
+    }
+    ctx.restore();
+    ctx.shadowBlur = 0;
+  },
+
+  electricWave(ctx, centerX, centerY, dataArray) {
+    const samples = 256;
+    const width = config.width * 0.9;
+    const startX = (config.width - width) / 2;
+    const amplitude = config.height * 0.15 * state.vizScale;
+    const waveCenterY = centerY;
+    const glowColor = state.vizColor;
+
+    ctx.save();
+    ctx.beginPath();
+    ctx.moveTo(startX, waveCenterY);
+
+    for (let i = 0; i < samples; i++) {
+      const t = i / (samples - 1);
+      const freqIndex = Math.floor(t * dataArray.length * 0.7);
+      const value = dataArray[freqIndex] || 0;
+      const displacement = (value / 255) * amplitude * (Math.sin(t * Math.PI * 4 + time * 0.5) * 0.5 + 0.5);
+      const x = startX + t * width;
+      const y = waveCenterY + Math.sin(t * Math.PI * 8 + time * 2) * displacement;
+
+      ctx.lineTo(x, y);
+    }
+
+    ctx.strokeStyle = glowColor;
+    ctx.lineWidth = 4;
+    ctx.shadowBlur = state.vizGlow * 2;
+    ctx.shadowColor = glowColor;
+    ctx.stroke();
+
+    for (let i = 0; i < 20; i++) {
+      const randT = Math.random();
+      const freqIndex = Math.floor(randT * dataArray.length * 0.7);
+      const value = dataArray[freqIndex] || 0;
+      if (value > 150) {
+        const x = startX + randT * width;
+        const y = waveCenterY + Math.sin(randT * Math.PI * 8 + time * 2) * (value / 255) * amplitude;
+        ctx.beginPath();
+        ctx.arc(x + (Math.random() - 0.5) * 20, y + (Math.random() - 0.5) * 20, Math.random() * 2 + 1, 0, Math.PI * 2);
+        ctx.fillStyle = hexToRgba(glowColor, Math.random());
+        ctx.shadowBlur = 10;
+        ctx.shadowColor = glowColor;
+        ctx.fill();
+      }
+    }
+
+    ctx.restore();
+    ctx.shadowBlur = 0;
+  },
+
+  soundPressure3D(ctx, centerX, centerY, dataArray) {
+    const radius = Math.min(config.width, config.height) * 0.2 * state.vizScale;
+    const bass = dataArray[2] || 0;
+
+    ctx.save();
+
+    const panelLayers = 3;
+    for (let layer = 0; layer < panelLayers; layer++) {
+      const layerRadius = radius * (1.5 - layer * 0.2);
+      const layerAlpha = 0.1 - layer * 0.02;
+      const layerOffset = layer * 15;
+
+      const bgGradient = ctx.createRadialGradient(
+        centerX, centerY + layerOffset,
+        0,
+        centerX, centerY + layerOffset,
+        layerRadius
+      );
+      bgGradient.addColorStop(0, `rgba(0,200,255,${layerAlpha})`);
+      bgGradient.addColorStop(1, `rgba(255,0,150,${layerAlpha / 2})`);
+
+      ctx.beginPath();
+      ctx.arc(centerX, centerY + layerOffset, layerRadius, 0, Math.PI * 2);
+      ctx.fillStyle = bgGradient;
+      ctx.fill();
+    }
+
+    for (let layer = 2; layer >= 0; layer--) {
+      const knobRadius = radius * (0.3 - layer * 0.05);
+      const knobY = centerY + layer * 5;
+
+      ctx.beginPath();
+      ctx.arc(centerX, knobY, knobRadius, 0, Math.PI * 2);
+
+      const knobGradient = ctx.createLinearGradient(
+        centerX - knobRadius, knobY,
+        centerX + knobRadius, knobY
+      );
+      knobGradient.addColorStop(0, layer === 0 ? '#2a2a3e' : '#1a1a2e');
+      knobGradient.addColorStop(0.5, layer === 0 ? '#36336e' : '#16213e');
+      knobGradient.addColorStop(1, layer === 0 ? '#1f3460' : '#0f3460');
+
+      ctx.fillStyle = knobGradient;
+      ctx.fill();
+
+      if (layer === 0) {
+        ctx.strokeStyle = 'rgba(255,255,255,0.2)';
+        ctx.lineWidth = 1;
+        ctx.stroke();
+      }
+    }
+
+    const bars = 120;
+    for (let i = 0; i < bars; i++) {
+      const angle = (i / bars) * Math.PI * 2 - Math.PI / 2;
+      const freqIndex = Math.floor(i / bars * dataArray.length * 0.6);
+      const value = dataArray[freqIndex] || 0;
+      const barHeight = (value / 255) * radius * 0.8;
+
+      const hue = 180 + (i / bars) * 180;
+
+      for (let layer = 2; layer >= 0; layer--) {
+        const layerScale = 1 - layer * 0.1;
+        const layerOffset = layer * 3;
+
+        const x1 = centerX + Math.cos(angle) * (radius * 0.7) * layerScale;
+        const y1 = centerY + Math.sin(angle) * (radius * 0.7) * layerScale + layerOffset;
+        const x2 = centerX + Math.cos(angle) * (radius * 0.7 + barHeight * layerScale);
+        const y2 = centerY + Math.sin(angle) * (radius * 0.7 + barHeight * layerScale) + layerOffset;
+
+        ctx.beginPath();
+        ctx.moveTo(x1, y1);
+        ctx.lineTo(x2, y2);
+        ctx.lineWidth = 4 * layerScale;
+        ctx.lineCap = 'round';
+
+        if (layer === 0) {
+          ctx.strokeStyle = `hsl(${hue}, 100%, ${50 + value/10}%)`;
+          ctx.shadowBlur = state.vizGlow;
+          ctx.shadowColor = `hsl(${hue}, 100%, 50%)`;
+        } else {
+          ctx.strokeStyle = `hsla(${hue}, 100%, ${30 + value/15}%, ${0.3 - layer * 0.1})`;
+          ctx.shadowBlur = 0;
+        }
+        ctx.stroke();
+      }
+    }
+
+    const panelY = centerY + radius * 1.8;
+    const panelWidth = radius * 3;
+    const panelHeight = 60;
+
+    ctx.fillStyle = 'rgba(0,0,0,0.4)';
+    ctx.fillRect(centerX - panelWidth/2 + 5, panelY + 5, panelWidth, panelHeight);
+
+    const panelGradient = ctx.createLinearGradient(0, panelY, 0, panelY + panelHeight);
+    panelGradient.addColorStop(0, 'rgba(30,30,40,0.9)');
+    panelGradient.addColorStop(0.5, 'rgba(20,20,30,0.8)');
+    panelGradient.addColorStop(1, 'rgba(10,10,20,0.7)');
+
+    ctx.fillStyle = panelGradient;
+    ctx.fillRect(centerX - panelWidth/2, panelY, panelWidth, panelHeight);
+
+    for (let i = 0; i < 20; i++) {
+      const levelX = centerX - panelWidth/2 + 20 + i * (panelWidth - 40) / 19;
+      const levelWidth = 8;
+      const levelHeight = 30;
+      const levelY = panelY + 15;
+
+      const freqIndex = Math.floor(i / 20 * dataArray.length * 0.5);
+      const value = dataArray[freqIndex] || 0;
+      const levelFill = (value / 255) * levelHeight;
+
+      ctx.fillStyle = 'rgba(10,10,10,0.8)';
+      ctx.fillRect(levelX, levelY, levelWidth, levelHeight);
+
+      const levelGradient = ctx.createLinearGradient(levelX, levelY + levelHeight, levelX, levelY);
+      const hue = 120 - (levelFill / levelHeight) * 120;
+      levelGradient.addColorStop(0, `hsla(${hue}, 100%, 50%, 0.8)`);
+      levelGradient.addColorStop(1, `hsla(${hue}, 100%, 70%, 0.9)`);
+
+      ctx.fillStyle = levelGradient;
+      ctx.fillRect(levelX, levelY + levelHeight - levelFill, levelWidth, levelFill);
+
+      ctx.fillStyle = 'rgba(255,255,255,0.2)';
+      ctx.fillRect(levelX, levelY, 2, levelHeight);
+    }
+
+    ctx.restore();
+    ctx.shadowBlur = 0;
   }
 };
-
 // =============================================
 // 🎵 AUDIO SETUP
 // =============================================
