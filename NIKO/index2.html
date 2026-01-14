@@ -1,0 +1,529 @@
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>N1K∅ Video Creator — Pro Edition</title>
+<style>
+:root {
+  --bg: #07060a;
+  --card: #0b0b10;
+  --border: #1a1a20;
+  --accent: #ff4da6;
+  --accent2: #00d1ff;
+  --text: #eaeaf2;
+  --muted: #8a8a9a;
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body {
+  font-family: 'Inter', sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  height: 100vh;
+  display: flex;
+  overflow: hidden;
+}
+
+.sidebar {
+  width: 320px;
+  background: var(--card);
+  border-right: 1px solid var(--border);
+  display: flex;
+  flex-direction: column;
+  overflow-y: auto;
+}
+
+.sidebar-header {
+  padding: 20px;
+  border-bottom: 1px solid var(--border);
+}
+.tabs {
+  display: flex;
+  background: #000;
+  border-bottom: 1px solid var(--border);
+}
+.tab {
+  flex: 1;
+  padding: 12px 8px;
+  background: none;
+  border: none;
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  cursor: pointer;
+}
+.tab.active { color: var(--accent); border-bottom: 2px solid var(--accent); }
+
+.tab-content { display: none; padding: 16px; }
+.tab-content.active { display: block; }
+
+.section {
+  margin-bottom: 20px;
+  padding-bottom: 20px;
+  border-bottom: 1px solid var(--border);
+}
+.section-title {
+  font-size: 11px;
+  color: var(--muted);
+  text-transform: uppercase;
+  margin-bottom: 12px;
+}
+
+.slider-group {
+  margin-bottom: 12px;
+}
+.slider-label {
+  display: flex;
+  justify-content: space-between;
+  font-size: 11px;
+  color: var(--muted);
+}
+.slider {
+  width: 100%;
+  height: 4px;
+  background: rgba(255,255,255,0.1);
+  border-radius: 2px;
+  outline: none;
+  -webkit-appearance: none;
+  cursor: pointer;
+}
+.slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: var(--accent);
+  box-shadow: 0 0 10px rgba(255,77,166,0.5);
+}
+
+.viz-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+  gap: 8px;
+}
+.viz-card {
+  background: rgba(255,255,255,0.03);
+  border: 2px solid var(--border);
+  border-radius: 10px;
+  padding: 16px 12px;
+  cursor: pointer;
+  text-align: center;
+  transition: all 0.2s;
+}
+.viz-card.active {
+  background: linear-gradient(135deg, rgba(255,77,166,0.2), rgba(0,209,255,0.2));
+  border-color: var(--accent);
+}
+
+.main-area {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  padding: 20px;
+  gap: 16px;
+}
+
+.canvas-container {
+  flex: 1;
+  background: #000;
+  border-radius: 12px;
+  overflow: hidden;
+  position: relative;
+  box-shadow: 0 10px 50px rgba(0,0,0,0.8);
+}
+
+.timeline-area {
+  background: var(--card);
+  border-radius: 12px;
+  padding: 16px;
+  border: 1px solid var(--border);
+}
+</style>
+</head>
+<body>
+
+<div class="sidebar">
+  <div class="sidebar-header"><h1>N1K∅ Video Creator</h1></div>
+  <div class="tabs">
+    <button class="tab active" onclick="switchTab('project', this)">Project</button>
+    <button class="tab" onclick="switchTab('audio', this)">Audio</button>
+    <button class="tab" onclick="switchTab('viz', this)">Spectrum</button>
+    <button class="tab" onclick="switchTab('fx', this)">Effects</button>
+  </div>
+
+  <div class="tab-content active" id="tab-project">
+    <div class="section">
+      <div class="section-title">Canvas Settings</div>
+      <select id="resolution" onchange="updateResolution()">
+        <option value="1920:1080">1920×1080 (16:9 Full HD)</option>
+        <option value="1280:720">1280×720 (16:9 HD)</option>
+      </select>
+      <select id="fps"><option value="24">24 FPS</option><option value="30" selected>30 FPS</option></select>
+    </div>
+    <div class="section">
+      <div class="section-title">Background</div>
+      <input type="file" id="bgImage" accept="image/*">
+      <input type="color" id="bgColor" value="#000000">
+      <div class="slider-group">
+        <div class="slider-label"><span>Blur</span><span id="blurVal">0</span></div>
+        <input type="range" class="slider" id="bgBlur" min="0" max="20" value="0">
+      </div>
+      <div class="slider-group">
+        <div class="slider-label"><span>Reactiveness</span><span id="bgReactVal">0.05</span></div>
+        <input type="range" class="slider" id="bgReact" min="0" max="0.3" step="0.01" value="0.05">
+      </div>
+    </div>
+  </div>
+
+  <div class="tab-content" id="tab-audio">
+    <div class="section">
+      <div class="section-title">Audio File</div>
+      <input type="file" id="audioFile" accept="audio/*">
+      <div class="slider-group">
+        <div class="slider-label"><span>Smoothing</span><span id="smoothVal">0.85</span></div>
+        <input type="range" class="slider" id="audioSmooth" min="0" max="0.99" step="0.01" value="0.85">
+      </div>
+    </div>
+  </div>
+
+  <div class="tab-content" id="tab-viz">
+    <div class="section">
+      <div class="section-title">Spectrum Style</div>
+      <div class="viz-grid">
+        <div class="viz-card active" onclick="selectViz('circular', this)">Circular</div>
+        <div class="viz-card" onclick="selectViz('radial', this)">Radial Lines</div>
+        <div class="viz-card" onclick="selectViz('neon', this)">Neon Ring</div>
+        <div class="viz-card" onclick="selectViz('lava', this)">Lava Blobs</div>
+        <div class="viz-card" onclick="selectViz('wave', this)">Water Wave</div>
+        <div class="viz-card" onclick="selectViz('plasma', this)">Plasma Field</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="tab-content" id="tab-fx">
+    <div class="section">
+      <div class="section-title">Particles</div>
+      <select id="partType">
+        <option value="none">None</option>
+        <option value="snow">Snowflakes</option>
+        <option value="stars">Stars</option>
+        <option value="matrix">Matrix Rain</option>
+      </select>
+      <div class="slider-group">
+        <div class="slider-label"><span>Amount</span><span id="partAmountVal">150</span></div>
+        <input type="range" class="slider" id="partAmount" min="0" max="500" value="150">
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="main-area">
+  <div class="canvas-container"><canvas id="canvas"></canvas></div>
+  <div class="timeline-area">
+    <div class="playback">
+      <button onclick="togglePlay()" class="play-btn">▶️</button>
+      <div class="time" id="timeDisplay">0:00 / 0:00</div>
+    </div>
+    <button onclick="toggleRecord()" class="btn">⏺️ Record</button>
+  </div>
+</div>
+
+<script>
+// =============================================
+// CORE STATE
+// =============================================
+const canvas = document.getElementById('canvas');
+const ctx = canvas.getContext('2d');
+
+let config = { width: 1920, height: 1080, fps: 30 };
+let audioCtx, analyser, source, audioBuffer, dataArray;
+let isPlaying = false, startTime = 0, pauseTime = 0, duration = 0;
+let state = {
+  visualizer: 'circular',
+  bgColor: '#000000',
+  bgBlur: 0, bgReact: 0.05, audioSmooth: 0.85,
+  vizColor: '#00a2ff', vizGlow: 15, vizScale: 1, vizY: 0.5,
+  partType: 'none', partAmount: 150
+};
+
+// =============================================
+// HELPERS
+// =============================================
+const getRadius = () => Math.min(config.width, config.height) * 0.25 * state.vizScale;
+const getColor = (i, total, alpha = 1) => `hsl(${(i/total)*360}, 100%, 50%, ${alpha})`;
+const drawBar = (x1, y1, x2, y2, color, width = 3) => {
+  ctx.beginPath(); ctx.moveTo(x1, y1); ctx.lineTo(x2, y2);
+  ctx.strokeStyle = color; ctx.lineWidth = width; ctx.lineCap = 'round';
+  ctx.shadowBlur = state.vizGlow; ctx.shadowColor = color;
+  ctx.stroke(); ctx.shadowBlur = 0;
+};
+
+// =============================================
+// VISUALIZERS
+// =============================================
+const Visualizers = {
+  circular(ctx, centerX, centerY, dataArray) {
+    const radius = getRadius();
+    for (let i = 0; i < 180; i++) {
+      const angle = (i / 180) * Math.PI * 2;
+      const val = dataArray[Math.floor(i / 180 * dataArray.length * 0.8)] || 0;
+      const h = (val / 255) * radius * 0.7;
+      drawBar(
+        centerX + Math.cos(angle) * radius,
+        centerY + Math.sin(angle) * radius,
+        centerX + Math.cos(angle) * (radius + h),
+        centerY + Math.sin(angle) * (radius + h),
+        getColor(i, 180)
+      );
+    }
+  },
+
+  radial(ctx, centerX, centerY, dataArray) {
+    const outerR = getRadius() * 1.4;
+    const innerR = outerR * 0.2;
+    for (let i = 0; i < 240; i++) {
+      const angle = (i / 240) * Math.PI * 2;
+      const val = dataArray[Math.floor(i / 240 * dataArray.length * 0.8)] || 0;
+      const len = innerR + (val / 255) * (outerR - innerR);
+      drawBar(
+        centerX + Math.cos(angle) * innerR,
+        centerY + Math.sin(angle) * innerR,
+        centerX + Math.cos(angle) * len,
+        centerY + Math.sin(angle) * len,
+        getColor(i, 240), 1.5
+      );
+    }
+  },
+
+  neon(ctx, centerX, centerY, dataArray) {
+    const r = getRadius();
+    ctx.beginPath();
+    for (let i = 0; i <= 360; i++) {
+      const angle = i / 360 * Math.PI * 2;
+      const val = dataArray[Math.floor(i / 360 * dataArray.length)] || 0;
+      const offset = (val / 255) * r * 0.6;
+      const x = centerX + Math.cos(angle) * (r + offset);
+      const y = centerY + Math.sin(angle) * (r + offset);
+      i ? ctx.lineTo(x, y) : ctx.moveTo(x, y);
+    }
+    ctx.closePath();
+    const grad = ctx.createLinearGradient(centerX - r, centerY, centerX + r, centerY);
+    grad.addColorStop(0, '#00E5FF'); grad.addColorStop(0.5, '#9D00FF'); grad.addColorStop(1, '#FF00E5');
+    ctx.strokeStyle = grad; ctx.lineWidth = 3;
+    ctx.shadowBlur = state.vizGlow + (dataArray[2] / 255) * 30;
+    ctx.shadowColor = '#00E5FF'; ctx.stroke(); ctx.shadowBlur = 0;
+  },
+
+  // NEW: Lava lamp effect
+  lava(ctx, centerX, centerY, dataArray) {
+    const bass = dataArray[2] || 0;
+    for (let i = 0; i < 8; i++) {
+      ctx.beginPath();
+      const r = 50 + (bass / 255) * 100 + Math.sin(time * 2 + i) * 20;
+      const x = centerX + Math.cos(time + i) * 100;
+      const y = centerY + Math.sin(time + i) * 50;
+      ctx.arc(x, y, r, 0, Math.PI * 2);
+      const g = ctx.createRadialGradient(x, y, 0, x, y, r);
+      g.addColorStop(0, `hsla(${i * 45 + bass}, 100%, 70%, 0.8)`);
+      g.addColorStop(1, `hsla(${i * 45 + bass}, 100%, 40%, 0)`);
+      ctx.fillStyle = g;
+      ctx.fill();
+    }
+  },
+
+  // NEW: Water ripple effect
+  wave(ctx, centerX, centerY, dataArray) {
+    const bass = dataArray[2] || 0;
+    for (let r = 1; r <= 8; r++) {
+      ctx.beginPath();
+      ctx.arc(centerX, centerY, r * 30 + (bass / 255) * 20, 0, Math.PI * 2);
+      ctx.strokeStyle = `hsla(${180 + r * 20}, 100%, 50%, ${1 - r / 10})`;
+      ctx.lineWidth = 3;
+      ctx.stroke();
+    }
+  },
+
+  // NEW: Plasma field
+  plasma(ctx, centerX, centerY, dataArray) {
+    const particles = 50;
+    for (let i = 0; i < particles; i++) {
+      const angle = (i / particles) * Math.PI * 2 + time;
+      const val = dataArray[Math.floor(i / particles * dataArray.length)] || 0;
+      const r = 100 + (val / 255) * 100;
+      const x = centerX + Math.cos(angle) * r;
+      const y = centerY + Math.sin(angle) * r;
+
+      ctx.beginPath();
+      ctx.arc(x, y, 10 + (val / 255) * 20, 0, Math.PI * 2);
+      const g = ctx.createRadialGradient(x, y, 0, x, y, 30);
+      g.addColorStop(0, `hsla(${val}, 100%, 70%, 0.9)`);
+      g.addColorStop(1, `hsla(${val}, 100%, 30%, 0)`);
+      ctx.fillStyle = g;
+      ctx.fill();
+    }
+  }
+};
+
+// =============================================
+// PARTICLES & FX
+// =============================================
+let particles = [];
+function initParticles() {
+  particles = [];
+  for (let i = 0; i < 500; i++) {
+    particles.push({
+      x: Math.random() * config.width,
+      y: Math.random() * config.height,
+      size: Math.random() * 3 + 1,
+      speed: Math.random() * 2 + 0.5,
+      opacity: Math.random(),
+      angle: Math.random() * Math.PI * 2,
+      hue: Math.random() * 360
+    });
+  }
+}
+
+function drawParticles(ctx, bass) {
+  if (state.partType === 'none') return;
+  const count = Math.min(state.partAmount, particles.length);
+  ctx.save();
+
+  for (let i = 0; i < count; i++) {
+    let p = particles[i];
+    switch (state.partType) {
+      case 'snow':
+        ctx.beginPath(); ctx.arc(p.x, p.y, p.size * (1 + bass / 500), 0, Math.PI * 2);
+        ctx.fillStyle = `rgba(255,255,255,${p.opacity})`; ctx.fill();
+        p.y += p.speed * (1 + bass / 200);
+        if (p.y > config.height) { p.y = -10; p.x = Math.random() * config.width; }
+        break;
+      case 'stars':
+        ctx.save(); ctx.translate(p.x, p.y); ctx.rotate(p.angle);
+        ctx.fillStyle = `rgba(255,255,200,${p.opacity * (Math.sin(time * 5 + i) * 0.5 + 0.5)})`;
+        ctx.fillRect(-p.size/2, -p.size/2, p.size, p.size);
+        ctx.restore();
+        p.y += p.speed * 0.3; p.angle += 0.02;
+        break;
+      case 'matrix':
+        ctx.font = '12px monospace';
+        ctx.fillStyle = `rgba(0,255,0,${p.opacity * (1 - p.y / config.height)})`;
+        ctx.fillText(String.fromCharCode(0x30A0 + Math.random() * 96), p.x, p.y);
+        p.y += p.speed * 3;
+        if (p.y > config.height) { p.y = -10; p.x = Math.random() * config.width; }
+        break;
+    }
+  }
+  ctx.restore();
+}
+
+// =============================================
+// AUDIO & PLAYBACK
+// =============================================
+document.getElementById('audioFile').onchange = async (e) => {
+  const file = e.target.files[0];
+  if (!file) return;
+  try {
+    if (audioCtx) audioCtx.close();
+    audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    analyser = audioCtx.createAnalyser();
+    analyser.fftSize = 1024;
+    analyser.smoothingTimeConstant = state.audioSmooth;
+    const arrayBuffer = await file.arrayBuffer();
+    audioBuffer = await audioCtx.decodeAudioData(arrayBuffer);
+    duration = audioBuffer.duration;
+    dataArray = new Uint8Array(analyser.frequencyBinCount);
+  } catch (err) {
+    alert('Ошибка загрузки аудио: ' + err.message);
+  }
+};
+
+function togglePlay() {
+  if (!audioBuffer) { alert('Сначала загрузите аудио'); return; }
+  if (isPlaying) {
+    isPlaying = false;
+    if (source) source.stop(0);
+    pauseTime = audioCtx.currentTime - startTime;
+  } else {
+    isPlaying = true;
+    source = audioCtx.createBufferSource();
+    source.buffer = audioBuffer;
+    source.connect(analyser);
+    analyser.connect(audioCtx.destination);
+    startTime = audioCtx.currentTime - pauseTime;
+    source.start(0, pauseTime);
+    animate();
+  }
+}
+
+// =============================================
+// RENDER LOOP
+// =============================================
+function animate() {
+  if (!isPlaying) return;
+  requestAnimationFrame(animate);
+  if (analyser && dataArray) {
+    analyser.smoothingTimeConstant = state.audioSmooth;
+    analyser.getByteFrequencyData(dataArray);
+  }
+  render();
+}
+
+function render() {
+  const centerX = config.width / 2;
+  const centerY = config.height * state.vizY;
+  const bass = dataArray ? dataArray[2] : 0;
+
+  ctx.fillStyle = state.bgColor;
+  ctx.fillRect(0, 0, config.width, config.config.height);
+
+  if (state.partType !== 'none') drawParticles(ctx, bass);
+  if (dataArray && Visualizers[state.visualizer]) {
+    Visualizers[state.visualizer](ctx, centerX, centerY, dataArray);
+  }
+}
+
+requestAnimationFrame(() => render());
+
+// =============================================
+// UI CONTROLS
+// =============================================
+function switchTab(tab, el) {
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+  el.classList.add('active');
+  document.getElementById('tab-' + tab).classList.add('active');
+}
+
+function selectViz(viz, el) {
+  state.visualizer = viz;
+  document.querySelectorAll('.viz-card').forEach(c => c.classList.remove('active'));
+  el.classList.add('active');
+}
+
+function updateResolution() {
+  const [w, h] = document.getElementById('resolution').value.split(':').map(Number);
+  config.width = w; config.height = h;
+  canvas.width = w; canvas.height = h;
+  initParticles();
+}
+
+// Slider events (универсальная функция)
+document.querySelectorAll('input[type="range"]').forEach(slider => {
+  slider.oninput = (e) => {
+    const key = e.target.id.replace(/^(bg|viz|audio|part)?/, '');
+    state[key] = parseFloat(e.target.value);
+    document.querySelector(`#${key}Val`).textContent = e.target.value + (e.target.dataset.suffix || '');
+  };
+});
+
+// Init
+function init() {
+  canvas.width = config.width;
+  canvas.height = config.height;
+  initParticles();
+}
+init();
+</script>
+</body>
+</html>
