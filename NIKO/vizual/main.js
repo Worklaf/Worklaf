@@ -52,7 +52,14 @@ function init() {
   
   // Canvas
   canvas = document.getElementById('visualizer');
+  if (!canvas) {
+    console.error('❌ Canvas не найден!');
+    return;
+  }
+  
   ctx = canvas.getContext('2d');
+  canvas.style.zIndex = '0'; // <- Добавьте эту строку!
+  
   resizeCanvas();
   window.addEventListener('resize', resizeCanvas);
   
