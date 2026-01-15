@@ -3066,7 +3066,482 @@ window.addEventListener('resize', () => {
   canvas.height = config.height;
   Effects.initParticles();
 });
+// =============================================
+// 🎯 НЕДОСТАЮЩИЕ ФУНКЦИИ
+// =============================================
 
+// Переключение табов
+function switchTab(tabName, button) {
+  // Убираем active со всех табов и контента
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+  
+  // Добавляем active к выбранным
+  button.classList.add('active');
+  document.getElementById('tab-' + tabName).classList.add('active');
+}
+
+// Выбор визуализатора
+function selectViz(vizName, card) {
+  state.visualizer = vizName;
+  
+  // Убираем active со всех карточек
+  document.querySelectorAll('.viz-card').forEach(c => c.classList.remove('active'));
+  
+  // Добавляем active к выбранной
+  card.classList.add('active');
+}
+
+// =============================================
+// 📱 ОБНОВЛЕНИЕ ЗНАЧЕНИЙ СЛАЙДЕРОВ
+// =============================================
+
+// Обновление разрешения
+function updateResolution() {
+  const select = document.getElementById('resolution');
+  const [w, h] = select.value.split(':').map(Number);
+  config.width = w;
+  config.height = h;
+  canvas.width = w;
+  canvas.height = h;
+  Effects.initParticles();
+}
+
+// Обновление всех слайдеров с отображением значений
+function setupSliders() {
+  // Фоновое размытие
+  const bgBlur = document.getElementById('bgBlur');
+  const bgBlurVal = document.getElementById('blurVal');
+  bgBlur.addEventListener('input', (e) => {
+    state.bgBlur = parseFloat(e.target.value);
+    bgBlurVal.textContent = e.target.value;
+  });
+
+  // Яркость фона
+  const bgBright = document.getElementById('bgBright');
+  const bgBrightVal = document.getElementById('brightVal');
+  bgBright.addEventListener('input', (e) => {
+    state.bgBright = parseFloat(e.target.value);
+    bgBrightVal.textContent = e.target.value + '%';
+  });
+
+  // Реактивность фона
+  const bgReact = document.getElementById('bgReact');
+  const bgReactVal = document.getElementById('bgReactVal');
+  bgReact.addEventListener('input', (e) => {
+    state.bgReact = parseFloat(e.target.value);
+    bgReactVal.textContent = e.target.value;
+  });
+
+  // Размер эмблемы
+  const emblemSize = document.getElementById('emblemSize');
+  const emblemSizeVal = document.getElementById('emblemSizeVal');
+  emblemSize.addEventListener('input', (e) => {
+    state.emblemSize = parseFloat(e.target.value);
+    emblemSizeVal.textContent = e.target.value;
+  });
+
+  // Позиция X эмблемы
+  const emblemX = document.getElementById('emblemX');
+  const emblemXVal = document.getElementById('emblemXVal');
+  emblemX.addEventListener('input', (e) => {
+    state.emblemX = parseFloat(e.target.value);
+    emblemXVal.textContent = e.target.value;
+  });
+
+  // Позиция Y эмблемы
+  const emblemY = document.getElementById('emblemY');
+  const emblemYVal = document.getElementById('emblemYVal');
+  emblemY.addEventListener('input', (e) => {
+    state.emblemY = parseFloat(e.target.value);
+    emblemYVal.textContent = e.target.value;
+  });
+
+  // Smoothing аудио
+  const audioSmooth = document.getElementById('audioSmooth');
+  const smoothVal = document.getElementById('smoothVal');
+  audioSmooth.addEventListener('input', (e) => {
+    state.audioSmooth = parseFloat(e.target.value);
+    smoothVal.textContent = e.target.value;
+    if (analyser) {
+      analyser.smoothingTimeConstant = state.audioSmooth;
+    }
+  });
+
+  // Glow визуализатора
+  const vizGlow = document.getElementById('vizGlow');
+  const glowVal = document.getElementById('glowVal');
+  vizGlow.addEventListener('input', (e) => {
+    state.vizGlow = parseFloat(e.target.value);
+    glowVal.textContent = e.target.value;
+  });
+
+  // Scale визуализатора
+  const vizScale = document.getElementById('vizScale');
+  const scaleVal = document.getElementById('scaleVal');
+  vizScale.addEventListener('input', (e) => {
+    state.vizScale = parseFloat(e.target.value);
+    scaleVal.textContent = e.target.value;
+  });
+
+  // Position Y визуализатора
+  const vizY = document.getElementById('vizY');
+  const vizYVal = document.getElementById('vizYVal');
+  vizY.addEventListener('input', (e) => {
+    state.vizY = parseFloat(e.target.value);
+    vizYVal.textContent = e.target.value;
+  });
+
+  // Скорость вращения
+  const rotSpeed = document.getElementById('rotSpeed');
+  const rotSpeedVal = document.getElementById('rotSpeedVal');
+  rotSpeed.addEventListener('input', (e) => {
+    state.rotSpeed = parseFloat(e.target.value);
+    rotSpeedVal.textContent = e.target.value;
+  });
+
+  // Количество частиц
+  const partAmount = document.getElementById('partAmount');
+  const partAmountVal = document.getElementById('partAmountVal');
+  partAmount.addEventListener('input', (e) => {
+    state.partAmount = parseInt(e.target.value);
+    partAmountVal.textContent = e.target.value;
+  });
+
+  // Motion Blur
+  const motionBlur = document.getElementById('motionBlur');
+  const motionBlurVal = document.getElementById('motionBlurVal');
+  motionBlur.addEventListener('input', (e) => {
+    state.motionBlur = parseFloat(e.target.value);
+    motionBlurVal.textContent = e.target.value;
+  });
+}
+
+// =============================================
+// 🎨 ОБРАБОТЧИКИ ФАЙЛОВ И ЦВЕТОВ
+// =============================================
+
+function setupFileInputs() {
+  // Загрузка аудио файла
+  document.getElementById('audioFile').addEventListener('change', (e) => {
+    if (e.target.files.length > 0) {
+      loadAudioFile(e.target.files[0]);
+    }
+  });
+
+  // Загрузка фонового изображения
+  document.getElementById('bgImage').addEventListener('change', (e) => {
+    if (e.target.files.length > 0) {
+      const reader = new FileReader();
+      reader.onload = (event) => {
+        const img = new Image();
+        img.onload = () => { bgImage = img; };
+        img.src = event.target.result;
+      };
+      reader.readAsDataURL(e.target.files[0]);
+    }
+  });
+
+  // Загрузка эмблемы
+  document.getElementById('emblemImage').addEventListener('change', (e) => {
+    if (e.target.files.length > 0) {
+      const reader = new FileReader();
+      reader.onload = (event) => {
+        const img = new Image();
+        img.onload = () => { emblemImage = img; };
+        img.src = event.target.result;
+      };
+      reader.readAsDataURL(e.target.files[0]);
+    }
+  });
+
+  // Цвет фона
+  document.getElementById('bgColor').addEventListener('input', (e) => {
+    state.bgColor = e.target.value;
+  });
+
+  // Цвет визуализатора
+  document.getElementById('vizColor').addEventListener('input', (e) => {
+    state.vizColor = e.target.value;
+  });
+
+  // Чекбоксы
+  document.getElementById('emblemCircle').addEventListener('change', (e) => {
+    state.emblemCircle = e.target.checked;
+  });
+
+  document.getElementById('fxFlicker').addEventListener('change', (e) => {
+    state.fxFlicker = e.target.checked;
+  });
+
+  document.getElementById('fxBloom').addEventListener('change', (e) => {
+    state.fxBloom = e.target.checked;
+  });
+
+  document.getElementById('fxVignette').addEventListener('change', (e) => {
+    state.fxVignette = e.target.checked;
+  });
+
+  // FPS
+  document.getElementById('fps').addEventListener('change', (e) => {
+    config.fps = parseInt(e.target.value);
+  });
+
+  // Тип частиц
+  document.getElementById('partType').addEventListener('change', (e) => {
+    state.partType = e.target.value;
+  });
+
+  // Туннель палитра
+  document.getElementById('tunnelPalettePreset').addEventListener('change', (e) => {
+    const presets = {
+      cyberpunk: ['#00E5FF', '#FF00E5', '#00FFAA'],
+      ocean: ['#00FFFF', '#00AAFF', '#0000FF'],
+      lava: ['#FF4500', '#FF8C00', '#FFD700'],
+      emerald: ['#00FF7F', '#7FFF00', '#008080']
+    };
+    
+    if (e.target.value !== 'custom') {
+      state.tunnelColors = presets[e.target.value];
+      document.getElementById('tunnelColorsInput').value = state.tunnelColors.join(',');
+    }
+  });
+
+  document.getElementById('tunnelColorsInput').addEventListener('input', (e) => {
+    const colors = e.target.value.split(',').map(c => c.trim()).filter(c => c.startsWith('#'));
+    if (colors.length > 0) {
+      state.tunnelColors = colors;
+    }
+  });
+}
+
+// =============================================
+// 🎬 PLAYBACK CONTROLS
+// =============================================
+
+function togglePlay() {
+  if (!audioCtx) {
+    alert('Сначала загрузите аудио файл!');
+    return;
+  }
+  
+  isPlaying = !isPlaying;
+  
+  const playBtn = document.getElementById('playBtn');
+  playBtn.innerHTML = isPlaying ? '⏸️' : '▶️';
+}
+
+function seekTimeline(event) {
+  if (!audioBuffer) return;
+  
+  const timeline = document.getElementById('timeline');
+  const rect = timeline.getBoundingClientRect();
+  const x = event.clientX - rect.left;
+  const percent = x / rect.width;
+  
+  currentTime = percent * duration;
+  
+  // Перезапуск аудио с новой позиции
+  if (source) {
+    source.stop();
+  }
+  
+  source = audioCtx.createBufferSource();
+  source.buffer = audioBuffer;
+  source.connect(analyser);
+  analyser.connect(audioCtx.destination);
+  source.start(0, currentTime);
+  
+  if (!isPlaying) {
+    togglePlay();
+  }
+}
+
+// =============================================
+// 🎥 RECORDING
+// =============================================
+
+function toggleRecord() {
+  const btn = document.getElementById('recordBtn');
+  const indicator = document.getElementById('recIndicator');
+  
+  if (!isRecording) {
+    startRecording();
+    btn.innerHTML = '⏹️ Stop Recording';
+    btn.classList.add('btn-danger');
+    indicator.classList.add('active');
+  } else {
+    stopRecording();
+    btn.innerHTML = '⏺️ Start Recording';
+    btn.classList.remove('btn-danger');
+    indicator.classList.remove('active');
+  }
+}
+
+function startRecording() {
+  recordedChunks = [];
+  
+  const stream = canvas.captureStream(config.fps);
+  mediaRecorder = new MediaRecorder(stream, {
+    mimeType: 'video/webm;codecs=vp9',
+    videoBitsPerSecond: 8000000
+  });
+  
+  mediaRecorder.ondataavailable = (e) => {
+    if (e.data.size > 0) {
+      recordedChunks.push(e.data);
+    }
+  };
+  
+  mediaRecorder.onstop = () => {
+    const blob = new Blob(recordedChunks, { type: 'video/webm' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `video_${Date.now()}.webm`;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+  
+  mediaRecorder.start();
+  isRecording = true;
+}
+
+function stopRecording() {
+  if (mediaRecorder && mediaRecorder.state !== 'inactive') {
+    mediaRecorder.stop();
+  }
+  isRecording = false;
+}
+
+// =============================================
+// 🚀 ОБНОВЛЕННАЯ ИНИЦИАЛИЗАЦИЯ
+// =============================================
+
+function init() {
+  canvas.width = config.width;
+  canvas.height = config.height;
+  
+  // Инициализация аудио контекста
+  audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+  analyser = audioCtx.createAnalyser();
+  analyser.fftSize = 2048;
+  analyser.smoothingTimeConstant = state.audioSmooth;
+  dataArray = new Uint8Array(analyser.frequencyBinCount);
+  
+  // Настройка всех контролов
+  setupSliders();
+  setupFileInputs();
+  
+  // Инициализация частиц
+  Effects.initParticles();
+  
+  // Запуск анимации
+  animate();
+}
+
+// Обновленная функция загрузки аудио
+function loadAudioFile(file) {
+  const reader = new FileReader();
+  reader.onload = function(e) {
+    audioCtx.decodeAudioData(e.target.result, function(buffer) {
+      audioBuffer = buffer;
+      duration = buffer.duration;
+      
+      if (source) {
+        source.stop();
+      }
+      
+      source = audioCtx.createBufferSource();
+      source.buffer = buffer;
+      source.connect(analyser);
+      analyser.connect(audioCtx.destination);
+      source.start(0);
+      
+      isPlaying = true;
+      startTime = audioCtx.currentTime;
+      
+      document.getElementById('playBtn').innerHTML = '⏸️';
+    });
+  };
+  reader.readAsArrayBuffer(file);
+}
+
+// Обновленная функция animate
+function animate() {
+  requestAnimationFrame(animate);
+  
+  // Motion blur эффект
+  if (state.motionBlur > 0) {
+    ctx.fillStyle = `rgba(0,0,0,${1 - state.motionBlur})`;
+    ctx.fillRect(0, 0, config.width, config.height);
+  } else {
+    // Очистка canvas
+    ctx.fillStyle = state.bgColor;
+    ctx.fillRect(0, 0, config.width, config.height);
+  }
+  
+  // Фоновое изображение
+  if (bgImage) {
+    ctx.save();
+    ctx.filter = `blur(${state.bgBlur}px) brightness(${state.bgBright}%)`;
+    ctx.globalAlpha = 0.5;
+    ctx.drawImage(bgImage, 0, 0, config.width, config.height);
+    ctx.restore();
+    ctx.filter = 'none';
+  }
+  
+  // Получение аудио данных
+  if (analyser) {
+    analyser.getByteFrequencyData(dataArray);
+  }
+  
+  const bass = dataArray[2] || 0;
+  time += 0.016;
+  rotation += 0.01;
+  
+  // Центр для визуализатора
+  const centerX = config.width / 2;
+  const centerY = config.height * state.vizY;
+  
+  // Рисование визуализатора
+  if (Visualizers[state.visualizer]) {
+    Visualizers[state.visualizer](ctx, centerX, centerY, dataArray);
+  }
+  
+  // Эффекты частиц
+  Effects.drawParticles(ctx, bass);
+  
+  // Эмблема
+  if (emblemImage) {
+    const size = Math.min(config.width, config.height) * state.emblemSize;
+    const x = config.width * state.emblemX;
+    const y = config.height * state.emblemY;
+    
+    ctx.save();
+    if (state.emblemCircle) {
+      ctx.beginPath();
+      ctx.arc(x, y, size / 2, 0, Math.PI * 2);
+      ctx.clip();
+    }
+    ctx.drawImage(emblemImage, x - size / 2, y - size / 2, size, size);
+    ctx.restore();
+  }
+  
+  // Обновление таймлайна
+  if (isPlaying && duration > 0) {
+    currentTime = (audioCtx.currentTime - startTime) % duration;
+    const progress = (currentTime / duration) * 100;
+    document.getElementById('progress').style.width = progress + '%';
+    
+    const timeDisplay = document.getElementById('timeDisplay');
+    const minutes = Math.floor(currentTime / 60);
+    const seconds = Math.floor(currentTime % 60);
+    const totalMinutes = Math.floor(duration / 60);
+    const totalSeconds = Math.floor(duration % 60);
+    timeDisplay.textContent = `${minutes}:${seconds.toString().padStart(2, '0')} / ${totalMinutes}:${totalSeconds.toString().padStart(2, '0')}`;
+  }
+}
 </script>
 </body>
 </html>
