@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <title>Romantic Wave Visualizer</title>
+    <style>
+        body {
+            margin: 0;
+            overflow: hidden;
+            background: radial-gradient(circle, #1a0a2a 0%, #050505 100%);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+            font-family: 'Segoe UI', sans-serif;
+        }
+
+        canvas {
+            position: absolute;
+            top: 0;
+            left: 0;
+            filter: blur(1px) contrast(1.2);
+        }
+
+        .controls {
+            z-index: 10;
+            background: rgba(255, 255, 255, 0.1);
+            padding: 20px;
+            border-radius: 15px;
+            backdrop-filter: blur(10px);
+            border: 1px border rgba(255, 255, 255, 0.2);
+            text-align: center;
+            color: white;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+        }
+
+        input[type="file"] { display: none; }
+
+        .upload-btn {
+            background: linear-gradient(45deg, #ff00cc, #3333ff);
+            padding: 12px 25px;
+            border-radius: 25px;
+            cursor: pointer;
+            transition: 0.3s;
+            text-transform: uppercase;
+            font-weight: bold;
+            letter-spacing: 1px;
+        }
+
+        .upload-btn:hover { transform: scale(1.05); opacity: 0.9; }
+    </style>
+</head>
+<body>
+
+    <canvas id="visualizer"></canvas>
+
+    <div class="controls">
+        <h2 style="margin-top:0">Romantic Wave</h2>
+        <label class="upload-btn">
+            Выбрать музыку
+            <input type="file" id="audioInput" accept="audio/*">
+        </label>
+        <p id="status" style="font-size: 12px; margin-top: 15px; color: #aaa;">Загрузите файл для старта</p>
+    </div>
+
+    <script>
+        const audioInput = document.getElementById('audioInput');
+        const canvas = document.getElementById('visualizer');
+        const ctx = canvas.getContext('2d');
+
+        let audioCtx, analyser, source, dataArray;
+
+        canvas.width = window.innerWidth;
+        canvas.height = window.innerHeight;
+
+        audioInput.onchange = function() {
+            const files = this.files;
+            if (files.length === 0) return;
+
+            const audio = new Audio();
+            audio.src = URL.createObjectURL(files[0]);
+            audio.load();
+            audio.play();
+
+            setupAudio(audio);
+            document.getElementById('status').innerText = "Воспроизведение: " + files[0].name;
+            draw();
+        };
+
+        function setupAudio(audio) {
+            audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+            analyser = audioCtx.createAnalyser();
+            source = audioCtx.createMediaElementSource(audio);
+            source.connect(analyser);
+            analyser.connect(audioCtx.destination);
+
+            analyser.fftSize = 512;
+            const bufferLength = analyser.frequencyBinCount;
+            dataArray = new Uint8Array(bufferLength);
+        }
+
+        function draw() {
+            requestAnimationFrame(draw);
+            analyser.getByteFrequencyData(dataArray);
+
+            // Очистка с эффектом шлейфа
+            ctx.fillStyle = 'rgba(5, 5, 5, 0.15)';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            const centerX = canvas.width / 2;
+            const centerY = canvas.height / 2;
+            const baseRadius = 120;
+
+            for (let i = 0; i < dataArray.length; i += 2) {
+                const v = dataArray[i] / 128.0;
+                const angle = (i * Math.PI * 2) / dataArray.length;
+                
+                // Математика волны
+                const length = v * 180;
+                const xStart = centerX + Math.cos(angle) * baseRadius;
+                const yStart = centerY + Math.sin(angle) * baseRadius;
+                
+                const xEnd = centerX + Math.cos(angle + v * 0.5) * (baseRadius + length);
+                const yEnd = centerY + Math.sin(angle + v * 0.5) * (baseRadius + length);
+
+                // Рисуем плавную линию (перо)
+                ctx.beginPath();
+                ctx.strokeStyle = `hsla(${i + 200}, 80%, 60%, 0.8)`; // Плавная смена цвета
+                ctx.lineWidth = 3;
+                ctx.lineCap = 'round';
+                
+                // Используем кривую Безье для эффекта "волоска" или волны
+                ctx.moveTo(xStart, yStart);
+                ctx.quadraticCurveTo(
+                    centerX + Math.cos(angle + 0.2) * (baseRadius + length/2),
+                    centerY + Math.sin(angle + 0.2) * (baseRadius + length/2),
+                    xEnd, yEnd
+                );
+                
+                ctx.stroke();
+
+                // Добавляем свечение на кончиках
+                ctx.beginPath();
+                ctx.arc(xEnd, yEnd, 2, 0, Math.PI * 2);
+                ctx.fillStyle = 'white';
+                ctx.fill();
+            }
+        }
+
+        window.onresize = () => {
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
+        };
+    </script>
+</body>
+</html>
