@@ -1,253 +1,615 @@
-// =============================================
-// 🎯 CORE STATE & CONFIG
-// =============================================
-const canvas = document.getElementById('canvas');
-const ctx = canvas.getContext('2d');
+javascriptDownloadCopy code// ===== MAIN.JS =====
 
-let config = { width: 1920, height: 1080, fps: 30 };
-let state = {
-    visualizer: 'circular',
-    bgColor: '#000000',
-    bgBlur: 0, bgBright: 100,
-    vizColor: '#00a2ff', vizGlow: 15, vizScale: 1, vizY: 0.5,
-    partType: 'none', partAmount: 150,
-    emblemSize: 0.3, emblemCircle: true
+import { visualizers2D, visualizers3D, vizList2D, vizList3D } from './visualizers.js';
+import { EffectsEngine } from './effects.js';
+
+// ============== ГЛОБАЛЬНЫЕ ПЕРЕМЕННЫЕ ==============
+let audioContext, analyser, audioSource, dataArray, bufferLength;
+let canvas, ctx;
+let animationId;
+let currentTime = 0;
+let isPlaying = false;
+let audioElement = null;
+let effectsEngine;
+
+// Состояние приложения
+const state = {
+  // Визуализация
+  currentViz: 'circular',
+  vizMode: '2D',
+  bgColor: '#000000',
+  primaryColor: '#00ffff',
+  secondaryColor: '#ff00ff',
+  vizScale: 1,
+  vizSpeed: 1,
+  vizGlow: 10,
+  
+  // Эффекты
+  particleType: 'none',
+  particleAmount: 50,
+  flickerEffect: false,
+  vignetteEffect: false,
+  
+  // 3D параметры
+  rotationX: 0,
+  rotationY: 0,
+  rotationZ: 0,
+  depth3D: 500,
+  perspective: 800,
+  autoRotate: true,
+  
+  // Аудио
+  smoothing: 0.8,
+  fftSize: 2048,
+  volume: 0.7
 };
 
-// Audio vars
-let audioCtx, analyser, source, dataArray, audioBuffer;
-let isPlaying = false, startTime = 0, pauseTime = 0, currentTime = 0, duration = 0;
-let programmaticStop = false;
+// ============== ИНИЦИАЛИЗАЦИЯ ==============
+window.addEventListener('DOMContentLoaded', init);
 
-// Assets
-let bgImage = null, emblemImage = null;
-let time = 0;
+function init() {
+  console.log('🎵 Инициализация Audio Visualizer...');
+  
+  // Canvas
+  canvas = document.getElementById('visualizer');
+  ctx = canvas.getContext('2d');
+  resizeCanvas();
+  window.addEventListener('resize', resizeCanvas);
+  
+  // Effects Engine
+  effectsEngine = new EffectsEngine();
+  effectsEngine.initParticles(200, canvas.width, canvas.height);
+  
+  // UI Events
+  setupUIEvents();
+  
+  // Генерируем списки визуализаций
+  populateVisualizerLists();
+  
+  // Загружаем сохраненные настройки
+  loadSettings();
+  
+  // Первый рендер
+  renderFrame();
+  
+  console.log('✅ Инициализация завершена');
+}
 
-// Recording
-let mediaRecorder, recordedChunks = [], isRecording = false, recordDest = null;
+function resizeCanvas() {
+  canvas.width = window.innerWidth;
+  canvas.height = window.innerHeight;
+  
+  if (effectsEngine) {
+    effectsEngine.initParticles(state.particleAmount, canvas.width, canvas.height);
+  }
+}
 
-// =============================================
-// 🎵 AUDIO ENGINE
-// =============================================
-document.getElementById('audioFile').onchange = async (e) => {
-    const file = e.target.files[0];
-    if(!file) return;
-    
-    if(audioCtx) audioCtx.close();
-    audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-    analyser = audioCtx.createAnalyser();
-    analyser.fftSize = 1024;
-    
-    const arrayBuffer = await file.arrayBuffer();
-    audioBuffer = await audioCtx.decodeAudioData(arrayBuffer);
-    duration = audioBuffer.duration;
-    dataArray = new Uint8Array(analyser.frequencyBinCount);
-    
-    currentTime = 0; pauseTime = 0;
-    updateTimeDisplay();
-};
+// ============== AUDIO SETUP ==============
+function setupAudio(audio) {
+  if (audioContext) {
+    audioContext.close();
+  }
+  
+  audioContext = new (window.AudioContext || window.webkitAudioContext)();
+  analyser = audioContext.createAnalyser();
+  analyser.fftSize = state.fftSize;
+  analyser.smoothingTimeConstant = state.smoothing;
+  
+  bufferLength = analyser.frequencyBinCount;
+  dataArray = new Uint8Array(bufferLength);
+  
+  audioSource = audioContext.createMediaElementSource(audio);
+  const gainNode = audioContext.createGain();
+  gainNode.gain.value = state.volume;
+  
+  audioSource.connect(gainNode);
+  gainNode.connect(analyser);
+  analyser.connect(audioContext.destination);
+  
+  console.log('🔊 Audio Context создан:', {
+    fftSize: analyser.fftSize,
+    bufferLength: bufferLength,
+    sampleRate: audioContext.sampleRate
+  });
+}
 
-function startPlayback() {
-    if(!audioBuffer) return;
-    if(audioCtx.state === 'suspended') audioCtx.resume();
-    
-    if(source) { programmaticStop = true; try{source.stop(0);}catch(e){} }
-    
-    source = audioCtx.createBufferSource();
-    source.buffer = audioBuffer;
-    source.connect(analyser);
-    analyser.connect(audioCtx.destination);
-    
-    if(isRecording && recordDest) source.connect(recordDest);
-    
-    source.onended = () => {
-        if(!programmaticStop) {
-            isPlaying = false;
-            document.getElementById('playBtn').textContent = '▶️';
-            currentTime = 0; pauseTime = 0; updateTimeDisplay();
-        }
-        programmaticStop = false;
-    };
-    
-    startTime = audioCtx.currentTime - pauseTime;
-    source.start(0, pauseTime);
+// ============== FILE UPLOAD ==============
+document.getElementById('audioFile').addEventListener('change', function(e) {
+  const file = e.target.files[0];
+  if (!file) return;
+  
+  console.log('📁 Загружен файл:', file.name);
+  
+  // Удаляем предыдущий аудио элемент
+  if (audioElement) {
+    audioElement.pause();
+    audioElement.remove();
+  }
+  
+  // Создаем новый
+  audioElement = new Audio();
+  audioElement.src = URL.createObjectURL(file);
+  audioElement.volume = state.volume;
+  audioElement.loop = true;
+  
+  // Setup audio context
+  setupAudio(audioElement);
+  
+  // Обновляем UI
+  document.getElementById('fileName').textContent = file.name;
+  document.getElementById('playBtn').disabled = false;
+  
+  // Автоплей
+  audioElement.play().then(() => {
     isPlaying = true;
-    document.getElementById('playBtn').textContent = '⏸️';
-    animate();
-}
-
-function togglePlay() {
-    if(!audioBuffer) return alert('Load audio first!');
-    if(isPlaying) {
-        isPlaying = false;
-        document.getElementById('playBtn').textContent = '▶️';
-        if(source) { programmaticStop = true; source.stop(0); }
-        pauseTime = audioCtx.currentTime - startTime;
-    } else {
-        startPlayback();
+    updatePlayButton();
+    if (audioContext.state === 'suspended') {
+      audioContext.resume();
     }
-}
+  }).catch(err => {
+    console.error('Ошибка автоплея:', err);
+  });
+  
+  // События
+  audioElement.addEventListener('timeupdate', updateProgress);
+  audioElement.addEventListener('ended', () => {
+    isPlaying = false;
+    updatePlayButton();
+  });
+  
+  // Обновляем длительность
+  audioElement.addEventListener('loadedmetadata', () => {
+    const duration = formatTime(audioElement.duration);
+    document.getElementById('duration').textContent = duration;
+  });
+});
 
-// =============================================
-// 🎨 RENDER LOOP
-// =============================================
-function animate() {
-    if(!isPlaying) return;
-    requestAnimationFrame(animate);
-    
-    analyser.getByteFrequencyData(dataArray);
-    currentTime = audioCtx.currentTime - startTime;
-    updateTimeDisplay();
-    time += 0.01;
-    
-    render();
-}
+// ============== PLAYBACK CONTROLS ==============
+document.getElementById('playBtn').addEventListener('click', togglePlayPause);
 
-function render() {
-    const cx = config.width / 2;
-    const cy = config.height * state.vizY;
-    const bass = dataArray ? dataArray[2] : 0;
-    
-    // 1. BG
-    ctx.fillStyle = state.bgColor;
-    ctx.fillRect(0,0, config.width, config.height);
-    
-    if(bgImage) {
-        ctx.save();
-        const s = 1 + (bass/255)*0.05;
-        ctx.filter = `blur(${state.bgBlur}px) brightness(${state.bgBright}%)`;
-        ctx.translate(cx, config.height/2);
-        ctx.scale(s, s);
-        // Simple cover fit
-        const aspect = bgImage.width/bgImage.height;
-        let dw = config.width, dh = config.width/aspect;
-        if(dh < config.height) { dh = config.height; dw = dh*aspect; }
-        ctx.drawImage(bgImage, -dw/2, -dh/2, dw, dh);
-        ctx.restore();
-        ctx.filter = 'none';
-    }
-
-    // 2. Effects (Particles)
-    Effects.draw(ctx, config.width, config.height, state.partType, state.partAmount, bass, time);
-
-    // 3. Visualizer
-    if(dataArray && Visualizers[state.visualizer]) {
-        ctx.save();
-        // Передаем time и state в визуализаторы
-        Visualizers[state.visualizer](ctx, cx, cy, dataArray, state, time);
-        ctx.restore();
-    }
-
-    // 4. Emblem
-    if(emblemImage) {
-        const sz = config.width * state.emblemSize * (1 + bass/1000);
-        ctx.save();
-        ctx.translate(config.width/2, config.height/2);
-        if(state.emblemCircle) {
-            ctx.beginPath(); ctx.arc(0,0,sz/2,0,Math.PI*2); ctx.clip();
-        }
-        ctx.drawImage(emblemImage, -sz/2, -sz/2, sz, sz);
-        ctx.restore();
-    }
-}
-
-// =============================================
-// 🎞️ TIMELINE & RECORDING
-// =============================================
-function updateTimeDisplay() {
-    const min = Math.floor(currentTime / 60);
-    const sec = Math.floor(currentTime % 60).toString().padStart(2,'0');
-    document.getElementById('timeDisplay').textContent = `${min}:${sec} / ...`;
-    const pct = duration ? (currentTime/duration)*100 : 0;
-    document.getElementById('progress').style.width = pct + '%';
-}
-
-function seekTimeline(e) {
-    if(!audioBuffer) return;
-    const rect = e.currentTarget.getBoundingClientRect();
-    const pct = (e.clientX - rect.left) / rect.width;
-    pauseTime = pct * duration;
-    currentTime = pauseTime;
-    updateTimeDisplay();
-    if(isPlaying) startPlayback(); // Restart if playing
-}
-
-function toggleRecord() {
-    if(isRecording) {
-        mediaRecorder.stop();
-        isRecording = false;
-        document.getElementById('recordBtn').textContent = '⏺️ Start Recording';
-        document.getElementById('recIndicator').classList.remove('active');
-    } else {
-        if(!audioBuffer) return alert('Load audio!');
-        recordedChunks = [];
-        const stream = canvas.captureStream(config.fps);
-        recordDest = audioCtx.createMediaStreamDestination();
-        if(source) source.connect(recordDest); // Capture audio too
-        stream.addTrack(recordDest.stream.getAudioTracks()[0]);
-        
-        mediaRecorder = new MediaRecorder(stream, { mimeType: 'video/webm;codecs=vp9' });
-        mediaRecorder.ondataavailable = e => recordedChunks.push(e.data);
-        mediaRecorder.onstop = () => {
-            const blob = new Blob(recordedChunks, {type:'video/webm'});
-            const a = document.createElement('a');
-            a.href = URL.createObjectURL(blob);
-            a.download = 'N1KO_Render.webm';
-            a.click();
-        };
-        
-        mediaRecorder.start();
-        isRecording = true;
-        document.getElementById('recordBtn').textContent = '⏹️ Stop & Save';
-        document.getElementById('recIndicator').classList.add('active');
-        pauseTime = 0; startPlayback(); // Start from beginning
-    }
-}
-
-// =============================================
-// ⚙️ UI EVENTS
-// =============================================
-function switchTab(t, el) {
-    document.querySelectorAll('.tab, .tab-content').forEach(x => x.classList.remove('active'));
-    el.classList.add('active');
-    document.getElementById('tab-'+t).classList.add('active');
-}
-function selectViz(v, el) {
-    state.visualizer = v;
-    document.querySelectorAll('.viz-card').forEach(x => x.classList.remove('active'));
-    el.classList.add('active');
-}
-function updateResolution() {
-    const [w,h] = document.getElementById('resolution').value.split(':').map(Number);
-    config.width = w; config.height = h;
-    canvas.width = w; canvas.height = h;
-    Effects.init(w, h);
-}
-
-// Inputs
-const ids = ['bgBlur','bgBright','vizColor','vizGlow','vizScale','vizY','partType','partAmount','emblemSize','emblemCircle','bgColor'];
-ids.forEach(id => {
-    const el = document.getElementById(id);
-    if(!el) return;
-    el.addEventListener(el.type==='checkbox'?'change':'input', e => {
-        state[id] = el.type==='checkbox' ? el.checked : el.value;
+function togglePlayPause() {
+  if (!audioElement) return;
+  
+  if (isPlaying) {
+    audioElement.pause();
+    isPlaying = false;
+  } else {
+    audioElement.play().then(() => {
+      isPlaying = true;
+      if (audioContext.state === 'suspended') {
+        audioContext.resume();
+      }
     });
+  }
+  
+  updatePlayButton();
+}
+
+function updatePlayButton() {
+  const btn = document.getElementById('playBtn');
+  btn.textContent = isPlaying ? '⏸️ Пауза' : '▶️ Играть';
+}
+
+// Progress bar
+document.getElementById('progress').addEventListener('input', function(e) {
+  if (!audioElement) return;
+  const seekTime = (e.target.value / 100) * audioElement.duration;
+  audioElement.currentTime = seekTime;
 });
 
-// Images
-['bgImage','emblemImage'].forEach(id => {
-    document.getElementById(id).onchange = e => {
-        const f = e.target.files[0];
-        if(f) {
-            const img = new Image();
-            img.onload = () => { if(id==='bgImage') bgImage=img; else emblemImage=img; render(); };
-            img.src = URL.createObjectURL(f);
-        }
-    };
+function updateProgress() {
+  if (!audioElement) return;
+  
+  const progress = (audioElement.currentTime / audioElement.duration) * 100;
+  document.getElementById('progress').value = progress;
+  document.getElementById('currentTime').textContent = formatTime(audioElement.currentTime);
+}
+
+// Volume
+document.getElementById('volume').addEventListener('input', function(e) {
+  state.volume = e.target.value / 100;
+  if (audioElement) {
+    audioElement.volume = state.volume;
+  }
+  document.getElementById('volumeValue').textContent = e.target.value + '%';
 });
 
-// Init
-canvas.width = config.width; canvas.height = config.height;
-Effects.init(config.width, config.height);
-// Initial render (black screen)
-ctx.fillStyle='#000'; ctx.fillRect(0,0,config.width,config.height);
+function formatTime(seconds) {
+  if (!seconds || isNaN(seconds)) return '0:00';
+  const mins = Math.floor(seconds / 60);
+  const secs = Math.floor(seconds % 60);
+  return `${mins}:${secs.toString().padStart(2, '0')}`;
+}
+
+// ============== VISUALIZER SELECTION ==============
+function populateVisualizerLists() {
+  const list2D = document.getElementById('viz2DList');
+  const list3D = document.getElementById('viz3DList');
+  
+  vizList2D.forEach(viz => {
+    const btn = document.createElement('button');
+    btn.className = 'viz-option';
+    btn.innerHTML = `<span class="viz-icon">${viz.icon}</span><span>${viz.name}</span>`;
+    btn.onclick = () => selectVisualizer(viz.id, '2D');
+    list2D.appendChild(btn);
+  });
+  
+  vizList3D.forEach(viz => {
+    const btn = document.createElement('button');
+    btn.className = 'viz-option';
+    btn.innerHTML = `<span class="viz-icon">${viz.icon}</span><span>${viz.name}</span>`;
+    btn.onclick = () => selectVisualizer(viz.id, '3D');
+    list3D.appendChild(btn);
+  });
+}
+
+function selectVisualizer(vizId, mode) {
+  state.currentViz = vizId;
+  state.vizMode = mode;
+  
+  // Обновляем активную кнопку
+  document.querySelectorAll('.viz-option').forEach(btn => btn.classList.remove('active'));
+  event.target.closest('.viz-option')?.classList.add('active');
+  
+  // Показываем/скрываем 3D контролы
+  document.getElementById('rotation-controls').style.display = 
+    mode === '3D' ? 'block' : 'none';
+  
+  console.log(`🎨 Визуализация изменена: ${vizId} (${mode})`);
+}
+
+// ============== UI CONTROLS ==============
+function setupUIEvents() {
+  // Tabs
+  document.querySelectorAll('.tab-btn').forEach(btn => {
+    btn.addEventListener('click', function() {
+      const tab = this.dataset.tab;
+      
+      document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+      document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+      
+      this.classList.add('active');
+      document.getElementById(tab).classList.add('active');
+    });
+  });
+  
+  // Colors
+  document.getElementById('bgColor').addEventListener('input', (e) => {
+    state.bgColor = e.target.value;
+  });
+  
+  document.getElementById('primaryColor').addEventListener('input', (e) => {
+    state.primaryColor = e.target.value;
+  });
+  
+  document.getElementById('secondaryColor').addEventListener('input', (e) => {
+    state.secondaryColor = e.target.value;
+  });
+  
+  // Visualization settings
+  setupSlider('vizScale', (v) => state.vizScale = v, 0.5, 2, 0.1);
+  setupSlider('vizSpeed', (v) => state.vizSpeed = v, 0.1, 3, 0.1);
+  setupSlider('vizGlow', (v) => state.vizGlow = v, 0, 50, 1);
+  
+  // Effects
+  document.getElementById('particleType').addEventListener('change', (e) => {
+    state.particleType = e.target.value;
+  });
+  
+  setupSlider('particleAmount', (v) => {
+    state.particleAmount = v;
+    effectsEngine.initParticles(v, canvas.width, canvas.height);
+  }, 0, 200, 10);
+  
+  document.getElementById('flickerEffect').addEventListener('change', (e) => {
+    state.flickerEffect = e.target.checked;
+  });
+  
+  document.getElementById('vignetteEffect').addEventListener('change', (e) => {
+    state.vignetteEffect = e.target.checked;
+  });
+  
+  // 3D Rotation
+  setupSlider('rotationX', (v) => state.rotationX = v, 0, 360, 1);
+  setupSlider('rotationY', (v) => state.rotationY = v, 0, 360, 1);
+  setupSlider('rotationZ', (v) => state.rotationZ = v, 0, 360, 1);
+  setupSlider('depth3D', (v) => state.depth3D = v, 100, 2000, 50);
+  setupSlider('perspective', (v) => state.perspective = v, 200, 2000, 50);
+  
+  document.getElementById('autoRotate').addEventListener('change', (e) => {
+    state.autoRotate = e.target.checked;
+  });
+  
+  // Audio settings
+  setupSlider('smoothing', (v) => {
+    state.smoothing = v;
+    if (analyser) analyser.smoothingTimeConstant = v;
+  }, 0, 0.99, 0.01);
+  
+  document.getElementById('fftSize').addEventListener('change', (e) => {
+    state.fftSize = parseInt(e.target.value);
+    if (audioElement && audioContext) {
+      setupAudio(audioElement);
+    }
+  });
+  
+  // Preset buttons
+  document.getElementById('randomPreset').addEventListener('click', randomizeSettings);
+  document.getElementById('savePreset').addEventListener('click', saveSettings);
+  document.getElementById('loadPreset').addEventListener('click', loadSettings);
+  document.getElementById('resetPreset').addEventListener('click', resetSettings);
+  
+  // Screenshot
+  document.getElementById('screenshot').addEventListener('click', takeScreenshot);
+  
+  // Fullscreen
+  document.getElementById('fullscreen').addEventListener('click', toggleFullscreen);
+}
+
+function setupSlider(id, callback, min, max, step) {
+  const slider = document.getElementById(id);
+  const display = document.getElementById(id + 'Value');
+  
+  slider.min = min;
+  slider.max = max;
+  slider.step = step;
+  
+  slider.addEventListener('input', (e) => {
+    const value = parseFloat(e.target.value);
+    callback(value);
+    if (display) {
+      display.textContent = value.toFixed(step < 1 ? 2 : 0);
+    }
+  });
+}
+
+// ============== RENDER LOOP ==============
+function renderFrame() {
+  animationId = requestAnimationFrame(renderFrame);
+  
+  currentTime += 0.016 * state.vizSpeed;
+  
+  // Очистка
+  ctx.fillStyle = state.bgColor;
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
+  
+  // Получаем аудио данные
+  if (analyser && isPlaying) {
+    analyser.getByteFrequencyData(dataArray);
+  } else {
+    // Заполняем нулями если нет аудио
+    dataArray = new Uint8Array(bufferLength || 1024).fill(0);
+  }
+  
+  // Автоповорот для 3D
+  if (state.vizMode === '3D' && state.autoRotate) {
+    state.rotationY = (state.rotationY + 0.5) % 360;
+    const slider = document.getElementById('rotationY');
+    if (slider) {
+      slider.value = state.rotationY;
+      document.getElementById('rotationYValue').textContent = Math.floor(state.rotationY);
+    }
+  }
+  
+  // Рисуем визуализацию
+  const centerX = canvas.width / 2;
+  const centerY = canvas.height / 2;
+  
+  const config = {
+    primaryColor: state.primaryColor,
+    secondaryColor: state.secondaryColor,
+    bgColor: state.bgColor
+  };
+  
+  try {
+    if (state.vizMode === '2D') {
+      const vizFunc = visualizers2D[state.currentViz];
+      if (vizFunc) {
+        vizFunc(ctx, centerX, centerY, dataArray, state, currentTime, config);
+      }
+    } else {
+      const vizFunc = visualizers3D[state.currentViz];
+      if (vizFunc) {
+        vizFunc(ctx, centerX, centerY, dataArray, state, currentTime, config);
+      }
+    }
+  } catch (err) {
+    console.error('Ошибка рендера визуализации:', err);
+  }
+  
+  // Эффекты
+  const bassAvg = dataArray.slice(0, 50).reduce((a, b) => a + b, 0) / 50;
+  
+  effectsEngine.drawParticles(
+    ctx, 
+    state.particleType, 
+    state.particleAmount, 
+    bassAvg, 
+    currentTime,
+    canvas.width,
+    canvas.height,
+    state.vizGlow
+  );
+  
+  effectsEngine.drawFlicker(ctx, state.flickerEffect, bassAvg, canvas.width, canvas.height);
+  effectsEngine.drawVignette(ctx, state.vignetteEffect, canvas.width, canvas.height);
+}
+
+// ============== PRESETS ==============
+function randomizeSettings() {
+  // Случайная визуализация
+  const allViz = [...vizList2D, ...vizList3D];
+  const randomViz = allViz[Math.floor(Math.random() * allViz.length)];
+  const mode = vizList2D.find(v => v.id === randomViz.id) ? '2D' : '3D';
+  selectVisualizer(randomViz.id, mode);
+  
+  // Случайные цвета
+  state.bgColor = '#' + Math.floor(Math.random()*16777215).toString(16).padStart(6, '0');
+  state.primaryColor = '#' + Math.floor(Math.random()*16777215).toString(16).padStart(6, '0');
+  state.secondaryColor = '#' + Math.floor(Math.random()*16777215).toString(16).padStart(6, '0');
+  
+  document.getElementById('bgColor').value = state.bgColor;
+  document.getElementById('primaryColor').value = state.primaryColor;
+  document.getElementById('secondaryColor').value = state.secondaryColor;
+  
+  // Случайные параметры
+  state.vizScale = 0.5 + Math.random() * 1.5;
+  state.vizSpeed = 0.5 + Math.random() * 2;
+  state.vizGlow = Math.random() * 30;
+  
+  // Обновляем UI
+  updateSlidersFromState();
+  
+  console.log('🎲 Настройки рандомизированы!');
+}
+
+function saveSettings() {
+  localStorage.setItem('audioVisualizerSettings', JSON.stringify(state));
+  alert('✅ Настройки сохранены!');
+  console.log('💾 Настройки сохранены в localStorage');
+}
+
+function loadSettings() {
+  const saved = localStorage.getItem('audioVisualizerSettings');
+  if (saved) {
+    const loaded = JSON.parse(saved);
+    Object.assign(state, loaded);
+    
+    // Обновляем UI
+    document.getElementById('bgColor').value = state.bgColor;
+    document.getElementById('primaryColor').value = state.primaryColor;
+    document.getElementById('secondaryColor').value = state.secondaryColor;
+    document.getElementById('particleType').value = state.particleType;
+    document.getElementById('flickerEffect').checked = state.flickerEffect;
+    document.getElementById('vignetteEffect').checked = state.vignetteEffect;
+    document.getElementById('autoRotate').checked = state.autoRotate;
+    document.getElementById('fftSize').value = state.fftSize;
+    
+    updateSlidersFromState();
+    
+    console.log('📂 Настройки загружены из localStorage');
+  }
+}
+
+function resetSettings() {
+  if (confirm('Сбросить все настройки к значениям по умолчанию?')) {
+    state.currentViz = 'circular';
+    state.vizMode = '2D';
+    state.bgColor = '#000000';
+    state.primaryColor = '#00ffff';
+    state.secondaryColor = '#ff00ff';
+    state.vizScale = 1;
+    state.vizSpeed = 1;
+    state.vizGlow = 10;
+    state.particleType = 'none';
+    state.particleAmount = 50;
+    state.flickerEffect = false;
+    state.vignetteEffect = false;
+    state.rotationX = 0;
+    state.rotationY = 0;
+    state.rotationZ = 0;
+    state.depth3D = 500;
+    state.perspective = 800;
+    state.autoRotate = true;
+    state.smoothing = 0.8;
+    state.fftSize = 2048;
+    state.volume = 0.7;
+    
+    // Обновляем UI
+    document.getElementById('bgColor').value = state.bgColor;
+    document.getElementById('primaryColor').value = state.primaryColor;
+    document.getElementById('secondaryColor').value = state.secondaryColor;
+    document.getElementById('particleType').value = state.particleType;
+    document.getElementById('flickerEffect').checked = state.flickerEffect;
+    document.getElementById('vignetteEffect').checked = state.vignetteEffect;
+    document.getElementById('autoRotate').checked = state.autoRotate;
+    document.getElementById('fftSize').value = state.fftSize;
+    
+    updateSlidersFromState();
+    
+    console.log('🔄 Настройки сброшены');
+  }
+}
+
+function updateSlidersFromState() {
+  const sliders = [
+    'vizScale', 'vizSpeed', 'vizGlow', 'particleAmount',
+    'rotationX', 'rotationY', 'rotationZ', 'depth3D', 'perspective',
+    'smoothing', 'volume'
+  ];
+  
+  sliders.forEach(id => {
+    const slider = document.getElementById(id);
+    const display = document.getElementById(id + 'Value');
+    if (slider && state[id] !== undefined) {
+      slider.value = state[id];
+      if (display) {
+        const decimals = parseFloat(slider.step) < 1 ? 2 : 0;
+        display.textContent = state[id].toFixed(decimals);
+      }
+    }
+  });
+}
+
+// ============== UTILITIES ==============
+function takeScreenshot() {
+  canvas.toBlob((blob) => {
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `visualizer_${Date.now()}.png`;
+    a.click();
+    URL.revokeObjectURL(url);
+    console.log('📸 Скриншот сохранен');
+  });
+}
+
+function toggleFullscreen() {
+  if (!document.fullscreenElement) {
+    document.documentElement.requestFullscreen().catch(err => {
+      console.error('Ошибка полноэкранного режима:', err);
+    });
+  } else {
+    document.exitFullscreen();
+  }
+}
+
+// Keyboard shortcuts
+document.addEventListener('keydown', (e) => {
+  switch(e.key) {
+    case ' ':
+      e.preventDefault();
+      togglePlayPause();
+      break;
+    case 'f':
+    case 'F':
+      toggleFullscreen();
+      break;
+    case 'r':
+    case 'R':
+      randomizeSettings();
+      break;
+    case 's':
+    case 'S':
+      if (e.ctrlKey) {
+        e.preventDefault();
+        saveSettings();
+      } else {
+        takeScreenshot();
+      }
+      break;
+  }
+});
+
+console.log(`
+╔═══════════════════════════════════════╗
+║   🎵 AUDIO VISUALIZER LOADED 🎵      ║
+║                                       ║
+║   Shortcuts:                          ║
+║   SPACE - Play/Pause                  ║
+║   F - Fullscreen                      ║
+║   R - Random preset                   ║
+║   S - Screenshot                      ║
+║   Ctrl+S - Save settings              ║
+╚═══════════════════════════════════════╝
+`);
