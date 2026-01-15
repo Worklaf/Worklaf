@@ -764,8 +764,6 @@ input[type="color"] {
 // =============================================
 const canvas = document.getElementById('canvas');
 const ctx = canvas.getContext('2d');
-const waveformCanvas = document.getElementById('waveformCanvas');
-const waveformCtx = waveformCanvas.getContext('2d');
 
 let config = {
   width: 1920,
@@ -773,18 +771,35 @@ let config = {
   fps: 30
 };
 
-let audioCtx, analyser, source, dataArray, audioBuffer;
-let isPlaying = false, startTime = 0, pauseTime = 0, currentTime = 0, duration = 0;
+// Аудио система
+let audioCtx = null;
+let analyser = null;
+let audioSource = null;
+let audioBuffer = null;
+let dataArray = null;
 
-let bgImage = null, emblemImage = null;
+// Плейбек
+let isPlaying = false;
+let audioStartTime = 0;
+let audioPauseTime = 0;
+let currentTime = 0;
+let duration = 0;
+
+// Изображения
+let bgImage = null;
+let emblemImage = null;
+
+// Частицы и анимация
 let particles = [];
-let rotation = 0, time = 0;
+let rotation = 0;
+let time = 0;
 
-let mediaRecorder, recordedChunks = [], isRecording = false;
-let recordDest = null;
+// Запись
+let mediaRecorder = null;
+let recordedChunks = [];
+let isRecording = false;
 
-let programmaticStop = false;
-
+// Состояние
 let state = {
   visualizer: 'circular',
   bgColor: '#000000',
@@ -804,11 +819,13 @@ let state = {
   emblemCircle: true,
   tunnelColors: ['#00E5FF', '#FF00E5', '#00FFAA'],
   rotSpeed: 1,
-  motionBlur: 0
+  motionBlur: 0,
+  fxFlicker: false,
+  fxBloom: false,
+  fxVignette: false
 };
-
 // =============================================
-// 🔧 HELPERS
+// 🔧 ВСПОМОГАТЕЛЬНЫЕ ФУНКЦИИ
 // =============================================
 function hexToRgba(hex, alpha) {
   if (!hex) return `rgba(255,255,255,${alpha})`;
@@ -821,7 +838,6 @@ function hexToRgba(hex, alpha) {
   return `rgba(${r},${g},${b},${alpha})`;
 }
 
-// Функция для рисования 3D точки с перспективой
 function project3D(x, y, z, centerX, centerY, fov = 500) {
   const scale = fov / (fov + z);
   return {
@@ -830,13 +846,11 @@ function project3D(x, y, z, centerX, centerY, fov = 500) {
     scale: scale
   };
 }
-
+  
 // =============================================
 // 🎨 VISUALIZERS
 // =============================================
-const Visualizers = {
-  // ВСЕ ВАШИ ОРИГИНАЛЬНЫЕ ВИЗУАЛИЗАТОРЫ СОХРАНЕНЫ
-  circular(ctx, centerX, centerY, dataArray) {
+circular(ctx, centerX, centerY, dataArray) {
     const radius = Math.min(config.width, config.height) * 0.25 * state.vizScale;
     const bars = 180;
     const barWidth = 3;
@@ -1771,66 +1785,62 @@ const Visualizers = {
 
   // 17. PLASMA VORTEX (вместо heartPulse)
 plasmaVortex(ctx, centerX, centerY, dataArray) {
-  const radius = Math.min(config.width, config.height) * 0.35 * state.vizScale;
-  
-  ctx.save();
-  
-  // Плазменные кольца
-  for (let ring = 0; ring < 8; ring++) {
-    const segments = 120;
-    ctx.beginPath();
+    const radius = Math.min(config.width, config.height) * 0.35 * state.vizScale;
     
-    for (let i = 0; i <= segments; i++) {
-      const angle = (i / segments) * Math.PI * 2 + rotation * state.rotSpeed * (ring % 2 ? 1 : -1);
-      const freqIndex = Math.floor(((ring * segments + i) / (8 * segments)) * dataArray.length);
-      const value = dataArray[freqIndex] || 0;
+    ctx.save();
+    
+    for (let ring = 0; ring < 8; ring++) {
+      const segments = 120;
+      ctx.beginPath();
       
-      // Создаем закручивающуюся форму
-      const spiralOffset = Math.sin(angle * 3 + time * 2 + ring * 0.5) * 30;
-      const r = radius * (0.3 + ring * 0.1) + (value / 255) * 60 + spiralOffset;
+      for (let i = 0; i <= segments; i++) {
+        const angle = (i / segments) * Math.PI * 2 + rotation * state.rotSpeed * (ring % 2 ? 1 : -1);
+        const freqIndex = Math.floor(((ring * segments + i) / (8 * segments)) * dataArray.length);
+        const value = dataArray[freqIndex] || 0;
+        
+        const spiralOffset = Math.sin(angle * 3 + time * 2 + ring * 0.5) * 30;
+        const r = radius * (0.3 + ring * 0.1) + (value / 255) * 60 + spiralOffset;
+        
+        const x = centerX + Math.cos(angle) * r;
+        const y = centerY + Math.sin(angle) * r;
+        
+        if (i === 0) ctx.moveTo(x, y);
+        else ctx.lineTo(x, y);
+      }
       
-      const x = centerX + Math.cos(angle) * r;
-      const y = centerY + Math.sin(angle) * r;
+      const hue = (ring * 45 + time * 50) % 360;
+      const gradient = ctx.createLinearGradient(
+        centerX - radius, centerY, 
+        centerX + radius, centerY
+      );
+      gradient.addColorStop(0, `hsla(${hue}, 100%, 50%, 0.3)`);
+      gradient.addColorStop(0.5, `hsla(${hue + 60}, 100%, 60%, 0.6)`);
+      gradient.addColorStop(1, `hsla(${hue + 120}, 100%, 50%, 0.3)`);
       
-      if (i === 0) ctx.moveTo(x, y);
-      else ctx.lineTo(x, y);
+      ctx.strokeStyle = gradient;
+      ctx.lineWidth = 3 - ring * 0.2;
+      ctx.shadowBlur = state.vizGlow * 1.5;
+      ctx.shadowColor = `hsl(${hue}, 100%, 50%)`;
+      ctx.stroke();
     }
     
-    // Плазменные цвета
-    const hue = (ring * 45 + time * 50) % 360;
-    const gradient = ctx.createLinearGradient(
-      centerX - radius, centerY, 
-      centerX + radius, centerY
-    );
-    gradient.addColorStop(0, `hsla(${hue}, 100%, 50%, 0.3)`);
-    gradient.addColorStop(0.5, `hsla(${hue + 60}, 100%, 60%, 0.6)`);
-    gradient.addColorStop(1, `hsla(${hue + 120}, 100%, 50%, 0.3)`);
+    const bass = dataArray[2] || 0;
+    const coreRadius = radius * 0.15 + (bass / 255) * 40;
     
-    ctx.strokeStyle = gradient;
-    ctx.lineWidth = 3 - ring * 0.2;
-    ctx.shadowBlur = state.vizGlow * 1.5;
-    ctx.shadowColor = `hsl(${hue}, 100%, 50%)`;
-    ctx.stroke();
-  }
-  
-  // Центральная энергетическая сфера
-  const bass = dataArray[2] || 0;
-  const coreRadius = radius * 0.15 + (bass / 255) * 40;
-  
-  const coreGradient = ctx.createRadialGradient(centerX, centerY, 0, centerX, centerY, coreRadius);
-  coreGradient.addColorStop(0, 'rgba(255,255,255,0.9)');
-  coreGradient.addColorStop(0.3, 'rgba(0,255,255,0.6)');
-  coreGradient.addColorStop(0.6, 'rgba(255,0,255,0.3)');
-  coreGradient.addColorStop(1, 'rgba(0,0,0,0)');
-  
-  ctx.fillStyle = coreGradient;
-  ctx.beginPath();
-  ctx.arc(centerX, centerY, coreRadius, 0, Math.PI * 2);
-  ctx.fill();
-  
-  ctx.restore();
-  ctx.shadowBlur = 0;
-},
+    const coreGradient = ctx.createRadialGradient(centerX, centerY, 0, centerX, centerY, coreRadius);
+    coreGradient.addColorStop(0, 'rgba(255,255,255,0.9)');
+    coreGradient.addColorStop(0.3, 'rgba(0,255,255,0.6)');
+    coreGradient.addColorStop(0.6, 'rgba(255,0,255,0.3)');
+    coreGradient.addColorStop(1, 'rgba(0,0,0,0)');
+    
+    ctx.fillStyle = coreGradient;
+    ctx.beginPath();
+    ctx.arc(centerX, centerY, coreRadius, 0, Math.PI * 2);
+    ctx.fill();
+    
+    ctx.restore();
+    ctx.shadowBlur = 0;
+  },
 
   loveWave(ctx, centerX, centerY, dataArray) {
     const width = config.width * 0.9;
@@ -2783,285 +2793,350 @@ const Effects = {
   }
 };
 
+// 🎆 ЧАСТИЦЫ
 // =============================================
-// 🎬 ANIMATION LOOP
+function initParticles() {
+  particles = [];
+  for (let i = 0; i < 500; i++) {
+    particles.push({
+      x: Math.random() * config.width,
+      y: Math.random() * config.height,
+      size: Math.random() * 3 + 1,
+      speed: Math.random() * 2 + 0.5,
+      opacity: Math.random(),
+      angle: Math.random() * Math.PI * 2,
+      hue: Math.random() * 360
+    });
+  }
+}
+
+// =============================================
+// 🎬 АНИМАЦИЯ
 // =============================================
 function animate() {
-  if (!state.isPlaying) {
-    requestAnimationFrame(animate);
-    return;
-  }
+  requestAnimationFrame(animate);
 
-  const ctx = canvas.getContext('2d');
-  
-  // Очистка с trail эффектом
-  if (state.trail > 0) {
-    ctx.fillStyle = `rgba(0,0,0,${1 - state.trail})`;
+  // Motion blur
+  if (state.motionBlur > 0) {
+    ctx.fillStyle = `rgba(0,0,0,${1 - state.motionBlur})`;
     ctx.fillRect(0, 0, config.width, config.height);
   } else {
-    ctx.fillStyle = config.bgColor;
+    ctx.fillStyle = state.bgColor;
     ctx.fillRect(0, 0, config.width, config.height);
+  }
+
+  // Фон
+  if (bgImage) {
+    ctx.save();
+    ctx.filter = `blur(${state.bgBlur}px) brightness(${state.bgBright}%)`;
+    ctx.globalAlpha = 0.5;
+    ctx.drawImage(bgImage, 0, 0, config.width, config.height);
+    ctx.restore();
+    ctx.filter = 'none';
   }
 
   // Получение аудио данных
-  analyser.getByteFrequencyData(dataArray);
-  
-  const bass = dataArray[2] || 0;
+  if (analyser) {
+    analyser.getByteFrequencyData(dataArray);
+  }
+
+  const bass = dataArray ? dataArray[2] : 0;
   time += 0.016;
-  rotation += 0.01 * state.rotSpeed;
+  rotation += 0.01;
 
   // Рисование визуализатора
   const centerX = config.width / 2;
-  const centerY = config.height / 2;
+  const centerY = config.height * state.vizY;
 
-  ctx.save();
-  if (visualizers[state.currentVisualizer]) {
-    visualizers[state.currentVisualizer](ctx, centerX, centerY, dataArray);
+  if (Visualizers[state.visualizer]) {
+    Visualizers[state.visualizer](ctx, centerX, centerY, dataArray || new Uint8Array(512));
   }
-  ctx.restore();
 
-  // Эффекты частиц
-  Effects.drawParticles(ctx, bass);
-
-  // Постобработка
-  Effects.applyPostProcessing(ctx);
-
-  // FPS счетчик
-  if (state.showFPS) {
-    frameCount++;
-    const currentTime = Date.now();
-    if (currentTime - lastFPSUpdate > 1000) {
-      currentFPS = frameCount;
-      frameCount = 0;
-      lastFPSUpdate = currentTime;
+  // Эмблема
+  if (emblemImage) {
+    const size = Math.min(config.width, config.height) * state.emblemSize;
+    const x = config.width * state.emblemX;
+    const y = config.height * state.emblemY;
+    
+    ctx.save();
+    if (state.emblemCircle) {
+      ctx.beginPath();
+      ctx.arc(x, y, size / 2, 0, Math.PI * 2);
+      ctx.clip();
     }
-    ctx.fillStyle = '#00ff00';
-    ctx.font = '14px monospace';
-    ctx.fillText(`FPS: ${currentFPS}`, 10, 20);
+    ctx.drawImage(emblemImage, x - size / 2, y - size / 2, size, size);
+    ctx.restore();
   }
 
-  requestAnimationFrame(animate);
+  // Обновление таймлайна
+  updateTimeline();
 }
 
 // =============================================
-// 🎵 AUDIO HANDLING
 // =============================================
-function setupAudio() {
-  audioContext = new (window.AudioContext || window.webkitAudioContext)();
-  analyser = audioContext.createAnalyser();
-  analyser.fftSize = 512;
-  analyser.smoothingTimeConstant = 0.8;
+// 🎵 АУДИО СИСТЕМА (ИСПРАВЛЕНО!)
+// =============================================
+function initAudio() {
+  audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+  analyser = audioCtx.createAnalyser();
+  analyser.fftSize = 2048;
+  analyser.smoothingTimeConstant = state.audioSmooth;
   dataArray = new Uint8Array(analyser.frequencyBinCount);
+  
+  console.log('✅ Аудио система инициализирована');
 }
 
 function loadAudioFile(file) {
+  if (!audioCtx) {
+    initAudio();
+  }
+
   const reader = new FileReader();
   reader.onload = function(e) {
-    audioContext.decodeAudioData(e.target.result, function(buffer) {
-      if (audioSource) {
-        audioSource.stop();
-      }
-      audioSource = audioContext.createBufferSource();
-      audioSource.buffer = buffer;
-      audioSource.connect(analyser);
-      analyser.connect(audioContext.destination);
-      audioSource.loop = true;
-      audioSource.start(0);
-      state.isPlaying = true;
-      updatePlayButton();
+    audioCtx.decodeAudioData(e.target.result, function(buffer) {
+      audioBuffer = buffer;
+      duration = buffer.duration;
+      
+      console.log('✅ Аудио загружено:', duration.toFixed(2), 'сек');
+      
+      // Автоматический запуск
+      playAudio();
+      
+    }, function(error) {
+      console.error('❌ Ошибка декодирования:', error);
+      alert('Не удалось загрузить аудио файл');
     });
   };
   reader.readAsArrayBuffer(file);
 }
 
-function togglePlay() {
-  if (audioContext.state === 'suspended') {
-    audioContext.resume();
+function playAudio() {
+  if (!audioBuffer || !audioCtx) {
+    console.warn('Нет буфера для воспроизведения');
+    return;
   }
-  state.isPlaying = !state.isPlaying;
-  updatePlayButton();
+
+  // Останавливаем предыдущий источник
+  if (audioSource) {
+    try {
+      audioSource.stop();
+      audioSource.disconnect();
+    } catch(e) {}
+  }
+
+  // Создаем новый источник
+  audioSource = audioCtx.createBufferSource();
+  audioSource.buffer = audioBuffer;
+  audioSource.connect(analyser);
+  analyser.connect(audioCtx.destination);
+  
+  // Запускаем с текущей позиции
+  const startPosition = audioPauseTime || 0;
+  audioSource.start(0, startPosition);
+  audioStartTime = audioCtx.currentTime - startPosition;
+  
+  isPlaying = true;
+  document.getElementById('playBtn').innerHTML = '⏸️';
+  
+  // Зацикливание
+  audioSource.onended = () => {
+    if (isPlaying && audioCtx.currentTime - audioStartTime >= duration - 0.1) {
+      audioPauseTime = 0;
+      playAudio();
+    }
+  };
 }
 
-function updatePlayButton() {
-  const btn = document.getElementById('playBtn');
-  btn.textContent = state.isPlaying ? '⏸ Pause' : '▶ Play';
+function togglePlay() {
+  if (!audioCtx) {
+    alert('❌ Сначала загрузите аудио файл!');
+    return;
+  }
+
+  if (audioCtx.state === 'suspended') {
+    audioCtx.resume();
+  }
+
+  if (isPlaying) {
+    // ПАУЗА
+    if (audioSource) {
+      audioPauseTime = audioCtx.currentTime - audioStartTime;
+      audioSource.stop();
+      audioSource.disconnect();
+      audioSource = null;
+    }
+    isPlaying = false;
+    document.getElementById('playBtn').innerHTML = '▶️';
+  } else {
+    // ВОСПРОИЗВЕДЕНИЕ
+    if (audioBuffer) {
+      playAudio();
+    }
+  }
+}
+
+function seekTimeline(event) {
+  if (!audioBuffer || !audioCtx) {
+    console.log('❌ Аудио не загружено');
+    return;
+  }
+
+  const timeline = document.getElementById('timeline');
+  const rect = timeline.getBoundingClientRect();
+  const x = event.clientX - rect.left;
+  const percent = Math.max(0, Math.min(1, x / rect.width));
+  
+  // Устанавливаем новое время
+  audioPauseTime = percent * duration;
+  currentTime = audioPauseTime;
+  
+  // Если играло - перезапускаем
+  if (isPlaying || true) { // Всегда запускаем при клике
+    playAudio();
+  }
+}
+
+function updateTimeline() {
+  if (!isPlaying || !audioBuffer || !audioCtx) return;
+
+  currentTime = audioCtx.currentTime - audioStartTime;
+  
+  // Защита от превышения длительности
+  if (currentTime >= duration) {
+    currentTime = 0;
+    audioStartTime = audioCtx.currentTime;
+  }
+
+  const progress = (currentTime / duration) * 100;
+  document.getElementById('progress').style.width = Math.min(100, Math.max(0, progress)) + '%';
+
+  // Форматирование времени
+  const formatTime = (seconds) => {
+    const mins = Math.floor(seconds / 60);
+    const secs = Math.floor(seconds % 60);
+    return `${mins}:${secs.toString().padStart(2, '0')}`;
+  };
+
+  document.getElementById('timeDisplay').textContent = 
+    `${formatTime(currentTime)} / ${formatTime(duration)}`;
 }
 
 // =============================================
 // 🎛️ UI CONTROLS
 // =============================================
 function setupControls() {
-  // Выбор визуализатора
-  const vizSelect = document.getElementById('visualizer');
-  Object.keys(visualizers).forEach(key => {
-    const option = document.createElement('option');
-    option.value = key;
-    option.textContent = key.replace(/([A-Z])/g, ' $1').trim();
-    vizSelect.appendChild(option);
-  });
-  vizSelect.value = state.currentVisualizer;
-  vizSelect.addEventListener('change', (e) => {
-    state.currentVisualizer = e.target.value;
-  });
+  // Слайдеры
+  const sliders = {
+    bgBlur: 'blurVal',
+    bgBright: 'brightVal',
+    bgReact: 'bgReactVal',
+    emblemSize: 'emblemSizeVal',
+    emblemX: 'emblemXVal',
+    emblemY: 'emblemYVal',
+    audioSmooth: 'smoothVal',
+    vizGlow: 'glowVal',
+    vizScale: 'scaleVal',
+    vizY: 'vizYVal',
+    rotSpeed: 'rotSpeedVal',
+    partAmount: 'partAmountVal',
+    motionBlur: 'motionBlurVal'
+  };
 
-  // Загрузка файла
-  document.getElementById('audioFile').addEventListener('change', (e) => {
-    if (e.target.files.length > 0) {
-      loadAudioFile(e.target.files[0]);
+  Object.entries(sliders).forEach(([key, displayId]) => {
+    const slider = document.getElementById(key);
+    const display = document.getElementById(displayId);
+    
+    if (slider && display) {
+      slider.value = state[key];
+      display.textContent = key.includes('Bright') ? state[key] + '%' : state[key];
+      
+      slider.addEventListener('input', (e) => {
+        state[key] = parseFloat(e.target.value);
+        display.textContent = key.includes('Bright') ? state[key] + '%' : state[key];
+        
+        if (key === 'audioSmooth' && analyser) {
+          analyser.smoothingTimeConstant = state[key];
+        }
+      });
     }
   });
 
-  // Play/Pause
-  document.getElementById('playBtn').addEventListener('click', togglePlay);
-
-  // Случайный визуализатор
-  document.getElementById('randomViz').addEventListener('click', () => {
-    const keys = Object.keys(visualizers);
-    state.currentVisualizer = keys[Math.floor(Math.random() * keys.length)];
-    vizSelect.value = state.currentVisualizer;
+  // Файлы
+  document.getElementById('audioFile').addEventListener('change', (e) => {
+    if (e.target.files[0]) loadAudioFile(e.target.files[0]);
   });
 
-  // Слайдеры
-  const sliders = {
-    vizScale: 'vizScale',
-    rotSpeed: 'rotSpeed',
-    vizGlow: 'vizGlow',
-    trail: 'trail',
-    blur: 'blur',
-    chromatic: 'chromatic',
-    vignette: 'vignette',
-    scanlines: 'scanlines',
-    partAmount: 'partAmount'
-  };
-
-  Object.entries(sliders).forEach(([key, id]) => {
-    const slider = document.getElementById(id);
-    const value = document.getElementById(id + 'Value');
-    slider.value = state[key];
-    value.textContent = state[key];
-    slider.addEventListener('input', (e) => {
-      state[key] = parseFloat(e.target.value);
-      value.textContent = state[key].toFixed(2);
-    });
+  document.getElementById('bgImage').addEventListener('change', (e) => {
+    if (e.target.files[0]) {
+      const reader = new FileReader();
+      reader.onload = (event) => {
+        const img = new Image();
+        img.onload = () => { bgImage = img; };
+        img.src = event.target.result;
+      };
+      reader.readAsDataURL(e.target.files[0]);
+    }
   });
 
-  // Тип частиц
+  document.getElementById('emblemImage').addEventListener('change', (e) => {
+    if (e.target.files[0]) {
+      const reader = new FileReader();
+      reader.onload = (event) => {
+        const img = new Image();
+        img.onload = () => { emblemImage = img; };
+        img.src = event.target.result;
+      };
+      reader.readAsDataURL(e.target.files[0]);
+    }
+  });
+
+  // Цвета
+  document.getElementById('bgColor').addEventListener('input', (e) => {
+    state.bgColor = e.target.value;
+  });
+
+  document.getElementById('vizColor').addEventListener('input', (e) => {
+    state.vizColor = e.target.value;
+  });
+
+  // Чекбоксы
+  ['emblemCircle', 'fxFlicker', 'fxBloom', 'fxVignette'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) {
+      el.addEventListener('change', (e) => {
+        state[id] = e.target.checked;
+      });
+    }
+  });
+
+  // Партиклы
   document.getElementById('partType').addEventListener('change', (e) => {
     state.partType = e.target.value;
   });
 
-  // Чекбоксы
-  document.getElementById('showFPS').addEventListener('change', (e) => {
-    state.showFPS = e.target.checked;
-  });
-
-  // Цвет фона
-  document.getElementById('bgColor').addEventListener('input', (e) => {
-    config.bgColor = e.target.value;
-  });
-
-  // Полноэкранный режим
-  document.getElementById('fullscreen').addEventListener('click', () => {
-    if (!document.fullscreenElement) {
-      document.documentElement.requestFullscreen();
-    } else {
-      document.exitFullscreen();
-    }
-  });
-
-  // Скриншот
-  document.getElementById('screenshot').addEventListener('click', () => {
-    const link = document.createElement('a');
-    link.download = `visualizer_${Date.now()}.png`;
-    link.href = canvas.toDataURL();
-    link.click();
-  });
-
-  // Экспорт настроек
-  document.getElementById('exportSettings').addEventListener('click', () => {
-    const settings = JSON.stringify(state, null, 2);
-    const blob = new Blob([settings], { type: 'application/json' });
-    const link = document.createElement('a');
-    link.download = 'visualizer_settings.json';
-    link.href = URL.createObjectURL(blob);
-    link.click();
-  });
-
-  // Импорт настроек
-  document.getElementById('importSettings').addEventListener('click', () => {
-    const input = document.createElement('input');
-    input.type = 'file';
-    input.accept = '.json';
-    input.onchange = (e) => {
-      const file = e.target.files[0];
-      const reader = new FileReader();
-      reader.onload = (event) => {
-        try {
-          const imported = JSON.parse(event.target.result);
-          Object.assign(state, imported);
-          location.reload(); // Перезагрузка для применения настроек
-        } catch (err) {
-          alert('Ошибка загрузки настроек');
-        }
-      };
-      reader.readAsText(file);
-    };
-    input.click();
-  });
-
-  // Сброс настроек
-  document.getElementById('resetSettings').addEventListener('click', () => {
-    if (confirm('Сбросить все настройки?')) {
-      location.reload();
-    }
-  });
-
-  // Переключение панели
-  document.getElementById('togglePanel').addEventListener('click', () => {
-    const controls = document.getElementById('controls');
-    controls.classList.toggle('hidden');
-  });
-
-  // Горячие клавиши
-  document.addEventListener('keydown', (e) => {
-    switch(e.key) {
-      case ' ': // Пробел
-        e.preventDefault();
-        togglePlay();
-        break;
-      case 'r': // R - случайный визуализатор
-      case 'R':
-        document.getElementById('randomViz').click();
-        break;
-      case 'f': // F - полноэкранный режим
-      case 'F':
-        document.getElementById('fullscreen').click();
-        break;
-      case 's': // S - скриншот
-      case 'S':
-        document.getElementById('screenshot').click();
-        break;
-      case 'h': // H - скрыть/показать панель
-      case 'H':
-        document.getElementById('togglePanel').click();
-        break;
-      case 'ArrowRight': // Следующий визуализатор
-        const keys = Object.keys(visualizers);
-        const currentIndex = keys.indexOf(state.currentVisualizer);
-        const nextIndex = (currentIndex + 1) % keys.length;
-        state.currentVisualizer = keys[nextIndex];
-        vizSelect.value = state.currentVisualizer;
-        break;
-      case 'ArrowLeft': // Предыдущий визуализатор
-        const keysLeft = Object.keys(visualizers);
-        const currentIndexLeft = keysLeft.indexOf(state.currentVisualizer);
-        const prevIndex = (currentIndexLeft - 1 + keysLeft.length) % keysLeft.length;
-        state.currentVisualizer = keysLeft[prevIndex];
-        vizSelect.value = state.currentVisualizer;
-        break;
-    }
+  // FPS
+  document.getElementById('fps').addEventListener('change', (e) => {
+    config.fps = parseInt(e.target.value);
   });
 }
+
+// =============================================
+// 🚀 ИНИЦИАЛИЗАЦИЯ
+// =============================================
+window.addEventListener('load', () => {
+  console.log('🚀 Инициализация...');
+  
+  canvas.width = config.width;
+  canvas.height = config.height;
+  
+  initAudio();
+  setupControls();
+  initParticles();
+  
+  animate();
+  
+  console.log('✅ Готово!');
+});
 
 // =============================================
 // 🚀 INITIALIZATION
@@ -3133,23 +3208,17 @@ window.addEventListener('resize', () => {
 
 // Переключение табов
 function switchTab(tabName, button) {
-  // Убираем active со всех табов и контента
   document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
   document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
   
-  // Добавляем active к выбранным
   button.classList.add('active');
   document.getElementById('tab-' + tabName).classList.add('active');
 }
 
-// Выбор визуализатора
 function selectViz(vizName, card) {
   state.visualizer = vizName;
   
-  // Убираем active со всех карточек
   document.querySelectorAll('.viz-card').forEach(c => c.classList.remove('active'));
-  
-  // Добавляем active к выбранной
   card.classList.add('active');
 }
 
@@ -3165,7 +3234,7 @@ function updateResolution() {
   config.height = h;
   canvas.width = w;
   canvas.height = h;
-  Effects.initParticles();
+  initParticles();
 }
 
 // Обновление всех слайдеров с отображением значений
@@ -3419,60 +3488,51 @@ function seekTimeline(event) {
 }
 
 // =============================================
-// 🎥 RECORDING
+// 🎥 ЗАПИСЬ ВИДЕО
 // =============================================
-
 function toggleRecord() {
   const btn = document.getElementById('recordBtn');
   const indicator = document.getElementById('recIndicator');
   
   if (!isRecording) {
-    startRecording();
+    recordedChunks = [];
+    
+    const stream = canvas.captureStream(config.fps);
+    mediaRecorder = new MediaRecorder(stream, {
+      mimeType: 'video/webm;codecs=vp9',
+      videoBitsPerSecond: 8000000
+    });
+    
+    mediaRecorder.ondataavailable = (e) => {
+      if (e.data.size > 0) recordedChunks.push(e.data);
+    };
+    
+    mediaRecorder.onstop = () => {
+      const blob = new Blob(recordedChunks, { type: 'video/webm' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `video_${Date.now()}.webm`;
+      a.click();
+      URL.revokeObjectURL(url);
+    };
+    
+    mediaRecorder.start();
+    isRecording = true;
+    
     btn.innerHTML = '⏹️ Stop Recording';
     btn.classList.add('btn-danger');
     indicator.classList.add('active');
   } else {
-    stopRecording();
+    if (mediaRecorder && mediaRecorder.state !== 'inactive') {
+      mediaRecorder.stop();
+    }
+    isRecording = false;
+    
     btn.innerHTML = '⏺️ Start Recording';
     btn.classList.remove('btn-danger');
     indicator.classList.remove('active');
   }
-}
-
-function startRecording() {
-  recordedChunks = [];
-  
-  const stream = canvas.captureStream(config.fps);
-  mediaRecorder = new MediaRecorder(stream, {
-    mimeType: 'video/webm;codecs=vp9',
-    videoBitsPerSecond: 8000000
-  });
-  
-  mediaRecorder.ondataavailable = (e) => {
-    if (e.data.size > 0) {
-      recordedChunks.push(e.data);
-    }
-  };
-  
-  mediaRecorder.onstop = () => {
-    const blob = new Blob(recordedChunks, { type: 'video/webm' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `video_${Date.now()}.webm`;
-    a.click();
-    URL.revokeObjectURL(url);
-  };
-  
-  mediaRecorder.start();
-  isRecording = true;
-}
-
-function stopRecording() {
-  if (mediaRecorder && mediaRecorder.state !== 'inactive') {
-    mediaRecorder.stop();
-  }
-  isRecording = false;
 }
 
 // =============================================
