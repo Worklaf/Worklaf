@@ -1,1987 +1,1652 @@
 <!DOCTYPE html>
 <html lang="ru">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width,initial-scale=1">
-<title>N1K∅ Super Video Creator — Pro Edition</title>
-<style>
-:root {
-  --bg: #07060a;
-  --card: #0b0b10;
-  --border: #1a1a20;
-  --accent: #ff4da6;
-  --accent2: #00d1ff;
-  --text: #eaeaf2;
-  --muted: #8a8a9a;
-}
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Аудио Визуализатор v2.0</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
 
-* { box-sizing: border-box; margin: 0; padding: 0; }
+        body {
+            font-family: 'Arial', sans-serif;
+            background: #000;
+            color: #fff;
+            overflow: hidden;
+        }
 
-body {
-  font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
-  background: var(--bg);
-  color: var(--text);
-  height: 100vh;
-  display: flex;
-  overflow: hidden;
-}
+        .container {
+            position: relative;
+            width: 100vw;
+            height: 100vh;
+        }
 
-/* === SIDEBAR === */
-.sidebar {
-  width: 320px;
-  background: var(--card);
-  border-right: 1px solid var(--border);
-  display: flex;
-  flex-direction: column;
-  overflow-y: auto;
-}
+        #visualizer {
+            position: absolute;
+            top: 0;
+            left: 0;
+            background: #000;
+            cursor: grab;
+        }
 
-.sidebar-header {
-  padding: 20px;
-  background: linear-gradient(180deg, #000, var(--card));
-  border-bottom: 1px solid var(--border);
-}
+        #visualizer:active {
+            cursor: grabbing;
+        }
 
-.sidebar-header h1 {
-  font-size: 18px;
-  background: linear-gradient(90deg, var(--accent), var(--accent2));
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
+        .controls {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            z-index: 100;
+            background: rgba(0, 0, 0, 0.8);
+            padding: 15px;
+            border-radius: 10px;
+            backdrop-filter: blur(10px);
+        }
 
-.tabs {
-  display: flex;
-  background: #000;
-  border-bottom: 1px solid var(--border);
-}
+        .control-group {
+            margin-bottom: 15px;
+        }
 
-.tab {
-  flex: 1;
-  padding: 12px 8px;
-  background: none;
-  border: none;
-  color: var(--muted);
-  font-size: 11px;
-  font-weight: 600;
-  text-transform: uppercase;
-  cursor: pointer;
-  border-bottom: 2px solid transparent;
-  transition: all 0.2s;
-}
+        .control-group:last-child {
+            margin-bottom: 0;
+        }
 
-.tab:hover { color: var(--text); }
-.tab.active { color: var(--accent); border-bottom-color: var(--accent); }
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-size: 12px;
+            text-transform: uppercase;
+            color: #888;
+        }
 
-.tab-content { display: none; padding: 16px; }
-.tab-content.active { display: block; }
+        input[type="range"] {
+            width: 200px;
+            margin-bottom: 5px;
+        }
 
-.section {
-  margin-bottom: 20px;
-  padding-bottom: 20px;
-  border-bottom: 1px solid var(--border);
-}
+        input[type="file"] {
+            width: 200px;
+            font-size: 12px;
+            color: #fff;
+        }
 
-.section:last-child { border: none; margin-bottom: 0; }
+        select, button {
+            width: 200px;
+            padding: 8px;
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid #333;
+            border-radius: 5px;
+            color: #fff;
+            font-size: 12px;
+        }
 
-.section-title {
-  font-size: 11px;
-  color: var(--muted);
-  text-transform: uppercase;
-  letter-spacing: 1px;
-  margin-bottom: 12px;
-  font-weight: 700;
-}
+        button {
+            cursor: pointer;
+            text-transform: uppercase;
+            font-weight: bold;
+        }
 
-/* === INPUTS === */
-.input, select, input[type="file"] {
-  width: 100%;
-  padding: 10px 12px;
-  background: rgba(255,255,255,0.05);
-  border: 1px solid var(--border);
-  border-radius: 8px;
-  color: var(--text);
-  font-size: 12px;
-  margin-bottom: 10px;
-  transition: all 0.2s;
-}
+        button:hover {
+            background: rgba(255, 255, 255, 0.2);
+        }
 
-.input:focus, select:focus {
-  outline: none;
-  border-color: var(--accent);
-  box-shadow: 0 0 0 3px rgba(255,77,166,0.1);
-}
+        .viz-list {
+            max-height: 150px;
+            overflow-y: auto;
+            background: rgba(0, 0, 0, 0.5);
+            border-radius: 5px;
+            padding: 5px;
+        }
 
-input[type="file"] {
-  font-size: 10px;
-  cursor: pointer;
-  padding: 8px;
-}
+        .viz-item {
+            padding: 5px 10px;
+            cursor: pointer;
+            border-radius: 3px;
+            font-size: 11px;
+        }
 
-input[type="color"] {
-  width: 100%;
-  height: 40px;
-  border-radius: 8px;
-  border: 1px solid var(--border);
-  cursor: pointer;
-  background: transparent;
-}
+        .viz-item:hover {
+            background: rgba(255, 255, 255, 0.1);
+        }
 
-/* === SLIDERS === */
-.slider-group {
-  margin-bottom: 12px;
-}
+        .viz-item.active {
+            background: #0080ff;
+        }
 
-.slider-label {
-  display: flex;
-  justify-content: space-between;
-  font-size: 11px;
-  color: var(--muted);
-  margin-bottom: 6px;
-}
+        .info {
+            position: absolute;
+            bottom: 20px;
+            left: 20px;
+            z-index: 100;
+            background: rgba(0, 0, 0, 0.8);
+            padding: 10px;
+            border-radius: 5px;
+            font-size: 12px;
+            backdrop-filter: blur(10px);
+        }
 
-.slider {
-  width: 100%;
-  height: 4px;
-  border-radius: 2px;
-  background: rgba(255,255,255,0.1);
-  outline: none;
-  -webkit-appearance: none;
-  cursor: pointer;
-}
+        .timer {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            z-index: 100;
+            background: rgba(0, 0, 0, 0.8);
+            padding: 15px;
+            border-radius: 10px;
+            backdrop-filter: blur(10px);
+            font-size: 20px;
+            font-weight: bold;
+            color: #0ff;
+        }
 
-.slider::-webkit-slider-thumb {
-  -webkit-appearance: none;
-  width: 14px;
-  height: 14px;
-  border-radius: 50%;
-  background: var(--accent);
-  cursor: pointer;
-  box-shadow: 0 0 10px rgba(255,77,166,0.5);
-}
+        #backgroundImage, #overlayImage {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            pointer-events: none;
+        }
 
-.slider::-moz-range-thumb {
-  width: 14px;
-  height: 14px;
-  border-radius: 50%;
-  background: var(--accent);
-  border: none;
-  box-shadow: 0 0 10px rgba(255,77,166,0.5);
-}
+        #backgroundImage {
+            z-index: 1;
+            opacity: 0.3;
+        }
 
-/* === VISUALIZER GRID === */
-.viz-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
-  gap: 8px;
-}
-
-.viz-card {
-  background: rgba(255,255,255,0.03);
-  border: 2px solid var(--border);
-  border-radius: 10px;
-  padding: 16px 12px;
-  cursor: pointer;
-  text-align: center;
-  transition: all 0.2s;
-}
-
-.viz-card:hover {
-  background: rgba(255,255,255,0.08);
-  transform: translateY(-2px);
-}
-
-.viz-card.active {
-  background: linear-gradient(135deg, rgba(255,77,166,0.2), rgba(0,209,255,0.2));
-  border-color: var(--accent);
-  box-shadow: 0 0 20px rgba(255,77,166,0.3);
-}
-
-.viz-icon {
-  font-size: 26px;
-  margin-bottom: 8px;
-  display: block;
-}
-
-.viz-name {
-  font-size: 11px;
-  font-weight: 600;
-  color: var(--text);
-}
-
-/* === BUTTONS === */
-.btn {
-  width: 100%;
-  padding: 12px 16px;
-  background: rgba(255,255,255,0.05);
-  border: 1px solid var(--border);
-  border-radius: 10px;
-  color: var(--text);
-  font-size: 13px;
-  font-weight: 600;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 8px;
-  transition: all 0.2s;
-  margin-bottom: 8px;
-}
-
-.btn:hover:not(:disabled) {
-  background: rgba(255,255,255,0.1);
-  transform: translateY(-2px);
-}
-
-.btn:disabled {
-  opacity: 0.4;
-  cursor: not-allowed;
-}
-
-.btn-primary {
-  background: linear-gradient(90deg, var(--accent), var(--accent2));
-  border: none;
-  box-shadow: 0 4px 12px rgba(255,77,166,0.3);
-}
-
-.btn-primary:hover {
-  box-shadow: 0 6px 20px rgba(255,77,166,0.5);
-}
-
-/* === MAIN AREA === */
-.main-area {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  padding: 20px;
-  gap: 16px;
-}
-
-.canvas-container {
-  flex: 1;
-  background: #000;
-  border-radius: 12px;
-  overflow: hidden;
-  position: relative;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  box-shadow: 0 10px 50px rgba(0,0,0,0.8);
-  border: 2px solid var(--border);
-}
-
-#canvas {
-  max-width: 100%;
-  max-height: 100%;
-  display: block;
-}
-
-/* === TIMELINE === */
-.timeline-area {
-  background: var(--card);
-  border-radius: 12px;
-  padding: 16px;
-  border: 1px solid var(--border);
-}
-
-.playback {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  margin-bottom: 12px;
-}
-
-.play-btn {
-  width: 44px;
-  height: 44px;
-  border-radius: 50%;
-  border: none;
-  background: linear-gradient(135deg, var(--accent), var(--accent2));
-  color: #fff;
-  font-size: 18px;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  box-shadow: 0 4px 15px rgba(255,77,166,0.4);
-  transition: all 0.2s;
-}
-
-.play-btn:hover {
-  transform: scale(1.1);
-  box-shadow: 0 6px 25px rgba(255,77,166,0.6);
-}
-
-.time-display {
-  font-size: 16px;
-  font-weight: 700;
-  font-variant-numeric: tabular-nums;
-  background: linear-gradient(90deg, var(--accent), var(--accent2));
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  min-width: 120px;
-  text-shadow: 0 0 10px rgba(255,77,166,0.3);
-  letter-spacing: 1px;
-}
-
-.timeline {
-  flex: 1;
-  height: 40px;
-  background: rgba(255,255,255,0.05);
-  border-radius: 8px;
-  position: relative;
-  cursor: pointer;
-  overflow: hidden;
-  border: 1px solid var(--border);
-}
-
-.timeline-progress {
-  position: absolute;
-  height: 100%;
-  background: linear-gradient(90deg, var(--accent), var(--accent2));
-  width: 0%;
-  transition: width 0.1s linear;
-  box-shadow: 0 0 20px rgba(255,77,166,0.5);
-}
-
-.timeline-handle {
-  position: absolute;
-  top: 50%;
-  right: -8px;
-  transform: translateY(-50%);
-  width: 16px;
-  height: 16px;
-  background: #fff;
-  border-radius: 50%;
-  box-shadow: 0 0 10px rgba(255,255,255,0.5);
-}
-
-/* === REC INDICATOR === */
-.rec-indicator {
-  position: fixed;
-  top: 30px;
-  right: 30px;
-  background: rgba(255,0,0,0.9);
-  color: #fff;
-  padding: 12px 20px;
-  border-radius: 10px;
-  font-weight: 700;
-  font-size: 14px;
-  display: none;
-  align-items: center;
-  gap: 10px;
-  z-index: 9999;
-  box-shadow: 0 4px 20px rgba(255,0,0,0.5);
-  animation: pulse 2s infinite;
-}
-
-.rec-indicator.active { display: flex; }
-
-.rec-dot {
-  width: 10px;
-  height: 10px;
-  background: #fff;
-  border-radius: 50%;
-  animation: blink 1s infinite;
-}
-
-@keyframes blink {
-  0%, 100% { opacity: 1; }
-  50% { opacity: 0.3; }
-}
-
-@keyframes pulse {
-  0%, 100% { transform: scale(1); }
-  50% { transform: scale(1.05); }
-}
-
-/* === RESPONSIVE === */
-@media (max-width: 900px) {
-  body {
-    flex-direction: column;
-    height: auto;
-    overflow: auto;
-  }
-  .sidebar {
-    width: 100%;
-    max-height: 50vh;
-    border-right: none;
-    border-bottom: 1px solid var(--border);
-  }
-  .main-area {
-    padding: 12px;
-  }
-  .canvas-container {
-    height: 50vh;
-  }
-}
-</style>
+        #overlayImage {
+            z-index: 50;
+            opacity: 0.2;
+            mix-blend-mode: overlay;
+        }
+    </style>
 </head>
 <body>
-
-<div class="rec-indicator" id="recIndicator">
-  <div class="rec-dot"></div>
-  REC
-</div>
-
-<!-- === SIDEBAR === -->
-<div class="sidebar">
-  <div class="sidebar-header">
-    <h1>N1K∅ Video Creator</h1>
-  </div>
-
-  <div class="tabs">
-    <button class="tab active" onclick="switchTab('project', this)">Project</button>
-    <button class="tab" onclick="switchTab('audio', this)">Audio</button>
-    <button class="tab" onclick="switchTab('viz', this)">Spectrum</button>
-    <button class="tab" onclick="switchTab('fx', this)">Effects</button>
-  </div>
-
-  <!-- TAB: PROJECT -->
-  <div class="tab-content active" id="tab-project">
-    <div class="section">
-      <div class="section-title">Canvas Settings</div>
-      <select id="resolution" class="input" onchange="updateResolution()">
-        <option value="1920:1080">1920×1080 (16:9 Full HD)</option>
-        <option value="1280:720">1280×720 (16:9 HD)</option>
-        <option value="720:1280">720×1280 (9:16 TikTok)</option>
-        <option value="1080:1920">1080×1920 (9:16 Reels)</option>
-        <option value="1080:1080">1080×1080 (1:1 Instagram)</option>
-        <option value="1024:768">1024×768 (4:3)</option>
-      </select>
-      <select id="fps" class="input">
-        <option value="24">24 FPS</option>
-        <option value="30" selected>30 FPS</option>
-        <option value="60">60 FPS</option>
-      </select>
-    </div>
-
-    <div class="section">
-      <div class="section-title">Background</div>
-      <input type="file" id="bgImage" accept="image/*">
-      <input type="color" id="bgColor" value="#000000">
-      <div class="slider-group">
-        <div class="slider-label"><span>Blur</span><span id="blurVal">0</span></div>
-        <input type="range" class="slider" id="bgBlur" min="0" max="20" value="0">
-      </div>
-      <div class="slider-group">
-        <div class="slider-label"><span>Brightness</span><span id="brightVal">100%</span></div>
-        <input type="range" class="slider" id="bgBright" min="0" max="200" value="100">
-      </div>
-      <div class="slider-group">
-        <div class="slider-label"><span>Reactiveness</span><span id="bgReactVal">0.05</span></div>
-        <input type="range" class="slider" id="bgReact" min="0" max="0.3" step="0.01" value="0.05">
-      </div>
-      <label style="display:flex;align-items:center;gap:8px;margin:8px 0;cursor:pointer;">
-        <input type="checkbox" id="globalShake">
-        <span style="font-size:12px;">Global Video Shake</span>
-      </label>
-    </div>
-
-    <div class="section">
-      <div class="section-title">Emblem / Overlay</div>
-      <input type="file" id="emblemImage" accept="image/*">
-      <div class="slider-group">
-        <div class="slider-label"><span>Size</span><span id="emblemSizeVal">0.3</span></div>
-        <input type="range" class="slider" id="emblemSize" min="0.1" max="1" step="0.01" value="0.3">
-      </div>
-      <div class="slider-group">
-        <div class="slider-label"><span>X Position</span><span id="emblemXVal">0.5</span></div>
-        <input type="range" class="slider" id="emblemX" min="0" max="1" step="0.01" value="0.5">
-      </div>
-      <div class="slider-group">
-        <div class="slider-label"><span>Y Position</span><span id="emblemYVal">0.5</span></div>
-        <input type="range" class="slider" id="emblemY" min="0" max="1" step="0.01" value="0.5">
-      </div>
-      <label style="display:flex;align-items:center;gap:8px;margin:8px 0;cursor:pointer;">
-        <input type="checkbox" id="emblemCircle" checked>
-        <span style="font-size:12px;">Clip to Circle</span>
-      </label>
-    </div>
-  </div>
-
-  <!-- TAB: AUDIO -->
-  <div class="tab-content" id="tab-audio">
-    <div class="section">
-      <div class="section-title">Audio File</div>
-      <input type="file" id="audioFile" accept="audio/*">
-      <div class="slider-group">
-        <div class="slider-label"><span>Smoothing</span><span id="smoothVal">0.85</span></div>
-        <input type="range" class="slider" id="audioSmooth" min="0" max="0.99" step="0.01" value="0.85">
-      </div>
-    </div>
-  </div>
-
-  <!-- TAB: VISUALIZER -->
-  <div class="tab-content" id="tab-viz">
-    <div class="section">
-      <div class="section-title">Spectrum Style</div>
-      <div class="viz-grid">
-        <div class="viz-card active" onclick="selectViz('circular', this)">
-          <span class="viz-icon">⭕</span>
-          <div class="viz-name">Circular Bars</div>
-        </div>
-        <div class="viz-card" onclick="selectViz('radial', this)">
-          <span class="viz-icon">🌐</span>
-          <div class="viz-name">Radial Lines</div>
-        </div>
-        <div class="viz-card" onclick="selectViz('neon', this)">
-          <span class="viz-icon">💡</span>
-          <div class="viz-name">Neon Ring</div>
-        </div>
-        <div class="viz-card" onclick="selectViz('tunnel', this)">
-          <span class="viz-icon">🚀</span>
-          <div class="viz-name">Cyber Tunnel</div>
-        </div>
-        <div class="viz-card" onclick="selectViz('ringWave', this)">
-          <span class="viz-icon">🌊</span>
-          <div class="viz-name">Ring Wave</div>
-        </div>
-        <div class="viz-card" onclick="selectViz('mirrorWave', this)">
-          <span class="viz-icon">📡</span>
-          <div class="viz-name">Mirror Landscape</div>
-        </div>
-        <div class="viz-card" onclick="selectViz('hudTech3D', this)">
-          <span class="viz-icon">🎯</span>
-          <div class="viz-name">3D Tech HUD</div>
-        </div>
-        <div class="viz-card" onclick="selectViz('landscape3D', this)">
-          <span class="viz-icon">🏞️</span>
-          <div class="viz-name">3D Landscape</div>
-        </div>
-        <div class="viz-card" onclick="selectViz('electricWave', this)">
-          <span class="viz-icon">⚡</span>
-          <div class="viz-name">Electric Wave</div>
-        </div>
-        <div class="viz-card" onclick="selectViz('soundPressure3D', this)">
-          <span class="viz-icon">🎚️</span>
-          <div class="viz-name">3D Sound Board</div>
-        </div>
-        <div class="viz-card" onclick="selectViz('waveformCircle', this)">
-          <span class="viz-icon">🎵</span>
-          <div class="viz-name">Waveform Circle</div>
-        </div>
-        <div class="viz-card" onclick="selectViz('purpleSpiral', this)">
-          <span class="viz-icon">🌀</span>
-          <div class="viz-name">Purple Spiral</div>
-        </div>
-        <div class="viz-card" onclick="selectViz('eyeSpectrum3D', this)">
-          <span class="viz-icon">👁️</span>
-          <div class="viz-name">3D Eye Vision</div>
-        </div>
-        <div class="viz-card" onclick="selectViz('infinityBass', this)">
-          <span class="viz-icon">∞</span>
-          <div class="viz-name">Infinity Bass</div>
-        </div>
-        <div class="viz-card" onclick="selectViz('radialBurst3D', this)">
-          <span class="viz-icon">💫</span>
-          <div class="viz-name">3D Radial Burst</div>
-        </div>
-        <div class="viz-card" onclick="selectViz('musicWave', this)">
-          <span class="viz-icon">〰️</span>
-          <div class="viz-name">Music Wave</div>
-        </div>
-        <div class="viz-card" onclick="selectViz('retroBurst3D', this)">
-          <span class="viz-icon">🌟</span>
-          <div class="viz-name">3D Retro Burst</div>
-        </div>
-        <div class="viz-card" onclick="selectViz('fluidNet3D', this)">
-          <span class="viz-icon">🕸️</span>
-          <div class="viz-name">3D Fluid Network</div>
-        </div>
-        <div class="viz-card" onclick="selectViz('magneticOrb', this)">
-          <span class="viz-icon">🔮</span>
-          <div class="viz-name">Magnetic Orb</div>
-        </div>
-        <div class="viz-card" onclick="selectViz('speedLines', this)">
-          <span class="viz-icon">💨</span>
-          <div class="viz-name">Speed Lines</div>
-        </div>
-        <div class="viz-card" onclick="selectViz('lovePulse', this)">
-          <span class="viz-icon">💖</span>
-          <div class="viz-name">Love Pulse</div>
-        </div>
-        <div class="viz-card" onclick="selectViz('heartbeat', this)">
-          <span class="viz-icon">💝</span>
-          <div class="viz-name">Heartbeat</div>
-        </div>
-        <div class="viz-card" onclick="selectViz('romanticWaves', this)">
-          <span class="viz-icon">💕</span>
-          <div class="viz-name">Romantic Waves</div>
-        </div>
-        <div class="viz-card" onclick="selectViz('kissing', this)">
-          <span class="viz-icon">💋</span>
-          <div class="viz-name">Kiss Energy</div>
-        </div>
-        <div class="viz-card" onclick="selectViz('neonPulse', this)">
-          <span class="viz-icon">🔥</span>
-          <div class="viz-name">Neon Pulse</div>
-        </div>
-        <div class="viz-card" onclick="selectViz('galacticCore', this)">
-          <span class="viz-icon">🌌</span>
-          <div class="viz-name">Galactic Core</div>
-        </div>
-        <div class="viz-card" onclick="selectViz('crystalBars', this)">
-          <span class="viz-icon">💎</span>
-          <div class="viz-name">Crystal Bars</div>
-        </div>
-        <div class="viz-card" onclick="selectViz('oceanWave', this)">
-          <span class="viz-icon">🌊</span>
-          <div class="viz-name">Ocean Wave</div>
-        </div>
-      </div>
-    </div>
-
-    <div class="section">
-      <div class="section-title">Settings</div>
-      <input type="color" id="vizColor" value="#00a2ff" style="margin-bottom:10px;">
-      <div class="slider-group">
-        <div class="slider-label"><span>Glow</span><span id="glowVal">15</span></div>
-        <input type="range" class="slider" id="vizGlow" min="0" max="50" value="15">
-      </div>
-      <div class="slider-group">
-        <div class="slider-label"><span>Scale</span><span id="scaleVal">1.0</span></div>
-        <input type="range" class="slider" id="vizScale" min="0.3" max="2" step="0.1" value="1">
-      </div>
-      <div class="slider-group">
-        <div class="slider-label"><span>Position Y</span><span id="vizYVal">0.5</span></div>
-        <input type="range" class="slider" id="vizY" min="0" max="1" step="0.01" value="0.5">
-      </div>
-    </div>
-  </div>
-
-  <!-- TAB: EFFECTS -->
-  <div class="tab-content" id="tab-fx">
-    <div class="section">
-      <div class="section-title">Particles</div>
-      <select id="partType" class="input">
-        <option value="none">None</option>
-        <option value="snow">Snowflakes</option>
-        <option value="stars">Stars</option>
-        <option value="bubbles">Bubbles</option>
-        <option value="fireflies">Fireflies</option>
-        <option value="matrix">Matrix Rain</option>
-        <option value="hearts">Hearts</option>
-        <option value="notes">Music Notes</option>
-        <option value="glitter">Glitter</option>
-        <option value="plasma">Plasma Orbs</option>
-        <option value="cyber-rain">Cyber Rain</option>
-        <option value="energy-orbs">Energy Orbs</option>
-        <option value="love-drops">Love Drops</option>
-        <option value="sparkle-trail">Sparkle Trail</option>
-      </select>
-      <div class="slider-group">
-        <div class="slider-label"><span>Amount</span><span id="partAmountVal">150</span></div>
-        <input type="range" class="slider" id="partAmount" min="0" max="500" value="150">
-      </div>
-    </div>
-
-    <div class="section">
-      <div class="section-title">Screen FX</div>
-      <label style="display:flex;align-items:center;gap:8px;margin:8px 0;cursor:pointer;">
-        <input type="checkbox" id="fxFlicker">
-        <span style="font-size:12px;">Flicker on Bass</span>
-      </label>
-      <label style="display:flex;align-items:center;gap:8px;margin:8px 0;cursor:pointer;">
-        <input type="checkbox" id="fxRGB">
-        <span style="font-size:12px;">RGB Shift</span>
-      </label>
-    </div>
-  </div>
-</div>
-
-<!-- === MAIN AREA === -->
-<div class="main-area">
-  <div class="canvas-container">
-    <canvas id="canvas"></canvas>
-  </div>
-
-  <div class="timeline-area">
-    <div class="playback">
-      <button class="play-btn" id="playBtn" onclick="togglePlay()">▶️</button>
-      <div class="time-display" id="timeDisplay">00:00 / 00:00</div>
-      <div class="timeline" id="timeline">
-        <div id="progress" class="timeline-progress">
-          <div class="timeline-handle"></div>
-        </div>
-      </div>
-    </div>
-    <button class="btn btn-primary" id="recordBtn" onclick="toggleRecord()">⏺️ Start Recording</button>
-  </div>
-</div>
-
-<script>
-// =============================================
-// 🎯 CORE STATE & VARIABLES
-// =============================================
-const canvas = document.getElementById('canvas');
-const ctx = canvas.getContext('2d');
-
-// Создаем скрытый audio элемент
-const audioElement = document.createElement('audio');
-audioElement.id = 'audioPlayer';
-audioElement.preload = 'auto';
-document.body.appendChild(audioElement);
-
-let config = {
-  width: 1920,
-  height: 1080,
-  fps: 30
-};
-
-let audioCtx, analyser, source, dataArray, audioBuffer;
-let isPlaying = false, startTime = 0, pauseTime = 0, currentTime = 0, duration = 0;
-
-let bgImage = null, emblemImage = null;
-let particles = [];
-let rotation = 0, time = 0;
-
-let mediaRecorder, recordedChunks = [], isRecording = false;
-let recordDest = null;
-
-let programmaticStop = false;
-
-let state = {
-  visualizer: 'circular',
-  bgColor: '#000000',
-  bgBlur: 0,
-  bgBright: 100,
-  bgReact: 0.05,
-  vizColor: '#00a2ff',
-  vizGlow: 15,
-  vizScale: 1,
-  vizY: 0.5,
-  audioSmooth: 0.85,
-  partType: 'none',
-  partAmount: 150,
-  emblemSize: 0.3,
-  emblemX: 0.5,
-  emblemY: 0.5,
-  emblemCircle: true,
-  globalShake: false
-};
-
-// =============================================
-// 🔧 UI FUNCTIONS
-// =============================================
-function switchTab(tabName, element) {
-  // Hide all tab contents
-  document.querySelectorAll('.tab-content').forEach(tab => {
-    tab.classList.remove('active');
-  });
-  
-  // Remove active class from all tabs
-  document.querySelectorAll('.tab').forEach(tab => {
-    tab.classList.remove('active');
-  });
-  
-  // Show selected tab content
-  document.getElementById(`tab-${tabName}`).classList.add('active');
-  
-  // Add active class to clicked tab
-  element.classList.add('active');
-}
-
-function selectViz(vizType, element) {
-  // Remove active class from all viz cards
-  document.querySelectorAll('.viz-card').forEach(card => {
-    card.classList.remove('active');
-  });
-  
-  // Add active class to clicked card
-  element.classList.add('active');
-  
-  // Update visualizer
-  state.visualizer = vizType;
-}
-
-function togglePlay() {
-  const playBtn = document.getElementById('playBtn');
-  
-  if (isPlaying) {
-    audioElement.pause();
-    playBtn.innerHTML = '▶️';
-    isPlaying = false;
-  } else {
-    if (audioElement.src) {
-      audioElement.play();
-      playBtn.innerHTML = '⏸️';
-      isPlaying = true;
-    } else {
-      alert('Please select an audio file first');
-    }
-  }
-}
-
-function toggleRecord() {
-  const recordBtn = document.getElementById('recordBtn');
-  const recIndicator = document.getElementById('recIndicator');
-  
-  if (isRecording) {
-    stopRecording();
-    recordBtn.innerHTML = '⏺️ Start Recording';
-    recIndicator.classList.remove('active');
-  } else {
-    startRecording();
-    recordBtn.innerHTML = '⏹️ Stop Recording';
-    recIndicator.classList.add('active');
-  }
-}
-
-function updateResolution() {
-  const resolution = document.getElementById('resolution').value;
-  const [w, h] = resolution.split(':').map(Number);
-  
-  config.width = w;
-  config.height = h;
-  
-  canvas.width = w;
-  canvas.height = h;
-  
-  console.log(`Resolution changed to ${w}x${h}`);
-}
-
-// =============================================
-// 🔧 HELPERS
-// =============================================
-function hexToRgba(hex, alpha) {
-  if (!hex) return `rgba(255,255,255,${alpha})`;
-  let h = hex.replace('#', '');
-  if (h.length === 3) h = h.split('').map(c => c + c).join('');
-  const num = parseInt(h, 16);
-  const r = (num >> 16) & 255;
-  const g = (num >> 8) & 255;
-  const b = num & 255;
-  return `rgba(${r},${g},${b},${alpha})`;
-}
-
-// =============================================
-// 🎨 VISUALIZERS (только основные для теста)
-// =============================================
-const Visualizers = {
-  // 1. Classic circular multi-color bars
-  circular(ctx, centerX, centerY, dataArray) {
-    const radius = Math.min(config.width, config.height) * 0.25 * state.vizScale;
-    const bars = 180;
-    const barWidth = 3;
-
-    const avgBass = dataArray.slice(0, 10).reduce((a, b) => a + b, 0) / 10;
-    const pulseRadius = radius * 0.25 + (avgBass / 255) * 20;
-
-    ctx.beginPath();
-    ctx.arc(centerX, centerY, pulseRadius, 0, Math.PI * 2);
-    ctx.fillStyle = 'rgba(255, 255, 255, 0.05)';
-    ctx.fill();
-
-    for (let i = 0; i < bars; i++) {
-      const angle = (i / bars) * Math.PI * 2;
-      const freqIndex = Math.floor(i / bars * dataArray.length * 0.8);
-      const value = dataArray[freqIndex] || 0;
-      const barHeight = (value / 255) * (radius * 0.7);
-      const hue = (i / bars) * 360;
-
-      const x1 = centerX + Math.cos(angle) * radius;
-      const y1 = centerY + Math.sin(angle) * radius;
-      const x2 = centerX + Math.cos(angle) * (radius + barHeight);
-      const y2 = centerY + Math.sin(angle) * (radius + barHeight);
-
-      ctx.beginPath();
-      ctx.moveTo(x1, y1);
-      ctx.lineTo(x2, y2);
-      ctx.lineWidth = barWidth;
-      ctx.lineCap = 'round';
-      ctx.strokeStyle = `hsl(${hue}, 100%, 50%)`;
-      ctx.shadowBlur = state.vizGlow;
-      ctx.shadowColor = `hsl(${hue}, 100%, 50%)`;
-      ctx.stroke();
-    }
-    ctx.shadowBlur = 0;
-  },
-
-  // 2. Radial rotating lines
-  radial(ctx, centerX, centerY, dataArray) {
-    const outerRadius = Math.min(config.width, config.height) * 0.35 * state.vizScale;
-    const innerRadius = outerRadius * 0.2;
-    const bars = 240;
-
-    for (let i = 0; i < bars; i++) {
-      const angle = (i / bars) * Math.PI * 2 + rotation;
-      const freqIndex = Math.floor((i / bars) * dataArray.length * 0.8);
-      const value = dataArray[freqIndex] || 0;
-      const lineLength = innerRadius + (value / 255) * (outerRadius - innerRadius);
-
-      const x1 = centerX + Math.cos(angle) * innerRadius;
-      const y1 = centerY + Math.sin(angle) * innerRadius;
-      const x2 = centerX + Math.cos(angle) * lineLength;
-      const y2 = centerY + Math.sin(angle) * lineLength;
-
-      const hue = (i / bars) * 360;
-
-      ctx.beginPath();
-      ctx.moveTo(x1, y1);
-      ctx.lineTo(x2, y2);
-      ctx.strokeStyle = `hsl(${hue}, 100%, 50%)`;
-      ctx.lineWidth = 1.5;
-      ctx.lineCap = 'round';
-      ctx.shadowBlur = state.vizGlow * 0.3;
-      ctx.shadowColor = `hsl(${hue}, 100%, 50%)`;
-      ctx.stroke();
-    }
-    ctx.shadowBlur = 0;
-  },
-
-  // 3. Neon Ring
-  neon(ctx, centerX, centerY, dataArray) {
-    const radius = Math.min(config.width, config.height) * 0.25 * state.vizScale;
-    const segments = 360;
-    const bass = dataArray[2] || 0;
-
-    const gradient = ctx.createLinearGradient(centerX - radius, centerY, centerX + radius, centerY);
-    gradient.addColorStop(0, '#00E5FF');
-    gradient.addColorStop(0.5, '#9D00FF');
-    gradient.addColorStop(1, '#FF00E5');
-
-    ctx.save();
-    ctx.beginPath();
-    for (let i = 0; i <= segments; i++) {
-      const t = i / segments;
-      const angle = t * Math.PI * 2 + rotation * 1.5;
-      const idx = Math.floor(t * dataArray.length);
-      const v = dataArray[idx] || 0;
-      const offset = (v / 255) * radius * 0.6;
-      const r = radius + offset;
-      const x = centerX + Math.cos(angle) * r;
-      const y = centerY + Math.sin(angle) * r;
-      if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
-    }
-    ctx.closePath();
-    ctx.strokeStyle = gradient;
-    ctx.lineWidth = 3;
-    ctx.shadowBlur = state.vizGlow + (bass / 255) * 30;
-    ctx.shadowColor = '#00E5FF';
-    ctx.stroke();
-
-    const innerRadius = radius * 0.4 + (bass / 255) * 20;
-    ctx.beginPath();
-    ctx.arc(centerX, centerY, innerRadius, 0, Math.PI * 2);
-    ctx.fillStyle = 'rgba(0,0,0,0.85)';
-    ctx.shadowBlur = state.vizGlow;
-    ctx.shadowColor = '#9D00FF';
-    ctx.fill();
-    ctx.restore();
-    ctx.shadowBlur = 0;
-  },
-
-  // 4. Cyber Tunnel
-  tunnel(ctx, centerX, centerY, dataArray) {
-    const radius = Math.min(config.width, config.height) * 0.3 * state.vizScale;
-    const bars = 90;
-    const barWidth = 4;
-
-    const neonColors = {
-      cyan: '#00E5FF',
-      pink: '#FF00E5',
-      accent: '#00FFAA'
-    };
-
-    const avgBass = dataArray.slice(0, 10).reduce((a, b) => a + b, 0) / 10;
-    const pulseRadius = radius * 0.25 + (avgBass / 255) * 30;
-
-    ctx.save();
-    ctx.beginPath();
-    ctx.arc(centerX, centerY, pulseRadius, 0, Math.PI * 2);
-    ctx.fillStyle = neonColors.pink;
-    ctx.shadowBlur = 30 + state.vizGlow;
-    ctx.shadowColor = neonColors.pink;
-    ctx.fill();
-    ctx.restore();
-    ctx.shadowBlur = 0;
-
-    for (let i = 0; i < bars; i++) {
-      const angle = (i / bars) * Math.PI * 2 + rotation * -1.5;
-      const freqIndex = Math.floor(i / bars * dataArray.length * 0.7);
-      const value = dataArray[freqIndex] || 0;
-      const barHeight = (value / 255) * (radius * 0.9) + 10;
-
-      const x1 = centerX + Math.cos(angle) * radius;
-      const y1 = centerY + Math.sin(angle) * radius;
-      const x2 = centerX + Math.cos(angle) * (radius + barHeight);
-      const y2 = centerY + Math.sin(angle) * (radius + barHeight);
-
-      const colorIndex = Math.floor((i / bars) * 3);
-      const barColor = [neonColors.cyan, neonColors.pink, neonColors.accent][colorIndex];
-
-      ctx.beginPath();
-      ctx.moveTo(x1, y1);
-      ctx.lineTo(x2, y2);
-      ctx.lineWidth = barWidth;
-      ctx.strokeStyle = barColor;
-      ctx.shadowBlur = state.vizGlow * 0.7;
-      ctx.shadowColor = barColor;
-
-      if (value > 190) {
-        ctx.strokeStyle = '#ffffff';
-        ctx.shadowBlur = 25;
-        ctx.shadowColor = '#ffffff';
-      }
-      ctx.stroke();
-      ctx.shadowBlur = 0;
-    }
-
-    for (let ring = 1; ring <= 4; ring++) {
-      const ringRadius = radius * (0.4 + ring * 0.18);
-      ctx.beginPath();
-      ctx.arc(centerX, centerY, ringRadius + Math.sin(time * 2 + ring) * 5, 0, Math.PI * 2);
-      ctx.strokeStyle = hexToRgba(neonColors.cyan, 0.35 - ring * 0.06);
-      ctx.lineWidth = 2;
-      ctx.stroke();
-    }
-  },
-
-  // 5. Ring Wave
-  ringWave(ctx, centerX, centerY, dataArray) {
-    const radius = Math.min(config.width, config.height) * 0.23 * state.vizScale;
-    const bass = dataArray[1] || 0;
-
-    const gradient = ctx.createLinearGradient(centerX - radius * 2, centerY, centerX + radius * 2, centerY);
-    gradient.addColorStop(0, '#ff4da6');
-    gradient.addColorStop(0.5, '#00e5ff');
-    gradient.addColorStop(1, '#7cff00');
-
-    ctx.beginPath();
-    ctx.arc(centerX, centerY, radius, 0, Math.PI * 2);
-    ctx.strokeStyle = gradient;
-    ctx.lineWidth = 4;
-    ctx.shadowBlur = state.vizGlow + bass / 2;
-    ctx.shadowColor = '#ff4da6';
-    ctx.stroke();
-    ctx.shadowBlur = 0;
-
-    const samples = 128;
-    const width = radius * 2.4;
-    const startX = centerX - width / 2;
-
-    ctx.beginPath();
-    for (let i = 0; i < samples; i++) {
-      const t = i / (samples - 1);
-      const idx = Math.floor(t * dataArray.length * 0.7);
-      const v = dataArray[idx] || 0;
-      const amp = (v / 255) * radius * 0.8;
-      const x = startX + t * width;
-      const y = centerY - amp;
-      if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
-    }
-    ctx.strokeStyle = gradient;
-    ctx.lineWidth = 2;
-    ctx.stroke();
-
-    ctx.beginPath();
-    for (let i = 0; i < samples; i++) {
-      const t = i / (samples - 1);
-      const idx = Math.floor(t * dataArray.length * 0.7);
-      const v = dataArray[idx] || 0;
-      const amp = (v / 255) * radius * 0.8;
-      const x = startX + t * width;
-      const y = centerY + amp;
-      if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
-    }
-    ctx.strokeStyle = hexToRgba('#00e5ff', 0.7);
-    ctx.lineWidth = 2;
-    ctx.stroke();
-  },
-
-  // 6. Mirror Landscape
-  mirrorWave(ctx, centerX, centerY, dataArray) {
-    const baseY = centerY;
-    const width = config.width;
-    const height = config.height * 0.25;
-    const samples = 200;
-
-    const gradientTop = ctx.createLinearGradient(0, baseY - height, 0, baseY);
-    gradientTop.addColorStop(0, hexToRgba(state.vizColor, 0.0));
-    gradientTop.addColorStop(1, hexToRgba(state.vizColor, 0.9));
-
-    const gradientBottom = ctx.createLinearGradient(0, baseY, 0, baseY + height);
-    gradientBottom.addColorStop(0, hexToRgba(state.vizColor, 0.7));
-    gradientBottom.addColorStop(1, 'rgba(0,0,0,0)');
-
-    ctx.beginPath();
-    ctx.moveTo(0, baseY);
-    for (let i = 0; i <= samples; i++) {
-      const t = i / samples;
-      const idx = Math.floor(t * dataArray.length * 0.9);
-      const v = dataArray[idx] || 0;
-      const amp = (v / 255) * height * 1.2;
-      const x = t * width;
-      const y = baseY - amp;
-      ctx.lineTo(x, y);
-    }
-    ctx.lineTo(width, baseY);
-    ctx.closePath();
-    ctx.fillStyle = gradientTop;
-    ctx.fill();
-
-    ctx.beginPath();
-    ctx.moveTo(0, baseY);
-    for (let i = 0; i <= samples; i++) {
-      const t = i / samples;
-      const idx = Math.floor(t * dataArray.length * 0.9);
-      const v = dataArray[idx] || 0;
-      const amp = (v / 255) * height * 0.9;
-      const x = t * width;
-      const y = baseY + amp;
-      ctx.lineTo(x, y);
-    }
-    ctx.lineTo(width, baseY);
-    ctx.closePath();
-    ctx.fillStyle = gradientBottom;
-    ctx.fill();
-  },
-
-  // 7. 3D Tech HUD
-  hudTech3D(ctx, centerX, centerY, dataArray) {
-    const mainR = Math.min(config.width, config.height) * 0.2 * state.vizScale;
-
-    const drawDial3D = (cx, cy, r, offset, freqOffset = 0) => {
-      const ticks = 60;
-      for (let i = 0; i < ticks; i++) {
-        const t = i / ticks;
-        const angle = t * Math.PI * 2 + rotation * 2 + offset;
-        const idx = Math.floor((t + freqOffset) * dataArray.length) % dataArray.length;
-        const v = dataArray[idx] || 0;
+    <div class="container">
+        <img id="backgroundImage" style="display: none;">
+        <canvas id="visualizer"></canvas>
+        <img id="overlayImage" style="display: none;">
         
-        const inner = r * 0.75;
-        const outer = inner + (v / 255) * r * 0.8;
-
-        const x1 = cx + Math.cos(angle) * inner;
-        const y1 = cy + Math.sin(angle) * inner;
-        const x2 = cx + Math.cos(angle) * outer;
-        const y2 = cy + Math.sin(angle) * outer;
-
-        ctx.beginPath();
-        ctx.moveTo(x1, y1);
-        ctx.lineTo(x2, y2);
-        ctx.strokeStyle = hexToRgba(state.vizColor, 0.8 + 0.2 * t);
-        ctx.lineWidth = 2;
-        ctx.shadowBlur = state.vizGlow;
-        ctx.shadowColor = state.vizColor;
-        ctx.stroke();
-      }
-
-      for (let ring = 0; ring < 3; ring++) {
-        const ringR = r * (0.3 + ring * 0.15);
-        ctx.beginPath();
-        ctx.arc(cx, cy, ringR, 0, Math.PI * 2);
-        ctx.strokeStyle = hexToRgba('#ffffff', 0.2 - ring * 0.05);
-        ctx.lineWidth = 1;
-        ctx.stroke();
-      }
-    };
-
-    ctx.save();
-    ctx.shadowBlur = state.vizGlow;
-    ctx.shadowColor = state.vizColor;
-
-    drawDial3D(centerX, centerY, mainR * 1.1, 0, 0);
-
-    const offset = mainR * 1.8;
-    drawDial3D(centerX - offset, centerY, mainR * 0.8, Math.PI / 4, 0.2);
-    drawDial3D(centerX + offset, centerY, mainR * 0.8, -Math.PI / 4, 0.5);
-
-    ctx.restore();
-    ctx.shadowBlur = 0;
-  },
-
-  // 8. 3D Landscape
-  landscape3D(ctx, centerX, centerY, dataArray) {
-    const barCount = 100;
-    const maxBarHeight = config.height * 0.4 * state.vizScale;
-    const baseLineY = centerY;
-    const barWidth = config.width / barCount;
-    const gradientColors = [
-      '#4E00FF', '#9D00FF', '#FF00E5', '#FFAA00', '#FFFF00', '#00FF00', '#00FFFF'
-    ];
-
-    ctx.save();
-
-    for (let i = 0; i < barCount; i++) {
-      const freqIndex = Math.floor(i / barCount * dataArray.length);
-      const value = dataArray[freqIndex] || 0;
-      const barHeight = (value / 255) * maxBarHeight;
-
-      const x = i * barWidth;
-      const barActualWidth = barWidth * 0.9;
-
-      const colorIdx = Math.floor((i / barCount) * gradientColors.length);
-      const barColor = gradientColors[colorIdx] || gradientColors[0];
-
-      const perspective = 1 - (i / barCount) * 0.3;
-      const finalHeight = barHeight * perspective;
-
-      ctx.beginPath();
-      ctx.rect(x, baseLineY - finalHeight, barActualWidth, finalHeight);
-      ctx.fillStyle = barColor;
-      ctx.shadowBlur = state.vizGlow;
-      ctx.shadowColor = barColor;
-      ctx.fill();
-
-      ctx.beginPath();
-      ctx.moveTo(x, baseLineY - finalHeight);
-      ctx.lineTo(x + barActualWidth, baseLineY - finalHeight);
-      ctx.lineTo(x + barActualWidth + 5, baseLineY - finalHeight - 5);
-      ctx.lineTo(x + 5, baseLineY - finalHeight - 5);
-      ctx.closePath();
-      ctx.fillStyle = hexToRgba(barColor, 0.8);
-      ctx.fill();
-
-      ctx.beginPath();
-      ctx.rect(x, baseLineY, barActualWidth, finalHeight * 0.5);
-      ctx.fillStyle = hexToRgba(barColor, 0.2);
-      ctx.shadowBlur = state.vizGlow / 2;
-      ctx.shadowColor = hexToRgba(barColor, 0.5);
-      ctx.fill();
-    }
-    ctx.restore();
-    ctx.shadowBlur = 0;
-  },
-
-  // 9. Electric Wave
-  electricWave(ctx, centerX, centerY, dataArray) {
-    const samples = 256;
-    const width = config.width * 0.9;
-    const startX = (config.width - width) / 2;
-    const amplitude = config.height * 0.15 * state.vizScale;
-    const waveCenterY = centerY;
-    const glowColor = state.vizColor;
-
-    ctx.save();
-    ctx.beginPath();
-    ctx.moveTo(startX, waveCenterY);
-
-    for (let i = 0; i < samples; i++) {
-      const t = i / (samples - 1);
-      const freqIndex = Math.floor(t * dataArray.length * 0.7);
-      const value = dataArray[freqIndex] || 0;
-      const displacement = (value / 255) * amplitude * (Math.sin(t * Math.PI * 4 + time * 0.5) * 0.5 + 0.5);
-      const x = startX + t * width;
-      const y = waveCenterY + Math.sin(t * Math.PI * 8 + time * 2) * displacement;
-
-      ctx.lineTo(x, y);
-    }
-
-    ctx.strokeStyle = glowColor;
-    ctx.lineWidth = 4;
-    ctx.shadowBlur = state.vizGlow * 2;
-    ctx.shadowColor = glowColor;
-    ctx.stroke();
-
-    for (let i = 0; i < 20; i++) {
-      const randT = Math.random();
-      const freqIndex = Math.floor(randT * dataArray.length * 0.7);
-      const value = dataArray[freqIndex] || 0;
-      if (value > 150) {
-        const x = startX + randT * width;
-        const y = waveCenterY + Math.sin(randT * Math.PI * 8 + time * 2) * (value / 255) * amplitude;
-        ctx.beginPath();
-        ctx.arc(x + (Math.random() - 0.5) * 20, y + (Math.random() - 0.5) * 20, Math.random() * 2 + 1, 0, Math.PI * 2);
-        ctx.fillStyle = hexToRgba(glowColor, Math.random());
-        ctx.shadowBlur = 10;
-        ctx.shadowColor = glowColor;
-        ctx.fill();
-      }
-    }
-
-    ctx.restore();
-    ctx.shadowBlur = 0;
-  },
-
-  // 10. 3D Sound Pressure Board
-  soundPressure3D(ctx, centerX, centerY, dataArray) {
-    const radius = Math.min(config.width, config.height) * 0.2 * state.vizScale;
-    const bass = dataArray[2] || 0;
-
-    ctx.save();
-
-    const bgGradient = ctx.createRadialGradient(centerX, centerY, 0, centerX, centerY, radius * 1.5);
-    bgGradient.addColorStop(0, 'rgba(0,200,255,0.1)');
-    bgGradient.addColorStop(1, 'rgba(255,0,150,0.05)');
-    
-    ctx.beginPath();
-    ctx.arc(centerX, centerY, radius * 1.5, 0, Math.PI * 2);
-    ctx.fillStyle = bgGradient;
-    ctx.fill();
-
-    const knobRadius = radius * 0.3;
-    ctx.beginPath();
-    ctx.arc(centerX, centerY, knobRadius, 0, Math.PI * 2);
-    
-    const knobGradient = ctx.createLinearGradient(centerX - knobRadius, centerY, centerX + knobRadius, centerY);
-    knobGradient.addColorStop(0, '#2a2a3e');
-    knobGradient.addColorStop(0.5, '#36336e');
-    knobGradient.addColorStop(1, '#1f3460');
-    
-    ctx.fillStyle = knobGradient;
-    ctx.fill();
-    ctx.strokeStyle = 'rgba(255,255,255,0.2)';
-    ctx.lineWidth = 1;
-    ctx.stroke();
-
-    const bars = 120;
-    for (let i = 0; i < bars; i++) {
-      const angle = (i / bars) * Math.PI * 2 - Math.PI / 2;
-      const freqIndex = Math.floor(i / bars * dataArray.length * 0.6);
-      const value = dataArray[freqIndex] || 0;
-      const barHeight = (value / 255) * radius * 0.8;
-
-      const hue = 180 + (i / bars) * 180;
-
-      const x1 = centerX + Math.cos(angle) * (radius * 0.7);
-      const y1 = centerY + Math.sin(angle) * (radius * 0.7);
-      const x2 = centerX + Math.cos(angle) * (radius * 0.7 + barHeight);
-      const y2 = centerY + Math.sin(angle) * (radius * 0.7 + barHeight);
-
-      ctx.beginPath();
-      ctx.moveTo(x1, y1);
-      ctx.lineTo(x2, y2);
-      ctx.lineWidth = 4;
-      ctx.lineCap = 'round';
-      ctx.strokeStyle = `hsl(${hue}, 100%, ${50 + value/10}%)`;
-      ctx.shadowBlur = state.vizGlow;
-      ctx.shadowColor = `hsl(${hue}, 100%, 50%)`;
-      ctx.stroke();
-    }
-
-    const panelY = centerY + radius * 1.8;
-    const panelWidth = radius * 3;
-    const panelHeight = 60;
-
-    ctx.fillStyle = 'rgba(0,0,0,0.4)';
-    ctx.fillRect(centerX - panelWidth/2 + 5, panelY + 5, panelWidth, panelHeight);
-
-    const panelGradient = ctx.createLinearGradient(0, panelY, 0, panelY + panelHeight);
-    panelGradient.addColorStop(0, 'rgba(30,30,40,0.9)');
-    panelGradient.addColorStop(0.5, 'rgba(20,20,30,0.8)');
-    panelGradient.addColorStop(1, 'rgba(10,10,20,0.7)');
-    
-    ctx.fillStyle = panelGradient;
-    ctx.fillRect(centerX - panelWidth/2, panelY, panelWidth, panelHeight);
-
-    for (let i = 0; i < 20; i++) {
-      const levelX = centerX - panelWidth/2 + 20 + i * (panelWidth - 40) / 19;
-      const levelWidth = 8;
-      const levelHeight = 30;
-      const levelY = panelY + 15;
-      
-      const freqIndex = Math.floor(i / 20 * dataArray.length * 0.5);
-      const value = dataArray[freqIndex] || 0;
-      const levelFill = (value / 255) * levelHeight;
-      
-      ctx.fillStyle = 'rgba(10,10,10,0.8)';
-      ctx.fillRect(levelX, levelY, levelWidth, levelHeight);
-      
-      const levelGradient = ctx.createLinearGradient(levelX, levelY + levelHeight, levelX, levelY);
-      const hue = 120 - (levelFill / levelHeight) * 120;
-      levelGradient.addColorStop(0, `hsla(${hue}, 100%, 50%, 0.8)`);
-      levelGradient.addColorStop(1, `hsla(${hue}, 100%, 70%, 0.9)`);
-      
-      ctx.fillStyle = levelGradient;
-      ctx.fillRect(levelX, levelY + levelHeight - levelFill, levelWidth, levelFill);
-      
-      ctx.fillStyle = 'rgba(255,255,255,0.2)';
-      ctx.fillRect(levelX, levelY, 2, levelHeight);
-    }
-
-    ctx.restore();
-    ctx.shadowBlur = 0;
-  },
-
-  // Добавляем простые заглушки для остальных визуализаторов
-  waveformCircle(ctx, centerX, centerY, dataArray) {
-    const radius = Math.min(config.width, config.height) * 0.25 * state.vizScale;
-    
-    ctx.beginPath();
-    for (let i = 0; i < 360; i++) {
-      const angle = (i / 360) * Math.PI * 2;
-      const freqIndex = Math.floor(i / 360 * dataArray.length);
-      const value = dataArray[freqIndex] || 0;
-      const r = radius + (value / 255) * 50;
-      const x = centerX + Math.cos(angle) * r;
-      const y = centerY + Math.sin(angle) * r;
-      if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
-    }
-    ctx.closePath();
-    ctx.strokeStyle = state.vizColor;
-    ctx.lineWidth = 3;
-    ctx.shadowBlur = state.vizGlow;
-    ctx.shadowColor = state.vizColor;
-    ctx.stroke();
-    ctx.shadowBlur = 0;
-  },
-
-  purpleSpiral(ctx, centerX, centerY, dataArray) {
-    const maxRadius = Math.min(config.width, config.height) * 0.3 * state.vizScale;
-    const turns = 5;
-    
-    ctx.beginPath();
-    for (let i = 0; i < 500; i++) {
-      const t = i / 500;
-      const angle = t * turns * Math.PI * 2 + rotation;
-      const freqIndex = Math.floor(t * dataArray.length);
-      const value = dataArray[freqIndex] || 0;
-      const r = t * maxRadius + (value / 255) * 30;
-      const x = centerX + Math.cos(angle) * r;
-      const y = centerY + Math.sin(angle) * r;
-      if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
-    }
-    ctx.strokeStyle = '#9D00FF';
-    ctx.lineWidth = 2;
-    ctx.shadowBlur = state.vizGlow;
-    ctx.shadowColor = '#9D00FF';
-    ctx.stroke();
-    ctx.shadowBlur = 0;
-  },
-
- eyeSpectrum3D(ctx, centerX, centerY, dataArray) {
-    const radius = Math.min(config.width, config.height) * 0.2 * state.vizScale;
-    
-    // Радужка
-    ctx.beginPath();
-    ctx.arc(centerX, centerY, radius, 0, Math.PI * 2);
-    ctx.fillStyle = state.vizColor;
-    ctx.fill();
-    
-    // Спектр по кругу
-    for (let i = 0; i < 120; i++) {
-      const angle = (i / 120) * Math.PI * 2 + rotation;
-      const freqIndex = Math.floor(i / 120 * dataArray.length);
-      const value = dataArray[freqIndex] || 0;
-      const barHeight = (value / 255) * radius * 0.5;
-      
-      const x1 = centerX + Math.cos(angle) * radius;
-      const y1 = centerY + Math.sin(angle) * radius;
-      const x2 = centerX + Math.cos(angle) * (radius + barHeight);
-      const y2 = centerY + Math.sin(angle) * (radius + barHeight);
-      
-      ctx.beginPath();
-      ctx.moveTo(x1, y1);
-      ctx.lineTo(x2, y2);
-      ctx.strokeStyle = state.vizColor;
-      ctx.lineWidth = 3;
-      ctx.shadowBlur = state.vizGlow;
-      ctx.shadowColor = state.vizColor;
-      ctx.stroke();
-    }
-    
-    // Зрачок
-    ctx.beginPath();
-    ctx.arc(centerX, centerY, radius * 0.3, 0, Math.PI * 2);
-    ctx.fillStyle = '#000000';
-    ctx.fill();
-    ctx.shadowBlur = 0;
-  },
-
-  // Остальные визуализаторы
-  centralBars(ctx, centerX, centerY, dataArray) {
-    const barWidth = 4;
-    const barGap = 2;
-    const totalBars = Math.floor(config.width / (barWidth + barGap));
-    const startX = centerX - (totalBars * (barWidth + barGap)) / 2;
-    
-    for (let i = 0; i < totalBars; i++) {
-      const freqIndex = Math.floor(i / totalBars * dataArray.length);
-      const value = dataArray[freqIndex] || 0;
-      const barHeight = (value / 255) * config.height * 0.4 * state.vizScale;
-      
-      const x = startX + i * (barWidth + barGap);
-      const y = centerY - barHeight / 2;
-      
-      const hue = (i / totalBars) * 360;
-      
-      ctx.beginPath();
-      ctx.rect(x, y, barWidth, barHeight);
-      ctx.fillStyle = `hsl(${hue}, 100%, 50%)`;
-      ctx.shadowBlur = state.vizGlow;
-      ctx.shadowColor = `hsl(${hue}, 100%, 50%)`;
-      ctx.fill();
-    }
-    ctx.shadowBlur = 0;
-  },
-
-  doubleBars(ctx, centerX, centerY, dataArray) {
-    const barWidth = 3;
-    const barGap = 1;
-    const barsPerSide = 60;
-    const maxHeight = config.height * 0.3 * state.vizScale;
-    
-    for (let i = 0; i < barsPerSide; i++) {
-      const freqIndex = Math.floor(i / barsPerSide * dataArray.length * 0.8);
-      const value = dataArray[freqIndex] || 0;
-      const barHeight = (value / 255) * maxHeight;
-      
-      const x = centerX - (barsPerSide * (barWidth + barGap)) / 2 + i * (barWidth + barGap);
-      const hue = (i / barsPerSide) * 360;
-      const color = `hsl(${hue}, 100%, 50%)`;
-      
-      // Верхние бары
-      ctx.beginPath();
-      ctx.rect(x, centerY - barHeight - 10, barWidth, barHeight);
-      ctx.fillStyle = color;
-      ctx.shadowBlur = state.vizGlow;
-      ctx.shadowColor = color;
-      ctx.fill();
-      
-      // Нижние бары (отражение)
-      ctx.beginPath();
-      ctx.rect(x, centerY + 10, barWidth, barHeight);
-      ctx.fillStyle = hexToRgba(color.replace('hsl', 'hsla').replace(')', ', 0.6)'));
-      ctx.shadowBlur = state.vizGlow * 0.5;
-      ctx.shadowColor = color;
-      ctx.fill();
-    }
-    ctx.shadowBlur = 0;
-  },
-
-  modernSpectrum(ctx, centerX, centerY, dataArray) {
-    const bars = 64;
-    const barWidth = config.width / bars;
-    const maxHeight = config.height * 0.4 * state.vizScale;
-    
-    for (let i = 0; i < bars; i++) {
-      const freqIndex = Math.floor(i / bars * dataArray.length);
-      const value = dataArray[freqIndex] || 0;
-      const barHeight = (value / 255) * maxHeight;
-      
-      const x = i * barWidth;
-      const gradient = ctx.createLinearGradient(x, centerY, x, centerY - barHeight);
-      gradient.addColorStop(0, '#FF00FF');
-      gradient.addColorStop(0.5, '#00FFFF');
-      gradient.addColorStop(1, '#FFFF00');
-      
-      ctx.beginPath();
-      ctx.rect(x, centerY - barHeight, barWidth * 0.8, barHeight);
-      ctx.fillStyle = gradient;
-      ctx.shadowBlur = state.vizGlow;
-      ctx.shadowColor = '#FF00FF';
-      ctx.fill();
-    }
-    ctx.shadowBlur = 0;
-  },
-
-  snowFlake(ctx, centerX, centerY, dataArray) {
-    const arms = 8;
-    const maxRadius = Math.min(config.width, config.height) * 0.25 * state.vizScale;
-    
-    for (let arm = 0; arm < arms; arm++) {
-      const armAngle = (arm / arms) * Math.PI * 2 + rotation;
-      
-      for (let i = 0; i < 20; i++) {
-        const t = i / 20;
-        const freqIndex = Math.floor((arm * 20 + i) / (arms * 20) * dataArray.length);
-        const value = dataArray[freqIndex] || 0;
-        const radius = t * maxRadius + (value / 255) * 20;
+        <div class="controls">
+            <div class="control-group">
+                <label>Аудио файл</label>
+                <input type="file" id="audioFile" accept="audio/*">
+            </div>
+            
+            <div class="control-group">
+                <label>Фон</label>
+                <input type="file" id="backgroundFile" accept="image/*">
+                <button onclick="clearBackground()">Очистить фон</button>
+            </div>
+            
+            <div class="control-group">
+                <label>Оверлей</label>
+                <input type="file" id="overlayFile" accept="image/*">
+                <button onclick="clearOverlay()">Очистить оверлей</button>
+            </div>
+            
+            <div class="control-group">
+                <label>Визуализатор</label>
+                <div class="viz-list" id="vizList"></div>
+            </div>
+            
+            <div class="control-group">
+                <label>Размер: <span id="scaleValue">1.0</span></label>
+                <input type="range" id="vizScale" min="0.1" max="3" step="0.1" value="1">
+            </div>
+            
+            <div class="control-group">
+                <label>Свечение: <span id="glowValue">10</span></label>
+                <input type="range" id="vizGlow" min="0" max="50" step="1" value="10">
+            </div>
+            
+            <div class="control-group">
+                <label>Скорость: <span id="speedValue">1.0</span></label>
+                <input type="range" id="vizSpeed" min="0.1" max="5" step="0.1" value="1">
+            </div>
+            
+            <div class="control-group">
+                <button onclick="toggleFullscreen()">Полный экран</button>
+                <button onclick="resetSettings()">Сброс</button>
+            </div>
+        </div>
         
-        const x = centerX + Math.cos(armAngle) * radius;
-        const y = centerY + Math.sin(armAngle) * radius;
+        <div class="timer" id="timer">00:00</div>
         
-        ctx.beginPath();
-        ctx.arc(x, y, 2 + (value / 255) * 3, 0, Math.PI * 2);
-        ctx.fillStyle = state.vizColor;
-        ctx.shadowBlur = state.vizGlow;
-        ctx.shadowColor = state.vizColor;
-        ctx.fill();
-      }
-    }
-    ctx.shadowBlur = 0;
-  },
+        <div class="info">
+            <div>Визуализатор: <span id="currentViz">circular</span></div>
+            <div>Клик - смена визуализатора | Колесо мыши - масштаб</div>
+        </div>
+    </div>
 
-  rippleWaves(ctx, centerX, centerY, dataArray) {
-    const bass = dataArray.slice(0, 10).reduce((a, b) => a + b, 0) / 10;
-    const maxRadius = Math.min(config.width, config.height) * 0.4 * state.vizScale;
-    
-    for (let ring = 0; ring < 8; ring++) {
-      const t = ring / 8;
-      const radius = t * maxRadius + Math.sin(time * 3 + ring) * 20;
-      const opacity = 1 - t;
-      
-      ctx.beginPath();
-      ctx.arc(centerX, centerY, radius, 0, Math.PI * 2);
-      ctx.strokeStyle = hexToRgba(state.vizColor, opacity * 0.8);
-      ctx.lineWidth = 3;
-      ctx.shadowBlur = state.vizGlow * opacity;
-      ctx.shadowColor = state.vizColor;
-      ctx.stroke();
-    }
-    ctx.shadowBlur = 0;
-  },
+    <script>
+        // Глобальные переменные
+        let audioContext, analyser, dataArray, source;
+        let canvas, ctx;
+        let isPlaying = false;
+        let currentAudio = null;
+        let animationId = null;
+        let startTime = 0;
+        let rotation = 0;
+        let time = 0;
 
-  galaxySpiral(ctx, centerX, centerY, dataArray) {
-    const maxRadius = Math.min(config.width, config.height) * 0.3 * state.vizScale;
-    const arms = 3;
-    
-    for (let arm = 0; arm < arms; arm++) {
-      ctx.beginPath();
-      for (let i = 0; i < 200; i++) {
-        const t = i / 200;
-        const angle = t * Math.PI * 6 + (arm / arms) * Math.PI * 2 + rotation * 0.5;
-        const freqIndex = Math.floor(t * dataArray.length);
-        const value = dataArray[freqIndex] || 0;
-        const radius = t * maxRadius + (value / 255) * 15;
-        
-        const x = centerX + Math.cos(angle) * radius;
-        const y = centerY + Math.sin(angle) * radius;
-        
-        if (i === 0) ctx.moveTo(x, y);
-        else ctx.lineTo(x, y);
-      }
-      
-      const hue = (arm / arms) * 360;
-      ctx.strokeStyle = `hsl(${hue}, 100%, 50%)`;
-      ctx.lineWidth = 2;
-      ctx.shadowBlur = state.vizGlow;
-      ctx.shadowColor = `hsl(${hue}, 100%, 50%)`;
-      ctx.stroke();
-    }
-    ctx.shadowBlur = 0;
-  },
-
-  particleField(ctx, centerX, centerY, dataArray) {
-    const particles = 100;
-    const fieldRadius = Math.min(config.width, config.height) * 0.4 * state.vizScale;
-    
-    for (let i = 0; i < particles; i++) {
-      const angle = (i / particles) * Math.PI * 2 + rotation * 0.2;
-      const freqIndex = Math.floor(i / particles * dataArray.length);
-      const value = dataArray[freqIndex] || 0;
-      const radius = (Math.random() * 0.5 + 0.5) * fieldRadius;
-      const size = 1 + (value / 255) * 4;
-      
-      const x = centerX + Math.cos(angle) * radius;
-      const y = centerY + Math.sin(angle) * radius;
-      
-      ctx.beginPath();
-      ctx.arc(x, y, size, 0, Math.PI * 2);
-      ctx.fillStyle = state.vizColor;
-      ctx.shadowBlur = state.vizGlow;
-      ctx.shadowColor = state.vizColor;
-      ctx.fill();
-    }
-    ctx.shadowBlur = 0;
-  },
-
-  heartBeat(ctx, centerX, centerY, dataArray) {
-    const bass = dataArray.slice(0, 5).reduce((a, b) => a + b, 0) / 5;
-    const scale = 1 + (bass / 255) * 0.5;
-    const size = Math.min(config.width, config.height) * 0.15 * state.vizScale * scale;
-    
-    ctx.save();
-    ctx.translate(centerX, centerY);
-    ctx.scale(scale, scale);
-    
-    ctx.beginPath();
-    ctx.moveTo(0, -size * 0.3);
-    ctx.bezierCurveTo(-size * 0.5, -size * 0.8, -size * 0.8, -size * 0.3, 0, size * 0.2);
-    ctx.bezierCurveTo(size * 0.8, -size * 0.3, size * 0.5, -size * 0.8, 0, -size * 0.3);
-    
-    ctx.fillStyle = state.vizColor;
-    ctx.shadowBlur = state.vizGlow * 2;
-    ctx.shadowColor = state.vizColor;
-    ctx.fill();
-    
-    ctx.restore();
-    ctx.shadowBlur = 0;
-  }
-};
-// =============================================
-// 🎵 AUDIO SETUP
-// =============================================
-function setupAudio() {
-  try {
-    if (!audioCtx) {
-      audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-    }
-
-    if (audioCtx.state === 'suspended') {
-      audioCtx.resume();
-    }
-
-    analyser = audioCtx.createAnalyser();
-    analyser.fftSize = 2048;
-    analyser.smoothingTimeConstant = state.audioSmooth;
-
-    if (source) {
-      source.disconnect();
-    }
-
-    source = audioCtx.createMediaElementSource(audioElement);
-    source.connect(analyser);
-    analyser.connect(audioCtx.destination);
-
-    dataArray = new Uint8Array(analyser.frequencyBinCount);
-
-    console.log('✅ Audio context initialized');
-  } catch (error) {
-    console.error('❌ Audio setup failed:', error);
-  }
-}
-
-// =============================================
-// 🖼️ BACKGROUND PROCESSING
-// =============================================
-function drawBackground() {
-  ctx.fillStyle = state.bgColor;
-  ctx.fillRect(0, 0, config.width, config.height);
-}
-
-// =============================================
-// 🎬 MAIN RENDER LOOP
-// =============================================
-function render() {
-  // Clear canvas
-  ctx.clearRect(0, 0, config.width, config.height);
-
-  // Update audio data
-  if (analyser && dataArray) {
-    analyser.getByteFrequencyData(dataArray);
-  }
-
-  // Draw background
-  drawBackground();
-
-  // Calculate center position
-  const centerX = config.width / 2;
-  const centerY = config.height * state.vizY;
-
-  // Draw main visualizer
-  if (dataArray && Visualizers[state.visualizer]) {
-    ctx.save();
-    Visualizers[state.visualizer](ctx, centerX, centerY, dataArray);
-    ctx.restore();
-  }
-
-  // Update time and rotation
-  time += 0.016;
-  rotation += 0.01;
-
-  // Update timeline
-  updateTimeline();
-
-  requestAnimationFrame(render);
-}
-
-function updateTimeline() {
-  const timeDisplay = document.getElementById('timeDisplay');
-  const progress = document.getElementById('progress');
-  
-  if (audioElement.duration) {
-    const current = audioElement.currentTime;
-    const total = audioElement.duration;
-    const percent = (current / total) * 100;
-    
-    progress.style.width = percent + '%';
-    timeDisplay.textContent = `${formatTime(current)} / ${formatTime(total)}`;
-  }
-}
-
-function formatTime(seconds) {
-  const mins = Math.floor(seconds / 60);
-  const secs = Math.floor(seconds % 60);
-  return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
-}
-
-// =============================================
-// 🎥 RECORDING
-// =============================================
-function startRecording() {
-  if (!audioCtx || !analyser) {
-    alert('Please load audio first');
-    return;
-  }
-
-  try {
-    recordDest = audioCtx.createMediaStreamDestination();
-    analyser.connect(recordDest);
-
-    const canvasStream = canvas.captureStream(30);
-    const audioStream = recordDest.stream;
-
-    const combinedStream = new MediaStream([
-      ...canvasStream.getTracks(),
-      ...audioStream.getTracks()
-    ]);
-
-    mediaRecorder = new MediaRecorder(combinedStream);
-    recordedChunks = [];
-
-    mediaRecorder.ondataavailable = (event) => {
-      if (event.data.size > 0) {
-        recordedChunks.push(event.data);
-      }
-    };
-
-    mediaRecorder.onstop = () => {
-      const blob = new Blob(recordedChunks, { type: 'video/webm' });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = `visualizer-${Date.now()}.webm`;
-      a.click();
-      URL.revokeObjectURL(url);
-    };
-
-    mediaRecorder.start();
-    isRecording = true;
-    console.log('🎥 Recording started');
-  } catch (error) {
-    console.error('❌ Recording failed:', error);
-    alert('Recording failed: ' + error.message);
-  }
-}
-
-function stopRecording() {
-  if (mediaRecorder && isRecording) {
-    mediaRecorder.stop();
-    isRecording = false;
-    console.log('🛑 Recording stopped');
-  }
-}
-
-// =============================================
-// 🚀 INITIALIZATION
-// =============================================
-function init() {
-  // Setup canvas
-  canvas.width = config.width;
-  canvas.height = config.height;
-
-  // Audio file input
-  document.getElementById('audioFile').addEventListener('change', (e) => {
-    const file = e.target.files[0];
-    if (file) {
-      const url = URL.createObjectURL(file);
-      audioElement.src = url;
-      setupAudio();
-      console.log('✅ Audio file loaded');
-    }
-  });
-
-  // Background image input
-  document.getElementById('bgImage').addEventListener('change', (e) => {
-    const file = e.target.files[0];
-    if (file) {
-      const reader = new FileReader();
-      reader.onload = (event) => {
-        const img = new Image();
-        img.onload = () => {
-          bgImage = img;
-          console.log('✅ Background image loaded');
+        // Конфигурация
+        const config = {
+            width: window.innerWidth,
+            height: window.innerHeight,
+            fftSize: 512,
+            smoothingTimeConstant: 0.8
         };
-        img.src = event.target.result;
-      };
-      reader.readAsDataURL(file);
-    }
-  });
 
-  // Emblem image input
-  document.getElementById('emblemImage').addEventListener('change', (e) => {
-    const file = e.target.files[0];
-    if (file) {
-      const reader = new FileReader();
-      reader.onload = (event) => {
-        const img = new Image();
-        img.onload = () => {
-          emblemImage = img;
-          console.log('✅ Emblem image loaded');
+        // Состояние визуализатора
+        const state = {
+            currentViz: 0,
+            vizScale: 1.0,
+            vizGlow: 10,
+            vizSpeed: 1.0,
+            mouseX: 0,
+            mouseY: 0
         };
-        img.src = event.target.result;
-      };
-      reader.readAsDataURL(file);
-    }
-  });
 
-  // Control sliders with live value display
-  const sliders = [
-    { id: 'bgBlur', display: 'blurVal', prop: 'bgBlur' },
-    { id: 'bgBright', display: 'brightVal', prop: 'bgBright', suffix: '%' },
-    { id: 'bgReact', display: 'bgReactVal', prop: 'bgReact' },
-    { id: 'vizGlow', display: 'glowVal', prop: 'vizGlow' },
-    { id: 'vizScale', display: 'scaleVal', prop: 'vizScale' },
-    { id: 'vizY', display: 'vizYVal', prop: 'vizY' },
-    { id: 'audioSmooth', display: 'smoothVal', prop: 'audioSmooth' },
-    { id: 'partAmount', display: 'partAmountVal', prop: 'partAmount' },
-    { id: 'emblemSize', display: 'emblemSizeVal', prop: 'emblemSize' },
-    { id: 'emblemX', display: 'emblemXVal', prop: 'emblemX' },
-    { id: 'emblemY', display: 'emblemYVal', prop: 'emblemY' }
-  ];
+        // Список всех визуализаторов
+        const visualizerNames = [
+            'circular', 'radial', 'neon', 'tunnel', 'ringWave', 'mirrorWave', 
+            'hudTech3D', 'landscape3D', 'electricWave', 'soundPressure3D', 
+            'waveformCircle', 'purpleSpiral', 'eyeSpectrum3D', 'centralBars', 
+            'doubleBars', 'modernSpectrum', 'snowFlake', 'rippleWaves', 
+            'galaxySpiral', 'particleField', 'heartBeat', 'matrix3D', 
+            'dnaHelix', 'quantumField', 'neurNetwork', 'cosmicRing', 
+            'synthWave', 'hologram3D'
+        ];
 
-  sliders.forEach(slider => {
-    const element = document.getElementById(slider.id);
-    const display = document.getElementById(slider.display);
-    
-    if (element && display) {
-      element.addEventListener('input', (e) => {
-        const value = parseFloat(e.target.value);
-        state[slider.prop] = value;
-        display.textContent = value + (slider.suffix || '');
-      });
-      
-      // Set initial value
-      element.value = state[slider.prop];
-      display.textContent = state[slider.prop] + (slider.suffix || '');
-    }
-  });
+        // Утилиты
+        function hexToRgba(hex, alpha = 1) {
+            const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
+            if (result) {
+                const r = parseInt(result[1], 16);
+                const g = parseInt(result[2], 16);
+                const b = parseInt(result[3], 16);
+                return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+            }
+            return `rgba(255, 255, 255, ${alpha})`;
+        }
 
-  // Color inputs
-  ['bgColor', 'vizColor'].forEach(colorId => {
-    const element = document.getElementById(colorId);
-    if (element) {
-      element.addEventListener('change', (e) => {
-        state[colorId] = e.target.value;
-      });
-      element.value = state[colorId];
-    }
-  });
+        function formatTime(seconds) {
+            const mins = Math.floor(seconds / 60);
+            const secs = Math.floor(seconds % 60);
+            return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+        }
 
-  // Checkboxes
-  ['globalShake', 'emblemCircle'].forEach(checkId => {
-    const element = document.getElementById(checkId);
-    if (element) {
-      element.addEventListener('change', (e) => {
-        state[checkId] = e.target.checked;
-      });
-      element.checked = state[checkId];
-    }
-  });
+        // Визуализаторы
+        const visualizers = {
+            circular(ctx, centerX, centerY, dataArray) {
+                const radius = Math.min(config.width, config.height) * 0.2 * state.vizScale;
+                const barCount = dataArray.length;
+                
+                for (let i = 0; i < barCount; i++) {
+                    const angle = (i / barCount) * Math.PI * 2;
+                    const barHeight = (dataArray[i] / 255) * radius;
+                    
+                    const x1 = centerX + Math.cos(angle) * radius;
+                    const y1 = centerY + Math.sin(angle) * radius;
+                    const x2 = centerX + Math.cos(angle) * (radius + barHeight);
+                    const y2 = centerY + Math.sin(angle) * (radius + barHeight);
+                    
+                    ctx.beginPath();
+                    ctx.moveTo(x1, y1);
+                    ctx.lineTo(x2, y2);
+                    
+                    const hue = (i / barCount) * 360;
+                    ctx.strokeStyle = `hsl(${hue}, 100%, 50%)`;
+                    ctx.lineWidth = 2;
+                    ctx.shadowBlur = state.vizGlow;
+                    ctx.shadowColor = `hsl(${hue}, 100%, 50%)`;
+                    ctx.stroke();
+                }
+                ctx.shadowBlur = 0;
+            },
 
-  // Select elements
-  ['partType'].forEach(selectId => {
-    const element = document.getElementById(selectId);
-    if (element) {
-      element.addEventListener('change', (e) => {
-        state[selectId] = e.target.value;
-      });
-      element.value = state[selectId];
-    }
-  });
+            radial(ctx, centerX, centerY, dataArray) {
+                const maxRadius = Math.min(config.width, config.height) * 0.4 * state.vizScale;
+                
+                for (let i = 0; i < dataArray.length; i += 2) {
+                    const value = dataArray[i];
+                    const radius = (value / 255) * maxRadius;
+                    const hue = (i / dataArray.length) * 360;
+                    
+                    ctx.beginPath();
+                    ctx.arc(centerX, centerY, radius, 0, Math.PI * 2);
+                    ctx.strokeStyle = `hsla(${hue}, 100%, 50%, 0.6)`;
+                    ctx.lineWidth = 2;
+                    ctx.shadowBlur = state.vizGlow;
+                    ctx.shadowColor = `hsl(${hue}, 100%, 50%)`;
+                    ctx.stroke();
+                }
+                ctx.shadowBlur = 0;
+            },
 
-  // Timeline click
-  document.getElementById('timeline').addEventListener('click', (e) => {
-    if (audioElement.duration) {
-      const rect = e.target.getBoundingClientRect();
-      const percent = (e.clientX - rect.left) / rect.width;
-      audioElement.currentTime = percent * audioElement.duration;
-    }
-  });
+            neon(ctx, centerX, centerY, dataArray) {
+                const barWidth = config.width / dataArray.length;
+                
+                for (let i = 0; i < dataArray.length; i++) {
+                    const barHeight = (dataArray[i] / 255) * config.height * 0.8 * state.vizScale;
+                    const x = i * barWidth;
+                    const y = centerY - barHeight / 2;
+                    
+                    const gradient = ctx.createLinearGradient(x, y, x, y + barHeight);
+                    gradient.addColorStop(0, '#ff0080');
+                    gradient.addColorStop(0.5, '#0080ff');
+                    gradient.addColorStop(1, '#00ff80');
+                    
+                    ctx.fillStyle = gradient;
+                    ctx.shadowBlur = state.vizGlow;
+                    ctx.shadowColor = '#ff0080';
+                    ctx.fillRect(x, y, barWidth - 1, barHeight);
+                }
+                ctx.shadowBlur = 0;
+            },
 
-  // Start render loop
-  render();
+            tunnel(ctx, centerX, centerY, dataArray) {
+                const maxRings = 20;
+                const maxRadius = Math.min(config.width, config.height) * 0.5 * state.vizScale;
+                
+                for (let ring = 0; ring < maxRings; ring++) {
+                    const ringProgress = ring / maxRings;
+                    const radius = maxRadius * (1 - ringProgress);
+                    const dataIndex = Math.floor(ringProgress * dataArray.length);
+                    const intensity = dataArray[dataIndex] / 255;
+                    
+                    ctx.beginPath();
+                    ctx.arc(centerX, centerY, radius, 0, Math.PI * 2);
+                    
+                    const alpha = intensity * (1 - ringProgress);
+                    const hue = ringProgress * 360 + time * 50;
+                    ctx.strokeStyle = `hsla(${hue}, 100%, 50%, ${alpha})`;
+                    ctx.lineWidth = 3;
+                    ctx.shadowBlur = state.vizGlow * intensity;
+                    ctx.shadowColor = `hsl(${hue}, 100%, 50%)`;
+                    ctx.stroke();
+                }
+                ctx.shadowBlur = 0;
+            },
 
-  console.log('🎉 Audio Visualizer initialized!');
-}
+            ringWave(ctx, centerX, centerY, dataArray) {
+                const rings = 10;
+                const baseRadius = Math.min(config.width, config.height) * 0.1 * state.vizScale;
+                
+                for (let ring = 0; ring < rings; ring++) {
+                    const radius = baseRadius * (ring + 1);
+                    const segments = 60;
+                    
+                    ctx.beginPath();
+                    for (let i = 0; i <= segments; i++) {
+                        const angle = (i / segments) * Math.PI * 2 + rotation * (ring + 1) * 0.1;
+                        const dataIndex = Math.floor((i + ring * 10) / (segments + rings * 10) * dataArray.length);
+                        const wave = (dataArray[dataIndex] / 255) * 20;
+                        
+                        const x = centerX + Math.cos(angle) * (radius + wave);
+                        const y = centerY + Math.sin(angle) * (radius + wave);
+                        
+                        if (i === 0) ctx.moveTo(x, y);
+                        else ctx.lineTo(x, y);
+                    }
+                    
+                    const hue = (ring / rings) * 360;
+                    ctx.strokeStyle = `hsl(${hue}, 100%, 50%)`;
+                    ctx.lineWidth = 2;
+                    ctx.shadowBlur = state.vizGlow;
+                    ctx.shadowColor = `hsl(${hue}, 100%, 50%)`;
+                    ctx.stroke();
+                }
+                ctx.shadowBlur = 0;
+            },
 
-// Start when DOM is ready
-document.addEventListener('DOMContentLoaded', init);
-</script>
+            mirrorWave(ctx, centerX, centerY, dataArray) {
+                const waveHeight = config.height * 0.3 * state.vizScale;
+                const waveWidth = config.width;
+                const step = waveWidth / dataArray.length;
+                
+                // Верхняя волна
+                ctx.beginPath();
+                for (let i = 0; i < dataArray.length; i++) {
+                    const x = i * step;
+                    const y = centerY - (dataArray[i] / 255) * waveHeight;
+                    if (i === 0) ctx.moveTo(x, y);
+                    else ctx.lineTo(x, y);
+                }
+                
+                const gradient1 = ctx.createLinearGradient(0, centerY - waveHeight, 0, centerY);
+                gradient1.addColorStop(0, '#ff006e');
+                gradient1.addColorStop(1, 'rgba(255, 0, 110, 0)');
+                ctx.strokeStyle = gradient1;
+                ctx.lineWidth = 3;
+                ctx.shadowBlur = state.vizGlow;
+                ctx.shadowColor = '#ff006e';
+                ctx.stroke();
+                
+                // Нижняя волна (зеркальная)
+                ctx.beginPath();
+                for (let i = 0; i < dataArray.length; i++) {
+                    const x = i * step;
+                    const y = centerY + (dataArray[i] / 255) * waveHeight;
+                    if (i === 0) ctx.moveTo(x, y);
+                    else ctx.lineTo(x, y);
+                }
+                
+                const gradient2 = ctx.createLinearGradient(0, centerY, 0, centerY + waveHeight);
+                gradient2.addColorStop(0, 'rgba(0, 255, 200, 0)');
+                gradient2.addColorStop(1, '#00ffc8');
+                ctx.strokeStyle = gradient2;
+                ctx.stroke();
+                ctx.shadowBlur = 0;
+            },
+
+            hudTech3D(ctx, centerX, centerY, dataArray) {
+                const gridSize = 50;
+                const bassValue = dataArray.slice(0, 10).reduce((a, b) => a + b, 0) / 10;
+                
+                // Сетка
+                ctx.strokeStyle = `rgba(0, 255, 255, ${0.3 + bassValue / 255 * 0.4})`;
+                ctx.lineWidth = 1;
+                
+                for (let x = 0; x < config.width; x += gridSize) {
+                    ctx.beginPath();
+                    ctx.moveTo(x, 0);
+                    ctx.lineTo(x, config.height);
+                    ctx.stroke();
+                }
+                
+                for (let y = 0; y < config.height; y += gridSize) {
+                    ctx.beginPath();
+                    ctx.moveTo(0, y);
+                    ctx.lineTo(config.width, y);
+                    ctx.stroke();
+                }
+                
+                // Центральный элемент
+                const size = 100 * state.vizScale + bassValue / 2;
+                ctx.save();
+                ctx.translate(centerX, centerY);
+                ctx.rotate(rotation);
+                
+                ctx.strokeStyle = '#00ffff';
+                ctx.lineWidth = 3;
+                ctx.shadowBlur = state.vizGlow;
+                ctx.shadowColor = '#00ffff';
+                
+                ctx.strokeRect(-size/2, -size/2, size, size);
+                ctx.strokeRect(-size/4, -size/4, size/2, size/2);
+                
+                ctx.restore();
+                ctx.shadowBlur = 0;
+            },
+
+            landscape3D(ctx, centerX, centerY, dataArray) {
+                const horizon = centerY + 50;
+                const mountains = 5;
+                const mountainWidth = config.width / mountains;
+                
+                for (let m = 0; m < mountains; m++) {
+                    const startX = m * mountainWidth;
+                    const peaks = 20;
+                    
+                    ctx.beginPath();
+                    ctx.moveTo(startX, horizon);
+                    
+                    for (let p = 0; p <= peaks; p++) {
+                        const x = startX + (p / peaks) * mountainWidth;
+                        const dataIndex = Math.floor((m * peaks + p) / (mountains * peaks) * dataArray.length);
+                        const height = (dataArray[dataIndex] / 255) * config.height * 0.4 * state.vizScale;
+                        const y = horizon - height;
+                        ctx.lineTo(x, y);
+                    }
+                    
+                    ctx.lineTo(startX + mountainWidth, horizon);
+                    
+                    const gradient = ctx.createLinearGradient(0, horizon - config.height * 0.4, 0, horizon);
+                    gradient.addColorStop(0, `hsl(${200 + m * 40}, 80%, 60%)`);
+                    gradient.addColorStop(1, `hsla(${200 + m * 40}, 80%, 20%, 0.3)`);
+                    
+                    ctx.fillStyle = gradient;
+                    ctx.fill();
+                    ctx.strokeStyle = `hsl(${200 + m * 40}, 100%, 70%)`;
+                    ctx.lineWidth = 2;
+                    ctx.shadowBlur = state.vizGlow;
+                    ctx.shadowColor = `hsl(${200 + m * 40}, 100%, 70%)`;
+                    ctx.stroke();
+                }
+                ctx.shadowBlur = 0;
+            },
+
+            electricWave(ctx, centerX, centerY, dataArray) {
+                const segments = dataArray.length;
+                const amplitude = config.height * 0.2 * state.vizScale;
+                
+                for (let wave = 0; wave < 3; wave++) {
+                    ctx.beginPath();
+                    
+                    for (let i = 0; i < segments; i++) {
+                        const x = (i / segments) * config.width;
+                        const waveOffset = wave * Math.PI / 3;
+                        const baseY = centerY + Math.sin(i * 0.05 + time + waveOffset) * 20;
+                        const dataY = (dataArray[i] / 255) * amplitude * Math.sin(i * 0.1 + time);
+                        const y = baseY + dataY;
+                        
+                        if (i === 0) ctx.moveTo(x, y);
+                        else ctx.lineTo(x, y);
+                    }
+                    
+                    const colors = ['#ff0080', '#0080ff', '#80ff00'];
+                    ctx.strokeStyle = colors[wave];
+                    ctx.lineWidth = 3;
+                    ctx.shadowBlur = state.vizGlow;
+                    ctx.shadowColor = colors[wave];
+                    ctx.stroke();
+                }
+                ctx.shadowBlur = 0;
+            },
+
+            soundPressure3D(ctx, centerX, centerY, dataArray) {
+                const cubes = 15;
+                const cubeSize = 30 * state.vizScale;
+                const spacing = 40;
+                const startX = centerX - (cubes * spacing) / 2;
+                
+                for (let i = 0; i < cubes; i++) {
+                    for (let j = 0; j < cubes; j++) {
+                        const x = startX + i * spacing;
+                        const y = centerY - (cubes * spacing) / 2 + j * spacing;
+                        const dataIndex = Math.floor(((i + j) / (cubes * 2)) * dataArray.length);
+                        const pressure = dataArray[dataIndex] / 255;
+                        
+                        if (pressure > 0.1) {
+                            const size = cubeSize * pressure;
+                            const depth = size * 0.5;
+                            
+                            // Основной куб
+                            ctx.fillStyle = `hsl(${pressure * 360}, 100%, ${50 + pressure * 30}%)`;
+                            ctx.shadowBlur = state.vizGlow * pressure;
+                            ctx.shadowColor = `hsl(${pressure * 360}, 100%, 50%)`;
+                            ctx.fillRect(x - size/2, y - size/2, size, size);
+                            
+                            // 3D эффект
+                            ctx.fillStyle = `hsl(${pressure * 360}, 100%, ${30 + pressure * 20}%)`;
+                            ctx.fillRect(x - size/2 + depth, y - size/2 - depth, size, size);
+                            
+                            // Соединительные линии
+                            ctx.strokeStyle = `hsl(${pressure * 360}, 100%, 70%)`;
+                            ctx.lineWidth = 1;
+                            ctx.beginPath();
+                            ctx.moveTo(x - size/2, y - size/2);
+                            ctx.lineTo(x - size/2 + depth, y - size/2 - depth);
+                            ctx.moveTo(x + size/2, y - size/2);
+                            ctx.lineTo(x + size/2 + depth, y - size/2 - depth);
+                            ctx.moveTo(x - size/2, y + size/2);
+                            ctx.lineTo(x - size/2 + depth, y + size/2 - depth);
+                            ctx.moveTo(x + size/2, y + size/2);
+                            ctx.lineTo(x + size/2 + depth, y + size/2 - depth);
+                            ctx.stroke();
+                        }
+                    }
+                }
+                ctx.shadowBlur = 0;
+            },
+
+            waveformCircle(ctx, centerX, centerY, dataArray) {
+                const radius = Math.min(config.width, config.height) * 0.25 * state.vizScale;
+                const segments = 120;
+                
+                ctx.beginPath();
+                for (let i = 0; i < segments; i++) {
+                    const angle = (i / segments) * Math.PI * 2;
+                    const dataIndex = Math.floor((i / segments) * dataArray.length);
+                    const wave = (dataArray[dataIndex] / 255) * 50;
+                    const waveRadius = radius + wave * Math.sin(i * 0.2 + time);
+                    
+                    const x = centerX + Math.cos(angle) * waveRadius;
+                    const y = centerY + Math.sin(angle) * waveRadius;
+                    
+                    if (i === 0) ctx.moveTo(x, y);
+                    else ctx.lineTo(x, y);
+                }
+                ctx.closePath();
+                
+                const gradient = ctx.createRadialGradient(centerX, centerY, 0, centerX, centerY, radius + 50);
+                gradient.addColorStop(0, 'rgba(255, 100, 200, 0.8)');
+                gradient.addColorStop(0.7, 'rgba(100, 200, 255, 0.5)');
+                gradient.addColorStop(1, 'rgba(100, 255, 100, 0.2)');
+                
+                ctx.strokeStyle = gradient;
+                ctx.lineWidth = 4;
+                ctx.shadowBlur = state.vizGlow;
+                ctx.shadowColor = '#ff64c8';
+                ctx.stroke();
+                ctx.shadowBlur = 0;
+            },
+
+            purpleSpiral(ctx, centerX, centerY, dataArray) {
+                const maxRadius = Math.min(config.width, config.height) * 0.3 * state.vizScale;
+                const turns = 5;
+                const points = dataArray.length;
+                
+                ctx.beginPath();
+                for (let i = 0; i < points; i++) {
+                    const t = i / points;
+                    const angle = t * turns * Math.PI * 2 + rotation;
+                    const spiralRadius = t * maxRadius;
+                    const wave = (dataArray[i] / 255) * 20;
+                    const finalRadius = spiralRadius + wave;
+                    
+                    const x = centerX + Math.cos(angle) * finalRadius;
+                    const y = centerY + Math.sin(angle) * finalRadius;
+                    
+                    if (i === 0) ctx.moveTo(x, y);
+                    else ctx.lineTo(x, y);
+                }
+                
+                const gradient = ctx.createRadialGradient(centerX, centerY, 0, centerX, centerY, maxRadius);
+                gradient.addColorStop(0, '#8A2BE2');
+                gradient.addColorStop(0.5, '#DA70D6');
+                gradient.addColorStop(1, '#9370DB');
+                
+                ctx.strokeStyle = gradient;
+                ctx.lineWidth = 3;
+                ctx.shadowBlur = state.vizGlow;
+                ctx.shadowColor = '#8A2BE2';
+                ctx.stroke();
+                ctx.shadowBlur = 0;
+            },
+
+            eyeSpectrum3D(ctx, centerX, centerY, dataArray) {
+                const eyeWidth = 200 * state.vizScale;
+                const eyeHeight = 100 * state.vizScale;
+                const bass = dataArray.slice(0, 10).reduce((a, b) => a + b, 0) / 10;
+                
+                // Внешний контур глаза
+                ctx.beginPath();
+                ctx.ellipse(centerX, centerY, eyeWidth, eyeHeight, 0, 0, Math.PI * 2);
+                ctx.strokeStyle = '#00ffff';
+                ctx.lineWidth = 3;
+                ctx.shadowBlur = state.vizGlow;
+                ctx.shadowColor = '#00ffff';
+                ctx.stroke();
+                
+                // Зрачок с анимацией
+                const pupilSize = 30 + bass / 10;
+                ctx.beginPath();
+                ctx.arc(centerX, centerY, pupilSize, 0, Math.PI * 2);
+                ctx.fillStyle = '#000';
+				                ctx.fill();
+                
+                // Радужка
+                const irisGradient = ctx.createRadialGradient(centerX, centerY, 0, centerX, centerY, pupilSize * 2);
+                irisGradient.addColorStop(0, 'rgba(0, 255, 255, 0.8)');
+                irisGradient.addColorStop(1, 'rgba(0, 150, 255, 0.3)');
+                ctx.beginPath();
+                ctx.arc(centerX, centerY, pupilSize * 2, 0, Math.PI * 2);
+                ctx.fillStyle = irisGradient;
+                ctx.fill();
+                
+                // Спектральные лучи
+                for (let i = 0; i < dataArray.length; i += 4) {
+                    const angle = (i / dataArray.length) * Math.PI * 2;
+                    const intensity = dataArray[i] / 255;
+                    const rayLength = intensity * eyeWidth;
+                    
+                    if (rayLength > 10) {
+                        ctx.beginPath();
+                        ctx.moveTo(centerX, centerY);
+                        ctx.lineTo(
+                            centerX + Math.cos(angle) * rayLength,
+                            centerY + Math.sin(angle) * rayLength
+                        );
+                        ctx.strokeStyle = `hsla(${(i / dataArray.length) * 360}, 100%, 70%, ${intensity})`;
+                        ctx.lineWidth = 2;
+                        ctx.stroke();
+                    }
+                }
+                ctx.shadowBlur = 0;
+            },
+
+            centralBars(ctx, centerX, centerY, dataArray) {
+                const barCount = 64;
+                const maxBarHeight = config.height * 0.4 * state.vizScale;
+                const barWidth = 8;
+                const totalWidth = barCount * (barWidth + 2);
+                const startX = centerX - totalWidth / 2;
+                
+                for (let i = 0; i < barCount; i++) {
+                    const dataIndex = Math.floor((i / barCount) * dataArray.length);
+                    const barHeight = (dataArray[dataIndex] / 255) * maxBarHeight;
+                    const x = startX + i * (barWidth + 2);
+                    const y = centerY - barHeight / 2;
+                    
+                    const gradient = ctx.createLinearGradient(x, y, x, y + barHeight);
+                    gradient.addColorStop(0, '#ff4757');
+                    gradient.addColorStop(0.5, '#ffa502');
+                    gradient.addColorStop(1, '#ff6b6b');
+                    
+                    ctx.fillStyle = gradient;
+                    ctx.shadowBlur = state.vizGlow;
+                    ctx.shadowColor = '#ff4757';
+                    ctx.fillRect(x, y, barWidth, barHeight);
+                }
+                ctx.shadowBlur = 0;
+            },
+
+            doubleBars(ctx, centerX, centerY, dataArray) {
+                const barCount = 32;
+                const maxBarHeight = config.height * 0.35 * state.vizScale;
+                const barWidth = 10;
+                const spacing = 15;
+                
+                for (let i = 0; i < barCount; i++) {
+                    const dataIndex = Math.floor((i / barCount) * dataArray.length);
+                    const barHeight = (dataArray[dataIndex] / 255) * maxBarHeight;
+                    
+                    // Левые бары
+                    const leftX = centerX - (barCount / 2 * spacing) + i * spacing;
+                    ctx.fillStyle = `hsl(${200 + i * 5}, 100%, 60%)`;
+                    ctx.shadowBlur = state.vizGlow;
+                    ctx.shadowColor = `hsl(${200 + i * 5}, 100%, 60%)`;
+                    ctx.fillRect(leftX, centerY - barHeight, barWidth, barHeight);
+                    
+                    // Правые бары (зеркальные)
+                    ctx.fillRect(leftX, centerY, barWidth, barHeight);
+                }
+                ctx.shadowBlur = 0;
+            },
+
+            modernSpectrum(ctx, centerX, centerY, dataArray) {
+                const barCount = 128;
+                const maxHeight = config.height * 0.6 * state.vizScale;
+                const barWidth = config.width / barCount;
+                
+                for (let i = 0; i < barCount; i++) {
+                    const dataIndex = Math.floor((i / barCount) * dataArray.length);
+                    const height = (dataArray[dataIndex] / 255) * maxHeight;
+                    const x = i * barWidth;
+                    const y = config.height - height;
+                    
+                    const hue = (i / barCount) * 360;
+                    const gradient = ctx.createLinearGradient(x, y, x, config.height);
+                    gradient.addColorStop(0, `hsla(${hue}, 100%, 70%, 0.9)`);
+                    gradient.addColorStop(1, `hsla(${hue}, 100%, 30%, 0.3)`);
+                    
+                    ctx.fillStyle = gradient;
+                    ctx.fillRect(x, y, barWidth - 1, height);
+                    
+                    // Свечение сверху
+                    if (height > maxHeight * 0.7) {
+                        ctx.shadowBlur = state.vizGlow;
+                        ctx.shadowColor = `hsl(${hue}, 100%, 70%)`;
+                        ctx.fillRect(x, y - 5, barWidth - 1, 5);
+                        ctx.shadowBlur = 0;
+                    }
+                }
+            },
+
+            snowFlake(ctx, centerX, centerY, dataArray) {
+                const arms = 8;
+                const maxLength = Math.min(config.width, config.height) * 0.3 * state.vizScale;
+                
+                for (let arm = 0; arm < arms; arm++) {
+                    const angle = (arm / arms) * Math.PI * 2 + rotation * 0.1;
+                    const segments = 20;
+                    
+                    for (let seg = 0; seg < segments; seg++) {
+                        const t = seg / segments;
+                        const dataIndex = Math.floor((arm * segments + seg) / (arms * segments) * dataArray.length);
+                        const intensity = dataArray[dataIndex] / 255;
+                        const length = t * maxLength * intensity;
+                        
+                        const x = centerX + Math.cos(angle) * length;
+                        const y = centerY + Math.sin(angle) * length;
+                        
+                        // Основная ветка
+                        ctx.beginPath();
+                        ctx.moveTo(centerX, centerY);
+                        ctx.lineTo(x, y);
+                        ctx.strokeStyle = `hsla(${200 + intensity * 60}, 100%, 80%, ${intensity})`;
+                        ctx.lineWidth = 3 * intensity;
+                        ctx.shadowBlur = state.vizGlow * intensity;
+                        ctx.shadowColor = `hsl(${200 + intensity * 60}, 100%, 80%)`;
+                        ctx.stroke();
+                        
+                        // Боковые веточки
+                        if (seg % 3 === 0 && intensity > 0.3) {
+                            const branchLength = length * 0.3;
+                            const branchAngle1 = angle + Math.PI / 6;
+                            const branchAngle2 = angle - Math.PI / 6;
+                            
+                            ctx.beginPath();
+                            ctx.moveTo(x, y);
+                            ctx.lineTo(x + Math.cos(branchAngle1) * branchLength, y + Math.sin(branchAngle1) * branchLength);
+                            ctx.moveTo(x, y);
+                            ctx.lineTo(x + Math.cos(branchAngle2) * branchLength, y + Math.sin(branchAngle2) * branchLength);
+                            ctx.lineWidth = 2 * intensity;
+                            ctx.stroke();
+                        }
+                    }
+                }
+                ctx.shadowBlur = 0;
+            },
+
+            rippleWaves(ctx, centerX, centerY, dataArray) {
+                const maxRipples = 15;
+                const maxRadius = Math.min(config.width, config.height) * 0.6;
+                const bassAvg = dataArray.slice(0, 20).reduce((a, b) => a + b, 0) / 20;
+                
+                for (let i = 0; i < maxRipples; i++) {
+                    const rippleTime = (time * state.vizSpeed + i * 0.5) % 10;
+                    const radius = (rippleTime / 10) * maxRadius;
+                    const dataIndex = Math.floor((i / maxRipples) * dataArray.length);
+                    const intensity = (dataArray[dataIndex] / 255) * (1 - rippleTime / 10);
+                    
+                    if (intensity > 0.1) {
+                        ctx.beginPath();
+                        ctx.arc(centerX, centerY, radius, 0, Math.PI * 2);
+                        
+                        const alpha = intensity * (1 - rippleTime / 10);
+                        const hue = (rippleTime * 36 + bassAvg) % 360;
+                        ctx.strokeStyle = `hsla(${hue}, 100%, 60%, ${alpha})`;
+                        ctx.lineWidth = 3 * intensity;
+                        ctx.shadowBlur = state.vizGlow * intensity;
+                        ctx.shadowColor = `hsl(${hue}, 100%, 60%)`;
+                        ctx.stroke();
+                    }
+                }
+                ctx.shadowBlur = 0;
+            },
+
+            galaxySpiral(ctx, centerX, centerY, dataArray) {
+                const arms = 3;
+                const maxRadius = Math.min(config.width, config.height) * 0.4 * state.vizScale;
+                const points = dataArray.length;
+                
+                for (let arm = 0; arm < arms; arm++) {
+                    const armOffset = (arm / arms) * Math.PI * 2;
+                    ctx.beginPath();
+                    
+                    for (let i = 0; i < points; i++) {
+                        const t = i / points;
+                        const spiralRadius = t * maxRadius;
+                        const angle = t * 4 * Math.PI + armOffset + rotation * 0.5;
+                        const intensity = dataArray[i] / 255;
+                        
+                        const x = centerX + Math.cos(angle) * spiralRadius;
+                        const y = centerY + Math.sin(angle) * spiralRadius;
+                        
+                        if (intensity > 0.2) {
+                            ctx.beginPath();
+                            ctx.arc(x, y, intensity * 4, 0, Math.PI * 2);
+                            
+                            const hue = (t * 360 + arm * 120) % 360;
+                            ctx.fillStyle = `hsla(${hue}, 100%, 70%, ${intensity})`;
+                            ctx.shadowBlur = state.vizGlow * intensity;
+                            ctx.shadowColor = `hsl(${hue}, 100%, 70%)`;
+                            ctx.fill();
+                        }
+                    }
+                }
+                ctx.shadowBlur = 0;
+            },
+
+            particleField(ctx, centerX, centerY, dataArray) {
+                const particleCount = 200;
+                const fieldSize = Math.min(config.width, config.height) * 0.8;
+                
+                for (let i = 0; i < particleCount; i++) {
+                    const angle = (i / particleCount) * Math.PI * 2;
+                    const distance = Math.random() * fieldSize * 0.5;
+                    const dataIndex = Math.floor((i / particleCount) * dataArray.length);
+                    const intensity = dataArray[dataIndex] / 255;
+                    
+                    if (intensity > 0.1) {
+                        const x = centerX + Math.cos(angle + time * 0.1) * distance;
+                        const y = centerY + Math.sin(angle + time * 0.1) * distance;
+                        const size = intensity * 8 * state.vizScale;
+                        
+                        ctx.beginPath();
+                        ctx.arc(x, y, size, 0, Math.PI * 2);
+                        
+                        const hue = (intensity * 360 + time * 50) % 360;
+                        ctx.fillStyle = `hsla(${hue}, 100%, 60%, ${intensity})`;
+                        ctx.shadowBlur = state.vizGlow * intensity;
+                        ctx.shadowColor = `hsl(${hue}, 100%, 60%)`;
+                        ctx.fill();
+                    }
+                }
+                ctx.shadowBlur = 0;
+            },
+
+            heartBeat(ctx, centerX, centerY, dataArray) {
+                const bassValue = dataArray.slice(0, 10).reduce((a, b) => a + b, 0) / 10;
+                const heartSize = (50 + bassValue / 2) * state.vizScale;
+                const pulse = Math.sin(time * 8) * 0.2 + 1;
+                
+                ctx.save();
+                ctx.translate(centerX, centerY);
+                ctx.scale(pulse, pulse);
+                
+                // Рисуем сердце
+                ctx.beginPath();
+                ctx.moveTo(0, heartSize * 0.3);
+                
+                // Левая половина сердца
+                ctx.bezierCurveTo(-heartSize * 0.5, -heartSize * 0.2, -heartSize, -heartSize * 0.2, -heartSize * 0.5, heartSize * 0.1);
+                ctx.bezierCurveTo(-heartSize * 0.5, heartSize * 0.3, 0, heartSize * 0.7, 0, heartSize);
+                
+                // Правая половина сердца
+                ctx.bezierCurveTo(0, heartSize * 0.7, heartSize * 0.5, heartSize * 0.3, heartSize * 0.5, heartSize * 0.1);
+                ctx.bezierCurveTo(heartSize, -heartSize * 0.2, heartSize * 0.5, -heartSize * 0.2, 0, heartSize * 0.3);
+                
+                const intensity = bassValue / 255;
+                const gradient = ctx.createRadialGradient(0, 0, 0, 0, 0, heartSize);
+                gradient.addColorStop(0, `rgba(255, 20, 147, ${0.8 + intensity * 0.2})`);
+                gradient.addColorStop(1, `rgba(220, 20, 60, ${0.3 + intensity * 0.3})`);
+                
+                ctx.fillStyle = gradient;
+                ctx.shadowBlur = state.vizGlow * (1 + intensity);
+                ctx.shadowColor = '#ff1493';
+                ctx.fill();
+                
+                ctx.restore();
+                ctx.shadowBlur = 0;
+            },
+
+            matrix3D(ctx, centerX, centerY, dataArray) {
+                const cols = 20;
+                const rows = 15;
+                const cellSize = 25 * state.vizScale;
+                const startX = centerX - (cols * cellSize) / 2;
+                const startY = centerY - (rows * cellSize) / 2;
+                
+                for (let col = 0; col < cols; col++) {
+                    for (let row = 0; row < rows; row++) {
+                        const dataIndex = Math.floor(((col + row) / (cols + rows)) * dataArray.length);
+                        const intensity = dataArray[dataIndex] / 255;
+                        
+                        if (intensity > 0.3) {
+                            const x = startX + col * cellSize;
+                            const y = startY + row * cellSize;
+                            const char = String.fromCharCode(0x30A0 + Math.floor(Math.random() * 96));
+                            
+                            ctx.font = `${cellSize * 0.8}px monospace`;
+                            ctx.fillStyle = `hsla(120, 100%, ${50 + intensity * 50}%, ${intensity})`;
+                            ctx.shadowBlur = state.vizGlow * intensity;
+                            ctx.shadowColor = '#00ff00';
+                            ctx.fillText(char, x, y + cellSize);
+                        }
+                    }
+                }
+                ctx.shadowBlur = 0;
+            },
+
+            dnaHelix(ctx, centerX, centerY, dataArray) {
+                const helixHeight = config.height * 0.8;
+                const helixWidth = 100 * state.vizScale;
+                const segments = dataArray.length / 2;
+                
+                for (let i = 0; i < segments; i++) {
+                    const t = i / segments;
+                    const y = centerY - helixHeight / 2 + t * helixHeight;
+                    const angle = t * Math.PI * 8 + time;
+                    
+                    const intensity1 = dataArray[i * 2] / 255;
+                    const intensity2 = dataArray[i * 2 + 1] / 255;
+                    
+                    // Левая спираль
+                    const x1 = centerX + Math.cos(angle) * helixWidth * intensity1;
+                    ctx.beginPath();
+                    ctx.arc(x1, y, 3 * intensity1, 0, Math.PI * 2);
+                    ctx.fillStyle = `hsla(200, 100%, 60%, ${intensity1})`;
+                    ctx.shadowBlur = state.vizGlow * intensity1;
+                    ctx.shadowColor = '#00bfff';
+                    ctx.fill();
+                    
+                    // Правая спираль
+                    const x2 = centerX + Math.cos(angle + Math.PI) * helixWidth * intensity2;
+                    ctx.beginPath();
+                    ctx.arc(x2, y, 3 * intensity2, 0, Math.PI * 2);
+                    ctx.fillStyle = `hsla(300, 100%, 60%, ${intensity2})`;
+                    ctx.shadowColor = '#ff00ff';
+                    ctx.fill();
+                    
+                    // Соединительные линии
+                    if (intensity1 > 0.2 && intensity2 > 0.2) {
+                        ctx.beginPath();
+                        ctx.moveTo(x1, y);
+                        ctx.lineTo(x2, y);
+                        ctx.strokeStyle = `hsla(${t * 360}, 100%, 70%, ${(intensity1 + intensity2) / 2})`;
+                        ctx.lineWidth = 2;
+                        ctx.stroke();
+                    }
+                }
+                ctx.shadowBlur = 0;
+            },
+
+            quantumField(ctx, centerX, centerY, dataArray) {
+                const gridSize = 40;
+                const cols = Math.floor(config.width / gridSize);
+                const rows = Math.floor(config.height / gridSize);
+                
+                for (let x = 0; x < cols; x++) {
+                    for (let y = 0; y < rows; y++) {
+                        const posX = x * gridSize;
+                        const posY = y * gridSize;
+                        const dataIndex = Math.floor(((x + y) / (cols + rows)) * dataArray.length);
+                        const intensity = dataArray[dataIndex] / 255;
+                        
+                        if (intensity > 0.1) {
+                            const waveX = Math.sin((x + time) * 0.1) * 10;
+                            const waveY = Math.cos((y + time) * 0.1) * 10;
+                            
+                            ctx.beginPath();
+                            ctx.arc(posX + waveX, posY + waveY, intensity * 15, 0, Math.PI * 2);
+                            
+                            const hue = ((x + y) * 10 + time * 50) % 360;
+                            ctx.fillStyle = `hsla(${hue}, 100%, 50%, ${intensity * 0.7})`;
+                            ctx.shadowBlur = state.vizGlow * intensity;
+                            ctx.shadowColor = `hsl(${hue}, 100%, 50%)`;
+                            ctx.fill();
+                            
+                            // Квантовые связи
+                            if (Math.random() < intensity * 0.1) {
+                                const targetX = (x + Math.floor(Math.random() * 3 - 1)) * gridSize;
+                                const targetY = (y + Math.floor(Math.random() * 3 - 1)) * gridSize;
+                                
+                                ctx.beginPath();
+                                ctx.moveTo(posX + waveX, posY + waveY);
+                                ctx.lineTo(targetX, targetY);
+                                ctx.strokeStyle = `hsla(${hue}, 100%, 70%, ${intensity * 0.3})`;
+                                ctx.lineWidth = 1;
+                                ctx.stroke();
+                            }
+                        }
+                    }
+                }
+                ctx.shadowBlur = 0;
+            },
+
+            neurNetwork(ctx, centerX, centerY, dataArray) {
+                const neurons = 50;
+                const maxDistance = Math.min(config.width, config.height) * 0.4;
+                const nodes = [];
+                
+                // Создаем узлы
+                for (let i = 0; i < neurons; i++) {
+                    const angle = (i / neurons) * Math.PI * 2;
+                    const distance = Math.random() * maxDistance;
+                    const dataIndex = Math.floor((i / neurons) * dataArray.length);
+                    const activity = dataArray[dataIndex] / 255;
+                    
+                    nodes.push({
+                        x: centerX + Math.cos(angle) * distance,
+                        y: centerY + Math.sin(angle) * distance,
+                        activity: activity,
+                        size: 3 + activity * 7
+                    });
+                }
+                
+                // Рисуем связи
+                ctx.lineWidth = 1;
+                for (let i = 0; i < nodes.length; i++) {
+                    for (let j = i + 1; j < nodes.length; j++) {
+                        const node1 = nodes[i];
+                        const node2 = nodes[j];
+                        const distance = Math.hypot(node1.x - node2.x, node1.y - node2.y);
+                        
+                        if (distance < 150 && (node1.activity > 0.2 || node2.activity > 0.2)) {
+                            const strength = Math.min(node1.activity, node2.activity);
+                            ctx.beginPath();
+                            ctx.moveTo(node1.x, node1.y);
+                            ctx.lineTo(node2.x, node2.y);
+                            ctx.strokeStyle = `hsla(60, 100%, 50%, ${strength * 0.5})`;
+                            ctx.stroke();
+                        }
+                    }
+                }
+                
+                // Рисуем узлы
+                nodes.forEach((node, i) => {
+                    if (node.activity > 0.1) {
+                        ctx.beginPath();
+                        ctx.arc(node.x, node.y, node.size * state.vizScale, 0, Math.PI * 2);
+                        
+                        const hue = (i * 10 + node.activity * 100) % 360;
+                        ctx.fillStyle = `hsla(${hue}, 100%, 60%, ${node.activity})`;
+                        ctx.shadowBlur = state.vizGlow * node.activity;
+                        ctx.shadowColor = `hsl(${hue}, 100%, 60%)`;
+                        ctx.fill();
+                    }
+                });
+                ctx.shadowBlur = 0;
+            },
+
+            cosmicRing(ctx, centerX, centerY, dataArray) {
+                const rings = 12;
+                const maxRadius = Math.min(config.width, config.height) * 0.4 * state.vizScale;
+                
+                for (let ring = 0; ring < rings; ring++) {
+                    const ringRadius = ((ring + 1) / rings) * maxRadius;
+                    const segments = 60;
+                    const dataSlice = Math.floor((ring / rings) * dataArray.length);
+                    const intensity = dataArray[dataSlice] / 255;
+                    
+                    if (intensity > 0.1) {
+                        ctx.beginPath();
+                        for (let seg = 0; seg <= segments; seg++) {
+                            const angle = (seg / segments) * Math.PI * 2 + rotation * (ring + 1) * 0.05;
+                            const wave = Math.sin(seg * 0.2 + time + ring) * intensity * 10;
+                            const finalRadius = ringRadius + wave;
+                            
+                            const x = centerX + Math.cos(angle) * finalRadius;
+                            const y = centerY + Math.sin(angle) * finalRadius;
+                            
+                            if (seg === 0) ctx.moveTo(x, y);
+                            else ctx.lineTo(x, y);
+                        }
+                        
+                        const hue = (ring * 30 + time * 20) % 360;
+                        const gradient = ctx.createRadialGradient(centerX, centerY, ringRadius - 10, centerX, centerY, ringRadius + 10);
+                        gradient.addColorStop(0, `hsla(${hue}, 100%, 70%, ${intensity})`);
+                        gradient.addColorStop(1, `hsla(${hue + 60}, 100%, 50%, ${intensity * 0.3})`);
+                        
+                        ctx.strokeStyle = gradient;
+                        ctx.lineWidth = 3;
+                        ctx.shadowBlur = state.vizGlow * intensity;
+                        ctx.shadowColor = `hsl(${hue}, 100%, 70%)`;
+                        ctx.stroke();
+                    }
+                }
+                ctx.shadowBlur = 0;
+            },
+
+            synthWave(ctx, centerX, centerY, dataArray) {
+                const horizon = centerY + 100;
+                const gridSpacing = 30;
+                const bassValue = dataArray.slice(0, 20).reduce((a, b) => a + b, 0) / 20;
+                
+                // Фоновая сетка
+                ctx.strokeStyle = `rgba(255, 0, 128, ${0.3 + bassValue / 500})`;
+                ctx.lineWidth = 1;
+                
+                // Вертикальные линии
+                for (let x = 0; x < config.width; x += gridSpacing) {
+                    ctx.beginPath();
+                    ctx.moveTo(x, horizon);
+                    ctx.lineTo(x, config.height);
+                    ctx.stroke();
+                }
+                
+                // Горизонтальные линии с перспективой
+                for (let y = horizon; y < config.height; y += gridSpacing) {
+                    const perspective = (y - horizon) / (config.height - horizon);
+                    ctx.beginPath();
+                    ctx.moveTo(0, y);
+                    ctx.lineTo(config.width, y);
+                    ctx.globalAlpha = 1 - perspective * 0.7;
+                    ctx.stroke();
+                }
+                ctx.globalAlpha = 1;
+                
+                // Горы на горизонте
+                const mountains = 8;
+                const mountainWidth = config.width / mountains;
+                
+                ctx.beginPath();
+                ctx.moveTo(0, horizon);
+                
+                for (let m = 0; m <= mountains; m++) {
+                    const x = (m / mountains) * config.width;
+                    const dataIndex = Math.floor((m / mountains) * dataArray.length);
+                    const height = (dataArray[dataIndex] / 255) * 150 * state.vizScale;
+                    const y = horizon - height;
+                    
+                    ctx.lineTo(x, y);
+                }
+                
+                ctx.lineTo(config.width, horizon);
+                ctx.closePath();
+                
+                const mountainGradient = ctx.createLinearGradient(0, horizon - 150, 0, horizon);
+                mountainGradient.addColorStop(0, 'rgba(255, 20, 147, 0.8)');
+                mountainGradient.addColorStop(1, 'rgba(138, 43, 226, 0.4)');
+                
+                ctx.fillStyle = mountainGradient;
+                ctx.fill();
+                
+                // Солнце
+                const sunSize = 60 + bassValue / 5;
+                ctx.beginPath();
+                ctx.arc(centerX, horizon - 80, sunSize, 0, Math.PI * 2);
+                
+                const sunGradient = ctx.createRadialGradient(centerX, horizon - 80, 0, centerX, horizon - 80, sunSize);
+                sunGradient.addColorStop(0, '#ffff00');
+                sunGradient.addColorStop(0.7, '#ff4500');
+                sunGradient.addColorStop(1, 'rgba(255, 69, 0, 0)');
+                
+                ctx.fillStyle = sunGradient;
+                ctx.shadowBlur = state.vizGlow * 2;
+                ctx.shadowColor = '#ff4500';
+                ctx.fill();
+                ctx.shadowBlur = 0;
+            },
+
+            hologram3D(ctx, centerX, centerY, dataArray) {
+                const layers = 8;
+                const maxSize = Math.min(config.width, config.height) * 0.3 * state.vizScale;
+                
+                for (let layer = 0; layer < layers; layer++) {
+                    const layerProgress = layer / layers;
+                    const size = maxSize * (1 - layerProgress * 0.3);
+                    const depth = layer * 15;
+                    const dataIndex = Math.floor(layerProgress * dataArray.length);
+                    const intensity = dataArray[dataIndex] / 255;
+                    
+                    if (intensity > 0.1) {
+                        ctx.save();
+                        ctx.translate(centerX + depth, centerY - depth);
+                        ctx.rotate(rotation + layerProgress);
+                        
+                        // Основная фигура
+                        ctx.beginPath();
+                        ctx.rect(-size/2, -size/2, size, size);
+                                                const alpha = intensity * (1 - layerProgress * 0.5);
+                        const hue = (layerProgress * 180 + time * 30) % 360;
+                        
+                        ctx.strokeStyle = `hsla(${hue}, 100%, 70%, ${alpha})`;
+                        ctx.lineWidth = 2;
+                        ctx.shadowBlur = state.vizGlow * alpha;
+                        ctx.shadowColor = `hsl(${hue}, 100%, 70%)`;
+                        ctx.stroke();
+                        
+                        // Голографические линии
+                        const lines = 8;
+                        for (let i = 0; i < lines; i++) {
+                            const lineProgress = i / lines;
+                            const y = -size/2 + lineProgress * size;
+                            
+                            ctx.beginPath();
+                            ctx.moveTo(-size/2, y);
+                            ctx.lineTo(size/2, y);
+                            ctx.strokeStyle = `hsla(${hue + 60}, 100%, 80%, ${alpha * 0.5})`;
+                            ctx.lineWidth = 1;
+                            ctx.stroke();
+                        }
+                        
+                        ctx.restore();
+                    }
+                }
+                ctx.shadowBlur = 0;
+            }
+        };
+
+        // Функция выбора случайного визуализатора
+        function getRandomVisualizer() {
+            const keys = Object.keys(visualizers);
+            return keys[Math.floor(Math.random() * keys.length)];
+        }
+
+        // Инициализация Canvas
+        function initCanvas() {
+            canvas.width = config.width;
+            canvas.height = config.height;
+            ctx.imageSmoothingEnabled = true;
+        }
+
+        // Основная функция рендеринга
+        function render() {
+            if (!isPlaying) return;
+
+            analyser.getByteFrequencyData(dataArray);
+            
+            // Очистка canvas с эффектом следа
+            if (state.vizTrail) {
+                ctx.fillStyle = `rgba(${bgColors.r}, ${bgColors.g}, ${bgColors.b}, ${1 - state.vizTrail})`;
+                ctx.fillRect(0, 0, config.width, config.height);
+            } else {
+                ctx.clearRect(0, 0, config.width, config.height);
+                
+                // Градиентный фон
+                if (state.vizBackground) {
+                    const bgGradient = ctx.createLinearGradient(0, 0, config.width, config.height);
+                    bgGradient.addColorStop(0, `rgba(${bgColors.r}, ${bgColors.g}, ${bgColors.b}, 0.1)`);
+                    bgGradient.addColorStop(1, `rgba(${bgColors.r + 20}, ${bgColors.g + 20}, ${bgColors.b + 20}, 0.05)`);
+                    ctx.fillStyle = bgGradient;
+                    ctx.fillRect(0, 0, config.width, config.height);
+                }
+            }
+
+            // Обновление времени и вращения
+            time = performance.now() * 0.001;
+            rotation += state.vizSpeed * 0.02;
+
+            // Вычисление центра
+            const centerX = config.width / 2;
+            const centerY = config.height / 2;
+
+            // Рендер текущего визуализатора
+            ctx.save();
+            
+            if (visualizers[state.currentVisualizer]) {
+                visualizers[state.currentVisualizer](ctx, centerX, centerY, dataArray);
+            }
+
+            // Автосмена визуализатора
+            if (state.autoChange && time - lastVisualizerChange > state.changeInterval) {
+                state.currentVisualizer = getRandomVisualizer();
+                lastVisualizerChange = time;
+                
+                // Обновление UI
+                const select = document.getElementById('visualizerSelect');
+                if (select) {
+                    select.value = state.currentVisualizer;
+                }
+            }
+
+            ctx.restore();
+
+            // Информационная панель
+            if (state.showInfo) {
+                drawInfo();
+            }
+
+            requestAnimationFrame(render);
+        }
+
+        // Функция отображения информации
+        function drawInfo() {
+            const bassLevel = dataArray.slice(0, 10).reduce((a, b) => a + b, 0) / 10;
+            const midLevel = dataArray.slice(10, 50).reduce((a, b) => a + b, 0) / 40;
+            const trebleLevel = dataArray.slice(50).reduce((a, b) => a + b, 0) / (dataArray.length - 50);
+
+            ctx.save();
+            ctx.fillStyle = 'rgba(0, 0, 0, 0.7)';
+            ctx.fillRect(10, 10, 200, 120);
+            
+            ctx.fillStyle = '#ffffff';
+            ctx.font = '14px Arial';
+            ctx.fillText(`Визуализатор: ${state.currentVisualizer}`, 20, 30);
+            ctx.fillText(`Бас: ${Math.round(bassLevel)}`, 20, 50);
+            ctx.fillText(`Средние: ${Math.round(midLevel)}`, 20, 70);
+            ctx.fillText(`Высокие: ${Math.round(trebleLevel)}`, 20, 90);
+            ctx.fillText(`FPS: ${Math.round(1000 / 16)}`, 20, 110);
+            ctx.restore();
+        }
+
+        // Инициализация приложения
+        function init() {
+            initCanvas();
+            
+            // Создание элементов управления
+            createControls();
+            
+            // Настройка Canvas для полноэкранного режима
+            function resizeCanvas() {
+                if (state.fullscreen) {
+                    canvas.width = window.innerWidth;
+                    canvas.height = window.innerHeight;
+                    config.width = canvas.width;
+                    config.height = canvas.height;
+                } else {
+                    canvas.width = config.width;
+                    canvas.height = config.height;
+                }
+            }
+
+            window.addEventListener('resize', resizeCanvas);
+            
+            // Обработчики клавиш
+            document.addEventListener('keydown', (e) => {
+                switch(e.key) {
+                    case ' ':
+                        e.preventDefault();
+                        togglePlayPause();
+                        break;
+                    case 'f':
+                    case 'F':
+                        toggleFullscreen();
+                        break;
+                    case 'n':
+                    case 'N':
+                        state.currentVisualizer = getRandomVisualizer();
+                        document.getElementById('visualizerSelect').value = state.currentVisualizer;
+                        break;
+                    case 'i':
+                    case 'I':
+                        state.showInfo = !state.showInfo;
+                        document.getElementById('showInfo').checked = state.showInfo;
+                        break;
+                }
+            });
+
+            console.log('Visualizer Pro загружен. Выберите аудиофайл для начала.');
+        }
+
+        // Создание элементов управления
+        function createControls() {
+            const container = document.getElementById('controls');
+            
+            container.innerHTML = `
+                <div class="control-group">
+                    <label for="audioFile">Выбрать аудиофайл:</label>
+                    <input type="file" id="audioFile" accept="audio/*">
+                    <button id="playPause">▶ Play</button>
+                </div>
+
+                <div class="control-group">
+                    <label for="visualizerSelect">Визуализатор:</label>
+                    <select id="visualizerSelect">
+                        ${Object.keys(visualizers).map(key => 
+                            `<option value="${key}">${key}</option>`
+                        ).join('')}
+                    </select>
+                </div>
+
+                <div class="control-group">
+                    <label for="autoChange">Автосмена:</label>
+                    <input type="checkbox" id="autoChange" ${state.autoChange ? 'checked' : ''}>
+                    
+                    <label for="changeInterval">Интервал (сек):</label>
+                    <input type="range" id="changeInterval" min="5" max="60" value="${state.changeInterval}" step="5">
+                    <span id="intervalValue">${state.changeInterval}s</span>
+                </div>
+
+                <div class="control-group">
+                    <label for="vizScale">Масштаб:</label>
+                    <input type="range" id="vizScale" min="0.1" max="3" value="${state.vizScale}" step="0.1">
+                    <span id="scaleValue">${state.vizScale}</span>
+                </div>
+
+                <div class="control-group">
+                    <label for="vizSpeed">Скорость:</label>
+                    <input type="range" id="vizSpeed" min="0.1" max="5" value="${state.vizSpeed}" step="0.1">
+                    <span id="speedValue">${state.vizSpeed}</span>
+                </div>
+
+                <div class="control-group">
+                    <label for="vizGlow">Свечение:</label>
+                    <input type="range" id="vizGlow" min="0" max="50" value="${state.vizGlow}" step="1">
+                    <span id="glowValue">${state.vizGlow}</span>
+                </div>
+
+                <div class="control-group">
+                    <label for="vizTrail">След:</label>
+                    <input type="range" id="vizTrail" min="0" max="0.95" value="${state.vizTrail}" step="0.05">
+                    <span id="trailValue">${state.vizTrail}</span>
+                </div>
+
+                <div class="control-group">
+                    <input type="checkbox" id="showInfo" ${state.showInfo ? 'checked' : ''}>
+                    <label for="showInfo">Показать инфо</label>
+                    
+                    <input type="checkbox" id="vizBackground" ${state.vizBackground ? 'checked' : ''}>
+                    <label for="vizBackground">Фон</label>
+                    
+                    <button id="fullscreen">⛶ Полный экран</button>
+                    <button id="randomViz">🎲 Случайный</button>
+                </div>
+
+                <div class="control-group">
+                    <label>Горячие клавиши:</label>
+                    <small>Пробел - Play/Pause, F - полный экран, N - случайный визуализатор, I - инфо</small>
+                </div>
+            `;
+
+            // Привязка событий
+            document.getElementById('audioFile').addEventListener('change', loadAudio);
+            document.getElementById('playPause').addEventListener('click', togglePlayPause);
+            document.getElementById('visualizerSelect').addEventListener('change', (e) => {
+                state.currentVisualizer = e.target.value;
+            });
+            
+            document.getElementById('autoChange').addEventListener('change', (e) => {
+                state.autoChange = e.target.checked;
+            });
+            
+            document.getElementById('changeInterval').addEventListener('input', (e) => {
+                state.changeInterval = parseInt(e.target.value);
+                document.getElementById('intervalValue').textContent = state.changeInterval + 's';
+            });
+
+            document.getElementById('vizScale').addEventListener('input', (e) => {
+                state.vizScale = parseFloat(e.target.value);
+                document.getElementById('scaleValue').textContent = state.vizScale;
+            });
+
+            document.getElementById('vizSpeed').addEventListener('input', (e) => {
+                state.vizSpeed = parseFloat(e.target.value);
+                document.getElementById('speedValue').textContent = state.vizSpeed;
+            });
+
+            document.getElementById('vizGlow').addEventListener('input', (e) => {
+                state.vizGlow = parseInt(e.target.value);
+                document.getElementById('glowValue').textContent = state.vizGlow;
+            });
+
+            document.getElementById('vizTrail').addEventListener('input', (e) => {
+                state.vizTrail = parseFloat(e.target.value);
+                document.getElementById('trailValue').textContent = state.vizTrail;
+            });
+
+            document.getElementById('showInfo').addEventListener('change', (e) => {
+                state.showInfo = e.target.checked;
+            });
+
+            document.getElementById('vizBackground').addEventListener('change', (e) => {
+                state.vizBackground = e.target.checked;
+            });
+
+            document.getElementById('fullscreen').addEventListener('click', toggleFullscreen);
+            document.getElementById('randomViz').addEventListener('click', () => {
+                state.currentVisualizer = getRandomVisualizer();
+                document.getElementById('visualizerSelect').value = state.currentVisualizer;
+            });
+        }
+
+        // Функция переключения полноэкранного режима
+        function toggleFullscreen() {
+            if (!document.fullscreenElement) {
+                document.documentElement.requestFullscreen().then(() => {
+                    state.fullscreen = true;
+                    canvas.width = window.innerWidth;
+                    canvas.height = window.innerHeight;
+                    config.width = canvas.width;
+                    config.height = canvas.height;
+                });
+            } else {
+                document.exitFullscreen().then(() => {
+                    state.fullscreen = false;
+                    canvas.width = 800;
+                    canvas.height = 600;
+                    config.width = canvas.width;
+                    config.height = canvas.height;
+                });
+            }
+        }
+
+        // Загрузка аудиофайла
+        function loadAudio(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+
+            const url = URL.createObjectURL(file);
+            
+            if (audio) {
+                audio.pause();
+                audio.src = '';
+                URL.revokeObjectURL(audio.src);
+            }
+
+            audio = new Audio(url);
+            audio.crossOrigin = 'anonymous';
+            
+            audio.addEventListener('loadeddata', () => {
+                setupAudioContext();
+                document.getElementById('playPause').disabled = false;
+                console.log('Аудиофайл загружен:', file.name);
+            });
+
+            audio.addEventListener('error', (e) => {
+                console.error('Ошибка загрузки аудиофайла:', e);
+                alert('Не удалось загрузить аудиофайл. Проверьте формат файла.');
+            });
+        }
+
+        // Настройка аудиоконтекста
+        function setupAudioContext() {
+            if (audioContext) {
+                audioContext.close();
+            }
+
+            audioContext = new (window.AudioContext || window.webkitAudioContext)();
+            analyser = audioContext.createAnalyser();
+            analyser.fftSize = 512;
+            analyser.smoothingTimeConstant = 0.8;
+
+            const source = audioContext.createMediaElementSource(audio);
+            source.connect(analyser);
+            analyser.connect(audioContext.destination);
+
+            dataArray = new Uint8Array(analyser.frequencyBinCount);
+        }
+
+        // Переключение воспроизведения
+        function togglePlayPause() {
+            if (!audio) {
+                alert('Сначала выберите аудиофайл');
+                return;
+            }
+
+            if (audioContext.state === 'suspended') {
+                audioContext.resume();
+            }
+
+            if (audio.paused) {
+                audio.play();
+                isPlaying = true;
+                document.getElementById('playPause').textContent = '⏸ Pause';
+                if (!animationStarted) {
+                    render();
+                    animationStarted = true;
+                }
+            } else {
+                audio.pause();
+                isPlaying = false;
+                document.getElementById('playPause').textContent = '▶ Play';
+            }
+        }
+
+        // Запуск приложения
+        init();
+
+    </script>
 </body>
 </html>
+                        
