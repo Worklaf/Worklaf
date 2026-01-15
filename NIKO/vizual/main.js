@@ -44,13 +44,33 @@ const state = {
   volume: 0.7
 };
 
-// ============== ИНИЦИАЛИЗАЦИЯ ==============
-window.addEventListener('DOMContentLoaded', init);
+// ========== INITIALIZATION ==========
 
+// Tab switching функция
+window.switchTab = function(tabName) {
+  console.log('📑 Переключение на вкладку:', tabName);
+  
+  // Деактивируем все табы
+  document.querySelectorAll('.tab-btn').forEach(btn => {
+    btn.classList.remove('active');
+  });
+  document.querySelectorAll('.tab-content').forEach(content => {
+    content.classList.remove('active');
+  });
+  
+  // Активируем выбранный таб
+  const button = document.querySelector(`[onclick="switchTab('${tabName}')"]`);
+  const content = document.getElementById(tabName);
+  
+  if (button) button.classList.add('active');
+  if (content) content.classList.add('active');
+};
+
+// Инициализация
 function init() {
   console.log('🎵 Инициализация Audio Visualizer...');
   
-  // Canvas
+  // Canvas setup
   canvas = document.getElementById('visualizer');
   if (!canvas) {
     console.error('❌ Canvas не найден!');
@@ -58,37 +78,165 @@ function init() {
   }
   
   ctx = canvas.getContext('2d');
-  canvas.style.zIndex = '0'; // <- Добавьте эту строку!
+  canvas.style.zIndex = '0'; // На задний план
   
   resizeCanvas();
   window.addEventListener('resize', resizeCanvas);
   
-  // Effects Engine
-  effectsEngine = new EffectsEngine();
-  effectsEngine.initParticles(200, canvas.width, canvas.height);
+  // Audio context (создается при первом взаимодействии)
+  setupEventListeners();
   
-  // UI Events
-  setupUIEvents();
+  // Запуск рендера
+  render();
   
-  // Генерируем списки визуализаций
-  populateVisualizerLists();
-  
-  // Загружаем сохраненные настройки
-  loadSettings();
-  
-  // Первый рендер
-  renderFrame();
+  // Активируем первую вкладку
+  switchTab('visualizer');
   
   console.log('✅ Инициализация завершена');
 }
 
-function resizeCanvas() {
-  canvas.width = window.innerWidth;
-  canvas.height = window.innerHeight;
+// Setup Event Listeners
+function setupEventListeners() {
+  console.log('🎧 Настройка обработчиков событий...');
   
-  if (effectsEngine) {
-    effectsEngine.initParticles(state.particleAmount, canvas.width, canvas.height);
+  // File input
+  const fileInput = document.getElementById('audioFile');
+  if (fileInput) {
+    fileInput.addEventListener('change', handleFileSelect);
   }
+  
+  // Play/Pause button
+  const playBtn = document.getElementById('playBtn');
+  if (playBtn) {
+    playBtn.addEventListener('click', togglePlayPause);
+  }
+  
+  // Progress bar
+  const progressBar = document.getElementById('progressBar');
+  if (progressBar) {
+    progressBar.addEventListener('input', (e) => {
+      if (audio && audio.duration) {
+        audio.currentTime = (e.target.value / 100) * audio.duration;
+      }
+    });
+  }
+  
+  // Visualizer selection
+  document.querySelectorAll('.viz-option').forEach(option => {
+    option.addEventListener('click', function() {
+      const vizType = this.dataset.viz;
+      if (vizType) {
+        setVisualizerType(vizType);
+      }
+    });
+  });
+  
+  // Color controls
+  const colorInputs = {
+    'color1': (value) => { vizSettings.color1 = value; },
+    'color2': (value) => { vizSettings.color2 = value; },
+    'bgColor': (value) => { vizSettings.backgroundColor = value; }
+  };
+  
+  Object.keys(colorInputs).forEach(id => {
+    const input = document.getElementById(id);
+    if (input) {
+      input.addEventListener('input', (e) => colorInputs[id](e.target.value));
+    }
+  });
+  
+  // Range sliders with live updates
+  const rangeInputs = {
+    'barWidth': (value) => { 
+      vizSettings.barWidth = parseFloat(value);
+      document.getElementById('barWidthValue').textContent = value;
+    },
+    'barSpacing': (value) => { 
+      vizSettings.barSpacing = parseFloat(value);
+      document.getElementById('barSpacingValue').textContent = value;
+    },
+    'sensitivity': (value) => { 
+      vizSettings.sensitivity = parseFloat(value);
+      document.getElementById('sensitivityValue').textContent = value;
+    },
+    'smoothing': (value) => { 
+      if (analyser) analyser.smoothingTimeConstant = parseFloat(value);
+      document.getElementById('smoothingValue').textContent = value;
+    },
+    'rotationSpeed': (value) => { 
+      vizSettings.rotationSpeed = parseFloat(value);
+      document.getElementById('rotationSpeedValue').textContent = value;
+    },
+    'particleCount': (value) => { 
+      vizSettings.particleCount = parseInt(value);
+      document.getElementById('particleCountValue').textContent = value;
+      initParticles();
+    }
+  };
+  
+  Object.keys(rangeInputs).forEach(id => {
+    const input = document.getElementById(id);
+    if (input) {
+      input.addEventListener('input', (e) => rangeInputs[id](e.target.value));
+    }
+  });
+  
+  // Checkboxes
+  const checkboxes = {
+    'mirrorEffect': (checked) => { vizSettings.mirrorEffect = checked; },
+    'glowEffect': (checked) => { vizSettings.glowEffect = checked; }
+  };
+  
+  Object.keys(checkboxes).forEach(id => {
+    const input = document.getElementById(id);
+    if (input) {
+      input.addEventListener('change', (e) => checkboxes[id](e.target.checked));
+    }
+  });
+  
+  // Background image
+  const bgInput = document.getElementById('bgImage');
+  if (bgInput) {
+    bgInput.addEventListener('change', loadBackgroundImage);
+  }
+  
+  // Preset buttons
+  const presets = {
+    'preset1': applyPreset1,
+    'preset2': applyPreset2,
+    'preset3': applyPreset3,
+    'preset4': applyPreset4
+  };
+  
+  Object.keys(presets).forEach(id => {
+    const btn = document.getElementById(id);
+    if (btn) {
+      btn.addEventListener('click', presets[id]);
+    }
+  });
+  
+  // Utils buttons
+  const utilButtons = {
+    'resetBtn': resetSettings,
+    'fullscreenBtn': toggleFullscreen,
+    'screenshotBtn': takeScreenshot
+  };
+  
+  Object.keys(utilButtons).forEach(id => {
+    const btn = document.getElementById(id);
+    if (btn) {
+      btn.addEventListener('click', utilButtons[id]);
+    }
+  });
+  
+  console.log('✅ Обработчики событий настроены');
+}
+
+// Запуск после загрузки DOM
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', init);
+} else {
+  init();
 }
 
 // ============== AUDIO SETUP ==============
