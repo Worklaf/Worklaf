@@ -2,477 +2,491 @@
 <html lang="ru">
 <head>
     <meta charset="UTF-8">
-    <title>Advanced Music Visualizer</title>
+    <title>Ultimate Web Visualizer</title>
     <style>
+        /* --- Основные стили --- */
         body {
             margin: 0;
             overflow: hidden;
-            background-color: #000; /* Fallback background */
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            height: 100vh;
+            background-color: #050505;
             font-family: 'Segoe UI', sans-serif;
-            color: #fff;
-            position: relative; /* Для фонового изображения */
+            color: white;
         }
 
-        .background-image {
+        /* Фоновое изображение */
+        #bgImage {
             position: absolute;
             top: 0;
             left: 0;
             width: 100%;
             height: 100%;
             object-fit: cover;
-            filter: brightness(0.4) blur(3px); /* Затемнение и размытие фона */
-            z-index: -1;
+            z-index: 0;
+            opacity: 0.4; /* Затемнение фона */
+            filter: blur(4px); /* Размытие для красоты */
+            transition: opacity 0.5s;
         }
 
+        /* Канвас визуализатора */
         canvas {
             position: absolute;
             top: 0;
             left: 0;
-            filter: contrast(1.2); /* Применяем контраст к визуализатору */
-            z-index: 0;
+            z-index: 1;
+            /* Смешивание цветов для яркости */
+            mix-blend-mode: screen; 
         }
 
-        .controls {
-            z-index: 10;
-            background: rgba(0, 0, 0, 0.6);
+        /* --- Интерфейс (UI) --- */
+        
+        /* Кнопка настроек (шестеренка) */
+        .settings-toggle {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            z-index: 20;
+            background: rgba(0,0,0,0.6);
+            border: 1px solid rgba(255,255,255,0.3);
+            color: white;
+            padding: 10px;
+            border-radius: 50%;
+            cursor: pointer;
+            font-size: 20px;
+        }
+
+        /* Панель настроек (скрыта по умолчанию) */
+        .controls-panel {
+            position: absolute;
+            top: 0;
+            right: -320px; /* Спрятана за экраном */
+            width: 300px;
+            height: 100%;
+            background: rgba(15, 15, 20, 0.95);
+            backdrop-filter: blur(15px);
+            z-index: 15;
             padding: 20px;
-            border-radius: 15px;
-            backdrop-filter: blur(10px);
-            border: 1px solid rgba(255, 255, 255, 0.2);
-            text-align: center;
-            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
-            max-width: 90%; /* Ограничение ширины для мобильных */
+            box-shadow: -5px 0 20px rgba(0,0,0,0.5);
+            transition: right 0.3s ease;
+            overflow-y: auto;
             box-sizing: border-box;
         }
 
-        .control-group {
-            margin-bottom: 15px;
+        .controls-panel.open {
+            right: 0;
         }
 
-        .control-group label {
-            display: block;
-            margin-bottom: 8px;
-            font-size: 14px;
-            color: #ccc;
-        }
-
-        input[type="file"] { display: none; }
-
+        /* Стили внутри панели */
+        h2 { margin-top: 50px; font-size: 18px; border-bottom: 1px solid #333; padding-bottom: 10px; }
+        .control-group { margin-bottom: 20px; }
+        
         .btn {
-            background: linear-gradient(45deg, #a855f7, #6366f1);
-            padding: 10px 20px;
-            border-radius: 25px;
+            display: block;
+            width: 100%;
+            padding: 12px;
+            margin-bottom: 8px;
+            background: #2a2a35;
+            border: 1px solid #444;
+            color: #ccc;
+            border-radius: 8px;
             cursor: pointer;
-            transition: 0.3s;
-            text-transform: uppercase;
-            font-weight: bold;
-            letter-spacing: 1px;
-            color: white;
-            border: none;
-            margin: 5px;
-            display: inline-block;
-        }
-        .btn:hover { transform: scale(1.05); opacity: 0.9; }
-
-        .btn.active {
-            background: linear-gradient(45deg, #ff00cc, #3333ff);
-            box-shadow: 0 0 15px rgba(255, 0, 204, 0.7);
-        }
-        .btn-record { background: linear-gradient(45deg, #e74c3c, #c0392b); }
-        .btn-record.recording { background: linear-gradient(45deg, #27ae60, #2ecc71); }
-
-
-        #spectrumSelector button {
-            background: rgba(255,255,255,0.1);
-            border: 1px solid rgba(255,255,255,0.3);
-            color: #eee;
-            margin: 5px;
-            padding: 8px 15px;
-            border-radius: 20px;
-            cursor: pointer;
+            text-align: left;
             transition: 0.2s;
         }
-        #spectrumSelector button:hover {
-            background: rgba(255,255,255,0.2);
-        }
-        #spectrumSelector button.active {
-            background: linear-gradient(45deg, #4CAF50, #8BC34A);
-            border-color: #4CAF50;
-            color: white;
-            font-weight: bold;
+        .btn:hover { background: #3a3a45; color: white; }
+        .btn.active { background: linear-gradient(90deg, #ff00cc, #3333ff); color: white; border: none;}
+        
+        input[type="file"] { display: none; }
+        label.btn { text-align: center; }
+
+        /* --- Нижний бар плеера --- */
+        .player-bar {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            width: 100%;
+            height: 80px;
+            background: linear-gradient(to top, rgba(0,0,0,0.9), transparent);
+            z-index: 10;
+            display: flex;
+            flex-direction: column;
+            justify-content: flex-end;
+            padding-bottom: 20px;
         }
 
-        #status { font-size: 12px; margin-top: 15px; color: #aaa; }
+        /* Прогресс бар (Timeline) */
+        .progress-container {
+            width: 90%;
+            height: 6px;
+            background: rgba(255,255,255,0.2);
+            margin: 0 auto 10px auto;
+            border-radius: 3px;
+            cursor: pointer;
+            position: relative;
+        }
+        .progress-fill {
+            height: 100%;
+            background: #00e5ff;
+            width: 0%;
+            border-radius: 3px;
+            box-shadow: 0 0 10px #00e5ff;
+            pointer-events: none; /* Чтобы клик проходил сквозь полоску */
+        }
+        .time-display {
+            text-align: center;
+            font-size: 12px;
+            color: #aaa;
+            margin-top: 5px;
+        }
+
+        /* Статус */
+        .status-msg {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            text-align: center;
+            color: #aaa;
+            z-index: 5;
+            pointer-events: none;
+        }
+
     </style>
 </head>
 <body>
 
-    <img id="backgroundImage" class="background-image" src="" alt="Background" style="display: none;">
+    <img id="bgImage" src="" alt="" style="display: none;">
+    
     <canvas id="visualizer"></canvas>
 
-    <div class="controls">
-        <h2 style="margin-top:0">Музыкальный Визуализатор</h2>
+    <div class="status-msg" id="startMessage">
+        <h1>Music Visualizer Pro</h1>
+        <p>Откройте настройки (⚙️) чтобы загрузить музыку</p>
+    </div>
 
-        <div class="control-group">
-            <label for="audioInput" class="btn">Выбрать музыку</label>
+    <div class="settings-toggle" onclick="togglePanel()">⚙️</div>
+
+    <div class="controls-panel" id="panel">
+        <h2>🎵 Аудио</h2>
+        <label class="btn">
+            📂 Загрузить MP3
             <input type="file" id="audioInput" accept="audio/*">
-        </div>
+        </label>
 
-        <div class="control-group">
-            <label for="bgImageInput" class="btn">Фоновое изображение</label>
-            <input type="file" id="bgImageInput" accept="image/*">
-        </div>
+        <h2>🖼 Фон</h2>
+        <label class="btn">
+            🌄 Загрузить Картинку
+            <input type="file" id="bgInput" accept="image/*">
+        </label>
+        <button class="btn" onclick="document.getElementById('bgImage').style.display='none'">❌ Убрать фон</button>
 
-        <div class="control-group">
-            <label>Выбор спектра:</label>
-            <div id="spectrumSelector">
-                <button class="btn active" data-spectrum="romanticWave">Волновой вихрь</button>
-                <button class="btn" data-spectrum="circularBars">Круговые столбики</button>
-                <button class="btn" data-spectrum="barSpectrum">Классический спектр</button>
-                <button class="btn" data-spectrum="particleField">Поле частиц</button>
-            </div>
-        </div>
+        <h2>🎨 Стиль</h2>
+        <button class="btn active" onclick="setSpectrum('vortex')" id="btn-vortex">🌀 Неоновый Вихрь</button>
+        <button class="btn" onclick="setSpectrum('spaceTunnel')" id="btn-spaceTunnel">🌌 3D Туннель</button>
+        <button class="btn" onclick="setSpectrum('waveLine')" id="btn-waveLine">〰️ Волна</button>
+        <button class="btn" onclick="setSpectrum('bars')" id="btn-bars">📊 Спектр</button>
 
-        <div class="control-group">
-            <button id="recordBtn" class="btn btn-record">Запись (WebM)</button>
-            <button id="stopRecordBtn" class="btn btn-record" style="display: none;">Остановить запись</button>
-        </div>
+        <h2>🎥 Запись</h2>
+        <button class="btn" style="background:#b71c1c" id="recBtn" onclick="toggleRecord()">⏺ Начать запись (WebM)</button>
+    </div>
 
-        <p id="status">Загрузите музыку для старта</p>
+    <div class="player-bar">
+        <div class="time-display" id="timeDisplay">00:00 / 00:00</div>
+        <div class="progress-container" id="progressBar">
+            <div class="progress-fill" id="progressFill"></div>
+        </div>
     </div>
 
     <script>
-        const audioInput = document.getElementById('audioInput');
-        const bgImageInput = document.getElementById('bgImageInput');
-        const backgroundImage = document.getElementById('backgroundImage');
+        // --- Переменные ---
         const canvas = document.getElementById('visualizer');
         const ctx = canvas.getContext('2d');
-        const spectrumSelector = document.getElementById('spectrumSelector');
-        const statusText = document.getElementById('status');
-        const recordBtn = document.getElementById('recordBtn');
-        const stopRecordBtn = document.getElementById('stopRecordBtn');
+        const bgImage = document.getElementById('bgImage');
+        const audioInput = document.getElementById('audioInput');
+        const bgInput = document.getElementById('bgInput');
+        const progressContainer = document.getElementById('progressBar');
+        const progressFill = document.getElementById('progressFill');
+        const timeDisplay = document.getElementById('timeDisplay');
+        const recBtn = document.getElementById('recBtn');
 
-        let audioCtx, analyser, source, dataArray, audioPlayer;
-        let animationFrameId;
-        let currentSpectrum = 'romanticWave'; // Дефолтный спектр
+        let audioCtx, analyser, source, dataArray;
+        let audio = new Audio();
+        let animationId;
+        let currentEffect = 'vortex'; // По умолчанию
+        
+        // Переменные для записи
         let mediaRecorder;
-        let recordedChunks = [];
+        let chunks = [];
         let isRecording = false;
 
-        canvas.width = window.innerWidth;
-        canvas.height = window.innerHeight;
-
-        // --- Audio Setup ---
-        function setupAudio(audioElement) {
-            if (audioCtx) {
-                audioCtx.close(); // Закрываем предыдущий контекст, если был
-            }
-            audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-            analyser = audioCtx.createAnalyser();
-            source = audioCtx.createMediaElementSource(audioElement);
-            source.connect(analyser);
-            analyser.connect(audioCtx.destination);
-
-            analyser.fftSize = 512; // Можно менять для детализации
-            const bufferLength = analyser.frequencyBinCount;
-            dataArray = new Uint8Array(bufferLength);
+        // Настройка размера
+        function resize() {
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
         }
+        window.addEventListener('resize', resize);
+        resize();
 
+        // --- Аудио Логика ---
         audioInput.onchange = function() {
             const files = this.files;
             if (files.length === 0) return;
-
-            if (audioPlayer) {
-                audioPlayer.pause();
-                audioPlayer = null;
-            }
-
-            audioPlayer = new Audio();
-            audioPlayer.src = URL.createObjectURL(files[0]);
-            audioPlayer.load();
-            audioPlayer.play();
-
-            audioPlayer.onended = () => {
-                statusText.innerText = `Воспроизведение '${files[0].name}' завершено.`;
-                if (isRecording) stopRecording();
-            };
-
-            setupAudio(audioPlayer);
-            statusText.innerText = `Воспроизведение: ${files[0].name}`;
-            if (animationFrameId) cancelAnimationFrame(animationFrameId);
-            drawVisualizer();
+            
+            audio.src = URL.createObjectURL(files[0]);
+            audio.load();
+            audio.play();
+            
+            document.getElementById('startMessage').style.display = 'none';
+            setupAudioContext();
+            togglePanel(); // Закрыть панель после выбора
         };
 
-        // --- Background Image ---
-        bgImageInput.onchange = function() {
-            const files = this.files;
-            if (files.length === 0) {
-                backgroundImage.style.display = 'none';
-                backgroundImage.src = '';
-                return;
-            }
-            backgroundImage.src = URL.createObjectURL(files[0]);
-            backgroundImage.style.display = 'block';
-        };
-
-        // --- Spectrum Selection ---
-        spectrumSelector.addEventListener('click', (e) => {
-            if (e.target.tagName === 'BUTTON') {
-                document.querySelectorAll('#spectrumSelector button').forEach(btn => btn.classList.remove('active'));
-                e.target.classList.add('active');
-                currentSpectrum = e.target.dataset.spectrum;
-                if (animationFrameId) cancelAnimationFrame(animationFrameId);
-                if (audioPlayer && !audioPlayer.paused) {
-                    drawVisualizer(); // Перезапускаем отрисовку с новым спектром
-                } else {
-                    ctx.clearRect(0, 0, canvas.width, canvas.height); // Очищаем канвас, если музыки нет
-                }
-            }
-        });
-
-        // --- Drawing Logic ---
-        function drawVisualizer() {
-            animationFrameId = requestAnimationFrame(drawVisualizer);
-            if (!analyser || !dataArray) return;
-
-            analyser.getByteFrequencyData(dataArray);
-
-            // Очистка с эффектом шлейфа
-            ctx.fillStyle = 'rgba(0, 0, 0, 0.1)'; // Более темный шлейф для эффекта
-            ctx.fillRect(0, 0, canvas.width, canvas.height);
-
-            const centerX = canvas.width / 2;
-            const centerY = canvas.height / 2;
-
-            switch (currentSpectrum) {
-                case 'romanticWave':
-                    drawRomanticWave(centerX, centerY, dataArray);
-                    break;
-                case 'circularBars':
-                    drawCircularBars(centerX, centerY, dataArray);
-                    break;
-                case 'barSpectrum':
-                    drawBarSpectrum(dataArray);
-                    break;
-                case 'particleField':
-                    drawParticleField(centerX, centerY, dataArray);
-                    break;
+        function setupAudioContext() {
+            if (!audioCtx) {
+                audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+                analyser = audioCtx.createAnalyser();
+                analyser.fftSize = 2048; // Высокое разрешение для красивых волн
+                
+                source = audioCtx.createMediaElementSource(audio);
+                source.connect(analyser);
+                analyser.connect(audioCtx.destination);
+                
+                dataArray = new Uint8Array(analyser.frequencyBinCount);
+                draw();
             }
         }
 
-        // --- Spectrum Implementations ---
+        // --- Управление фоном ---
+        bgInput.onchange = function() {
+            if (this.files.length > 0) {
+                bgImage.src = URL.createObjectURL(this.files[0]);
+                bgImage.style.display = 'block';
+            }
+        }
 
-        // 1. Волновой вихрь (Romantic Wave)
-        function drawRomanticWave(centerX, centerY, data) {
-            const baseRadius = 120;
-            const path = new Path2D();
+        // --- Управление плеером (Timeline) ---
+        audio.ontimeupdate = () => {
+            if (audio.duration) {
+                const percent = (audio.currentTime / audio.duration) * 100;
+                progressFill.style.width = percent + '%';
+                timeDisplay.innerText = formatTime(audio.currentTime) + " / " + formatTime(audio.duration);
+            }
+        };
 
-            for (let i = 0; i < data.length; i += 4) { // Уменьшаем количество линий для плавности
-                const v = data[i] / 128.0;
-                const angle = (i * Math.PI * 2) / data.length;
+        progressContainer.onclick = (e) => {
+            if (!audio.duration) return;
+            const rect = progressContainer.getBoundingClientRect();
+            const clickX = e.clientX - rect.left;
+            const width = rect.width;
+            audio.currentTime = (clickX / width) * audio.duration;
+        };
+
+        function formatTime(s) {
+            const m = Math.floor(s / 60);
+            const sec = Math.floor(s % 60);
+            return m + ":" + (sec < 10 ? "0" + sec : sec);
+        }
+
+        // --- UI Панель ---
+        function togglePanel() {
+            document.getElementById('panel').classList.toggle('open');
+        }
+
+        function setSpectrum(type) {
+            currentEffect = type;
+            // Обновляем кнопки
+            document.querySelectorAll('.controls-panel .btn').forEach(b => b.classList.remove('active'));
+            document.getElementById('btn-' + type).classList.add('active');
+        }
+
+        // ==========================================
+        // === ЛОГИКА ОТРИСОВКИ (VISUALIZERS) ===
+        // ==========================================
+
+        function draw() {
+            animationId = requestAnimationFrame(draw);
+            analyser.getByteFrequencyData(dataArray);
+
+            const w = canvas.width;
+            const h = canvas.height;
+            const cx = w / 2;
+            const cy = h / 2;
+
+            // Очистка экрана (с легким шлейфом для плавности)
+            ctx.fillStyle = 'rgba(0, 0, 0, 0.15)'; 
+            ctx.fillRect(0, 0, w, h);
+
+            if (currentEffect === 'vortex') drawVortex(cx, cy, dataArray);
+            else if (currentEffect === 'spaceTunnel') drawSpaceTunnel(w, h, cx, cy, dataArray);
+            else if (currentEffect === 'waveLine') drawWaveLine(w, h, dataArray);
+            else drawBars(w, h, dataArray);
+        }
+
+        // 1. ВИХРЬ (VORTEX) - Как на твоей картинке
+        function drawVortex(cx, cy, data) {
+            const radius = 80; // Размер пустой дыры в центре
+            const bars = 100; // Количество "перьев"
+            const step = Math.floor(data.length / bars);
+
+            for (let i = 0; i < bars; i++) {
+                const val = data[i * step];
+                const amplitude = (val / 255) * 300; // Длина пера
                 
-                const length = v * 180;
-                const xStart = centerX + Math.cos(angle) * baseRadius;
-                const yStart = centerY + Math.sin(angle) * baseRadius;
+                // Угол
+                const angle = (i / bars) * Math.PI * 2;
                 
-                const xEnd = centerX + Math.cos(angle + v * 0.5) * (baseRadius + length);
-                const yEnd = centerY + Math.sin(angle + v * 0.5) * (baseRadius + length);
+                // Координаты начала (на круге)
+                const x1 = cx + Math.cos(angle) * radius;
+                const y1 = cy + Math.sin(angle) * radius;
+
+                // Координаты конца (со смещением угла для эффекта закручивания)
+                // angle + 0.5 создает изгиб
+                const x2 = cx + Math.cos(angle + (val/500) + 0.3) * (radius + amplitude);
+                const y2 = cy + Math.sin(angle + (val/500) + 0.3) * (radius + amplitude);
+
+                // Контрольная точка для кривой Безье (чтобы линия была изогнутой)
+                const xControl = cx + Math.cos(angle + 0.8) * (radius + amplitude * 0.5);
+                const yControl = cy + Math.sin(angle + 0.8) * (radius + amplitude * 0.5);
 
                 ctx.beginPath();
-                ctx.strokeStyle = `hsla(${i * 0.8 + 200}, 80%, 60%, 0.8)`; 
+                // Цвет: градиент от фиолетового к голубому и оранжевому
+                const hue = (i / bars) * 360 + (val/2); 
+                ctx.strokeStyle = `hsla(${hue}, 80%, 60%, 0.8)`;
                 ctx.lineWidth = 3;
                 ctx.lineCap = 'round';
-                
-                ctx.moveTo(xStart, yStart);
-                ctx.quadraticCurveTo(
-                    centerX + Math.cos(angle + 0.2) * (baseRadius + length/2),
-                    centerY + Math.sin(angle + 0.2) * (baseRadius + length/2),
-                    xEnd, yEnd
-                );
-                ctx.stroke();
 
-                ctx.beginPath();
-                ctx.arc(xEnd, yEnd, 2, 0, Math.PI * 2);
+                ctx.moveTo(x1, y1);
+                ctx.quadraticCurveTo(xControl, yControl, x2, y2);
+                ctx.stroke();
+                
+                // Светящаяся точка на конце
                 ctx.fillStyle = 'white';
+                ctx.beginPath();
+                ctx.arc(x2, y2, 2, 0, Math.PI * 2);
                 ctx.fill();
             }
         }
 
-        // 2. Круговые столбики (Circular Bars)
-        function drawCircularBars(centerX, centerY, data) {
-            const baseRadius = 100;
-            const barWidth = Math.PI * 2 / data.length * 0.8; // Ширина бара в радианах
+        // 2. 3D ТУННЕЛЬ (ПРОСТРАНСТВЕННЫЙ)
+        // Массив звезд/частиц для 3D
+        let stars = [];
+        for(let i=0; i<300; i++) stars.push({
+            x: (Math.random()-0.5)*2000, 
+            y: (Math.random()-0.5)*2000, 
+            z: Math.random()*2000
+        });
 
-            for (let i = 0; i < data.length; i += 2) {
-                const v = data[i] / 255.0; // Нормализованное значение
-                const angle = (i * Math.PI * 2) / data.length;
-                const barHeight = v * 150; // Высота бара
+        function drawSpaceTunnel(w, h, cx, cy, data) {
+            // Получаем среднюю громкость басов (первые 40 частот)
+            let bass = 0;
+            for(let i=0; i<40; i++) bass += data[i];
+            bass = bass / 40; // Среднее 0-255
+            
+            const speed = 5 + (bass / 10); // Скорость полета зависит от баса
 
-                const startAngle = angle - barWidth / 2;
-                const endAngle = angle + barWidth / 2;
+            stars.forEach((star, index) => {
+                // Двигаем звезду к камере
+                star.z -= speed;
+                if (star.z <= 0) {
+                    star.z = 2000;
+                    star.x = (Math.random()-0.5)*2000;
+                    star.y = (Math.random()-0.5)*2000;
+                }
+
+                // Проекция 3D на 2D
+                // x2d = x / z * scale
+                const scale = 500 / (star.z); 
+                const x2d = cx + star.x * scale;
+                const y2d = cy + star.y * scale;
+
+                // Размер и цвет зависят от приближения и звука
+                const size = (1 - star.z/2000) * 8 + (bass/50);
+                const alpha = (1 - star.z/2000);
+
+                // Берем частоту для цвета
+                const freqIndex = Math.floor(Math.abs(star.x + star.y) % 200);
+                const freqVal = data[freqIndex];
 
                 ctx.beginPath();
-                ctx.strokeStyle = `hsla(${i * 0.5}, 100%, 50%, 0.9)`;
-                ctx.lineWidth = 8;
-                ctx.lineCap = 'round';
-                
-                ctx.arc(centerX, centerY, baseRadius + barHeight / 2, startAngle, endAngle);
-                ctx.stroke();
-            }
+                ctx.fillStyle = `hsla(${bass + freqIndex}, 100%, 70%, ${alpha})`;
+                ctx.arc(x2d, y2d, size, 0, Math.PI * 2);
+                ctx.fill();
+
+                // Рисуем линии, соединяющие близкие точки, если бас сильный
+                if (bass > 150 && index > 0 && index % 5 === 0) {
+                    ctx.beginPath();
+                    ctx.moveTo(x2d, y2d);
+                    ctx.lineTo(cx, cy); // Линии к центру
+                    ctx.strokeStyle = `rgba(255,255,255, ${alpha * 0.2})`;
+                    ctx.stroke();
+                }
+            });
         }
 
-        // 3. Классический спектр (Bar Spectrum)
-        function drawBarSpectrum(data) {
-            const barWidth = (canvas.width / data.length) * 2.5; // Увеличим ширину бара
-            let x = 0;
-
+        // 3. Простая волна
+        function drawWaveLine(w, h, data) {
+            ctx.beginPath();
+            ctx.moveTo(0, h/2);
             for (let i = 0; i < data.length; i++) {
-                const barHeight = data[i] * 1.5; // Увеличим высоту
+                const x = (i / data.length) * w;
+                const y = h/2 - (data[i] / 255) * (h/3) * (i%2==0 ? 1 : -1); 
+                ctx.lineTo(x, y);
+            }
+            ctx.strokeStyle = '#00ffcc';
+            ctx.lineWidth = 3;
+            ctx.stroke();
+        }
 
-                ctx.fillStyle = `rgb(${barHeight + 100}, 50, ${255 - barHeight})`; // Цвета меняются
-                ctx.fillRect(x, canvas.height - barHeight, barWidth, barHeight);
+        // 4. Столбики
+        function drawBars(w, h, data) {
+            const barWidth = (w / data.length) * 2.5;
+            let x = 0;
+            for(let i = 0; i < data.length; i++) {
+                const barHeight = data[i];
+                ctx.fillStyle = `rgb(${barHeight+50}, 50, 150)`;
+                ctx.fillRect(x, h - barHeight*1.5, barWidth, barHeight*1.5);
                 x += barWidth + 1;
             }
         }
 
-        // 4. Поле частиц (Particle Field)
-        const particles = [];
-        const numParticles = 150;
-        function createParticles() {
-            particles.length = 0; // Очищаем при смене
-            for (let i = 0; i < numParticles; i++) {
-                particles.push({
-                    x: Math.random() * canvas.width,
-                    y: Math.random() * canvas.height,
-                    vx: (Math.random() - 0.5) * 2,
-                    vy: (Math.random() - 0.5) * 2,
-                    radius: Math.random() * 2 + 1,
-                    color: `hsla(${Math.random() * 360}, 100%, 70%, 0.8)`
-                });
-            }
-        }
-        createParticles(); // Инициализация частиц при старте
-
-        function drawParticleField(centerX, centerY, data) {
-            // Движение частиц
-            for (let i = 0; i < particles.length; i++) {
-                const p = particles[i];
-
-                p.x += p.vx;
-                p.y += p.vy;
-
-                // Отталкивание от центра при громком звуке
-                if (data[Math.floor(i % data.length)] > 150) {
-                    const dx = p.x - centerX;
-                    const dy = p.y - centerY;
-                    const dist = Math.sqrt(dx*dx + dy*dy);
-                    if (dist < 200) { // Если частица близко к центру
-                        p.x += dx / dist * 5; // Отталкиваем
-                        p.y += dy / dist * 5;
-                    }
-                }
-
-                // Перезапуск частиц, если вышли за границы
-                if (p.x < 0 || p.x > canvas.width || p.y < 0 || p.y > canvas.height) {
-                    p.x = Math.random() * canvas.width;
-                    p.y = Math.random() * canvas.height;
-                }
-
-                ctx.beginPath();
-                ctx.arc(p.x, p.y, p.radius, 0, Math.PI * 2);
-                ctx.fillStyle = p.color;
-                ctx.fill();
-            }
-        }
-
-
-        // --- Recording Functionality ---
-        recordBtn.onclick = function() {
-            if (!audioPlayer || audioPlayer.paused) {
-                statusText.innerText = "Сначала загрузите и запустите музыку!";
-                return;
-            }
-
-            isRecording = true;
-            recordBtn.style.display = 'none';
-            stopRecordBtn.style.display = 'inline-block';
-            statusText.innerText = "Идет запись...";
-            recordedChunks = [];
-
-            // Получаем поток с Canvas
-            // Можно настроить frameRate для 9:16 или 16:9, но это повлияет на отрисовку
-            const stream = canvas.captureStream(60); // 60 FPS
-            
-            // Если нужно записать звук вместе с видео
-            if (audioCtx && audioPlayer.captureStream) {
-                 const audioStream = audioCtx.createMediaStreamDestination();
-                 // Подключаем наш источник звука к аудио-потоку
-                 source.disconnect(analyser); // Отключаем от анализатора временно
-                 source.connect(audioStream); // Подключаем к потоку записи
-                 source.connect(analyser); // Снова подключаем к анализатору для визуализации
-
-                 stream.addTrack(audioStream.stream.getAudioTracks()[0]);
-            }
-
-            mediaRecorder = new MediaRecorder(stream, {
-                mimeType: 'video/webm; codecs=vp8' // WebM с VP8 - наиболее поддерживаемый
-                // Для H.264/MP4 требуется 'video/mp4; codecs=avc1' но поддержка браузерами разная
-            });
-
-            mediaRecorder.ondataavailable = function(event) {
-                if (event.data.size > 0) {
-                    recordedChunks.push(event.data);
-                }
-            };
-
-            mediaRecorder.onstop = function() {
-                const blob = new Blob(recordedChunks, { type: 'video/webm' });
-                const url = URL.createObjectURL(blob);
-                const a = document.createElement('a');
-                document.body.appendChild(a);
-                a.style.display = 'none';
-                a.href = url;
-                a.download = `visualizer_${new Date().toISOString()}.webm`; // Имя файла
-                a.click();
-                window.URL.revokeObjectURL(url);
-                statusText.innerText = "Запись сохранена как webm!";
-
-                // Восстанавливаем подключение источника звука, если оно было изменено для записи
-                if (audioCtx && audioPlayer.captureStream) {
-                    source.disconnect(audioCtx.destination); // Отключаем от потока записи
-                    source.connect(analyser); // Подключаем обратно к анализатору и динамикам
-                    analyser.connect(audioCtx.destination);
-                }
-            };
-
-            mediaRecorder.start();
-        };
-
-        stopRecordBtn.onclick = function() {
-            stopRecording();
-        };
-
-        function stopRecording() {
-            if (isRecording && mediaRecorder && mediaRecorder.state === 'recording') {
+        // --- Функция Записи Видео ---
+        function toggleRecord() {
+            if (isRecording) {
                 mediaRecorder.stop();
+                recBtn.innerText = "⏺ Начать запись (WebM)";
+                recBtn.style.background = "#b71c1c";
                 isRecording = false;
-                recordBtn.style.display = 'inline-block';
-                stopRecordBtn.style.display = 'none';
+            } else {
+                if (!audioCtx) return alert("Сначала запустите музыку!");
+                
+                const stream = canvas.captureStream(60);
+                const dest = audioCtx.createMediaStreamDestination();
+                source.connect(dest);
+                source.connect(analyser); // Reconnect to hear it
+                
+                if (dest.stream.getAudioTracks().length > 0) {
+                    stream.addTrack(dest.stream.getAudioTracks()[0]);
+                }
+
+                mediaRecorder = new MediaRecorder(stream, { mimeType: 'video/webm; codecs=vp9' });
+                chunks = [];
+                
+                mediaRecorder.ondataavailable = e => chunks.push(e.data);
+                mediaRecorder.onstop = e => {
+                    const blob = new Blob(chunks, { type: 'video/webm' });
+                    const url = URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = url;
+                    a.download = 'vizualization.webm';
+                    a.click();
+                };
+
+                mediaRecorder.start();
+                recBtn.innerText = "⏹ Остановить запись";
+                recBtn.style.background = "#2e7d32";
+                isRecording = true;
             }
         }
 
-
-        // --- Resizing Canvas ---
-        window.onresize = () => {
-            canvas.width = window.innerWidth;
-            canvas.height = window.innerHeight;
-            if (currentSpectrum === 'particleField') createParticles(); // Пересоздаем частицы
-        };
     </script>
 </body>
 </html>
