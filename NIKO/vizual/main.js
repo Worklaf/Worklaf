@@ -1,4 +1,4 @@
-javascriptDownloadCopy code// ===== MAIN.JS =====
+/ ===== MAIN.JS =====
 
 import { visualizers2D, visualizers3D, vizList2D, vizList3D } from './visualizers.js';
 import { EffectsEngine } from './effects.js';
