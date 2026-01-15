@@ -2,434 +2,123 @@
 <html lang="ru">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>5D Audio Visualizer Pro</title>
+    <title>Deep Audio Visualizer 5D</title>
     <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
-
         body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background: linear-gradient(135deg, #0a0a0a 0%, #1a1a2e 100%);
-            color: #fff;
-            overflow: hidden;
-        }
-
-        #visualizer-container {
-            position: relative;
-            width: 100vw;
-            height: 100vh;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-        }
-
-        #visualizer {
+            margin: 0;
             background: #000;
-            box-shadow: 0 0 50px rgba(0, 255, 255, 0.3);
+            overflow: hidden;
+            font-family: 'Segoe UI', sans-serif;
+            color: white;
         }
-
-        #controls {
-            position: absolute;
-            top: 20px;
-            left: 20px;
-            background: rgba(0, 0, 0, 0.8);
-            backdrop-filter: blur(10px);
-            padding: 20px;
-            border-radius: 15px;
-            max-width: 350px;
-            max-height: 85vh;
-            overflow-y: auto;
-            z-index: 100;
-            border: 1px solid rgba(0, 255, 255, 0.3);
-        }
-
-        #controls::-webkit-scrollbar {
-            width: 8px;
-        }
-
-        #controls::-webkit-scrollbar-track {
-            background: rgba(255, 255, 255, 0.1);
-            border-radius: 10px;
-        }
-
-        #controls::-webkit-scrollbar-thumb {
-            background: rgba(0, 255, 255, 0.5);
-            border-radius: 10px;
-        }
-
-        .control-group {
-            margin-bottom: 15px;
-            padding: 10px;
-            background: rgba(255, 255, 255, 0.05);
-            border-radius: 8px;
-        }
-
-        .control-group label {
+        canvas {
             display: block;
-            margin-bottom: 5px;
-            font-size: 13px;
-            color: #00ffff;
-            font-weight: 600;
         }
-
-        input[type="file"] {
-            width: 100%;
-            padding: 8px;
-            background: rgba(255, 255, 255, 0.1);
-            border: 1px solid rgba(0, 255, 255, 0.3);
-            border-radius: 5px;
-            color: #fff;
-            cursor: pointer;
-        }
-
-        input[type="range"] {
-            width: 70%;
-            margin-right: 10px;
-        }
-
-        select {
-            width: 100%;
-            padding: 8px;
-            background: rgba(255, 255, 255, 0.1);
-            border: 1px solid rgba(0, 255, 255, 0.3);
-            border-radius: 5px;
-            color: #fff;
-            cursor: pointer;
-        }
-
-        button {
-            padding: 10px 15px;
-            background: linear-gradient(135deg, #00ffff 0%, #0080ff 100%);
-            border: none;
-            border-radius: 5px;
-            color: #000;
-            font-weight: bold;
-            cursor: pointer;
-            margin: 5px 5px 5px 0;
-            transition: all 0.3s;
-        }
-
-        button:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 5px 15px rgba(0, 255, 255, 0.4);
-        }
-
-        button:active {
-            transform: translateY(0);
-        }
-
-        input[type="checkbox"] {
-            margin-right: 5px;
-        }
-
-        #timeline {
+        
+        /* UI Container */
+        #ui-layer {
             position: absolute;
             bottom: 20px;
             left: 50%;
             transform: translateX(-50%);
-            width: 80%;
-            background: rgba(0, 0, 0, 0.8);
+            width: 90%;
+            max-width: 800px;
+            background: rgba(20, 20, 30, 0.85);
             backdrop-filter: blur(10px);
-            padding: 15px;
-            border-radius: 10px;
-            border: 1px solid rgba(0, 255, 255, 0.3);
-            z-index: 100;
+            padding: 20px;
+            border-radius: 15px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            transition: opacity 0.3s;
         }
 
-        #timeline-bar {
+        /* Timeline */
+        .timeline-container {
             width: 100%;
-            height: 8px;
+            margin-bottom: 15px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        #timeline {
+            flex-grow: 1;
+            height: 6px;
+            -webkit-appearance: none;
             background: rgba(255, 255, 255, 0.2);
-            border-radius: 4px;
-            position: relative;
+            border-radius: 3px;
+            outline: none;
             cursor: pointer;
-            margin-bottom: 10px;
         }
-
-        #timeline-progress {
-            height: 100%;
-            background: linear-gradient(90deg, #00ffff 0%, #0080ff 100%);
-            border-radius: 4px;
-            width: 0%;
-            position: relative;
-        }
-
-        #timeline-handle {
-            position: absolute;
-            right: -8px;
-            top: 50%;
-            transform: translateY(-50%);
+        #timeline::-webkit-slider-thumb {
+            -webkit-appearance: none;
             width: 16px;
             height: 16px;
-            background: #00ffff;
+            background: #00ffcc;
             border-radius: 50%;
-            box-shadow: 0 0 10px rgba(0, 255, 255, 0.8);
             cursor: pointer;
+            box-shadow: 0 0 10px #00ffcc;
         }
-
-        #timeline-info {
-            display: flex;
-            justify-content: space-between;
+        .time-display {
             font-size: 12px;
-            color: #00ffff;
-        }
-
-        #info-panel {
-            position: absolute;
-            top: 20px;
-            right: 20px;
-            background: rgba(0, 0, 0, 0.8);
-            backdrop-filter: blur(10px);
-            padding: 15px;
-            border-radius: 10px;
-            border: 1px solid rgba(0, 255, 255, 0.3);
-            min-width: 200px;
-        }
-
-        .info-item {
-            margin: 5px 0;
-            font-size: 12px;
-        }
-
-        .info-label {
-            color: #00ffff;
-            font-weight: bold;
-        }
-
-        .level-bar {
-            width: 100%;
-            height: 4px;
-            background: rgba(255, 255, 255, 0.2);
-            border-radius: 2px;
-            margin-top: 3px;
-            overflow: hidden;
-        }
-
-        .level-fill {
-            height: 100%;
-            background: linear-gradient(90deg, #00ffff 0%, #ff00ff 100%);
-            transition: width 0.1s;
-        }
-
-        h3 {
-            color: #00ffff;
-            margin-bottom: 10px;
-            font-size: 16px;
+            font-family: monospace;
+            min-width: 80px;
             text-align: center;
-            text-shadow: 0 0 10px rgba(0, 255, 255, 0.5);
         }
 
-        .hidden {
-            display: none;
-        }
-
-        small {
-            color: #888;
-            font-size: 11px;
-        }
-
-        #preset-buttons {
+        /* Controls Grid */
+        .controls {
             display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 5px;
+            grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+            gap: 10px;
+            align-items: center;
         }
 
-        #preset-buttons button {
-            font-size: 11px;
-            padding: 6px;
+        button, select, input[type="file"] {
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            color: white;
+            padding: 8px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 13px;
         }
+        button:hover { background: rgba(255, 255, 255, 0.2); }
+        button.active { background: #00ffcc; color: #000; }
 
-        .section-title {
-            color: #ff00ff;
-            font-size: 14px;
-            margin-top: 15px;
-            margin-bottom: 10px;
-            border-bottom: 1px solid rgba(255, 0, 255, 0.3);
-            padding-bottom: 5px;
-        }
+        .hidden { opacity: 0; pointer-events: none; }
     </style>
 </head>
 <body>
-    <div id="visualizer-container">
-        <canvas id="visualizer"></canvas>
-        
-        <div id="controls">
-            <h3>🎵 5D Audio Visualizer</h3>
+    <canvas id="canvas"></canvas>
+
+    <div id="ui-layer">
+        <!-- Таймлайн -->
+        <div class="timeline-container">
+            <span id="currentTime" class="time-display">00:00</span>
+            <input type="range" id="timeline" min="0" max="100" value="0" step="0.1">
+            <span id="duration" class="time-display">00:00</span>
+        </div>
+
+        <!-- Контроллеры -->
+        <div class="controls">
+            <input type="file" id="audioFile" accept="audio/*">
+            <button id="playBtn">▶ Play</button>
             
-            <div class="control-group">
-                <label>📁 Аудиофайл:</label>
-                <input type="file" id="audioFile" accept="audio/*">
-                <button id="playPause" disabled>▶ Play</button>
-            </div>
+            <select id="vizSelect">
+                <option value="deepSpace">🌌 Deep Space (5D)</option>
+                <option value="quantumField">⚛️ Quantum Field</option>
+                <option value="romanticHeart">💖 Romantic Soul</option>
+                <option value="loveTunnel">🌹 Love Tunnel</option>
+                <option value="hyperCube">🧊 Hyper Cube</option>
+                <option value="matrixRain">🧬 Digital Rain</option>
+            </select>
 
-            <div class="section-title">🎨 Визуализация</div>
-
-            <div class="control-group">
-                <label>Визуализатор:</label>
-                <select id="visualizerSelect"></select>
-            </div>
-
-            <div class="control-group">
-                <label>
-                    <input type="checkbox" id="autoChange">
-                    Автосмена
-                </label>
-                <label>Интервал:</label>
-                <input type="range" id="changeInterval" min="5" max="60" value="15" step="5">
-                <span id="intervalValue">15s</span>
-            </div>
-
-            <div class="section-title">⚙️ Параметры</div>
-
-            <div class="control-group">
-                <label>Масштаб:</label>
-                <input type="range" id="vizScale" min="0.1" max="3" value="1" step="0.1">
-                <span id="scaleValue">1.0</span>
-            </div>
-
-            <div class="control-group">
-                <label>Скорость:</label>
-                <input type="range" id="vizSpeed" min="0.1" max="5" value="1" step="0.1">
-                <span id="speedValue">1.0</span>
-            </div>
-
-            <div class="control-group">
-                <label>3D Глубина:</label>
-                <input type="range" id="depth3D" min="0" max="1000" value="500" step="10">
-                <span id="depthValue">500</span>
-            </div>
-
-            <div class="control-group">
-                <label>Перспектива:</label>
-                <input type="range" id="perspective" min="100" max="2000" value="800" step="50">
-                <span id="perspectiveValue">800</span>
-            </div>
-
-            <div class="control-group">
-                <label>Rotation X:</label>
-                <input type="range" id="rotationX" min="-180" max="180" value="0" step="5">
-                <span id="rotXValue">0°</span>
-            </div>
-
-            <div class="control-group">
-                <label>Rotation Y:</label>
-                <input type="range" id="rotationY" min="-180" max="180" value="0" step="5">
-                <span id="rotYValue">0°</span>
-            </div>
-
-            <div class="section-title">✨ Эффекты</div>
-
-            <div class="control-group">
-                <label>Основной эффект:</label>
-                <select id="effectSelect"></select>
-            </div>
-
-            <div class="control-group">
-                <label>Свечение:</label>
-                <input type="range" id="vizGlow" min="0" max="50" value="15" step="1">
-                <span id="glowValue">15</span>
-            </div>
-
-            <div class="control-group">
-                <label>След:</label>
-                <input type="range" id="vizTrail" min="0" max="0.95" value="0.3" step="0.05">
-                <span id="trailValue">0.3</span>
-            </div>
-
-            <div class="control-group">
-                <label>Интенсивность частиц:</label>
-                <input type="range" id="particleIntensity" min="0" max="100" value="50" step="10">
-                <span id="particleValue">50</span>
-            </div>
-
-            <div class="control-group">
-                <label>
-                    <input type="checkbox" id="vizBackground" checked>
-                    Динамический фон
-                </label>
-                <label>
-                    <input type="checkbox" id="showInfo" checked>
-                    Панель информации
-                </label>
-            </div>
-
-            <div class="section-title">🎭 Пресеты</div>
-            <div id="preset-buttons">
-                <button onclick="loadPreset('space')">🌌 Космос</button>
-                <button onclick="loadPreset('romantic')">💖 Романтика</button>
-                <button onclick="loadPreset('energy')">⚡ Энергия</button>
-                <button onclick="loadPreset('chill')">🌙 Релакс</button>
-                <button onclick="loadPreset('psycho')">🌀 Психо</button>
-                <button onclick="loadPreset('neon')">🌆 Неон</button>
-            </div>
-
-            <div class="section-title">🎮 Управление</div>
-            <div class="control-group">
-                <button id="fullscreen">⛶ Полный экран</button>
-                <button id="randomViz">🎲 Случайный</button>
-                <button id="screenshot">📷 Скриншот</button>
-            </div>
-
-            <div class="control-group">
-                <small>
-                    <b>Горячие клавиши:</b><br>
-                    Пробел - Play/Pause<br>
-                    F - Полный экран<br>
-                    N - Случайный визуализатор<br>
-                    I - Инфо панель<br>
-                    ← → - Перемотка ±5 сек<br>
-                    ↑ ↓ - Масштаб
-                </small>
-            </div>
-        </div>
-
-        <div id="info-panel" class="hidden">
-            <div class="info-item">
-                <span class="info-label">Визуализатор:</span>
-                <div id="currentViz">-</div>
-            </div>
-            <div class="info-item">
-                <span class="info-label">FPS:</span>
-                <div id="fpsDisplay">60</div>
-            </div>
-            <div class="info-item">
-                <span class="info-label">Бас:</span>
-                <div class="level-bar"><div class="level-fill" id="bassLevel"></div></div>
-            </div>
-            <div class="info-item">
-                <span class="info-label">Средние:</span>
-                <div class="level-bar"><div class="level-fill" id="midLevel"></div></div>
-            </div>
-            <div class="info-item">
-                <span class="info-label">Высокие:</span>
-                <div class="level-bar"><div class="level-fill" id="trebleLevel"></div></div>
-            </div>
-            <div class="info-item">
-                <span class="info-label">3D активность:</span>
-                <div id="activity3D">0%</div>
-            </div>
-        </div>
-
-        <div id="timeline" class="hidden">
-            <div id="timeline-bar">
-                <div id="timeline-progress">
-                    <div id="timeline-handle"></div>
-                </div>
-            </div>
-            <div id="timeline-info">
-                <span id="currentTime">0:00</span>
-                <span id="trackName">Не выбран</span>
-                <span id="totalTime">0:00</span>
-            </div>
+            <button id="fullscreenBtn">⛶ Fullscreen</button>
+            <button id="autoCamBtn">🎥 Auto Cam</button>
         </div>
     </div>
 
-    <script type="module" src="visualizers.js"></script>
-    <script type="module" src="effects.js"></script>
-    <script type="module" src="main.js"></script>
+    <!-- Подключаем скрипты в правильном порядке -->
+    <script src="visualizers.js"></script>
+    <script src="main.js"></script>
 </body>
 </html>
