@@ -1,1361 +1,340 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="ru">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>N1K∅ 3D Audio Visualizer - Video Export</title>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
-<style>
-* {
-  margin: 0;
-  padding: 0;
-  box-sizing: border-box;
-}
+    <meta charset="UTF-8">
+    <title>N1K∅ Cinema Visualizer & Recorder</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <style>
+        body { margin: 0; background: #050505; color: white; font-family: 'Segoe UI', sans-serif; overflow: hidden; }
+        canvas { display: block; }
 
-body {
-  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-  background: #000;
-  color: #fff;
-  overflow: hidden;
-  position: relative;
-}
+        /* UI Overlay */
+        #ui-root { position: fixed; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 10; }
+        .interactive { pointer-events: auto; }
 
-#canvas-container {
-  position: fixed;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  z-index: 1;
-}
+        /* Sidebar */
+        .sidebar { position: absolute; right: 0; top: 0; width: 300px; height: 100%; background: rgba(0,0,0,0.8); backdrop-filter: blur(20px); padding: 20px; border-left: 1px solid rgba(255,255,255,0.1); overflow-y: auto; }
+        
+        /* Bottom Player */
+        .player-bar { position: absolute; bottom: 0; left: 0; width: calc(100% - 300px); background: rgba(0,0,0,0.9); padding: 20px; border-top: 1px solid rgba(255,255,255,0.1); }
+        .progress-container { width: 100%; height: 6px; background: #333; cursor: pointer; border-radius: 3px; margin-bottom: 10px; position: relative; }
+        .progress-fill { height: 100%; background: #ff2d55; width: 0%; border-radius: 3px; }
 
-#background-image {
-  position: fixed;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-  opacity: 0.3;
-  z-index: 0;
-  display: none;
-}
+        /* Recording Preview Mode */
+        #record-frame { 
+            position: fixed; top: 50%; left: 40%; transform: translate(-50%, -50%); 
+            border: 2px solid #ff2d55; display: none; box-shadow: 0 0 50px rgba(255,45,85,0.5);
+        }
 
-.control-panel {
-  position: fixed;
-  top: 0;
-  right: 0;
-  width: 350px;
-  height: 100vh;
-  background: rgba(10, 10, 10, 0.95);
-  backdrop-filter: blur(10px);
-  z-index: 1000;
-  overflow-y: auto;
-  border-left: 1px solid rgba(255, 255, 255, 0.1);
-  transition: transform 0.3s ease;
-}
+        .btn { background: #ff2d55; border: none; color: white; padding: 10px 20px; border-radius: 5px; cursor: pointer; font-weight: bold; width: 100%; margin: 5px 0; }
+        .btn:hover { background: #ff5e7e; }
+        .btn.secondary { background: #333; }
+        
+        label { font-size: 12px; color: #aaa; margin-top: 10px; display: block; }
+        select, input { width: 100%; background: #222; border: 1px solid #444; color: white; padding: 8px; margin-top: 5px; border-radius: 4px; }
 
-.control-panel.hidden {
-  transform: translateX(100%);
-}
-
-.toggle-panel {
-  position: fixed;
-  top: 50%;
-  right: 350px;
-  transform: translateY(-50%);
-  background: rgba(20, 20, 20, 0.9);
-  border: 1px solid rgba(255, 255, 255, 0.2);
-  border-radius: 5px 0 0 5px;
-  padding: 15px 10px;
-  cursor: pointer;
-  z-index: 1001;
-  transition: right 0.3s ease;
-}
-
-.toggle-panel.collapsed {
-  right: 0;
-}
-
-.header {
-  padding: 20px;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  text-align: center;
-}
-
-.header h1 {
-  font-size: 24px;
-  margin-bottom: 5px;
-}
-
-.tabs {
-  display: flex;
-  background: rgba(20, 20, 20, 0.5);
-  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-}
-
-.tab {
-  flex: 1;
-  padding: 12px;
-  background: none;
-  border: none;
-  color: #fff;
-  cursor: pointer;
-  transition: all 0.3s;
-  font-size: 14px;
-}
-
-.tab:hover {
-  background: rgba(255, 255, 255, 0.05);
-}
-
-.tab.active {
-  background: rgba(102, 126, 234, 0.2);
-  border-bottom: 2px solid #667eea;
-}
-
-.tab-content {
-  display: none;
-  padding: 20px;
-}
-
-.tab-content.active {
-  display: block;
-}
-
-.viz-grid {
-  display: grid;
-  grid-template-columns: repeat(2, 1fr);
-  gap: 10px;
-  margin-bottom: 20px;
-}
-
-.viz-card {
-  background: rgba(20, 20, 20, 0.5);
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  border-radius: 8px;
-  padding: 15px;
-  cursor: pointer;
-  transition: all 0.3s;
-  text-align: center;
-}
-
-.viz-card:hover {
-  background: rgba(30, 30, 30, 0.5);
-  transform: translateY(-2px);
-}
-
-.viz-card.active {
-  background: linear-gradient(135deg, rgba(102, 126, 234, 0.3), rgba(118, 75, 162, 0.3));
-  border-color: #667eea;
-}
-
-.viz-card.social-ready {
-  border: 2px solid #00ff00;
-}
-
-.viz-card .icon {
-  font-size: 24px;
-  margin-bottom: 5px;
-}
-
-.viz-card .name {
-  font-size: 12px;
-  font-weight: 600;
-}
-
-.viz-card .badge {
-  display: inline-block;
-  background: #00ff00;
-  color: #000;
-  font-size: 9px;
-  padding: 2px 5px;
-  border-radius: 3px;
-  margin-top: 5px;
-}
-
-.control-group {
-  margin-bottom: 20px;
-}
-
-.control-group label {
-  display: block;
-  margin-bottom: 8px;
-  font-size: 12px;
-  text-transform: uppercase;
-  opacity: 0.7;
-}
-
-.slider {
-  flex: 1;
-  -webkit-appearance: none;
-  height: 4px;
-  background: rgba(255, 255, 255, 0.1);
-  outline: none;
-  border-radius: 2px;
-}
-
-.slider::-webkit-slider-thumb {
-  -webkit-appearance: none;
-  width: 12px;
-  height: 12px;
-  background: #667eea;
-  border-radius: 50%;
-  cursor: pointer;
-}
-
-.slider-container {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-}
-
-.slider-value {
-  min-width: 40px;
-  text-align: right;
-  font-size: 12px;
-}
-
-/* Recording Modal */
-.recording-modal {
-  position: fixed;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  background: rgba(0, 0, 0, 0.9);
-  display: none;
-  justify-content: center;
-  align-items: center;
-  z-index: 2000;
-}
-
-.recording-modal.active {
-  display: flex;
-}
-
-.recording-content {
-  background: rgba(20, 20, 20, 0.95);
-  border-radius: 10px;
-  padding: 30px;
-  max-width: 500px;
-  width: 90%;
-}
-
-.recording-title {
-  font-size: 24px;
-  margin-bottom: 20px;
-  text-align: center;
-}
-
-.format-grid {
-  display: grid;
-  grid-template-columns: repeat(2, 1fr);
-  gap: 15px;
-  margin-bottom: 20px;
-}
-
-.format-card {
-  background: rgba(30, 30, 30, 0.5);
-  border: 2px solid rgba(255, 255, 255, 0.1);
-  border-radius: 8px;
-  padding: 20px;
-  cursor: pointer;
-  text-align: center;
-  transition: all 0.3s;
-}
-
-.format-card:hover {
-  background: rgba(40, 40, 40, 0.5);
-  transform: translateY(-2px);
-}
-
-.format-card.selected {
-  border-color: #667eea;
-  background: rgba(102, 126, 234, 0.2);
-}
-
-.format-card .format-name {
-  font-size: 16px;
-  font-weight: bold;
-  margin-bottom: 5px;
-}
-
-.format-card .format-desc {
-  font-size: 12px;
-  opacity: 0.7;
-}
-
-.recording-controls {
-  display: flex;
-  flex-direction: column;
-  gap: 15px;
-}
-
-.duration-control {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-}
-
-.record-btn {
-  padding: 15px 30px;
-  background: linear-gradient(135deg, #667eea, #764ba2);
-  border: none;
-  border-radius: 5px;
-  color: #fff;
-  font-size: 16px;
-  cursor: pointer;
-  transition: all 0.3s;
-}
-
-.record-btn:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 5px 20px rgba(102, 126, 234, 0.4);
-}
-
-.record-btn:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
-}
-
-.cancel-btn {
-  padding: 10px 20px;
-  background: rgba(255, 255, 255, 0.1);
-  border: 1px solid rgba(255, 255, 255, 0.2);
-  border-radius: 5px;
-  color: #fff;
-  cursor: pointer;
-}
-
-.recording-status {
-  text-align: center;
-  margin-top: 20px;
-}
-
-.recording-progress {
-  width: 100%;
-  height: 4px;
-  background: rgba(255, 255, 255, 0.1);
-  border-radius: 2px;
-  overflow: hidden;
-  margin-top: 10px;
-}
-
-.recording-progress-bar {
-  height: 100%;
-  background: linear-gradient(90deg, #667eea, #764ba2);
-  width: 0%;
-  transition: width 0.1s linear;
-}
-
-.audio-controls {
-  position: fixed;
-  bottom: 0;
-  left: 0;
-  right: 350px;
-  background: rgba(10, 10, 10, 0.95);
-  backdrop-filter: blur(10px);
-  padding: 20px;
-  border-top: 1px solid rgba(255, 255, 255, 0.1);
-  z-index: 100;
-  transition: right 0.3s ease;
-}
-
-.audio-controls.expanded {
-  right: 0;
-}
-
-.audio-buttons {
-  display: flex;
-  gap: 10px;
-  margin-bottom: 15px;
-}
-
-.audio-btn {
-  padding: 10px 20px;
-  background: rgba(102, 126, 234, 0.2);
-  border: 1px solid #667eea;
-  border-radius: 4px;
-  color: #fff;
-  cursor: pointer;
-  transition: all 0.3s;
-  font-size: 18px;
-}
-
-.audio-btn:hover {
-  background: rgba(102, 126, 234, 0.3);
-  transform: translateY(-2px);
-}
-
-.audio-btn.recording {
-  background: rgba(255, 0, 0, 0.3);
-  border-color: #ff0000;
-  animation: pulse 1s infinite;
-}
-
-@keyframes pulse {
-  0%, 100% { opacity: 1; }
-  50% { opacity: 0.5; }
-}
-
-.file-input {
-  display: none;
-}
-
-.file-label {
-  display: inline-block;
-  padding: 10px 20px;
-  background: rgba(102, 126, 234, 0.2);
-  border: 1px solid #667eea;
-  border-radius: 4px;
-  cursor: pointer;
-  transition: all 0.3s;
-}
-
-input[type="color"] {
-  width: 100%;
-  height: 40px;
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  border-radius: 4px;
-  cursor: pointer;
-  background: rgba(20, 20, 20, 0.5);
-}
-
-select {
-  width: 100%;
-  padding: 8px;
-  background: rgba(20, 20, 20, 0.5);
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  border-radius: 4px;
-  color: #fff;
-  cursor: pointer;
-}
-
-.loading {
-  position: fixed;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  background: #000;
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  z-index: 9999;
-}
-
-.loading-text {
-  font-size: 24px;
-  animation: pulse 1.5s infinite;
-}
-</style>
+        .status-rec { color: #ff2d55; font-weight: bold; animation: blink 1s infinite; display: none; }
+        @keyframes blink { 0% { opacity: 1; } 50% { opacity: 0; } }
+    </style>
 </head>
 <body>
 
-<div class="loading">
-  <div class="loading-text">N1K∅ Loading...</div>
-</div>
+<div id="ui-root">
+    <!-- Sidebar -->
+    <div class="sidebar interactive">
+        <h2 style="color: #ff2d55">N1K∅ PRO</h2>
+        
+        <label>1. АУДИО</label>
+        <input type="file" id="audio-input" accept="audio/*">
+        
+        <label>2. 3D ФОН (ФОТО)</label>
+        <input type="file" id="image-input" accept="image/*">
 
-<img id="background-image" />
-<div id="canvas-container"></div>
-
-<div class="recording-modal" id="recordingModal">
-  <div class="recording-content">
-    <h2 class="recording-title">📹 Export Video</h2>
-    
-    <div class="format-grid">
-      <div class="format-card" onclick="selectFormat('tiktok', this)">
-        <div class="format-name">TikTok</div>
-        <div class="format-desc">9:16 (1080x1920)</div>
-      </div>
-      
-      <div class="format-card" onclick="selectFormat('reels', this)">
-        <div class="format-name">Reels/Shorts</div>
-        <div class="format-desc">9:16 (1080x1920)</div>
-      </div>
-      
-      <div class="format-card" onclick="selectFormat('square', this)">
-        <div class="format-name">Instagram</div>
-        <div class="format-desc">1:1 (1080x1080)</div>
-      </div>
-      
-      <div class="format-card" onclick="selectFormat('landscape', this)">
-        <div class="format-name">YouTube</div>
-        <div class="format-desc">16:9 (1920x1080)</div>
-      </div>
-    </div>
-    
-    <div class="recording-controls">
-      <div class="duration-control">
-        <label>Duration (seconds):</label>
-        <input type="number" id="recordDuration" value="15" min="5" max="60" style="width: 80px; padding: 5px; background: rgba(20,20,20,0.5); border: 1px solid rgba(255,255,255,0.1); color: white;">
-      </div>
-      
-      <div class="control-group">
-        <label>Quality:</label>
-        <select id="recordQuality">
-          <option value="4000000">High (4 Mbps)</option>
-          <option value="2500000" selected>Medium (2.5 Mbps)</option>
-          <option value="1000000">Low (1 Mbps)</option>
+        <label>3. ВИЗУАЛИЗАТОР</label>
+        <select id="viz-type">
+            <option value="crystalHearts">💎 Crystal Hearts (Романтика)</option>
+            <option value="spatialImage">🌌 Spatial Photo (Объемное фото)</option>
+            <option value="nebulaLove">☁️ Nebula Love (Туманность)</option>
         </select>
-      </div>
-      
-      <button class="record-btn" id="startRecordBtn" onclick="startRecording()">🔴 Start Recording</button>
-      <button class="cancel-btn" onclick="closeRecordingModal()">Cancel</button>
+
+        <label>4. ФОРМАТ ЭКСПОРТА</label>
+        <select id="export-format">
+            <option value="9/16">TikTok / Reels (9:16)</option>
+            <option value="16/9">YouTube (16:9)</option>
+            <option value="1/1">Instagram Square (1:1)</option>
+        </select>
+
+        <label>ИНТЕНСИВНОСТЬ 3D</label>
+        <input type="range" id="depth-range" min="1" max="50" value="20">
+
+        <div style="margin-top: 30px;">
+            <div id="rec-status" class="status-rec">● ИДЕТ ЗАПИСЬ...</div>
+            <button class="btn" id="start-rec">НАЧАТЬ ЗАПИСЬ ВИДЕО</button>
+            <button class="btn secondary" id="stop-rec" style="display:none">ОСТАНОВИТЬ И СОХРАНИТЬ</button>
+        </div>
     </div>
-    
-    <div class="recording-status" id="recordingStatus" style="display: none;">
-      <div>Recording: <span id="recordTime">0</span>s / <span id="totalTime">15</span>s</div>
-      <div class="recording-progress">
-        <div class="recording-progress-bar" id="recordProgress"></div>
-      </div>
+
+    <!-- Player Bar -->
+    <div class="player-bar interactive">
+        <div class="progress-container" id="progress-bar">
+            <div class="progress-fill" id="progress-fill"></div>
+        </div>
+        <div style="display: flex; justify-content: space-between; align-items: center;">
+            <button id="play-btn" style="background:none; border:none; color:white; font-size:24px; cursor:pointer;">▶</button>
+            <div id="time-display">00:00 / 00:00</div>
+            <div style="font-size: 12px; color: #666;">Spatial Engine v2.5</div>
+        </div>
     </div>
-  </div>
 </div>
 
-<div class="toggle-panel" onclick="togglePanel()">
-  <span>☰</span>
-</div>
-
-<div class="control-panel" id="controlPanel">
-  <div class="header">
-    <h1>N1K∅ 3D Visualizer</h1>
-    <p>Video Export Edition</p>
-  </div>
-
-  <div class="tabs">
-    <button class="tab active" onclick="switchTab('visualizers', this)">Visualizers</button>
-    <button class="tab" onclick="switchTab('scene', this)">Scene</button>
-    <button class="tab" onclick="switchTab('effects', this)">Effects</button>
-  </div>
-
-  <div id="tab-visualizers" class="tab-content active">
-    <div class="viz-grid">
-      <div class="viz-card active social-ready" onclick="selectVisualizer('particleWave', this)">
-        <div class="icon">🌊</div>
-        <div class="name">Particle Wave</div>
-        <div class="badge">SOCIAL READY</div>
-      </div>
-      
-      <div class="viz-card social-ready" onclick="selectVisualizer('circularBars', this)">
-        <div class="icon">⭕</div>
-        <div class="name">Circular Bars</div>
-        <div class="badge">SOCIAL READY</div>
-      </div>
-      
-      <div class="viz-card social-ready" onclick="selectVisualizer('neonLines', this)">
-        <div class="icon">💫</div>
-        <div class="name">Neon Lines</div>
-        <div class="badge">SOCIAL READY</div>
-      </div>
-      
-      <div class="viz-card social-ready" onclick="selectVisualizer('pulseRing', this)">
-        <div class="icon">💍</div>
-        <div class="name">Pulse Ring</div>
-        <div class="badge">SOCIAL READY</div>
-      </div>
-      
-      <div class="viz-card" onclick="selectVisualizer('particleSphere', this)">
-        <div class="icon">🌐</div>
-        <div class="name">Particle Sphere</div>
-      </div>
-      
-      <div class="viz-card" onclick="selectVisualizer('bars3D', this)">
-        <div class="icon">📊</div>
-        <div class="name">3D Bars</div>
-      </div>
-    </div>
-  </div>
-
-  <div id="tab-scene" class="tab-content">
-    <div class="control-group">
-      <label>Background Image</label>
-      <input type="file" id="bgImageFile" class="file-input" accept="image/*">
-      <label for="bgImageFile" class="file-label">Choose Background</label>
-    </div>
-    
-    <div class="control-group">
-      <label>Background Opacity</label>
-      <div class="slider-container">
-        <input type="range" class="slider" id="bgOpacity" min="0" max="1" step="0.01" value="0.3">
-        <span class="slider-value" id="bgOpacityVal">0.3</span>
-      </div>
-    </div>
-
-    <div class="control-group">
-      <label>Fog Density</label>
-      <div class="slider-container">
-        <input type="range" class="slider" id="fogDensity" min="0" max="0.1" step="0.001" value="0.01">
-        <span class="slider-value" id="fogDensityVal">0.01</span>
-      </div>
-    </div>
-
-    <div class="control-group">
-      <label>Primary Color</label>
-      <input type="color" id="vizColor1" value="#667eea">
-    </div>
-
-    <div class="control-group">
-      <label>Secondary Color</label>
-      <input type="color" id="vizColor2" value="#764ba2">
-    </div>
-  </div>
-
-  <div id="tab-effects" class="tab-content">
-    <div class="control-group">
-      <label>Visualizer Scale</label>
-      <div class="slider-container">
-        <input type="range" class="slider" id="vizScale" min="0.5" max="3" step="0.1" value="1">
-        <span class="slider-value" id="vizScaleVal">1</span>
-      </div>
-    </div>
-
-    <div class="control-group">
-      <label>Reactivity</label>
-      <div class="slider-container">
-        <input type="range" class="slider" id="reactivity" min="0" max="2" step="0.1" value="1">
-        <span class="slider-value" id="reactivityVal">1</span>
-      </div>
-    </div>
-
-    <div class="control-group">
-      <label>Smoothing</label>
-      <div class="slider-container">
-        <input type="range" class="slider" id="smoothing" min="0" max="0.9" step="0.01" value="0.8">
-        <span class="slider-value" id="smoothingVal">0.8</span>
-      </div>
-    </div>
-  </div>
-</div>
-
-<div class="audio-controls" id="audioControls">
-  <div class="audio-buttons">
-    <button class="audio-btn" id="playBtn" onclick="togglePlay()">▶️</button>
-    <label for="audioFile" class="file-label">Choose Audio</label>
-    <input type="file" id="audioFile" class="file-input" accept="audio/*">
-    <button class="audio-btn" onclick="useMicrophone()">🎤</button>
-    <button class="audio-btn" id="recordBtn" onclick="openRecordingModal()">🎬 Export Video</button>
-  </div>
-</div>
+<!-- Рамка для предпросмотра записи -->
+<div id="record-frame"></div>
 
 <script>
-class N1K0Visualizer {
-  constructor() {
-    this.scene = null;
-    this.camera = null;
-    this.renderer = null;
-    this.visualizer = null;
-    this.currentVizType = 'particleWave';
-    
-    this.audioContext = null;
-    this.analyser = null;
-    this.dataArray = null;
-    this.audioSource = null;
-    this.audioBuffer = null;
-    this.isPlaying = false;
-    
-    // Recording
-    this.mediaRecorder = null;
-    this.recordedChunks = [];
-    this.isRecording = false;
-    this.recordFormat = 'tiktok';
-    this.recordCanvas = null;
-    
-    this.clock = new THREE.Clock();
-    
-    this.config = {
-      fogDensity: 0.01,
-      vizScale: 1,
-      reactivity: 1,
-      smoothing: 0.8,
-      vizColor1: 0x667eea,
-      vizColor2: 0x764ba2
-    };
-    
-    this.init();
-  }
+let scene, camera, renderer, analyser, dataArray, audio, audioContext;
+let visualizerGroup, backgroundParticles;
+let isPlaying = false;
+let recorder, recordedChunks = [];
+let spatialPoints = null;
 
-  init() {
-    this.initThree();
-    this.initAudio();
-    this.initControls();
-    this.createVisualizer(this.currentVizType);
-    this.animate();
-  }
+// Инициализация
+function init() {
+    scene = new THREE.Scene();
+    camera = new THREE.PerspectiveCamera(75, (window.innerWidth - 300) / window.innerHeight, 0.1, 1000);
+    camera.position.z = 50;
 
-  initThree() {
-    this.scene = new THREE.Scene();
-    this.scene.fog = new THREE.FogExp2(0x000000, this.config.fogDensity);
-    
-    this.camera = new THREE.PerspectiveCamera(
-      75,
-      window.innerWidth / window.innerHeight,
-      0.1,
-      1000
-    );
-    this.camera.position.z = 30;
-    
-    this.renderer = new THREE.WebGLRenderer({ 
-      antialias: true, 
-      alpha: true,
-      preserveDrawingBuffer: true 
-    });
-    this.renderer.setSize(window.innerWidth, window.innerHeight);
-    this.renderer.setPixelRatio(window.devicePixelRatio);
-    document.getElementById('canvas-container').appendChild(this.renderer.domElement);
-    
-    // Lights
-    this.ambientLight = new THREE.AmbientLight(0xffffff, 0.3);
-    this.scene.add(this.ambientLight);
-    
-    this.pointLight = new THREE.PointLight(0xffffff, 1);
-    this.pointLight.position.set(20, 20, 20);
-    this.scene.add(this.pointLight);
-    
-    window.addEventListener('resize', () => this.onResize());
-  }
+    renderer = new THREE.WebGLRenderer({ antialias: true, preserveDrawingBuffer: true });
+    renderer.setSize(window.innerWidth - 300, window.innerHeight);
+    document.body.appendChild(renderer.domElement);
 
-  initAudio() {
-    this.audioContext = new (window.AudioContext || window.webkitAudioContext)();
-    this.analyser = this.audioContext.createAnalyser();
-    this.analyser.fftSize = 2048;
-    this.analyser.smoothingTimeConstant = this.config.smoothing;
+    visualizerGroup = new THREE.Group();
+    scene.add(visualizerGroup);
+
+    window.addEventListener('resize', onWindowResize);
+    setupAudioControls();
+    setupVisualizerChange();
+    animate();
+}
+
+// 1. ТЕХНОЛОГИЯ: ОБЪЕМНОЕ ФОТО (Spatial Image)
+function createSpatialImage(imgElement) {
+    if (spatialPoints) scene.remove(spatialPoints);
     
-    this.dataArray = new Uint8Array(this.analyser.frequencyBinCount);
-    
-    this.gainNode = this.audioContext.createGain();
-    this.gainNode.connect(this.analyser);
-    this.analyser.connect(this.audioContext.destination);
-  }
+    const canvas = document.createElement('canvas');
+    const ctx = canvas.getContext('2d');
+    const w = 128, h = 128; // Плотность точек
+    canvas.width = w; canvas.height = h;
+    ctx.drawImage(imgElement, 0, 0, w, h);
+    const imageData = ctx.getImageData(0, 0, w, h).data;
 
-  createVisualizer(type) {
-    if (this.visualizer) {
-      this.scene.remove(this.visualizer);
-      if (this.visualizer.geometry) this.visualizer.geometry.dispose();
-      if (this.visualizer.material) this.visualizer.material.dispose();
-    }
-
-    switch(type) {
-      case 'particleWave':
-        this.createParticleWave();
-        break;
-      case 'circularBars':
-        this.createCircularBars();
-        break;
-      case 'neonLines':
-        this.createNeonLines();
-        break;
-      case 'pulseRing':
-        this.createPulseRing();
-        break;
-      case 'particleSphere':
-        this.createParticleSphere();
-        break;
-      case 'bars3D':
-        this.createBars3D();
-        break;
-    }
-
-    this.scene.add(this.visualizer);
-  }
-
-  createParticleWave() {
     const geometry = new THREE.BufferGeometry();
-    const count = 5000;
-    const positions = new Float32Array(count * 3);
-    const colors = new Float32Array(count * 3);
-    
-    for (let i = 0; i < count; i++) {
-      positions[i * 3] = (Math.random() - 0.5) * 40;
-      positions[i * 3 + 1] = (Math.random() - 0.5) * 20;
-      positions[i * 3 + 2] = (Math.random() - 0.5) * 20;
-      
-      const color = new THREE.Color();
-      color.setHSL(Math.random(), 0.8, 0.5);
-      colors[i * 3] = color.r;
-      colors[i * 3 + 1] = color.g;
-      colors[i * 3 + 2] = color.b;
+    const positions = [];
+    const colors = [];
+
+    for (let y = 0; y < h; y++) {
+        for (let x = 0; x < w; x++) {
+            const idx = (y * w + x) * 4;
+            const r = imageData[idx] / 255;
+            const g = imageData[idx+1] / 255;
+            const b = imageData[idx+2] / 255;
+            const brightness = (r + g + b) / 3;
+
+            positions.push((x - w/2) * 0.5, (h/2 - y) * 0.5, 0);
+            colors.push(r, g, b);
+        }
     }
-    
-    geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
-    geometry.setAttribute('color', new THREE.BufferAttribute(colors, 3));
-    
-    const material = new THREE.PointsMaterial({
-      size: 0.5,
-      vertexColors: true,
-      transparent: true,
-      opacity: 0.8,
-      blending: THREE.AdditiveBlending
-    });
-    
-    this.visualizer = new THREE.Points(geometry, material);
-    this.visualizer.userData.originalPositions = positions.slice();
-  }
 
-  createCircularBars() {
-    this.visualizer = new THREE.Group();
-    const barCount = 64;
+    geometry.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
+    geometry.setAttribute('color', new THREE.Float32BufferAttribute(colors, 3));
     
-    for (let i = 0; i < barCount; i++) {
-      const geometry = new THREE.BoxGeometry(0.5, 1, 2);
-      const material = new THREE.MeshPhongMaterial({
-        color: new THREE.Color().setHSL(i / barCount, 0.8, 0.5),
-        emissive: new THREE.Color().setHSL(i / barCount, 1, 0.3),
-        emissiveIntensity: 0.5
-      });
-      
-      const bar = new THREE.Mesh(geometry, material);
-      const angle = (i / barCount) * Math.PI * 2;
-      bar.position.x = Math.cos(angle) * 10;
-      bar.position.z = Math.sin(angle) * 10;
-      bar.rotation.y = -angle;
-      bar.userData.index = i;
-      
-      this.visualizer.add(bar);
+    const material = new THREE.PointsMaterial({ size: 0.2, vertexColors: true });
+    spatialPoints = new THREE.Points(geometry, material);
+    scene.add(spatialPoints);
+}
+
+// 2. РОМАНТИЧЕСКИЙ ВИЗУАЛИЗАТОР: Crystal Hearts
+function createHearts() {
+    visualizerGroup.clear();
+    const heartShape = new THREE.Shape();
+    heartShape.moveTo(0, 0);
+    heartShape.bezierCurveTo(0, -3, -5, -3, -5, 0);
+    heartShape.bezierCurveTo(-5, 5, 0, 8, 0, 12);
+    heartShape.bezierCurveTo(0, 8, 5, 5, 5, 0);
+    heartShape.bezierCurveTo(5, -3, 0, -3, 0, 0);
+
+    for(let i=0; i<30; i++) {
+        const geom = new THREE.ExtrudeGeometry(heartShape, { depth: 1, bevelEnabled: true });
+        const mat = new THREE.MeshPhongMaterial({ color: 0xff2d55, shininess: 100 });
+        const heart = new THREE.Mesh(geom, mat);
+        heart.rotation.x = Math.PI;
+        heart.position.set(Math.random()*60-30, Math.random()*40-20, Math.random()*20-10);
+        heart.scale.set(0.2, 0.2, 0.2);
+        visualizerGroup.add(heart);
     }
-  }
+    const light = new THREE.PointLight(0xffffff, 1);
+    light.position.set(0,0,20);
+    visualizerGroup.add(light);
+}
 
-  createNeonLines() {
-    this.visualizer = new THREE.Group();
+// УПРАВЛЕНИЕ АУДИО И ПЕРЕМОТКА
+function setupAudioControls() {
+    const audioInput = document.getElementById('audio-input');
+    const playBtn = document.getElementById('play-btn');
+    const progressFill = document.getElementById('progress-fill');
+    const progressBar = document.getElementById('progress-bar');
+    const timeDisplay = document.getElementById('time-display');
+
+    audio = new Audio();
     
-    for (let j = 0; j < 5; j++) {
-      const points = [];
-      for (let i = 0; i < 50; i++) {
-        points.push(new THREE.Vector3(
-          (i - 25) * 0.8,
-          0,
-          j * 2 - 4
-        ));
-      }
-      
-      const geometry = new THREE.BufferGeometry().setFromPoints(points);
-      const material = new THREE.LineBasicMaterial({
-        color: new THREE.Color().setHSL(j / 5, 1, 0.5),
-        linewidth: 2,
-        transparent: true,
-        opacity: 0.8
-      });
-      
-      const line = new THREE.Line(geometry, material);
-      line.userData.offset = j;
-      this.visualizer.add(line);
+    audioInput.onchange = (e) => {
+        const file = e.target.files[0];
+        audio.src = URL.createObjectURL(file);
+        initAudioContext();
+    };
+
+    playBtn.onclick = () => {
+        if (audio.paused) { audio.play(); playBtn.innerText = '⏸'; }
+        else { audio.pause(); playBtn.innerText = '▶'; }
+    };
+
+    audio.ontimeupdate = () => {
+        const pct = (audio.currentTime / audio.duration) * 100;
+        progressFill.style.width = pct + '%';
+        timeDisplay.innerText = `${formatTime(audio.currentTime)} / ${formatTime(audio.duration)}`;
+    };
+
+    progressBar.onclick = (e) => {
+        const rect = progressBar.getBoundingClientRect();
+        const pct = (e.clientX - rect.left) / rect.width;
+        audio.currentTime = pct * audio.duration;
+    };
+
+    // Загрузка фото
+    document.getElementById('image-input').onchange = (e) => {
+        const img = new Image();
+        img.src = URL.createObjectURL(e.target.files[0]);
+        img.onload = () => createSpatialImage(img);
+    };
+}
+
+function initAudioContext() {
+    if (audioContext) return;
+    audioContext = new AudioContext();
+    analyser = audioContext.createAnalyser();
+    const source = audioContext.createMediaElementSource(audio);
+    source.connect(analyser);
+    analyser.connect(audioContext.destination);
+    analyser.fftSize = 256;
+    dataArray = new Uint8Array(analyser.frequencyBinCount);
+}
+
+// СИСТЕМА ЗАПИСИ
+const startRecBtn = document.getElementById('start-rec');
+const stopRecBtn = document.getElementById('stop-rec');
+const recStatus = document.getElementById('rec-status');
+
+startRecBtn.onclick = async () => {
+    const format = document.getElementById('export-format').value;
+    let w = 1080, h = 1920; // Default 9:16
+    
+    if (format === '16/9') { w = 1920; h = 1080; }
+    if (format === '1/1') { w = 1080; h = 1080; }
+
+    renderer.setSize(w, h);
+    camera.aspect = w / h;
+    camera.updateProjectionMatrix();
+
+    const stream = renderer.domElement.captureStream(60);
+    // Добавляем аудиодорожку
+    if (audioContext) {
+        const dest = audioContext.createMediaStreamDestination();
+        analyser.connect(dest);
+        stream.addTrack(dest.stream.getAudioTracks()[0]);
     }
-  }
 
-  createPulseRing() {
-    this.visualizer = new THREE.Group();
-    
-    for (let i = 0; i < 5; i++) {
-      const geometry = new THREE.TorusGeometry(8 + i * 2, 0.3, 8, 64);
-      const material = new THREE.MeshPhongMaterial({
-        color: new THREE.Color().setHSL(i / 5, 0.8, 0.5),
-        emissive: new THREE.Color().setHSL(i / 5, 1, 0.3),
-        emissiveIntensity: 0.5,
-        transparent: true,
-        opacity: 0.8 - i * 0.1
-      });
-      
-      const ring = new THREE.Mesh(geometry, material);
-      ring.userData.index = i;
-      this.visualizer.add(ring);
-    }
-  }
+    recorder = new MediaRecorder(stream, { mimeType: 'video/webm;codecs=vp9', videoBitsPerSecond: 8000000 });
+    recordedChunks = [];
 
-  createParticleSphere() {
-    const geometry = new THREE.SphereGeometry(10, 32, 32);
-    const material = new THREE.PointsMaterial({
-      size: 0.3,
-      color: this.config.vizColor1,
-      transparent: true,
-      opacity: 0.8,
-      blending: THREE.AdditiveBlending
-    });
-    
-    this.visualizer = new THREE.Points(geometry, material);
-  }
+    recorder.ondataavailable = e => recordedChunks.push(e.data);
+    recorder.onstop = saveVideo;
 
-  createBars3D() {
-    this.visualizer = new THREE.Group();
+    recorder.start();
+    startRecBtn.style.display = 'none';
+    stopRecBtn.style.display = 'block';
+    recStatus.style.display = 'block';
+};
+
+stopRecBtn.onclick = () => {
+    recorder.stop();
+    startRecBtn.style.display = 'block';
+    stopRecBtn.style.display = 'none';
+    recStatus.style.display = 'none';
+    onWindowResize(); // Возвращаем размер экрана
+};
+
+function saveVideo() {
+    const blob = new Blob(recordedChunks, { type: 'video/webm' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `Visualizer_${Date.now()}.webm`;
+    a.click();
+}
+
+function setupVisualizerChange() {
+    document.getElementById('viz-type').onchange = (e) => {
+        if (e.target.value === 'crystalHearts') createHearts();
+        else visualizerGroup.clear();
+    };
+}
+
+function animate() {
+    requestAnimationFrame(animate);
     
-    for (let i = 0; i < 16; i++) {
-      for (let j = 0; j < 16; j++) {
-        const geometry = new THREE.BoxGeometry(0.8, 1, 0.8);
-        const material = new THREE.MeshPhongMaterial({
-          color: new THREE.Color().setHSL((i + j) / 32, 0.8, 0.5)
+    if (analyser) {
+        analyser.getByteFrequencyData(dataArray);
+        const bass = dataArray[2] / 255;
+        const mid = dataArray[10] / 255;
+
+        // Анимация пространственного фото
+        if (spatialPoints) {
+            const depth = document.getElementById('depth-range').value;
+            const positions = spatialPoints.geometry.attributes.position.array;
+            for (let i = 0; i < positions.length; i += 3) {
+                // Двигаем точки по оси Z в зависимости от баса
+                positions[i + 2] = Math.sin(i + Date.now() * 0.001) * (bass * depth);
+            }
+            spatialPoints.geometry.attributes.position.needsUpdate = true;
+            spatialPoints.rotation.y = Math.sin(Date.now() * 0.0005) * 0.2;
+        }
+
+        // Анимация сердец
+        visualizerGroup.children.forEach((obj, i) => {
+            if (obj.type === "Mesh") {
+                obj.scale.setScalar(0.2 + bass * 0.3);
+                obj.rotation.y += 0.01 + (mid * 0.05);
+            }
         });
-        
-        const bar = new THREE.Mesh(geometry, material);
-        bar.position.x = (i - 8) * 1.2;
-        bar.position.z = (j - 8) * 1.2;
-        bar.userData.index = i * 16 + j;
-        
-        this.visualizer.add(bar);
-      }
     }
-  }
 
-  updateVisualizer() {
-    if (!this.analyser || !this.visualizer) return;
-    
-    this.analyser.getByteFrequencyData(this.dataArray);
-    
-    const bass = this.getFrequencyRange(0, 10) * this.config.reactivity;
-    const mid = this.getFrequencyRange(10, 100) * this.config.reactivity;
-    const treble = this.getFrequencyRange(100, 512) * this.config.reactivity;
-    const time = this.clock.getElapsedTime();
-    
-    switch(this.currentVizType) {
-      case 'particleWave':
-        this.updateParticleWave(bass, mid, treble, time);
-        break;
-      case 'circularBars':
-        this.updateCircularBars(bass, mid, treble, time);
-        break;
-      case 'neonLines':
-        this.updateNeonLines(bass, mid, treble, time);
-        break;
-      case 'pulseRing':
-        this.updatePulseRing(bass, mid, treble, time);
-        break;
-      case 'particleSphere':
-        this.visualizer.rotation.y += 0.01;
-        this.visualizer.scale.set(1 + bass, 1 + bass, 1 + bass);
-        break;
-      case 'bars3D':
-        this.updateBars3D(bass, mid, treble, time);
-        break;
-    }
-    
-    const scale = this.config.vizScale * (1 + bass * 0.2);
-    this.visualizer.scale.set(scale, scale, scale);
-  }
-
-  updateParticleWave(bass, mid, treble, time) {
-    const positions = this.visualizer.geometry.attributes.position;
-    const originalPositions = this.visualizer.userData.originalPositions;
-    
-    for (let i = 0; i < positions.count; i++) {
-      const i3 = i * 3;
-      const x = originalPositions[i3];
-      const wave = Math.sin(x * 0.1 + time * 2) * bass * 10;
-      
-      positions.setY(i, originalPositions[i3 + 1] + wave);
-    }
-    
-    positions.needsUpdate = true;
-    this.visualizer.rotation.y += 0.005;
-  }
-
-  updateCircularBars(bass, mid, treble, time) {
-    this.visualizer.children.forEach((bar, i) => {
-      const freqIndex = Math.floor((i / this.visualizer.children.length) * this.dataArray.length);
-      const amplitude = this.dataArray[freqIndex] / 255;
-      
-      bar.scale.y = 0.1 + amplitude * 15;
-      bar.position.y = bar.scale.y / 2;
-    });
-    
-    this.visualizer.rotation.y += 0.01;
-  }
-
-  updateNeonLines(bass, mid, treble, time) {
-    this.visualizer.children.forEach((line, index) => {
-      const positions = line.geometry.attributes.position;
-      
-      for (let i = 0; i < positions.count; i++) {
-        const freqIndex = Math.floor((i / positions.count) * this.dataArray.length);
-        const amplitude = this.dataArray[freqIndex] / 255;
-        
-        positions.setY(
-          i,
-          Math.sin(time * 2 + i * 0.2 + index) * amplitude * 5
-        );
-      }
-      
-      positions.needsUpdate = true;
-    });
-  }
-
-  updatePulseRing(bass, mid, treble, time) {
-    this.visualizer.children.forEach((ring, i) => {
-      const scale = 1 + bass * (1 - i * 0.2);
-      ring.scale.set(scale, scale, 1);
-      ring.rotation.z = time * (1 + i * 0.2);
-      ring.material.opacity = 0.3 + mid * 0.7;
-    });
-  }
-
-  updateBars3D(bass, mid, treble, time) {
-    this.visualizer.children.forEach((bar) => {
-      const freqIndex = bar.userData.index % this.dataArray.length;
-      const amplitude = this.dataArray[freqIndex] / 255;
-      
-      bar.scale.y = 0.1 + amplitude * 10;
-      bar.position.y = bar.scale.y / 2;
-    });
-  }
-
-  getFrequencyRange(start, end) {
-    if (!this.dataArray) return 0;
-    let sum = 0;
-    for (let i = start; i < Math.min(end, this.dataArray.length); i++) {
-      sum += this.dataArray[i] / 255;
-    }
-    return sum / (end - start);
-  }
-
-  animate() {
-    requestAnimationFrame(() => this.animate());
-    this.updateVisualizer();
-    this.renderer.render(this.scene, this.camera);
-  }
-
-  setupRecording(format) {
-    const formats = {
-      'tiktok': { width: 1080, height: 1920 },
-      'reels': { width: 1080, height: 1920 },
-      'square': { width: 1080, height: 1080 },
-      'landscape': { width: 1920, height: 1080 }
-    };
-    
-    const { width, height } = formats[format];
-    
-    // Create offscreen canvas for recording
-    this.recordCanvas = document.createElement('canvas');
-    this.recordCanvas.width = width;
-    this.recordCanvas.height = height;
-    
-    // Setup camera for format
-    this.camera.aspect = width / height;
-    this.camera.updateProjectionMatrix();
-    this.renderer.setSize(width, height);
-    
-    // Get canvas stream with audio
-    const videoStream = this.recordCanvas.captureStream(30);
-    
-    // Add audio track if available
-    if (this.audioContext.destination) {
-      const audioDestination = this.audioContext.createMediaStreamDestination();
-      this.analyser.connect(audioDestination);
-      const audioTrack = audioDestination.stream.getAudioTracks()[0];
-      if (audioTrack) {
-        videoStream.addTrack(audioTrack);
-      }
-    }
-    
-    return videoStream;
-  }
-
-  async startVideoRecording(format, duration, quality) {
-    this.recordFormat = format;
-    const stream = this.setupRecording(format);
-    
-    this.recordedChunks = [];
-    
-    const options = {
-      mimeType: 'video/webm;codecs=vp9',
-      videoBitsPerSecond: parseInt(quality)
-    };
-    
-    try {
-      this.mediaRecorder = new MediaRecorder(stream, options);
-    } catch (e) {
-      // Fallback to default codec
-      this.mediaRecorder = new MediaRecorder(stream);
-    }
-    
-    this.mediaRecorder.ondataavailable = (event) => {
-      if (event.data.size > 0) {
-        this.recordedChunks.push(event.data);
-      }
-    };
-    
-    this.mediaRecorder.onstop = () => {
-      const blob = new Blob(this.recordedChunks, { type: 'video/webm' });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = `N1K0-${this.recordFormat}-${Date.now()}.webm`;
-      a.click();
-      URL.revokeObjectURL(url);
-      
-      // Reset camera
-      this.onResize();
-      this.isRecording = false;
-    };
-    
-    this.mediaRecorder.start();
-    this.isRecording = true;
-    
-    // Auto stop after duration
-    setTimeout(() => {
-      if (this.isRecording) {
-        this.stopVideoRecording();
-      }
-    }, duration * 1000);
-  }
-
-  stopVideoRecording() {
-    if (this.mediaRecorder && this.mediaRecorder.state !== 'inactive') {
-      this.mediaRecorder.stop();
-    }
-  }
-
-  renderToCanvas() {
-    if (!this.isRecording || !this.recordCanvas) return;
-    
-    const ctx = this.recordCanvas.getContext('2d');
-    
-    // Draw background image if exists
-    const bgImage = document.getElementById('background-image');
-    if (bgImage.style.display !== 'none') {
-      ctx.globalAlpha = parseFloat(bgImage.style.opacity);
-      ctx.drawImage(bgImage, 0, 0, this.recordCanvas.width, this.recordCanvas.height);
-      ctx.globalAlpha = 1;
-    }
-    
-    // Draw Three.js scene
-    ctx.drawImage(this.renderer.domElement, 0, 0, this.recordCanvas.width, this.recordCanvas.height);
-  }
-
-  initControls() {
-    // Audio file
-    document.getElementById('audioFile').addEventListener('change', (e) => {
-      const file = e.target.files[0];
-      if (file) {
-        const reader = new FileReader();
-        reader.onload = (e) => {
-          this.audioContext.decodeAudioData(e.target.result, (buffer) => {
-            this.audioBuffer = buffer;
-          });
-        };
-        reader.readAsArrayBuffer(file);
-      }
-    });
-
-    // Background image
-    document.getElementById('bgImageFile').addEventListener('change', (e) => {
-      const file = e.target.files[0];
-      if (file) {
-        const reader = new FileReader();
-        reader.onload = (e) => {
-          const img = document.getElementById('background-image');
-          img.src = e.target.result;
-          img.style.display = 'block';
-        };
-        reader.readAsDataURL(file);
-      }
-    });
-
-    // Controls
-    document.getElementById('fogDensity').addEventListener('input', (e) => {
-      this.config.fogDensity = parseFloat(e.target.value);
-      this.scene.fog.density = this.config.fogDensity;
-      document.getElementById('fogDensityVal').textContent = e.target.value;
-    });
-
-    document.getElementById('bgOpacity').addEventListener('input', (e) => {
-      const opacity = parseFloat(e.target.value);
-      document.getElementById('background-image').style.opacity = opacity;
-      document.getElementById('bgOpacityVal').textContent = opacity;
-    });
-
-    document.getElementById('vizScale').addEventListener('input', (e) => {
-      this.config.vizScale = parseFloat(e.target.value);
-      document.getElementById('vizScaleVal').textContent = e.target.value;
-    });
-
-    document.getElementById('reactivity').addEventListener('input', (e) => {
-      this.config.reactivity = parseFloat(e.target.value);
-      document.getElementById('reactivityVal').textContent = e.target.value;
-    });
-
-    document.getElementById('smoothing').addEventListener('input', (e) => {
-      this.config.smoothing = parseFloat(e.target.value);
-      this.analyser.smoothingTimeConstant = this.config.smoothing;
-      document.getElementById('smoothingVal').textContent = e.target.value;
-    });
-
-    document.getElementById('vizColor1').addEventListener('input', (e) => {
-      this.config.vizColor1 = parseInt(e.target.value.replace('#', '0x'));
-    });
-
-    document.getElementById('vizColor2').addEventListener('input', (e) => {
-      this.config.vizColor2 = parseInt(e.target.value.replace('#', '0x'));
-    });
-  }
-
-  onResize() {
-    const width = window.innerWidth - (document.getElementById('controlPanel').classList.contains('hidden') ? 0 : 350);
-    const height = window.innerHeight;
-    
-    this.camera.aspect = width / height;
-    this.camera.updateProjectionMatrix();
-    this.renderer.setSize(width, height);
-  }
-
-  playAudio() {
-    if (!this.audioBuffer) return;
-    
-    this.stopAudio();
-    
-    this.audioSource = this.audioContext.createBufferSource();
-    this.audioSource.buffer = this.audioBuffer;
-    this.audioSource.connect(this.gainNode);
-    this.audioSource.start(0);
-    
-    this.isPlaying = true;
-    document.getElementById('playBtn').textContent = '⏸️';
-  }
-
-  stopAudio() {
-    if (this.audioSource) {
-      this.audioSource.stop();
-      this.audioSource.disconnect();
-    }
-    this.isPlaying = false;
-    document.getElementById('playBtn').textContent = '▶️';
-  }
-
-  async useMicrophone() {
-    try {
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-      this.audioSource = this.audioContext.createMediaStreamSource(stream);
-      this.audioSource.connect(this.gainNode);
-      this.isPlaying = true;
-    } catch (error) {
-      console.error('Microphone access error:', error);
-    }
-  }
+    renderer.render(scene, camera);
 }
 
-// Global functions
-let visualizer;
-let selectedFormat = null;
-let recordingInterval = null;
-
-window.addEventListener('DOMContentLoaded', () => {
-  visualizer = new N1K0Visualizer();
-  setTimeout(() => {
-    document.querySelector('.loading').style.display = 'none';
-  }, 1000);
-});
-
-function selectVisualizer(type, element) {
-  document.querySelectorAll('.viz-card').forEach(card => {
-    card.classList.remove('active');
-  });
-  element.classList.add('active');
-  
-  visualizer.currentVizType = type;
-  visualizer.createVisualizer(type);
+function onWindowResize() {
+    camera.aspect = (window.innerWidth - 300) / window.innerHeight;
+    camera.updateProjectionMatrix();
+    renderer.setSize(window.innerWidth - 300, window.innerHeight);
 }
 
-function switchTab(tabName, element) {
-  document.querySelectorAll('.tab').forEach(tab => {
-    tab.classList.remove('active');
-  });
-  element.classList.add('active');
-  
-  document.querySelectorAll('.tab-content').forEach(content => {
-    content.classList.remove('active');
-  });
-  document.getElementById(`tab-${tabName}`).classList.add('active');
+function formatTime(seconds) {
+    if (!seconds) return "00:00";
+    const m = Math.floor(seconds / 60);
+    const s = Math.floor(seconds % 60);
+    return `${m < 10 ? '0'+m : m}:${s < 10 ? '0'+s : s}`;
 }
 
-function togglePanel() {
-  const panel = document.getElementById('controlPanel');
-  const toggle = document.querySelector('.toggle-panel');
-  const audioControls = document.getElementById('audioControls');
-  
-  panel.classList.toggle('hidden');
-  toggle.classList.toggle('collapsed');
-  audioControls.classList.toggle('expanded');
-  
-  setTimeout(() => visualizer.onResize(), 300);
-}
-
-function togglePlay() {
-  if (visualizer.isPlaying) {
-    visualizer.stopAudio();
-  } else {
-    visualizer.playAudio();
-  }
-}
-
-function useMicrophone() {
-  visualizer.useMicrophone();
-}
-
-function openRecordingModal() {
-  document.getElementById('recordingModal').classList.add('active');
-}
-
-function closeRecordingModal() {
-  document.getElementById('recordingModal').classList.remove('active');
-  if (visualizer.isRecording) {
-    visualizer.stopVideoRecording();
-  }
-}
-
-function selectFormat(format, element) {
-  document.querySelectorAll('.format-card').forEach(card => {
-    card.classList.remove('selected');
-  });
-  element.classList.add('selected');
-  selectedFormat = format;
-}
-
-function startRecording() {
-  if (!selectedFormat) {
-    alert('Please select a format');
-    return;
-  }
-  
-  const duration = parseInt(document.getElementById('recordDuration').value);
-  const quality = document.getElementById('recordQuality').value;
-  
-  // Update UI
-  document.getElementById('startRecordBtn').disabled = true;
-  document.getElementById('recordingStatus').style.display = 'block';
-  document.getElementById('totalTime').textContent = duration;
-  document.getElementById('recordBtn').classList.add('recording');
-  
-  // Start recording
-  visualizer.startVideoRecording(selectedFormat, duration, quality);
-  
-  // Update progress
-  let elapsed = 0;
-  recordingInterval = setInterval(() => {
-    elapsed++;
-    document.getElementById('recordTime').textContent = elapsed;
-    document.getElementById('recordProgress').style.width = (elapsed / duration * 100) + '%';
-    
-    // Render frame to recording canvas
-    visualizer.renderToCanvas();
-    
-    if (elapsed >= duration) {
-      clearInterval(recordingInterval);
-      document.getElementById('startRecordBtn').disabled = false;
-      document.getElementById('recordingStatus').style.display = 'none';
-      document.getElementById('recordBtn').classList.remove('recording');
-      closeRecordingModal();
-    }
-  }, 1000);
-}
-
-// Animation loop for recording
-function recordingLoop() {
-  if (visualizer && visualizer.isRecording) {
-    visualizer.renderToCanvas();
-  }
-  requestAnimationFrame(recordingLoop);
-}
-recordingLoop();
-
-console.log('N1K∅ Video Export Visualizer Ready!');
+init();
+createHearts(); // По умолчанию
 </script>
-
 </body>
 </html>
