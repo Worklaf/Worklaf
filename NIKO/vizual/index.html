@@ -800,6 +800,7 @@ function updateResolution() {
 }
 
 javascriptDownloadCopy code// =============================================
+// =============================================
 // 🎵 АУДИО СИСТЕМА (ИСПРАВЛЕНА)
 // =============================================
 function initAudio() {
@@ -830,9 +831,7 @@ function loadAudioFile(file) {
         isPlaying = false;
         
         console.log('✅ Аудио загружено:', duration.toFixed(2), 'сек');
-        
-        // Автоматически начинаем воспроизведение
-        togglePlay();
+        document.getElementById('playBtn').innerHTML = '▶️';
       }, 
       function(error) {
         console.error('❌ Ошибка декодирования:', error);
@@ -849,18 +848,10 @@ function playAudio() {
   // Останавливаем предыдущий источник
   if (audioSource) {
     try {
-      audioSource.onended = null; // Убираем обработчик
       audioSource.stop();
       audioSource.disconnect();
-    } catch(e) {
-      console.warn('Источник уже остановлен');
-    }
+    } catch(e) {}
     audioSource = null;
-  }
-
-  // Возобновляем контекст если приостановлен
-  if (audioCtx.state === 'suspended') {
-    audioCtx.resume();
   }
 
   // Создаем новый источник
@@ -870,27 +861,22 @@ function playAudio() {
   analyser.connect(audioCtx.destination);
   
   // Запускаем с текущей позиции
-  const startPos = Math.min(audioPauseTime, duration - 0.1);
+  const startPos = audioPauseTime;
   audioSource.start(0, startPos);
   audioStartTime = audioCtx.currentTime - startPos;
   
   isPlaying = true;
   document.getElementById('playBtn').innerHTML = '⏸️';
   
-  // Обработчик завершения
-  audioSource.onended = function() {
-    // Проверяем, действительно ли трек закончился
-    const elapsed = audioCtx.currentTime - audioStartTime;
-    if (elapsed >= duration - 0.1) {
-      console.log('🎵 Трек завершен');
+  // Обработка окончания
+  audioSource.onended = () => {
+    if (isPlaying) {
       audioPauseTime = 0;
       currentTime = 0;
       isPlaying = false;
       document.getElementById('playBtn').innerHTML = '▶️';
     }
   };
-  
-  console.log('▶️ Воспроизведение с позиции:', startPos.toFixed(2));
 }
 
 function pauseAudio() {
@@ -901,18 +887,13 @@ function pauseAudio() {
   
   // Останавливаем источник
   try {
-    audioSource.onended = null; // Убираем обработчик
     audioSource.stop();
     audioSource.disconnect();
-  } catch(e) {
-    console.warn('Ошибка остановки:', e);
-  }
-  
+  } catch(e) {}
   audioSource = null;
+  
   isPlaying = false;
   document.getElementById('playBtn').innerHTML = '▶️';
-  
-  console.log('⏸️ Пауза на позиции:', audioPauseTime.toFixed(2));
 }
 
 function togglePlay() {
@@ -923,9 +904,15 @@ function togglePlay() {
 
   if (!audioCtx) initAudio();
 
+  if (audioCtx.state === 'suspended') {
+    audioCtx.resume();
+  }
+
   if (isPlaying) {
+    // Пауза
     pauseAudio();
   } else {
+    // Воспроизведение
     playAudio();
   }
 }
@@ -942,10 +929,11 @@ function seekTimeline(event) {
   audioPauseTime = percent * duration;
   currentTime = audioPauseTime;
   
-  console.log('⏩ Перемотка на:', audioPauseTime.toFixed(2));
-  
   // Если играло - перезапускаем с новой позиции
-  if (isPlaying) {
+  const wasPlaying = isPlaying;
+  
+  if (wasPlaying) {
+    pauseAudio();
     playAudio();
   }
 }
@@ -957,32 +945,28 @@ function updateTimeline() {
   if (isPlaying && audioCtx) {
     currentTime = audioCtx.currentTime - audioStartTime;
     
-    // Проверяем, не закончился ли трек
+    // Проверка на окончание
     if (currentTime >= duration) {
-      currentTime = duration;
+      currentTime = 0;
       audioPauseTime = 0;
       isPlaying = false;
       document.getElementById('playBtn').innerHTML = '▶️';
       if (audioSource) {
         try {
-          audioSource.onended = null;
-          audioSource.stop();
           audioSource.disconnect();
         } catch(e) {}
         audioSource = null;
       }
-    } else {
-      audioPauseTime = currentTime;
     }
   } else {
     currentTime = audioPauseTime;
   }
 
-  // Обновляем прогресс бар
-  const progress = (currentTime / duration) * 100;
-  document.getElementById('progress').style.width = Math.min(100, Math.max(0, progress)) + '%';
+  // Обновляем прогресс-бар
+  const progress = Math.max(0, Math.min(100, (currentTime / duration) * 100));
+  document.getElementById('progress').style.width = progress + '%';
 
-  // Форматируем время
+  // Обновляем время
   const formatTime = (sec) => {
     const m = Math.floor(sec / 60);
     const s = Math.floor(sec % 60);
