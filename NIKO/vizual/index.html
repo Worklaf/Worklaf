@@ -2111,91 +2111,100 @@ hyperSphere(ctx, centerX, centerY, dataArray) {
 
   ctx.restore();
   },
-  // Визуализатор куба
-visualizeCube(ctx, centerX, centerY, dataArray) {
-  const cube = document.createElement('div');
-  cube.style.position = 'absolute';
-  cube.style.top = '50%';
-  cube.style.left = '50%';
-  cube.style.transform = 'translate(-50%, -50%)';
+  visualizeCube(ctx, centerX, centerY, dataArray) {
+  const size = 150 * state.vizScale;
+  const bass = (dataArray[2] || 0) / 255;
+  const s = size + bass * 50;
   
-  // Создаем сетку
-  const grid = document.createElement('div');
-  grid.style.position = 'absolute';
-  grid.style.top = '20%';
-  grid.style.left = '20%';
-  grid.style.width = '60%';
-  grid.style.height = '60%';
-  grid.style.backgroundColor = '#000';
-  grid.style.gridTemplateColumns = 'repeat(auto-fit, minmax(10px, 1fr))';
-  grid.style.gridGap = '10px';
-  
-  for (let i = 0; i < 10; i++) {
-    for (let j = 0; j < 10; j++) {
-      const cell = document.createElement('div');
-      cell.style.position = 'absolute';
-      cell.style.top = `${i * 10}px`;
-      cell.style.left = `${j * 10}px`;
-      cell.style.width = '10px';
-      cell.style.height = '10px';
-      cell.style.backgroundColor = `hsl(${Math.random() * 360}, 100%, 50%)`;
-      grid.appendChild(cell);
-    }
-  }
-  
-  cube.appendChild(grid);
-  canvas.appendChild(cube);
-}
+  // Координаты вершин куба
+  let vertices = [
+    {x: -1, y: -1, z: -1}, {x: 1, y: -1, z: -1}, {x: 1, y: 1, z: -1}, {x: -1, y: 1, z: -1},
+    {x: -1, y: -1, z: 1},  {x: 1, y: -1, z: 1},  {x: 1, y: 1, z: 1},  {x: -1, y: 1, z: 1}
+  ];
 
-// Визуализатор шарика
+  // Ребра куба (пары индексов вершин)
+  const edges = [
+    [0,1], [1,2], [2,3], [3,0], [4,5], [5,6], [6,7], [7,4], [0,4], [1,5], [2,6], [3,7]
+  ];
+
+  const ax = time * 0.5 * state.rotSpeed;
+  const ay = time * 0.8 * state.rotSpeed;
+
+  ctx.save();
+  ctx.strokeStyle = state.vizColor;
+  ctx.lineWidth = 3;
+  ctx.shadowBlur = state.vizGlow;
+  ctx.shadowColor = state.vizColor;
+
+  let projected = vertices.map(v => {
+    let p = rotate3D({x: v.x * s, y: v.y * s, z: v.z * s}, ax, ay, 0);
+    return project3D(p.x, p.y, p.z + 500, centerX, centerY, 600);
+  });
+
+  edges.forEach(e => {
+    ctx.beginPath();
+    ctx.moveTo(projected[e[0]].x, projected[e[0]].y);
+    ctx.lineTo(projected[e[1]].x, projected[e[1]].y);
+    ctx.stroke();
+  });
+  ctx.restore();
+},
+
 visualizeSphere(ctx, centerX, centerY, dataArray) {
-  const sphere = document.createElement('div');
-  sphere.style.position = 'absolute';
-  sphere.style.top = '50%';
-  sphere.style.left = '50%';
-  sphere.style.transform = 'translate(-50%, -50%)';
-  
-  const material = new THREE.MeshBasicMaterial({ color: 0x00ff00 });
-  const geometry = new THREE.SphereGeometry(1, 32, 32);
-  const mesh = new THREE.Mesh(geometry, material);
-  
-  sphere.appendChild(mesh);
-  canvas.appendChild(sphere);
-}
+  // Используем готовую логику sphereCloud, но делаем её плотнее
+  this.sphereCloud(ctx, centerX, centerY, dataArray);
+},
 
-// Визуализатор волнового сигнала
 visualizeWaveform(ctx, centerX, centerY, dataArray) {
-  const waveform = document.createElement('div');
-  waveform.style.position = 'absolute';
-  waveform.style.top = '50%';
-  waveform.style.left = '50%';
-  waveform.style.transform = 'translate(-50%, -50%)';
+  const width = config.width * 0.8;
+  const step = width / 128;
+  const startX = centerX - width / 2;
   
-  const material = new THREE.MeshBasicMaterial({ color: 0x00ff00 });
-  const geometry = new THREE.WaveGeometry(10, 10, 10);
-  const mesh = new THREE.Mesh(geometry, material);
-  
-  waveform.appendChild(mesh);
-  canvas.appendChild(waveform);
-}
+  ctx.save();
+  ctx.beginPath();
+  ctx.strokeStyle = state.vizColor;
+  ctx.lineWidth = 4;
+  ctx.shadowBlur = state.vizGlow;
+  ctx.shadowColor = state.vizColor;
 
-// Визуализатор звездного неба
+  for (let i = 0; i < 128; i++) {
+    const v = (dataArray[i] || 0) / 255;
+    const x = startX + i * step;
+    const y = centerY + (v - 0.5) * 300 * state.vizScale;
+    if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+  }
+  ctx.stroke();
+  ctx.restore();
+},
+
 visualizeStarField(ctx, centerX, centerY, dataArray) {
-  const starField = document.createElement('div');
-  starField.style.position = 'absolute';
-  starField.style.top = '50%';
-  starField.style.left = '50%';
-  starField.style.transform = 'translate(-50%, -50%)';
-  
-  const material = new THREE.MeshBasicMaterial({ color: 0xffffff });
-  const geometry = new THREE.BoxGeometry(1, 1, 1);
-  const mesh = new THREE.Mesh(geometry, material);
-  
-  starField.appendChild(mesh);
-  canvas.appendChild(starField);
-}
-};
+  const bass = (dataArray[2] || 0) / 255;
+  if (!this.stars) {
+    this.stars = Array(200).fill(0).map(() => ({
+      x: (Math.random() - 0.5) * 2000,
+      y: (Math.random() - 0.5) * 2000,
+      z: Math.random() * 2000
+    }));
+  }
 
+  ctx.save();
+  ctx.fillStyle = "#fff";
+  this.stars.forEach(s => {
+    s.z -= 5 + bass * 20; // Скорость зависит от баса
+    if (s.z < 1) s.z = 2000;
+    
+    let proj = project3D(s.x, s.y, s.z, centerX, centerY, 500);
+    let size = (1 - s.z / 2000) * 5;
+    
+    if (proj.x > 0 && proj.x < config.width && proj.y > 0 && proj.y < config.height) {
+      ctx.beginPath();
+      ctx.arc(proj.x, proj.y, size, 0, Math.PI * 2);
+      ctx.fill();
+    }
+  });
+  ctx.restore();
+}
+);
 // =============================================
 // 🎆 СИСТЕМА ЧАСТИЦ (РАБОТАЕТ)
 // =============================================
