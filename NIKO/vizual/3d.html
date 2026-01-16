@@ -1,0 +1,398 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>N1K∅ Super Video Creator — Three.js Edition</title>
+<!-- Подключаем Three.js -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/0.160.0/three.min.js"></script>
+<style>
+:root {
+  --bg: #050508;
+  --card: #0b0b12;
+  --border: #1f1f2a;
+  --accent: #00d1ff;
+  --accent2: #ff4da6;
+  --text: #eaeaf2;
+  --muted: #8a8a9a;
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body {
+  font-family: 'Inter', sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  height: 100vh;
+  display: flex;
+  overflow: hidden;
+}
+
+/* === SIDEBAR === */
+.sidebar {
+  width: 320px;
+  background: var(--card);
+  border-right: 1px solid var(--border);
+  display: flex;
+  flex-direction: column;
+  z-index: 10;
+}
+
+.sidebar-header { padding: 20px; border-bottom: 1px solid var(--border); }
+.sidebar-header h1 {
+  font-size: 18px;
+  background: linear-gradient(90deg, var(--accent), var(--accent2));
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+.tabs { display: flex; background: #000; }
+.tab {
+  flex: 1; padding: 12px 5px; background: none; border: none;
+  color: var(--muted); font-size: 10px; font-weight: 700;
+  text-transform: uppercase; cursor: pointer; border-bottom: 2px solid transparent;
+}
+.tab.active { color: var(--accent); border-bottom-color: var(--accent); }
+
+.tab-content { display: none; padding: 16px; overflow-y: auto; flex: 1; }
+.tab-content.active { display: block; }
+
+.section { margin-bottom: 20px; border-bottom: 1px solid var(--border); padding-bottom: 15px; }
+.section-title { font-size: 11px; color: var(--muted); text-transform: uppercase; margin-bottom: 10px; }
+
+/* === UI ELEMENTS === */
+.input, select {
+  width: 100%; padding: 10px; background: #161620; border: 1px solid var(--border);
+  border-radius: 6px; color: #fff; font-size: 12px; margin-bottom: 10px;
+}
+.slider-group { margin-bottom: 12px; }
+.slider-label { display: flex; justify-content: space-between; font-size: 11px; margin-bottom: 4px; }
+.slider { width: 100%; cursor: pointer; accent-color: var(--accent); }
+
+.viz-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.viz-card {
+  background: #161620; border: 1px solid var(--border); padding: 10px;
+  border-radius: 8px; cursor: pointer; text-align: center; transition: 0.2s;
+}
+.viz-card:hover { background: #1f1f2f; }
+.viz-card.active { border-color: var(--accent); background: #1a2535; }
+
+/* === MAIN === */
+.main-area { flex: 1; display: flex; flex-direction: column; position: relative; }
+#canvas-container { flex: 1; background: #000; position: relative; }
+canvas { width: 100%; height: 100%; display: block; }
+
+.controls-bar {
+  background: var(--card); padding: 20px; border-top: 1px solid var(--border);
+  display: flex; align-items: center; gap: 15px;
+}
+.play-btn {
+  width: 50px; height: 50px; border-radius: 50%; border: none;
+  background: var(--accent); color: #000; font-size: 20px; cursor: pointer;
+}
+.timeline { flex: 1; height: 6px; background: #1f1f2a; border-radius: 3px; position: relative; cursor: pointer; }
+.progress { position: absolute; height: 100%; background: var(--accent); width: 0%; border-radius: 3px; }
+
+.btn-rec {
+  padding: 10px 20px; border-radius: 6px; border: none;
+  background: #ff4d4d; color: #fff; font-weight: 700; cursor: pointer;
+}
+.btn-rec.recording { animation: pulse 1s infinite; background: #ff0000; }
+
+@keyframes pulse { 0% { opacity: 1; } 50% { opacity: 0.5; } 100% { opacity: 1; } }
+</style>
+</head>
+<body>
+
+<div class="sidebar">
+  <div class="sidebar-header"><h1>N1K∅ 3D CORE</h1></div>
+  <div class="tabs">
+    <button class="tab active" onclick="switchTab('visual')">Visual</button>
+    <button class="tab" onclick="switchTab('audio')">Audio</button>
+    <button class="tab" onclick="switchTab('scene')">Scene</button>
+  </div>
+
+  <div id="tab-visual" class="tab-content active">
+    <div class="section">
+      <div class="section-title">Visualizer Mode</div>
+      <div class="viz-grid">
+        <div class="viz-card active" onclick="setMode('bars', this)">Bars 3D</div>
+        <div class="viz-card" onclick="setMode('sphere', this)">Wave Sphere</div>
+        <div class="viz-card" onclick="setMode('tunnel', this)">Cyber Tunnel</div>
+        <div class="viz-card" onclick="setMode('particles', this)">Star Field</div>
+      </div>
+    </div>
+    <div class="section">
+      <div class="section-title">Settings</div>
+      <div class="slider-group">
+        <div class="slider-label">Sensitivity <span id="val-sense">1.5</span></div>
+        <input type="range" class="slider" id="sense" min="0.1" max="5" step="0.1" value="1.5">
+      </div>
+      <input type="color" id="color1" value="#00d1ff" title="Primary Color">
+    </div>
+  </div>
+
+  <div id="tab-audio" class="tab-content">
+    <div class="section">
+      <div class="section-title">Load Music</div>
+      <input type="file" id="audio-input" accept="audio/*">
+      <p style="font-size: 10px; color: var(--muted);">Click Play after loading</p>
+    </div>
+  </div>
+</div>
+
+<div class="main-area">
+  <div id="canvas-container"></div>
+  <div class="controls-bar">
+    <button class="play-btn" id="play-btn">▶</button>
+    <div style="font-size: 12px; min-width: 80px;" id="time-display">0:00</div>
+    <div class="timeline" id="timeline"><div class="progress" id="progress"></div></div>
+    <button class="btn-rec" id="rec-btn">⏺ REC</button>
+  </div>
+</div>
+
+<script>
+/**
+ * 🚀 THREE.JS ENGINE CORE
+ */
+let scene, camera, renderer, clock, analyser, dataArray;
+let objects = [];
+let currentMode = 'bars';
+let isPlaying = false;
+let audio = new Audio();
+let audioCtx, source;
+
+// Конфиг
+const config = {
+  sensitivity: 1.5,
+  color: 0x00d1ff,
+  resX: 1920,
+  resY: 1080
+};
+
+function initEngine() {
+  scene = new THREE.Scene();
+  camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 5000);
+  camera.position.z = 500;
+
+  renderer = new THREE.WebGLRenderer({ antialias: true, preserveDrawingBuffer: true });
+  renderer.setSize(window.innerWidth - 320, window.innerHeight - 100);
+  renderer.setPixelRatio(window.devicePixelRatio);
+  document.getElementById('canvas-container').appendChild(renderer.domElement);
+
+  // Освещение
+  const ambient = new THREE.AmbientLight(0xffffff, 0.5);
+  scene.add(ambient);
+  const point = new THREE.PointLight(0xffffff, 1);
+  point.position.set(200, 200, 500);
+  scene.add(point);
+
+  clock = new THREE.Clock();
+  setupMode('bars');
+  animate();
+}
+
+/**
+ * 🎵 AUDIO SYSTEM
+ */
+document.getElementById('audio-input').onchange = function(e) {
+  const file = e.target.files[0];
+  if (!file) return;
+  
+  audio.src = URL.createObjectURL(file);
+  setupAudio();
+};
+
+function setupAudio() {
+  if (audioCtx) return;
+  audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+  analyser = audioCtx.createAnalyser();
+  source = audioCtx.createMediaElementSource(audio);
+  source.connect(analyser);
+  analyser.connect(audioCtx.destination);
+  analyser.fftSize = 512;
+  dataArray = new Uint8Array(analyser.frequencyBinCount);
+}
+
+document.getElementById('play-btn').onclick = function() {
+  if (audio.paused) {
+    audio.play();
+    this.innerText = '⏸';
+    if(audioCtx) audioCtx.resume();
+  } else {
+    audio.pause();
+    this.innerText = '▶';
+  }
+};
+
+/**
+ * 🎨 MODES SETUP
+ */
+function clearScene() {
+  objects.forEach(obj => scene.remove(obj));
+  objects = [];
+}
+
+function setupMode(mode) {
+  clearScene();
+  currentMode = mode;
+
+  if (mode === 'bars') {
+    const count = 64;
+    const radius = 200;
+    for (let i = 0; i < count; i++) {
+      const geo = new THREE.BoxGeometry(10, 10, 10);
+      const mat = new THREE.MeshStandardMaterial({ color: config.color, emissive: config.color, emissiveIntensity: 0.5 });
+      const mesh = new THREE.Mesh(geo, mat);
+      
+      const angle = (i / count) * Math.PI * 2;
+      mesh.position.set(Math.cos(angle) * radius, Math.sin(angle) * radius, 0);
+      mesh.lookAt(0, 0, 0);
+      scene.add(mesh);
+      objects.push(mesh);
+    }
+  } 
+  else if (mode === 'sphere') {
+    const geo = new THREE.IcosahedronGeometry(150, 4);
+    const mat = new THREE.MeshStandardMaterial({ color: config.color, wireframe: true });
+    const mesh = new THREE.Mesh(geo, mat);
+    scene.add(mesh);
+    objects.push(mesh);
+  }
+  else if (mode === 'tunnel') {
+    const points = [];
+    for (let i = 0; i < 10; i++) points.push(new THREE.Vector3(0, 0, -i * 100));
+    const curve = new THREE.CatmullRomCurve3(points);
+    const geo = new THREE.TubeGeometry(curve, 100, 50, 20, false);
+    const mat = new THREE.MeshStandardMaterial({ color: config.color, wireframe: true, side: THREE.DoubleSide });
+    const mesh = new THREE.Mesh(geo, mat);
+    scene.add(mesh);
+    objects.push(mesh);
+  }
+}
+
+function setMode(mode, el) {
+  document.querySelectorAll('.viz-card').forEach(c => c.classList.remove('active'));
+  el.classList.add('active');
+  setupMode(mode);
+}
+
+/**
+ * 🔄 ANIMATION LOOP
+ */
+function animate() {
+  requestAnimationFrame(animate);
+  const delta = clock.getDelta();
+  const time = clock.getElapsedTime();
+
+  if (analyser) {
+    analyser.getByteFrequencyData(dataArray);
+  } else {
+    dataArray = new Uint8Array(256).fill(0);
+  }
+
+  const bass = dataArray[2] / 255;
+
+  if (currentMode === 'bars') {
+    objects.forEach((obj, i) => {
+      const f = dataArray[i % 128] / 255;
+      obj.scale.y = 1 + f * 20 * config.sensitivity;
+      obj.material.emissiveIntensity = f;
+    });
+    scene.rotation.z += 0.005;
+  } 
+  else if (currentMode === 'sphere') {
+    const mesh = objects[0];
+    const s = 1 + bass * config.sensitivity;
+    mesh.scale.set(s, s, s);
+    mesh.rotation.y += 0.01;
+    mesh.rotation.x += 0.005;
+  }
+  else if (currentMode === 'tunnel') {
+    const mesh = objects[0];
+    mesh.rotation.z += 0.01;
+    camera.position.z = Math.sin(time) * 50;
+  }
+
+  // Обновление таймлайна
+  if (audio.duration) {
+    const p = (audio.currentTime / audio.duration) * 100;
+    document.getElementById('progress').style.width = p + '%';
+    document.getElementById('time-display').innerText = formatTime(audio.currentTime);
+  }
+
+  renderer.render(scene, camera);
+}
+
+/**
+ * ⏺ RECORDING SYSTEM
+ */
+let mediaRecorder;
+let recordedChunks = [];
+
+document.getElementById('rec-btn').onclick = function() {
+  if (this.innerText === '⏺ REC') {
+    recordedChunks = [];
+    const stream = renderer.domElement.captureStream(60);
+    mediaRecorder = new MediaRecorder(stream, { mimeType: 'video/webm;codecs=vp9' });
+    
+    mediaRecorder.ondataavailable = e => recordedChunks.push(e.data);
+    mediaRecorder.onstop = saveVideo;
+    
+    mediaRecorder.start();
+    this.innerText = '⏹ STOP';
+    this.classList.add('recording');
+  } else {
+    mediaRecorder.stop();
+    this.innerText = '⏺ REC';
+    this.classList.remove('recording');
+  }
+};
+
+function saveVideo() {
+  const blob = new Blob(recordedChunks, { type: 'video/webm' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `3d_visualizer_${Date.now()}.webm`;
+  a.click();
+}
+
+/**
+ * 🛠 HELPERS
+ */
+function switchTab(id) {
+  document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  document.getElementById('tab-' + id).classList.add('active');
+  event.target.classList.add('active');
+}
+
+function formatTime(s) {
+  const mins = Math.floor(s / 60);
+  const secs = Math.floor(s % 60);
+  return `${mins}:${secs.toString().padStart(2, '0')}`;
+}
+
+document.getElementById('sense').oninput = function() {
+  config.sensitivity = parseFloat(this.value);
+  document.getElementById('val-sense').innerText = this.value;
+};
+
+document.getElementById('color1').oninput = function() {
+  const col = new THREE.Color(this.value);
+  config.color = col;
+  setupMode(currentMode);
+};
+
+window.onresize = () => {
+  camera.aspect = (window.innerWidth - 320) / (window.innerHeight - 100);
+  camera.updateProjectionMatrix();
+  renderer.setSize(window.innerWidth - 320, window.innerHeight - 100);
+};
+
+// Start
+initEngine();
+
+</script>
+</body>
+</html>
