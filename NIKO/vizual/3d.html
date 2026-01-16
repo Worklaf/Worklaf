@@ -1378,14 +1378,12 @@ class N1K0Visualizer {
 
   updateGalaxySpiral(bass, mid, treble, time) {
     this.visualizer.rotation.y = time * 0.1;
-    this.visualizer.rotation.z = time * 0.05;
     
     const positions = this.visualizer.geometry.attributes.position;
     for (let i = 0; i < positions.count; i++) {
-      // Создаем пульсацию спирали
-      const originalY = (Math.random() - 0.5) * 2;
-      const pulse = Math.sin(time * 3 + i) * bass * 2;
-      positions.setY(i, originalY + pulse);
+      const y = positions.getY(i);
+      const newY = (Math.random() - 0.5) * 2 * (1 + bass);
+      positions.setY(i, y * 0.9 + newY * 0.1);
     }
     positions.needsUpdate = true;
   }
@@ -1395,109 +1393,79 @@ class N1K0Visualizer {
     
     this.visualizer.children.forEach((crystal) => {
       const { angle, index } = crystal.userData;
-      // Кристаллы подпрыгивают от баса
       crystal.position.y = Math.sin(time * 2 + angle * 3) * bass * 5;
+      crystal.rotation.x += 0.01 + bass * 0.02;
+      crystal.rotation.y += 0.02 + mid * 0.01;
       
-      // Вращение самих кристаллов
-      crystal.rotation.x += 0.01 + bass * 0.05;
-      crystal.rotation.y += 0.02 + mid * 0.03;
-      
-      // Скейл от высоких частот
-      const scale = 1 + Math.sin(time * 3 + index) * treble * 0.5;
+      const scale = 1 + Math.sin(time * 3 + index) * treble * 0.3;
       crystal.scale.set(scale, scale, scale);
-      
-      // Изменение цвета материала (эмиссии)
-      if(crystal.material.emissive) {
-         crystal.material.emissiveIntensity = 0.5 + bass;
-      }
     });
   }
 
   updateNeonTunnel(bass, mid, treble, time) {
     this.visualizer.children.forEach((ring) => {
       const { index } = ring.userData;
-      
-      // Пульсация колец
-      const scale = 1 + Math.sin(time * 4 + index * 0.5) * bass * 0.4;
+      const scale = 1 + Math.sin(time * 2 + index * 0.5) * bass * 0.3;
       ring.scale.set(scale, scale, 1);
       ring.rotation.z = time + index * 0.1;
-      
-      // Эффект вспышки
-      ring.material.emissiveIntensity = 0.5 + mid;
     });
     
-    // Бесконечное движение тоннеля
-    const speed = 10 + bass * 20;
-    this.visualizer.position.z = (time * speed) % 100;
+    this.visualizer.position.z = -time * 10 % 100;
   }
 
   updateAtomicOrbit(bass, mid, treble, time) {
-    // Ядро пульсирует
+    // Rotate nucleus
     const nucleus = this.visualizer.children[0];
     nucleus.rotation.y = time;
-    nucleus.rotation.z = time * 0.5;
-    const nScale = 1 + bass * 0.8;
-    nucleus.scale.set(nScale, nScale, nScale);
+    nucleus.scale.set(1 + bass * 0.5, 1 + bass * 0.5, 1 + bass * 0.5);
     
-    // Обновление электронов
+    // Update electrons
     this.visualizer.children.forEach((child) => {
       if (child.userData.orbit !== undefined) {
         const { angle, radius, speed } = child.userData;
-        
-        // Ускорение от высоких частот
-        const currentSpeed = speed * (1 + treble * 2);
-        const currentAngle = angle + time * currentSpeed;
-        
-        // Хаотичное дрожание орбиты от средних частот
-        const jitter = Math.sin(time * 10) * mid * 0.5;
-        
-        child.position.x = Math.cos(currentAngle) * (radius + jitter);
-        child.position.z = Math.sin(currentAngle) * (radius + jitter);
-        child.position.y = Math.sin(currentAngle * 2) * (treble * 4);
+        const currentAngle = angle + time * speed;
+        child.position.x = Math.cos(currentAngle) * radius * (1 + mid * 0.2);
+        child.position.z = Math.sin(currentAngle) * radius * (1 + mid * 0.2);
+        child.position.y = Math.sin(currentAngle * 2) * treble * 3;
       }
     });
   }
 
   getFrequencyRange(start, end) {
     if (!this.dataArray) return 0;
-    
-    const rangeStart = Math.floor(start / 24000 * this.dataArray.length);
-    const rangeEnd = Math.floor(end / 24000 * this.dataArray.length);
     let sum = 0;
-    
-    for (let i = rangeStart; i < rangeEnd; i++) {
-      sum += this.dataArray[i];
+    for (let i = start; i < Math.min(end, this.dataArray.length); i++) {
+      sum += this.dataArray[i] / 255;
     }
-    
-    return (sum / (rangeEnd - rangeStart)) / 255;
+    return sum / (end - start);
   }
 
   animate() {
     requestAnimationFrame(() => this.animate());
     
-    const delta = this.clock.getDelta();
-    
-    // Аудио анализ
-    if (this.analyser) {
-        this.analyser.getByteFrequencyData(this.dataArray);
-    }
-    
     this.updateVisualizer();
     
-    // Эффекты камеры
-    if (this.config.autoRotate) {
-        const time = this.clock.getElapsedTime();
-        this.camera.position.x = Math.sin(time * 0.1) * 30;
-        this.camera.position.z = Math.cos(time * 0.1) * 30;
-        this.camera.lookAt(0, 0, 0);
+    // Update background particles
+    if (this.backgroundParticles) {
+      this.backgroundParticles.rotation.y += 0.0005;
+      this.backgroundParticles.rotation.x += 0.0003;
     }
-
-    // Рендер
+    
+    // Update grid
+    if (this.gridHelper && this.config.showFloor) {
+      const bass = this.getFrequencyRange(0, 10);
+      this.gridHelper.position.y = -10 + Math.sin(this.clock.getElapsedTime()) * bass * 2;
+    }
+    
+    // Render
+    if (this.config.motionBlur > 0) {
+      this.renderer.setClearColor(0x000000, 1 - this.config.motionBlur);
+    }
+    
     this.renderer.render(this.scene, this.camera);
     
-    // Обновление статистики и времени
+    // Update stats
     this.updateStats();
-    this.updateTimeDisplay();
   }
 
   updateStats() {
@@ -1519,203 +1487,395 @@ class N1K0Visualizer {
     }
     this.stats.fps++;
   }
-  
-  updateTimeDisplay() {
-    if (this.audioSource && this.audioContext && this.isPlaying) {
-        const currentTime = this.audioContext.currentTime - this.startTime;
-        const duration = this.audioBuffer ? this.audioBuffer.duration : 0;
-        
-        if (duration > 0) {
-            const progress = (currentTime / duration) * 100;
-            document.getElementById('progress').style.width = `${Math.min(100, progress)}%`;
-            document.getElementById('currentTime').textContent = this.formatTime(currentTime);
-            
-            if (currentTime >= duration) {
-                this.stopAudio();
-            }
-        }
+
+  initControls() {
+    // All slider controls
+    const sliders = {
+      fogDensity: (v) => {
+        this.config.fogDensity = parseFloat(v);
+        this.scene.fog.density = this.config.fogDensity;
+      },
+      ambientLight: (v) => {
+        this.config.ambientLight = parseFloat(v);
+        this.ambientLight.intensity = this.config.ambientLight;
+      },
+      pointLight: (v) => {
+        this.config.pointLight = parseFloat(v);
+      },
+      vizScale: (v) => {
+        this.config.vizScale = parseFloat(v);
+      },
+      reactivity: (v) => {
+        this.config.reactivity = parseFloat(v);
+      },
+      smoothing: (v) => {
+        this.config.smoothing = parseFloat(v);
+        this.analyser.smoothingTimeConstant = this.config.smoothing;
+      },
+      gain: (v) => {
+        this.config.gain = parseFloat(v);
+        this.gainNode.gain.value = this.config.gain;
+      },
+      bloomStrength: (v) => {
+        this.config.bloomStrength = parseFloat(v);
+      },
+      motionBlur: (v) => {
+        this.config.motionBlur = parseFloat(v);
+      },
+      particleCount: (v) => {
+        this.config.particleCount = parseInt(v);
+        // Recreate particles with new count
+      }
+    };
+
+    Object.keys(sliders).forEach(key => {
+      const slider = document.getElementById(key);
+      const display = document.getElementById(key.replace(/([A-Z])/g, '$1').toLowerCase() + 'Val');
+      
+      if (slider && display) {
+        slider.addEventListener('input', (e) => {
+          display.textContent = e.target.value;
+          sliders[key](e.target.value);
+        });
+      }
+    });
+
+    // Color inputs
+    document.getElementById('fogColor')?.addEventListener('input', (e) => {
+      this.config.fogColor = parseInt(e.target.value.replace('#', '0x'), 16);
+      this.scene.fog.color = new THREE.Color(this.config.fogColor);
+    });
+
+    document.getElementById('lightColor')?.addEventListener('input', (e) => {
+      this.config.lightColor = parseInt(e.target.value.replace('#', '0x'), 16);
+      this.pointLight1.color = new THREE.Color(this.config.lightColor);
+    });
+
+    document.getElementById('vizColor1')?.addEventListener('input', (e) => {
+      this.config.vizColor1 = parseInt(e.target.value.replace('#', '0x'), 16);
+      this.createVisualizer(this.currentVizType);
+    });
+
+    document.getElementById('vizColor2')?.addEventListener('input', (e) => {
+      this.config.vizColor2 = parseInt(e.target.value.replace('#', '0x'), 16);
+      this.createVisualizer(this.currentVizType);
+    });
+
+    // Checkboxes
+    document.getElementById('autoRotate')?.addEventListener('change', (e) => {
+      this.config.autoRotate = e.target.checked;
+    });
+
+    document.getElementById('showFloor')?.addEventListener('change', (e) => {
+      this.config.showFloor = e.target.checked;
+      this.gridHelper.visible = this.config.showFloor;
+    });
+
+    document.getElementById('wireframe')?.addEventListener('change', (e) => {
+      this.config.wireframe = e.target.checked;
+      this.createVisualizer(this.currentVizType);
+    });
+
+    // Audio file input
+    document.getElementById('audioFile')?.addEventListener('change', (e) => {
+      if (e.target.files[0]) {
+        this.loadAudioFile(e.target.files[0]);
+      }
+    });
+
+    // FFT Size
+    document.getElementById('fftSize')?.addEventListener('change', (e) => {
+      this.analyser.fftSize = parseInt(e.target.value);
+      this.dataArray = new Uint8Array(this.analyser.frequencyBinCount);
+    });
+  }
+
+  loadAudioFile(file) {
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      this.audioContext.decodeAudioData(e.target.result, (buffer) => {
+        this.audioBuffer = buffer;
+        this.playAudio();
+      });
+    };
+    reader.readAsArrayBuffer(file);
+  }
+
+  playAudio() {
+    if (this.audioSource) {
+      this.audioSource.stop();
+      this.audioSource.disconnect();
+    }
+
+    this.audioSource = this.audioContext.createBufferSource();
+    this.audioSource.buffer = this.audioBuffer;
+    this.audioSource.connect(this.gainNode);
+    this.audioSource.start(0);
+    this.isPlaying = true;
+
+    document.getElementById('playBtn').textContent = '⏸️';
+    
+    // Update progress
+    this.updateProgress();
+  }
+
+  updateProgress() {
+    if (!this.isPlaying || !this.audioBuffer) return;
+
+    const currentTime = this.audioContext.currentTime;
+    const duration = this.audioBuffer.duration;
+    const progress = (currentTime / duration) * 100;
+
+    document.getElementById('progress').style.width = progress + '%';
+    document.getElementById('currentTime').textContent = this.formatTime(currentTime);
+    document.getElementById('duration').textContent = this.formatTime(duration);
+
+    if (progress < 100) {
+      requestAnimationFrame(() => this.updateProgress());
+    } else {
+      this.isPlaying = false;
+      document.getElementById('playBtn').textContent = '▶️';
     }
   }
 
   formatTime(seconds) {
-      const m = Math.floor(seconds / 60);
-      const s = Math.floor(seconds % 60);
-      return `${m}:${s < 10 ? '0' : ''}${s}`;
-  }
-
-  // --- AUDIO HANDLING ---
-
-  loadAudioFile(file) {
-      const reader = new FileReader();
-      
-      // Показываем индикатор загрузки (можно добавить CSS класс)
-      document.getElementById('playBtn').textContent = '⏳';
-      
-      reader.onload = (e) => {
-          this.audioContext.decodeAudioData(e.target.result, (buffer) => {
-              this.audioBuffer = buffer;
-              document.getElementById('duration').textContent = this.formatTime(buffer.duration);
-              document.getElementById('playBtn').textContent = '▶️';
-              this.playAudio();
-          });
-      };
-      reader.readAsArrayBuffer(file);
+    const mins = Math.floor(seconds / 60);
+    const secs = Math.floor(seconds % 60);
+    return `${mins}:${secs.toString().padStart(2, '0')}`;
   }
 
   async useMicrophone() {
-      try {
-          const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-          if (this.audioSource) this.audioSource.disconnect();
-          
-          this.audioSource = this.audioContext.createMediaStreamSource(stream);
-          this.audioSource.connect(this.gainNode);
-          
-          this.isPlaying = true;
-          document.getElementById('playBtn').textContent = '🎤';
-          document.getElementById('playBtn').classList.add('active');
-          
-      } catch (err) {
-          console.error('Microphone access denied', err);
-          alert('Could not access microphone');
-      }
-  }
-
-  playAudio(offset = 0) {
-      if (this.audioSource) this.audioSource.disconnect();
-      
-      this.audioSource = this.audioContext.createBufferSource();
-      this.audioSource.buffer = this.audioBuffer;
-      this.audioSource.connect(this.gainNode);
-      
-      this.startTime = this.audioContext.currentTime - offset;
-      this.audioSource.start(0, offset);
-      this.isPlaying = true;
-      
-      document.getElementById('playBtn').textContent = '⏸️';
-      document.getElementById('playBtn').classList.add('active');
-  }
-
-  stopAudio() {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
       if (this.audioSource) {
-          try { this.audioSource.stop(); } catch(e) {}
+        this.audioSource.stop();
+        this.audioSource.disconnect();
       }
-      this.isPlaying = false;
-      document.getElementById('playBtn').textContent = '▶️';
-      document.getElementById('playBtn').classList.remove('active');
+      
+      this.audioSource = this.audioContext.createMediaStreamSource(stream);
+      this.audioSource.connect(this.gainNode);
+      this.isPlaying = true;
+      document.getElementById('playBtn').textContent = '⏸️';
+    } catch (error) {
+      console.error('Error accessing microphone:', error);
+      alert('Could not access microphone. Please check permissions.');
+    }
   }
 
-  togglePlay() {
-      if (this.isPlaying) {
-          this.pauseTime = this.audioContext.currentTime - this.startTime;
-          this.stopAudio();
-      } else {
-          if (this.audioBuffer) {
-              this.playAudio(this.pauseTime || 0);
-          }
-      }
+  exportScene() {
+    this.renderer.render(this.scene, this.camera);
+    const dataURL = this.renderer.domElement.toDataURL('image/png');
+    const link = document.createElement('a');
+    link.download = 'n1k0-3d-visualization.png';
+    link.href = dataURL;
+    link.click();
+  }
+
+  toggleRecord() {
+    if (!this.isRecording) {
+      // Start recording
+      const stream = this.renderer.domElement.captureStream(30);
+      this.mediaRecorder = new MediaRecorder(stream, {
+        mimeType: 'video/webm'
+      });
+      
+      this.recordedChunks = [];
+      
+      this.mediaRecorder.ondataavailable = (e) => {
+        if (e.data.size > 0) {
+          this.recordedChunks.push(e.data);
+        }
+      };
+      
+      this.mediaRecorder.onstop = () => {
+        const blob = new Blob(this.recordedChunks, { type: 'video/webm' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = 'n1k0-3d-visualization.webm';
+        a.click();
+      };
+      
+      this.mediaRecorder.start();
+      this.isRecording = true;
+      alert('Recording started...');
+    } else {
+      // Stop recording
+      this.mediaRecorder.stop();
+      this.isRecording = false;
+      alert('Recording stopped. Downloading video...');
+    }
+  }
+}
+
+// ============================================
+// 🚀 GLOBAL FUNCTIONS
+// ============================================
+
+let visualizer;
+
+function switchTab(tabName, element) {
+  // Hide all tabs
+  document.querySelectorAll('.tab-content').forEach(tab => {
+    tab.classList.remove('active');
+  });
+  
+  // Remove active from all tab buttons
+  document.querySelectorAll('.tab').forEach(btn => {
+    btn.classList.remove('active');
+  });
+  
+  // Show selected tab
+  document.getElementById(`tab-${tabName}`).classList.add('active');
+  element.classList.add('active');
+}
+
+function selectVisualizer(type, element) {
+  // Update UI
+  document.querySelectorAll('.viz-card').forEach(card => {
+    card.classList.remove('active');
+  });
+  element.classList.add('active');
+  
+  // Update visualizer
+  visualizer.currentVizType = type;
+  visualizer.createVisualizer(type);
+}
+
+function togglePlay() {
+  const btn = document.getElementById('playBtn');
+  
+  if (visualizer.isPlaying) {
+    // Pause
+    if (visualizer.audioSource) {
+      visualizer.audioSource.stop();
+    }
+    visualizer.isPlaying = false;
+    btn.textContent = '▶️';
+  } else {
+    // Play
+    if (visualizer.audioBuffer) {
+      visualizer.playAudio();
+    }
+  }
+}
+
+function seek(event) {
+  if (!visualizer.audioBuffer) return;
+  
+  const timeline = event.currentTarget;
+  const rect = timeline.getBoundingClientRect();
+  const percent = (event.clientX - rect.left) / rect.width;
+  const time = percent * visualizer.audioBuffer.duration;
+  
+  // Stop current playback and restart from position
+  if (visualizer.audioSource) {
+    visualizer.audioSource.stop();
   }
   
-  seek(percent) {
-      if (!this.audioBuffer) return;
-      const time = this.audioBuffer.duration * percent;
-      this.pauseTime = time;
-      if (this.isPlaying) {
-          this.playAudio(time);
-      } else {
-          // Обновим UI если на паузе
-          document.getElementById('progress').style.width = `${percent * 100}%`;
-          document.getElementById('currentTime').textContent = this.formatTime(time);
+  visualizer.audioSource = visualizer.audioContext.createBufferSource();
+  visualizer.audioSource.buffer = visualizer.audioBuffer;
+  visualizer.audioSource.connect(visualizer.gainNode);
+  visualizer.audioSource.start(0, time);
+}
+
+function toggleFullscreen() {
+  if (!document.fullscreenElement) {
+    document.documentElement.requestFullscreen();
+  } else {
+    document.exitFullscreen();
+  }
+}
+
+function useMicrophone() {
+  visualizer.useMicrophone();
+}
+
+function exportScene() {
+  visualizer.exportScene();
+}
+
+function toggleRecord() {
+  visualizer.toggleRecord();
+}
+
+// ============================================
+// 🎬 INITIALIZE ON LOAD
+// ============================================
+
+window.addEventListener('DOMContentLoaded', () => {
+  visualizer = new N1K0Visualizer();
+  
+  // Hide loading screen if exists
+  const loading = document.querySelector('.loading');
+  if (loading) {
+    loading.style.display = 'none';
+  }
+  
+  console.log('🎭 N1K∅ 3D Audio Visualizer initialized');
+  console.log('🚀 Three.js version:', THREE.REVISION);
+});
+
+// Handle visibility change (pause when tab is not visible)
+document.addEventListener('visibilitychange', () => {
+  if (document.hidden && visualizer && visualizer.isPlaying) {
+    // Pause rendering when tab is hidden
+    visualizer.renderer.setAnimationLoop(null);
+  } else if (!document.hidden && visualizer) {
+    // Resume rendering
+    visualizer.renderer.setAnimationLoop(() => visualizer.animate());
+  }
+});
+
+// Keyboard shortcuts
+document.addEventListener('keydown', (e) => {
+  if (!visualizer) return;
+  
+  switch(e.key) {
+    case ' ':
+      e.preventDefault();
+      togglePlay();
+      break;
+    case 'f':
+    case 'F':
+      toggleFullscreen();
+      break;
+    case 's':
+    case 'S':
+      if (e.ctrlKey || e.metaKey) {
+        e.preventDefault();
+        exportScene();
       }
+      break;
+    case 'r':
+    case 'R':
+      if (e.ctrlKey || e.metaKey) {
+        e.preventDefault();
+        toggleRecord();
+      }
+      break;
+    case 'ArrowLeft':
+      // Previous visualizer
+      const vizCards = document.querySelectorAll('.viz-card');
+      const currentIndex = Array.from(vizCards).findIndex(card => card.classList.contains('active'));
+      if (currentIndex > 0) {
+        vizCards[currentIndex - 1].click();
+      }
+      break;
+    case 'ArrowRight':
+      // Next visualizer
+      const vizCards2 = document.querySelectorAll('.viz-card');
+      const currentIndex2 = Array.from(vizCards2).findIndex(card => card.classList.contains('active'));
+      if (currentIndex2 < vizCards2.length - 1) {
+        vizCards2[currentIndex2 + 1].click();
+      }
+      break;
   }
-
-  initControls() {
-      // Инициализация обработчиков событий для слайдеров и инпутов
-      // (Частично реализовано в конструкторе, здесь дополнение)
-      
-      // Обработка клика по таймлайну
-      window.seek = (event) => {
-          const timeline = event.currentTarget;
-          const rect = timeline.getBoundingClientRect();
-          const percent = (event.clientX - rect.left) / rect.width;
-          this.seek(percent);
-      };
-
-      // Глобальные функции для HTML кнопок
-      window.useMicrophone = () => this.useMicrophone();
-      window.togglePlay = () => this.togglePlay();
-      window.toggleFullscreen = () => {
-          if (!document.fullscreenElement) {
-              document.body.requestFullscreen();
-          } else {
-              document.exitFullscreen();
-          }
-      };
-      
-      window.toggleRecord = () => {
-          this.isRecording = !this.isRecording;
-          const btn = document.querySelector('.btn-danger');
-          btn.textContent = this.isRecording ? '⏺️ Recording...' : '⏺️ Record Video';
-          if(this.isRecording) {
-              btn.style.animation = 'pulse 1s infinite';
-          } else {
-              btn.style.animation = 'none';
-          }
-          // Здесь можно подключить MediaRecorder API для записи canvas
-      };
-
-      window.exportScene = () => {
-          const link = document.createElement('a');
-          link.download = 'n1k0-viz.png';
-          link.href = document.getElementById('canvas3d').toDataURL('image/png');
-          link.click();
-      };
-  }
-}
-
-// ============================================
-// 🚀 GLOBAL UI & INIT
-// ============================================
-
-// UI Interaction Functions
-function switchTab(tabId, btn) {
-    // Hide all tabs
-    document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
-    document.querySelectorAll('.tab').forEach(el => el.classList.remove('active'));
-    
-    // Show selected
-    document.getElementById('tab-' + tabId).classList.add('active');
-    btn.classList.add('active');
-}
-
-function selectVisualizer(type, card) {
-    if (!window.app) return;
-    
-    // Update visual selection
-    document.querySelectorAll('.viz-card').forEach(el => el.classList.remove('active'));
-    card.classList.add('active');
-    
-    // Update engine
-    window.app.currentVizType = type;
-    window.app.createVisualizer(type);
-}
-
-// Start Engine on Load
-window.addEventListener('load', () => {
-    window.app = new N1K0Visualizer();
-    console.log('🚀 N1K∅ 3D Engine Initialized');
 });
 
-// Drag and Drop support
-document.addEventListener('dragover', (e) => e.preventDefault());
-document.addEventListener('drop', (e) => {
-    e.preventDefault();
-    if (e.dataTransfer.files[0] && e.dataTransfer.files[0].type.startsWith('audio/')) {
-        const fileInput = document.getElementById('audioFile');
-        fileInput.files = e.dataTransfer.files;
-        window.app.loadAudioFile(e.dataTransfer.files[0]);
-    }
-});
-
+console.log('✨ Welcome to N1K∅ 3D Audio Visualizer');
+console.log('🎮 Use keyboard shortcuts: Space (play/pause), F (fullscreen), Ctrl+S (screenshot), Ctrl+R (record)');
 </script>
+
 </body>
 </html>
