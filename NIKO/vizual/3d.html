@@ -1422,6 +1422,8 @@ class N1K0Visualizer {
 
   updateStats() {
     const now = performance.now();
+    this.stats.fps++;
+    
     if (now - this.stats.lastTime > 1000) {
       document.getElementById('fps').textContent = Math.round(this.stats.fps);
       document.getElementById('objects').textContent = this.scene.children.length;
@@ -1441,7 +1443,181 @@ class N1K0Visualizer {
       
       this.stats.fps = 0;
       this.stats.lastTime = now;
-	  this.audioSource.connect(this.gainNode);
+    }
+  }
+
+  initControls() {
+    // File input
+    document.getElementById('audioFile').addEventListener('change', (e) => {
+      const file = e.target.files[0];
+      if (file) {
+        const reader = new FileReader();
+        reader.onload = (e) => {
+          this.audioContext.decodeAudioData(e.target.result, (buffer) => {
+            this.audioBuffer = buffer;
+            this.stopAudio();
+          });
+        };
+        reader.readAsArrayBuffer(file);
+      }
+    });
+
+    // Background image
+    document.getElementById('bgImageFile').addEventListener('change', (e) => {
+      const file = e.target.files[0];
+      if (file) {
+        const reader = new FileReader();
+        reader.onload = (e) => {
+          const img = document.getElementById('background-image');
+          img.src = e.target.result;
+          img.style.display = 'block';
+        };
+        reader.readAsDataURL(file);
+      }
+    });
+
+    // Sliders
+    document.getElementById('fogDensity').addEventListener('input', (e) => {
+      this.config.fogDensity = parseFloat(e.target.value);
+      this.scene.fog.density = this.config.fogDensity;
+      document.getElementById('fogDensityVal').textContent = e.target.value;
+    });
+
+    document.getElementById('fogColor').addEventListener('input', (e) => {
+      this.config.fogColor = parseInt(e.target.value.replace('#', '0x'));
+      this.scene.fog.color = new THREE.Color(this.config.fogColor);
+    });
+
+    document.getElementById('ambientLight').addEventListener('input', (e) => {
+      this.config.ambientLight = parseFloat(e.target.value);
+      this.ambientLight.intensity = this.config.ambientLight;
+      document.getElementById('ambientLightVal').textContent = e.target.value;
+    });
+
+    document.getElementById('pointLight').addEventListener('input', (e) => {
+      this.config.pointLight = parseFloat(e.target.value);
+      this.pointLight1.intensity = this.config.pointLight;
+      this.pointLight2.intensity = this.config.pointLight;
+      document.getElementById('pointLightVal').textContent = e.target.value;
+    });
+
+    document.getElementById('lightColor').addEventListener('input', (e) => {
+      this.config.lightColor = parseInt(e.target.value.replace('#', '0x'));
+      this.pointLight1.color = new THREE.Color(this.config.lightColor);
+      this.pointLight2.color = new THREE.Color(this.config.lightColor);
+    });
+
+    document.getElementById('autoRotate').addEventListener('change', (e) => {
+      this.config.autoRotate = e.target.checked;
+    });
+
+    document.getElementById('showFloor').addEventListener('change', (e) => {
+      this.config.showFloor = e.target.checked;
+      this.gridHelper.visible = this.config.showFloor;
+    });
+
+    document.getElementById('wireframe').addEventListener('change', (e) => {
+      this.config.wireframe = e.target.checked;
+      this.createVisualizer(this.currentVizType);
+    });
+
+    document.getElementById('vizScale').addEventListener('input', (e) => {
+      this.config.vizScale = parseFloat(e.target.value);
+      document.getElementById('vizScaleVal').textContent = e.target.value;
+    });
+
+    document.getElementById('reactivity').addEventListener('input', (e) => {
+      this.config.reactivity = parseFloat(e.target.value);
+      document.getElementById('reactivityVal').textContent = e.target.value;
+    });
+
+    document.getElementById('smoothing').addEventListener('input', (e) => {
+      this.config.smoothing = parseFloat(e.target.value);
+      this.analyser.smoothingTimeConstant = this.config.smoothing;
+      document.getElementById('smoothingVal').textContent = e.target.value;
+    });
+
+    document.getElementById('vizColor1').addEventListener('input', (e) => {
+      this.config.vizColor1 = parseInt(e.target.value.replace('#', '0x'));
+    });
+
+    document.getElementById('vizColor2').addEventListener('input', (e) => {
+      this.config.vizColor2 = parseInt(e.target.value.replace('#', '0x'));
+    });
+
+    document.getElementById('gain').addEventListener('input', (e) => {
+      this.config.gain = parseFloat(e.target.value);
+      this.gainNode.gain.value = this.config.gain;
+      document.getElementById('gainVal').textContent = e.target.value;
+    });
+
+    document.getElementById('fftSize').addEventListener('change', (e) => {
+      this.analyser.fftSize = parseInt(e.target.value);
+      this.dataArray = new Uint8Array(this.analyser.frequencyBinCount);
+    });
+
+    document.getElementById('particleCount').addEventListener('input', (e) => {
+      this.config.particleCount = parseInt(e.target.value);
+      document.getElementById('particleCountVal').textContent = e.target.value;
+      this.createVisualizer(this.currentVizType);
+    });
+
+    document.getElementById('bgOpacity').addEventListener('input', (e) => {
+      const opacity = parseFloat(e.target.value);
+      document.getElementById('background-image').style.opacity = opacity;
+      document.getElementById('bgOpacityVal').textContent = opacity;
+    });
+
+    // EQ sliders
+    [60, 170, 350, 1000, 3500, 10000].forEach(freq => {
+      const slider = document.getElementById(`eq-${freq}`);
+      if (slider) {
+        slider.addEventListener('input', (e) => {
+          const value = parseFloat(e.target.value);
+          document.getElementById(`eq-${freq}-val`).textContent = value + 'dB';
+          if (this.eqFilters[freq]) {
+            this.eqFilters[freq].gain.value = value;
+          }
+        });
+      }
+    });
+  }
+
+  onResize() {
+    const width = window.innerWidth - (document.getElementById('controlPanel').classList.contains('hidden') ? 0 : 350);
+    const height = window.innerHeight;
+    
+    this.camera.aspect = width / height;
+    this.camera.updateProjectionMatrix();
+    this.renderer.setSize(width, height);
+  }
+
+  playAudio() {
+    if (!this.audioBuffer) return;
+    
+    this.stopAudio();
+    
+    this.audioSource = this.audioContext.createBufferSource();
+    this.audioSource.buffer = this.audioBuffer;
+    this.audioSource.connect(this.gainNode);
+    this.audioSource.start(0);
+    
+    document.getElementById('playBtn').textContent = '⏸️';
+    this.isPlaying = true;
+    
+    this.audioSource.onended = () => {
+      this.stopAudio();
+    };
+  }
+
+  async useMicrophone() {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      
+      this.stopAudio();
+      
+      this.audioSource = this.audioContext.createMediaStreamSource(stream);
+      this.audioSource.connect(this.gainNode);
       document.getElementById('playBtn').textContent = '🎤';
       this.isPlaying = true;
     } catch (error) {
@@ -1459,7 +1635,6 @@ class N1K0Visualizer {
     this.isPlaying = false;
     document.getElementById('playBtn').textContent = '▶️';
   }
-}
 
 // Global functions
 let visualizer;
