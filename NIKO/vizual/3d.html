@@ -1,33 +1,27 @@
 <!DOCTYPE html>
-<html lang="ru">
+<html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width,initial-scale=1">
-<title>N1K∅ 3D Audio Visualizer - Three.js Edition</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>N1K∅ 3D Audio Visualizer - Enhanced</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 <style>
-:root {
-  --bg: #000000;
-  --card: #0a0a0f;
-  --border: #1a1a25;
-  --accent: #00d4ff;
-  --accent2: #ff00ea;
-  --text: #ffffff;
-  --muted: #888899;
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
 }
-
-* { margin: 0; padding: 0; box-sizing: border-box; }
 
 body {
-  font-family: 'Inter', -apple-system, sans-serif;
-  background: var(--bg);
-  color: var(--text);
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  background: #000;
+  color: #fff;
   overflow: hidden;
-  height: 100vh;
-  display: flex;
+  position: relative;
 }
 
-#canvas3d {
-  position: absolute;
+#canvas-container {
+  position: fixed;
   top: 0;
   left: 0;
   width: 100%;
@@ -35,747 +29,787 @@ body {
   z-index: 1;
 }
 
-.sidebar {
-  width: 340px;
-  background: rgba(10,10,15,0.95);
-  backdrop-filter: blur(20px);
-  border-right: 1px solid var(--border);
-  z-index: 10;
-  display: flex;
-  flex-direction: column;
+#background-image {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  opacity: 0.3;
+  z-index: 0;
+  display: none;
+}
+
+.control-panel {
+  position: fixed;
+  top: 0;
+  right: 0;
+  width: 350px;
+  height: 100vh;
+  background: rgba(10, 10, 10, 0.95);
+  backdrop-filter: blur(10px);
+  z-index: 1000;
   overflow-y: auto;
-  position: relative;
+  border-left: 1px solid rgba(255, 255, 255, 0.1);
+  transition: transform 0.3s ease;
 }
 
-.sidebar-header {
-  padding: 24px;
-  background: linear-gradient(135deg, var(--card), rgba(0,212,255,0.1));
-  border-bottom: 1px solid var(--border);
+.control-panel.hidden {
+  transform: translateX(100%);
 }
 
-.sidebar-header h1 {
-  font-size: 20px;
-  font-weight: 800;
-  background: linear-gradient(90deg, var(--accent), var(--accent2));
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  text-transform: uppercase;
-  letter-spacing: 2px;
+.toggle-panel {
+  position: fixed;
+  top: 50%;
+  right: 350px;
+  transform: translateY(-50%);
+  background: rgba(20, 20, 20, 0.9);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 5px 0 0 5px;
+  padding: 15px 10px;
+  cursor: pointer;
+  z-index: 1001;
+  transition: right 0.3s ease;
+}
+
+.toggle-panel.collapsed {
+  right: 0;
+}
+
+.toggle-panel:hover {
+  background: rgba(30, 30, 30, 0.9);
+}
+
+.header {
+  padding: 20px;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  text-align: center;
+}
+
+.header h1 {
+  font-size: 24px;
+  margin-bottom: 5px;
+  text-shadow: 0 2px 10px rgba(0,0,0,0.3);
+}
+
+.header p {
+  opacity: 0.9;
+  font-size: 12px;
 }
 
 .tabs {
   display: flex;
-  background: rgba(0,0,0,0.5);
-  border-bottom: 1px solid var(--border);
+  background: rgba(20, 20, 20, 0.5);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
 }
 
 .tab {
   flex: 1;
-  padding: 14px;
+  padding: 12px;
   background: none;
   border: none;
-  color: var(--muted);
-  font-size: 11px;
-  font-weight: 600;
-  text-transform: uppercase;
+  color: #fff;
   cursor: pointer;
   transition: all 0.3s;
-  border-bottom: 2px solid transparent;
+  font-size: 14px;
 }
 
-.tab:hover { color: var(--text); }
-.tab.active { 
-  color: var(--accent);
-  border-bottom-color: var(--accent);
-  background: rgba(0,212,255,0.05);
+.tab:hover {
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.tab.active {
+  background: rgba(102, 126, 234, 0.2);
+  border-bottom: 2px solid #667eea;
 }
 
 .tab-content {
   display: none;
   padding: 20px;
-  animation: fadeIn 0.3s;
 }
 
-.tab-content.active { display: block; }
-
-@keyframes fadeIn {
-  from { opacity: 0; transform: translateY(10px); }
-  to { opacity: 1; transform: translateY(0); }
-}
-
-.section {
-  margin-bottom: 24px;
-  padding-bottom: 24px;
-  border-bottom: 1px solid rgba(255,255,255,0.05);
-}
-
-.section:last-child { border: none; }
-
-.section-title {
-  font-size: 10px;
-  color: var(--accent);
-  text-transform: uppercase;
-  letter-spacing: 2px;
-  margin-bottom: 16px;
-  font-weight: 700;
-}
-
-.input-group {
-  margin-bottom: 16px;
-}
-
-.input-label {
-  font-size: 11px;
-  color: var(--muted);
-  margin-bottom: 6px;
+.tab-content.active {
   display: block;
-}
-
-input, select {
-  width: 100%;
-  padding: 10px 14px;
-  background: rgba(255,255,255,0.03);
-  border: 1px solid rgba(255,255,255,0.1);
-  border-radius: 8px;
-  color: var(--text);
-  font-size: 12px;
-  transition: all 0.3s;
-}
-
-input:focus, select:focus {
-  outline: none;
-  border-color: var(--accent);
-  background: rgba(0,212,255,0.05);
-  box-shadow: 0 0 0 3px rgba(0,212,255,0.1);
-}
-
-input[type="file"] {
-  cursor: pointer;
-  font-size: 11px;
-}
-
-input[type="color"] {
-  height: 40px;
-  cursor: pointer;
-}
-
-.slider-group {
-  margin-bottom: 16px;
-}
-
-.slider-header {
-  display: flex;
-  justify-content: space-between;
-  margin-bottom: 8px;
-}
-
-.slider-label {
-  font-size: 11px;
-  color: var(--muted);
-}
-
-.slider-value {
-  font-size: 11px;
-  color: var(--accent);
-  font-weight: 600;
-  min-width: 40px;
-  text-align: right;
-}
-
-.slider {
-  width: 100%;
-  height: 4px;
-  border-radius: 2px;
-  background: rgba(255,255,255,0.1);
-  outline: none;
-  -webkit-appearance: none;
-  cursor: pointer;
-}
-
-.slider::-webkit-slider-thumb {
-  -webkit-appearance: none;
-  width: 16px;
-  height: 16px;
-  border-radius: 50%;
-  background: var(--accent);
-  cursor: pointer;
-  box-shadow: 0 0 10px rgba(0,212,255,0.5);
-  transition: all 0.2s;
-}
-
-.slider::-webkit-slider-thumb:hover {
-  transform: scale(1.2);
-  box-shadow: 0 0 20px rgba(0,212,255,0.8);
 }
 
 .viz-grid {
   display: grid;
   grid-template-columns: repeat(2, 1fr);
   gap: 10px;
+  margin-bottom: 20px;
 }
 
 .viz-card {
-  background: rgba(255,255,255,0.03);
-  border: 2px solid rgba(255,255,255,0.1);
-  border-radius: 12px;
-  padding: 16px;
+  background: rgba(20, 20, 20, 0.5);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 8px;
+  padding: 15px;
   cursor: pointer;
   transition: all 0.3s;
   text-align: center;
 }
 
 .viz-card:hover {
-  background: rgba(0,212,255,0.05);
-  border-color: rgba(0,212,255,0.3);
+  background: rgba(30, 30, 30, 0.5);
   transform: translateY(-2px);
 }
 
 .viz-card.active {
-  background: linear-gradient(135deg, rgba(0,212,255,0.2), rgba(255,0,234,0.2));
-  border-color: var(--accent);
-  box-shadow: 0 0 20px rgba(0,212,255,0.3);
+  background: linear-gradient(135deg, rgba(102, 126, 234, 0.3), rgba(118, 75, 162, 0.3));
+  border-color: #667eea;
 }
 
-.viz-icon {
-  font-size: 32px;
-  margin-bottom: 8px;
-  display: block;
-  filter: grayscale(0.5);
-  transition: all 0.3s;
+.viz-card .icon {
+  font-size: 24px;
+  margin-bottom: 5px;
 }
 
-.viz-card:hover .viz-icon,
-.viz-card.active .viz-icon {
-  filter: grayscale(0);
-  transform: scale(1.1);
-}
-
-.viz-name {
-  font-size: 11px;
-  font-weight: 600;
-  color: var(--text);
-}
-
-.btn {
-  width: 100%;
-  padding: 12px 20px;
-  background: linear-gradient(135deg, var(--accent), var(--accent2));
-  border: none;
-  border-radius: 10px;
-  color: white;
+.viz-card .name {
   font-size: 12px;
   font-weight: 600;
-  cursor: pointer;
-  transition: all 0.3s;
-  text-transform: uppercase;
-  letter-spacing: 1px;
+}
+
+.control-group {
+  margin-bottom: 20px;
+}
+
+.control-group label {
+  display: block;
   margin-bottom: 8px;
+  font-size: 12px;
+  text-transform: uppercase;
+  opacity: 0.7;
 }
 
-.btn:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 10px 30px rgba(0,212,255,0.4);
-}
-
-.btn:active {
-  transform: translateY(0);
-}
-
-.btn-secondary {
-  background: rgba(255,255,255,0.1);
-}
-
-.btn-danger {
-  background: linear-gradient(135deg, #ff0040, #ff0080);
-}
-
-.controls-overlay {
-  position: fixed;
-  bottom: 30px;
-  left: 50%;
-  transform: translateX(-50%);
-  display: flex;
-  gap: 16px;
-  z-index: 5;
-  background: rgba(10,10,15,0.9);
-  padding: 16px 24px;
-  border-radius: 20px;
-  backdrop-filter: blur(20px);
-  border: 1px solid rgba(255,255,255,0.1);
-}
-
-.control-btn {
-  width: 50px;
-  height: 50px;
-  border-radius: 50%;
-  border: 2px solid rgba(255,255,255,0.2);
-  background: rgba(255,255,255,0.05);
-  color: white;
-  font-size: 20px;
-  cursor: pointer;
-  transition: all 0.3s;
+.slider-container {
   display: flex;
   align-items: center;
-  justify-content: center;
+  gap: 10px;
 }
 
-.control-btn:hover {
-  background: var(--accent);
-  border-color: var(--accent);
-  transform: scale(1.1);
-  box-shadow: 0 0 20px rgba(0,212,255,0.5);
+.slider {
+  flex: 1;
+  -webkit-appearance: none;
+  height: 4px;
+  background: rgba(255, 255, 255, 0.1);
+  outline: none;
+  border-radius: 2px;
 }
 
-.control-btn.active {
-  background: var(--accent);
-  animation: pulse 2s infinite;
+.slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 12px;
+  height: 12px;
+  background: #667eea;
+  border-radius: 50%;
+  cursor: pointer;
 }
 
-@keyframes pulse {
-  0%, 100% { transform: scale(1); }
-  50% { transform: scale(1.05); }
+.slider::-moz-range-thumb {
+  width: 12px;
+  height: 12px;
+  background: #667eea;
+  border-radius: 50%;
+  cursor: pointer;
+}
+
+.slider-value {
+  min-width: 40px;
+  text-align: right;
+  font-size: 12px;
+  opacity: 0.8;
+}
+
+input[type="color"] {
+  width: 100%;
+  height: 40px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 4px;
+  cursor: pointer;
+  background: rgba(20, 20, 20, 0.5);
+}
+
+input[type="checkbox"] {
+  margin-right: 8px;
+}
+
+select {
+  width: 100%;
+  padding: 8px;
+  background: rgba(20, 20, 20, 0.5);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 4px;
+  color: #fff;
+  cursor: pointer;
+}
+
+.audio-controls {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 350px;
+  background: rgba(10, 10, 10, 0.95);
+  backdrop-filter: blur(10px);
+  padding: 20px;
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+  z-index: 100;
+  transition: right 0.3s ease;
+}
+
+.audio-controls.expanded {
+  right: 0;
+}
+
+.audio-buttons {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 15px;
+}
+
+.audio-btn {
+  padding: 10px 20px;
+  background: rgba(102, 126, 234, 0.2);
+  border: 1px solid #667eea;
+  border-radius: 4px;
+  color: #fff;
+  cursor: pointer;
+  transition: all 0.3s;
+  font-size: 18px;
+}
+
+.audio-btn:hover {
+  background: rgba(102, 126, 234, 0.3);
+  transform: translateY(-2px);
+}
+
+.timeline {
+  position: relative;
+  height: 4px;
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 2px;
+  cursor: pointer;
+  margin-bottom: 10px;
+}
+
+.progress {
+  position: absolute;
+  height: 100%;
+  background: linear-gradient(90deg, #667eea, #764ba2);
+  border-radius: 2px;
+  width: 0%;
+  transition: width 0.1s linear;
 }
 
 .time-display {
   display: flex;
-  align-items: center;
-  gap: 12px;
-  padding: 0 16px;
-  color: var(--muted);
+  justify-content: space-between;
   font-size: 12px;
-  font-variant-numeric: tabular-nums;
+  opacity: 0.7;
 }
 
-.timeline {
-  width: 200px;
-  height: 4px;
-  background: rgba(255,255,255,0.1);
-  border-radius: 2px;
-  position: relative;
+.file-input {
+  display: none;
+}
+
+.file-label {
+  display: inline-block;
+  padding: 10px 20px;
+  background: rgba(102, 126, 234, 0.2);
+  border: 1px solid #667eea;
+  border-radius: 4px;
   cursor: pointer;
-  margin: 0 12px;
-  align-self: center;
+  transition: all 0.3s;
 }
 
-.timeline-progress {
-  height: 100%;
-  background: linear-gradient(90deg, var(--accent), var(--accent2));
-  border-radius: 2px;
-  width: 0%;
-  transition: width 0.1s;
+.file-label:hover {
+  background: rgba(102, 126, 234, 0.3);
 }
 
 .stats {
   position: fixed;
   top: 20px;
-  right: 20px;
-  background: rgba(0,0,0,0.8);
-  padding: 12px 16px;
+  left: 20px;
+  background: rgba(10, 10, 10, 0.8);
+  padding: 15px;
   border-radius: 8px;
-  font-size: 11px;
-  color: var(--muted);
-  z-index: 5;
   font-family: monospace;
-  backdrop-filter: blur(10px);
-  border: 1px solid rgba(255,255,255,0.1);
+  font-size: 12px;
+  z-index: 100;
 }
 
 .stats div {
-  margin-bottom: 4px;
+  margin-bottom: 5px;
 }
 
-.stats span {
-  color: var(--accent);
-  font-weight: bold;
+/* Equalizer */
+.equalizer-container {
+  padding: 20px;
+  background: rgba(15, 15, 15, 0.8);
+}
+
+.eq-title {
+  text-align: center;
+  margin-bottom: 15px;
+  font-size: 14px;
+  text-transform: uppercase;
+  opacity: 0.8;
+}
+
+.eq-sliders {
+  display: flex;
+  justify-content: space-around;
+  align-items: flex-end;
+  height: 120px;
+  gap: 10px;
+}
+
+.eq-band {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  flex: 1;
+}
+
+.eq-slider-wrapper {
+  position: relative;
+  height: 80px;
+  width: 30px;
+}
+
+.eq-slider {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%) rotate(-90deg);
+  width: 80px;
+  -webkit-appearance: none;
+  background: rgba(255, 255, 255, 0.1);
+  height: 4px;
+  border-radius: 2px;
+  outline: none;
+}
+
+.eq-slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 12px;
+  height: 12px;
+  background: #667eea;
+  border-radius: 50%;
+  cursor: pointer;
+  box-shadow: 0 0 10px rgba(102, 126, 234, 0.5);
+}
+
+.eq-slider::-moz-range-thumb {
+  width: 12px;
+  height: 12px;
+  background: #667eea;
+  border-radius: 50%;
+  cursor: pointer;
+  box-shadow: 0 0 10px rgba(102, 126, 234, 0.5);
+}
+
+.eq-label {
+  margin-top: 10px;
+  font-size: 10px;
+  opacity: 0.7;
+}
+
+.eq-value {
+  margin-top: 5px;
+  font-size: 11px;
+  color: #667eea;
+}
+
+/* Background image controls */
+.bg-controls {
+  margin-top: 20px;
+  padding-top: 20px;
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.bg-opacity-slider {
+  margin-top: 10px;
+}
+
+/* Preset buttons */
+.preset-buttons {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 10px;
+  margin-top: 15px;
+}
+
+.preset-btn {
+  padding: 8px;
+  background: rgba(30, 30, 30, 0.5);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 4px;
+  color: #fff;
+  cursor: pointer;
+  font-size: 11px;
+  transition: all 0.3s;
+}
+
+.preset-btn:hover {
+  background: rgba(102, 126, 234, 0.2);
+  border-color: #667eea;
 }
 
 .loading {
   position: fixed;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%);
-  z-index: 100;
-  text-align: center;
-}
-
-.loading-spinner {
-  width: 60px;
-  height: 60px;
-  border: 3px solid rgba(255,255,255,0.1);
-  border-top-color: var(--accent);
-  border-radius: 50%;
-  animation: spin 1s linear infinite;
-}
-
-@keyframes spin {
-  to { transform: rotate(360deg); }
-}
-
-.checkbox-group {
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: #000;
   display: flex;
+  justify-content: center;
   align-items: center;
-  gap: 10px;
-  margin: 8px 0;
-}
-.progress-container {
-    width: 100%;
-    height: 10px;
-    background: rgba(255,255,255,0.1);
-    cursor: pointer; /* Сделать курсор рукой */
-    position: relative;
-}
-.progress-bar {
-    height: 100%;
-    background: #00ffcc;
-    width: 0%;
-    transition: width 0.1s linear;
-}
-.checkbox-group input[type="checkbox"] {
-  width: auto;
-  margin: 0;
+  z-index: 9999;
 }
 
-.checkbox-group label {
-  font-size: 12px;
-  cursor: pointer;
+.loading-text {
+  font-size: 24px;
+  animation: pulse 1.5s infinite;
 }
 
-::-webkit-scrollbar { width: 8px; }
-::-webkit-scrollbar-track { background: rgba(255,255,255,0.02); }
-::-webkit-scrollbar-thumb { 
-  background: rgba(255,255,255,0.1); 
-  border-radius: 4px;
+@keyframes pulse {
+  0%, 100% { opacity: 0.5; }
+  50% { opacity: 1; }
 }
-::-webkit-scrollbar-thumb:hover { background: rgba(255,255,255,0.2); }
 </style>
 </head>
 <body>
 
-<canvas id="canvas3d"></canvas>
+<div class="loading">
+  <div class="loading-text">N1K∅ Loading...</div>
+</div>
 
-<div class="sidebar">
-  <div class="sidebar-header">
-    <h1>🎭 N1K∅ 3D</h1>
+<img id="background-image" />
+<div id="canvas-container"></div>
+
+<div class="toggle-panel" onclick="togglePanel()">
+  <span>☰</span>
+</div>
+
+<div class="control-panel" id="controlPanel">
+  <div class="header">
+    <h1>N1K∅ 3D Visualizer</h1>
+    <p>Advanced Audio Visualization Engine</p>
   </div>
 
   <div class="tabs">
-    <button class="tab active" onclick="switchTab('scene', this)">Scene</button>
-    <button class="tab" onclick="switchTab('audio', this)">Audio</button>
-    <button class="tab" onclick="switchTab('visualizer', this)">Visualizer</button>
+    <button class="tab active" onclick="switchTab('visualizers', this)">Visualizers</button>
+    <button class="tab" onclick="switchTab('scene', this)">Scene</button>
     <button class="tab" onclick="switchTab('effects', this)">Effects</button>
   </div>
 
-  <div class="tab-content active" id="tab-scene">
-    <div class="section">
-      <div class="section-title">🎬 Scene Settings</div>
-      
-      <div class="input-group">
-        <label class="input-label">Environment</label>
-        <select id="environment">
-          <option value="space">🌌 Space</option>
-          <option value="cybercity">🏙️ Cyber City</option>
-          <option value="abstract">🎨 Abstract</option>
-          <option value="underwater">🌊 Underwater</option>
-          <option value="void">⚫ Void</option>
-        </select>
+  <div id="tab-visualizers" class="tab-content active">
+    <div class="viz-grid">
+      <div class="viz-card active" onclick="selectVisualizer('particleSphere', this)">
+        <div class="icon">🌐</div>
+        <div class="name">Particle Sphere</div>
       </div>
+      
+      <div class="viz-card" onclick="selectVisualizer('bars3D', this)">
+        <div class="icon">📊</div>
+        <div class="name">3D Bars</div>
+      </div>
+      
+      <div class="viz-card" onclick="selectVisualizer('waveform3D', this)">
+        <div class="icon">〰️</div>
+        <div class="name">3D Waveform</div>
+      </div>
+      
+      <div class="viz-card" onclick="selectVisualizer('ribbonFlow', this)">
+        <div class="icon">🎀</div>
+        <div class="name">Ribbon Flow</div>
+      </div>
+      
+      <div class="viz-card" onclick="selectVisualizer('particleGalaxy', this)">
+        <div class="icon">🌌</div>
+        <div class="name">Particle Galaxy</div>
+      </div>
+      
+      <div class="viz-card" onclick="selectVisualizer('geometricDance', this)">
+        <div class="icon">💎</div>
+        <div class="name">Geometric Dance</div>
+      </div>
+      
+      <div class="viz-card" onclick="selectVisualizer('vortexTunnel', this)">
+        <div class="icon">🌀</div>
+        <div class="name">Vortex Tunnel</div>
+      </div>
+      
+      <div class="viz-card" onclick="selectVisualizer('fireFlower', this)">
+        <div class="icon">🔥</div>
+        <div class="name">Fire Flower</div>
+      </div>
+    </div>
 
-      <div class="slider-group">
-        <div class="slider-header">
-          <span class="slider-label">Fog Density</span>
-          <span class="slider-value" id="fogVal">0.01</span>
+    <!-- Equalizer -->
+    <div class="equalizer-container">
+      <div class="eq-title">Equalizer</div>
+      <div class="eq-sliders">
+        <div class="eq-band">
+          <div class="eq-slider-wrapper">
+            <input type="range" class="eq-slider" id="eq-60" min="-12" max="12" value="0">
+          </div>
+          <div class="eq-label">60Hz</div>
+          <div class="eq-value" id="eq-60-val">0dB</div>
         </div>
+        <div class="eq-band">
+          <div class="eq-slider-wrapper">
+            <input type="range" class="eq-slider" id="eq-170" min="-12" max="12" value="0">
+          </div>
+          <div class="eq-label">170Hz</div>
+          <div class="eq-value" id="eq-170-val">0dB</div>
+        </div>
+        <div class="eq-band">
+          <div class="eq-slider-wrapper">
+            <input type="range" class="eq-slider" id="eq-350" min="-12" max="12" value="0">
+          </div>
+          <div class="eq-label">350Hz</div>
+          <div class="eq-value" id="eq-350-val">0dB</div>
+        </div>
+        <div class="eq-band">
+          <div class="eq-slider-wrapper">
+            <input type="range" class="eq-slider" id="eq-1000" min="-12" max="12" value="0">
+          </div>
+          <div class="eq-label">1kHz</div>
+          <div class="eq-value" id="eq-1000-val">0dB</div>
+        </div>
+        <div class="eq-band">
+          <div class="eq-slider-wrapper">
+            <input type="range" class="eq-slider" id="eq-3500" min="-12" max="12" value="0">
+          </div>
+          <div class="eq-label">3.5kHz</div>
+          <div class="eq-value" id="eq-3500-val">0dB</div>
+        </div>
+        <div class="eq-band">
+          <div class="eq-slider-wrapper">
+            <input type="range" class="eq-slider" id="eq-10000" min="-12" max="12" value="0">
+          </div>
+          <div class="eq-label">10kHz</div>
+          <div class="eq-value" id="eq-10000-val">0dB</div>
+        </div>
+      </div>
+      
+      <div class="preset-buttons">
+        <button class="preset-btn" onclick="setEQPreset('flat')">Flat</button>
+        <button class="preset-btn" onclick="setEQPreset('bass')">Bass Boost</button>
+        <button class="preset-btn" onclick="setEQPreset('vocal')">Vocal</button>
+        <button class="preset-btn" onclick="setEQPreset('rock')">Rock</button>
+        <button class="preset-btn" onclick="setEQPreset('electronic')">Electronic</button>
+        <button class="preset-btn" onclick="setEQPreset('classical')">Classical</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="tab-scene" class="tab-content">
+    <div class="control-group">
+      <label>Fog Density</label>
+      <div class="slider-container">
         <input type="range" class="slider" id="fogDensity" min="0" max="0.1" step="0.001" value="0.01">
-      </div>
-
-      <div class="input-group">
-        <label class="input-label">Fog Color</label>
-        <input type="color" id="fogColor" value="#000033">
-      </div>
-
-      <div class="checkbox-group">
-        <input type="checkbox" id="autoRotate" checked>
-        <label for="autoRotate">Auto Rotate Camera</label>
-      </div>
-
-      <div class="checkbox-group">
-        <input type="checkbox" id="showFloor" checked>
-        <label for="showFloor">Show Floor Grid</label>
+        <span class="slider-value" id="fogDensityVal">0.01</span>
       </div>
     </div>
 
-    <div class="section">
-      <div class="section-title">💡 Lighting</div>
-      
-      <div class="slider-group">
-        <div class="slider-header">
-          <span class="slider-label">Ambient Light</span>
-          <span class="slider-value" id="ambientVal">0.2</span>
-        </div>
-        <input type="range" class="slider" id="ambientLight" min="0" max="1" step="0.01" value="0.2">
-      </div>
+    <div class="control-group">
+      <label>Fog Color</label>
+      <input type="color" id="fogColor" value="#000000">
+    </div>
 
-      <div class="slider-group">
-        <div class="slider-header">
-          <span class="slider-label">Point Light Power</span>
-          <span class="slider-value" id="pointVal">1</span>
-        </div>
-        <input type="range" class="slider" id="pointLight" min="0" max="3" step="0.1" value="1">
-      </div>
-
-      <div class="input-group">
-        <label class="input-label">Light Color</label>
-        <input type="color" id="lightColor" value="#00ffff">
+    <div class="control-group">
+      <label>Ambient Light</label>
+      <div class="slider-container">
+        <input type="range" class="slider" id="ambientLight" min="0" max="1" step="0.01" value="0.3">
+        <span class="slider-value" id="ambientLightVal">0.3</span>
       </div>
     </div>
-  </div>
 
-  <div class="tab-content" id="tab-audio">
-    <div class="section">
-      <div class="section-title">🎵 Audio Input</div>
+    <div class="control-group">
+      <label>Point Light Intensity</label>
+      <div class="slider-container">
+        <input type="range" class="slider" id="pointLight" min="0" max="2" step="0.1" value="1">
+        <span class="slider-value" id="pointLightVal">1</span>
+      </div>
+    </div>
+
+    <div class="control-group">
+      <label>Light Color</label>
+      <input type="color" id="lightColor" value="#ffffff">
+    </div>
+
+    <div class="control-group">
+      <label>
+        <input type="checkbox" id="autoRotate" checked> Auto Rotate Camera
+      </label>
+    </div>
+
+    <div class="control-group">
+      <label>
+        <input type="checkbox" id="showFloor" checked> Show Floor Grid
+      </label>
+    </div>
+
+    <div class="control-group">
+      <label>
+        <input type="checkbox" id="wireframe"> Wireframe Mode
+      </label>
+    </div>
+
+    <!-- Background Image Controls -->
+    <div class="bg-controls">
+      <div class="control-group">
+        <label>Background Image</label>
+        <input type="file" id="bgImageFile" class="file-input" accept="image/*">
+        <label for="bgImageFile" class="file-label">Choose Image</label>
+      </div>
       
-      <div class="input-group">
-        <label class="input-label">Audio File</label>
-        <input type="file" id="audioFile" accept="audio/*">
-      </div>
-
-      <div class="slider-group">
-        <div class="slider-header">
-          <span class="slider-label">FFT Size</span>
-          <span class="slider-value" id="fftVal">2048</span>
+      <div class="control-group bg-opacity-slider">
+        <label>Background Opacity</label>
+        <div class="slider-container">
+          <input type="range" class="slider" id="bgOpacity" min="0" max="1" step="0.01" value="0.3">
+          <span class="slider-value" id="bgOpacityVal">0.3</span>
         </div>
-        <select id="fftSize" style="width:100%;margin-top:8px;">
-          <option value="512">512</option>
-          <option value="1024">1024</option>
-          <option value="2048" selected>2048</option>
-          <option value="4096">4096</option>
-        </select>
       </div>
-
-      <div class="slider-group">
-        <div class="slider-header">
-          <span class="slider-label">Smoothing</span>
-          <span class="slider-value" id="smoothVal">0.8</span>
-        </div>
-        <input type="range" class="slider" id="smoothing" min="0" max="0.99" step="0.01" value="0.8">
-      </div>
-
-      <div class="slider-group">
-        <div class="slider-header">
-          <span class="slider-label">Gain</span>
-          <span class="slider-value" id="gainVal">1</span>
-        </div>
-        <input type="range" class="slider" id="gain" min="0.1" max="3" step="0.1" value="1">
-      </div>
-
-      <button class="btn" onclick="useMicrophone()">🎤 Use Microphone</button>
     </div>
   </div>
 
-  <div class="tab-content" id="tab-visualizer">
-    <div class="section">
-      <div class="section-title">🎨 Visualizer Type</div>
-      
-      <div class="viz-grid">
-        <div class="viz-card active" onclick="selectVisualizer('particleSphere', this)">
-          <span class="viz-icon">🌐</span>
-          <div class="viz-name">Particle Sphere</div>
-        </div>
-        <div class="viz-card" onclick="selectVisualizer('dnaHelix', this)">
-          <span class="viz-icon">🧬</span>
-          <div class="viz-name">DNA Helix</div>
-        </div>
-        <div class="viz-card" onclick="selectVisualizer('cubeMatrix', this)">
-          <span class="viz-icon">🎲</span>
-          <div class="viz-name">Cube Matrix</div>
-        </div>
-        <div class="viz-card" onclick="selectVisualizer('waveField', this)">
-          <span class="viz-icon">🌊</span>
-          <div class="viz-name">Wave Field</div>
-        </div>
-        <div class="viz-card" onclick="selectVisualizer('galaxySpiral', this)">
-          <span class="viz-icon">🌌</span>
-          <div class="viz-name">Galaxy Spiral</div>
-        </div>
-        <div class="viz-card" onclick="selectVisualizer('crystalRing', this)">
-          <span class="viz-icon">💎</span>
-          <div class="viz-name">Crystal Ring</div>
-        </div>
-        <div class="viz-card" onclick="selectVisualizer('neonTunnel', this)">
-          <span class="viz-icon">🚇</span>
-          <div class="viz-name">Neon Tunnel</div>
-        </div>
-        <div class="viz-card" onclick="selectVisualizer('atomicOrbit', this)">
-          <span class="viz-icon">⚛️</span>
-          <div class="viz-name">Atomic Orbit</div>
-        </div>
-      </div>
-    </div>
-
-    <div class="section">
-      <div class="section-title">⚙️ Visualizer Settings</div>
-      
-      <div class="input-group">
-        <label class="input-label">Primary Color</label>
-        <input type="color" id="vizColor1" value="#00ffff">
-      </div>
-
-      <div class="input-group">
-        <label class="input-label">Secondary Color</label>
-        <input type="color" id="vizColor2" value="#ff00ff">
-      </div>
-
-      <div class="slider-group">
-        <div class="slider-header">
-          <span class="slider-label">Scale</span>
-          <span class="slider-value" id="vizScaleVal">1</span>
-        </div>
+  <div id="tab-effects" class="tab-content">
+    <div class="control-group">
+      <label>Visualizer Scale</label>
+      <div class="slider-container">
         <input type="range" class="slider" id="vizScale" min="0.5" max="3" step="0.1" value="1">
-      </div>
-
-      <div class="slider-group">
-        <div class="slider-header">
-          <span class="slider-label">Reactivity</span>
-          <span class="slider-value" id="reactivityVal">1</span>
-        </div>
-        <input type="range" class="slider" id="reactivity" min="0.1" max="2" step="0.1" value="1">
-      </div>
-
-      <div class="checkbox-group">
-        <input type="checkbox" id="wireframe">
-        <label for="wireframe">Wireframe Mode</label>
-      </div>
-    </div>
-  </div>
-
-  <div class="tab-content" id="tab-effects">
-    <div class="section">
-      <div class="section-title">✨ Post Processing</div>
-      
-      <div class="checkbox-group">
-        <input type="checkbox" id="fxBloom" checked>
-        <label for="fxBloom">Bloom</label>
-      </div>
-
-      <div class="slider-group">
-        <div class="slider-header">
-          <span class="slider-label">Bloom Strength</span>
-          <span class="slider-value" id="bloomVal">1</span>
-        </div>
-        <input type="range" class="slider" id="bloomStrength" min="0" max="3" step="0.1" value="1">
-      </div>
-
-      <div class="checkbox-group">
-        <input type="checkbox" id="fxGlitch">
-        <label for="fxGlitch">Glitch Effect</label>
-      </div>
-
-      <div class="checkbox-group">
-        <input type="checkbox" id="fxRGB">
-        <label for="fxRGB">RGB Shift</label>
-      </div>
-
-      <div class="checkbox-group">
-        <input type="checkbox" id="fxVignette" checked>
-        <label for="fxVignette">Vignette</label>
-      </div>
-
-      <div class="slider-group">
-        <div class="slider-header">
-          <span class="slider-label">Motion Blur</span>
-          <span class="slider-value" id="motionVal">0</span>
-        </div>
-        <input type="range" class="slider" id="motionBlur" min="0" max="0.95" step="0.05" value="0">
+        <span class="slider-value" id="vizScaleVal">1</span>
       </div>
     </div>
 
-    <div class="section">
-      <div class="section-title">🎆 Particles</div>
-      
-      <div class="checkbox-group">
-        <input type="checkbox" id="particlesEnabled" checked>
-        <label for="particlesEnabled">Enable Particles</label>
+    <div class="control-group">
+      <label>Reactivity</label>
+      <div class="slider-container">
+        <input type="range" class="slider" id="reactivity" min="0" max="2" step="0.1" value="1">
+        <span class="slider-value" id="reactivityVal">1</span>
       </div>
+    </div>
 
-      <div class="slider-group">
-        <div class="slider-header">
-          <span class="slider-label">Particle Count</span>
-          <span class="slider-value" id="particleCountVal">1000</span>
-        </div>
+    <div class="control-group">
+      <label>Smoothing</label>
+      <div class="slider-container">
+        <input type="range" class="slider" id="smoothing" min="0" max="0.9" step="0.01" value="0.8">
+        <span class="slider-value" id="smoothingVal">0.8</span>
+      </div>
+    </div>
+
+    <div class="control-group">
+      <label>Primary Color</label>
+      <input type="color" id="vizColor1" value="#667eea">
+    </div>
+
+    <div class="control-group">
+      <label>Secondary Color</label>
+      <input type="color" id="vizColor2" value="#764ba2">
+    </div>
+
+    <div class="control-group">
+      <label>Volume Gain</label>
+      <div class="slider-container">
+        <input type="range" class="slider" id="gain" min="0" max="2" step="0.1" value="1">
+        <span class="slider-value" id="gainVal">1</span>
+      </div>
+    </div>
+
+    <div class="control-group">
+      <label>FFT Size</label>
+      <select id="fftSize">
+        <option value="512">512</option>
+        <option value="1024">1024</option>
+        <option value="2048" selected>2048</option>
+        <option value="4096">4096</option>
+      </select>
+    </div>
+
+    <div class="control-group">
+      <label>Particle Density</label>
+      <div class="slider-container">
         <input type="range" class="slider" id="particleCount" min="100" max="5000" step="100" value="1000">
+        <span class="slider-value" id="particleCountVal">1000</span>
       </div>
-
-      <button class="btn btn-secondary" onclick="exportScene()">📸 Screenshot</button>
-      <button class="btn btn-danger" onclick="toggleRecord()">⏺️ Record Video</button>
     </div>
   </div>
 </div>
 
-<div class="controls-overlay">
-  <button class="control-btn" id="playBtn" onclick="togglePlay()">▶️</button>
+<div class="audio-controls" id="audioControls">
+  <div class="audio-buttons">
+    <button class="audio-btn" id="playBtn" onclick="togglePlay()">▶️</button>
+    <label for="audioFile" class="file-label">Choose Audio</label>
+    <input type="file" id="audioFile" class="file-input" accept="audio/*">
+    <button class="audio-btn" onclick="useMicrophone()">🎤</button>
+    <button class="audio-btn" onclick="exportScene()">📸</button>
+    <button class="audio-btn" onclick="toggleFullscreen()">⛶</button>
+  </div>
+  
+  <div class="timeline" id="timeline" onclick="seek(event)">
+    <div class="progress" id="progress"></div>
+  </div>
+  
   <div class="time-display">
     <span id="currentTime">0:00</span>
-    <div class="timeline" onclick="seek(event)">
-      <div class="timeline-progress" id="progress"></div>
-    </div>
     <span id="duration">0:00</span>
   </div>
-  <button class="control-btn" onclick="toggleFullscreen()">🔳</button>
 </div>
 
-<div class="stats" id="stats">
-  <div>FPS: <span id="fps">60</span></div>
+<div class="stats">
+  <div>FPS: <span id="fps">0</span></div>
   <div>Objects: <span id="objects">0</span></div>
   <div>Triangles: <span id="triangles">0</span></div>
 </div>
 
-<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 <script>
-// ============================================
-// 🎮 N1K∅ 3D AUDIO VISUALIZER ENGINE
-// ============================================
-
 class N1K0Visualizer {
   constructor() {
     this.scene = null;
     this.camera = null;
     this.renderer = null;
-    this.composer = null;
-    
-    this.audioContext = null;
-    this.analyser = null;
-    this.audioSource = null;
-    this.audioBuffer = null;
-    this.dataArray = null;
-    
     this.visualizer = null;
     this.currentVizType = 'particleSphere';
     
+    this.audioContext = null;
+    this.analyser = null;
+    this.dataArray = null;
+    this.audioSource = null;
+    this.gainNode = null;
+    this.audioBuffer = null;
     this.isPlaying = false;
-    this.isRecording = false;
     
+    // EQ filters
+    this.eqFilters = {};
+    
+    // Animation
     this.clock = new THREE.Clock();
-    this.stats = { fps: 0, lastTime: 0 };
+    this.stats = {
+      fps: 0,
+      lastTime: performance.now()
+    };
     
     this.config = {
-      vizScale: 1,
-      reactivity: 1,
-      wireframe: false,
+      fogDensity: 0.01,
+      fogColor: 0x000000,
+      ambientLight: 0.3,
+      pointLight: 1,
+      lightColor: 0xffffff,
       autoRotate: true,
       showFloor: true,
-      fogDensity: 0.01,
-      fogColor: 0x000033,
-      ambientLight: 0.2,
-      pointLight: 1,
-      lightColor: 0x00ffff,
-      vizColor1: 0x00ffff,
-      vizColor2: 0xff00ff,
-      bloomStrength: 1,
-      motionBlur: 0,
-      particlesEnabled: true,
-      particleCount: 1000,
+      wireframe: false,
+      vizScale: 1,
+      reactivity: 1,
+      smoothing: 0.8,
+      vizColor1: 0x667eea,
+      vizColor2: 0x764ba2,
       gain: 1,
-      smoothing: 0.8
+      particleCount: 1000
     };
     
     this.init();
@@ -784,10 +818,8 @@ class N1K0Visualizer {
   init() {
     this.initThree();
     this.initAudio();
-    this.initLights();
-    this.initEnvironment();
-    this.initVisualizer();
     this.initControls();
+    this.createVisualizer(this.currentVizType);
     this.animate();
   }
 
@@ -799,30 +831,44 @@ class N1K0Visualizer {
     // Camera
     this.camera = new THREE.PerspectiveCamera(
       75,
-      window.innerWidth / window.innerHeight,
+      (window.innerWidth - 350) / window.innerHeight,
       0.1,
       1000
     );
-    this.camera.position.set(0, 10, 30);
-    this.camera.lookAt(0, 0, 0);
+    this.camera.position.z = 30;
+    this.camera.position.y = 10;
     
     // Renderer
-    this.renderer = new THREE.WebGLRenderer({
-      canvas: document.getElementById('canvas3d'),
-      antialias: true,
-      alpha: true
+    this.renderer = new THREE.WebGLRenderer({ 
+      antialias: true, 
+      alpha: true 
     });
-    this.renderer.setSize(window.innerWidth, window.innerHeight);
+    this.renderer.setSize(window.innerWidth - 350, window.innerHeight);
     this.renderer.setPixelRatio(window.devicePixelRatio);
-    this.renderer.shadowMap.enabled = true;
-    this.renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+    document.getElementById('canvas-container').appendChild(this.renderer.domElement);
     
-    // Window resize
-    window.addEventListener('resize', () => {
-      this.camera.aspect = window.innerWidth / window.innerHeight;
-      this.camera.updateProjectionMatrix();
-      this.renderer.setSize(window.innerWidth, window.innerHeight);
-    });
+    // Lights
+    this.ambientLight = new THREE.AmbientLight(0xffffff, this.config.ambientLight);
+    this.scene.add(this.ambientLight);
+    
+    this.pointLight1 = new THREE.PointLight(this.config.lightColor, this.config.pointLight);
+    this.pointLight1.position.set(20, 20, 20);
+    this.scene.add(this.pointLight1);
+    
+    this.pointLight2 = new THREE.PointLight(this.config.lightColor, this.config.pointLight);
+    this.pointLight2.position.set(-20, 20, -20);
+    this.scene.add(this.pointLight2);
+    
+    // Grid
+    this.gridHelper = new THREE.GridHelper(50, 50, 0x444444, 0x222222);
+    this.gridHelper.position.y = -10;
+    this.scene.add(this.gridHelper);
+    
+    // Background particles
+    this.createBackgroundParticles();
+    
+    // Handle resize
+    window.addEventListener('resize', () => this.onResize());
   }
 
   initAudio() {
@@ -831,149 +877,120 @@ class N1K0Visualizer {
     this.analyser.fftSize = 2048;
     this.analyser.smoothingTimeConstant = this.config.smoothing;
     
+    this.dataArray = new Uint8Array(this.analyser.frequencyBinCount);
+    
     this.gainNode = this.audioContext.createGain();
     this.gainNode.gain.value = this.config.gain;
     
-    this.gainNode.connect(this.analyser);
-    this.analyser.connect(this.audioContext.destination);
-    
-    this.dataArray = new Uint8Array(this.analyser.frequencyBinCount);
-  }
-
-  initLights() {
-    // Ambient light
-    this.ambientLight = new THREE.AmbientLight(0xffffff, this.config.ambientLight);
-    this.scene.add(this.ambientLight);
-    
-    // Point lights
-    this.pointLight1 = new THREE.PointLight(this.config.lightColor, this.config.pointLight, 100);
-    this.pointLight1.position.set(20, 20, 20);
-    this.pointLight1.castShadow = true;
-    this.scene.add(this.pointLight1);
-    
-    this.pointLight2 = new THREE.PointLight(0xff00ff, this.config.pointLight * 0.5, 100);
-    this.pointLight2.position.set(-20, 20, -20);
-    this.scene.add(this.pointLight2);
-    
-    // Spot light
-    this.spotLight = new THREE.SpotLight(0xffffff, 0.5);
-    this.spotLight.position.set(0, 50, 0);
-    this.spotLight.angle = Math.PI / 4;
-    this.spotLight.penumbra = 0.1;
-    this.spotLight.decay = 2;
-    this.spotLight.distance = 200;
-    this.spotLight.castShadow = true;
-    this.scene.add(this.spotLight);
-  }
-
-  initEnvironment() {
-    // Floor grid
-    this.gridHelper = new THREE.GridHelper(100, 50, 0x00ffff, 0x001133);
-    this.gridHelper.position.y = -10;
-    this.scene.add(this.gridHelper);
-    
-    // Particle system for background
-    const particleGeometry = new THREE.BufferGeometry();
-    const particleCount = this.config.particleCount;
-    const positions = new Float32Array(particleCount * 3);
-    
-    for (let i = 0; i < particleCount * 3; i += 3) {
-      positions[i] = (Math.random() - 0.5) * 200;
-      positions[i + 1] = (Math.random() - 0.5) * 200;
-      positions[i + 2] = (Math.random() - 0.5) * 200;
-    }
-    
-    particleGeometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
-    
-    const particleMaterial = new THREE.PointsMaterial({
-      color: 0x00ffff,
-      size: 0.5,
-      transparent: true,
-      opacity: 0.6,
-      blending: THREE.AdditiveBlending
+    // Create EQ filters
+    const frequencies = [60, 170, 350, 1000, 3500, 10000];
+    frequencies.forEach(freq => {
+      const filter = this.audioContext.createBiquadFilter();
+      filter.type = 'peaking';
+      filter.frequency.value = freq;
+      filter.Q.value = 1;
+      filter.gain.value = 0;
+      this.eqFilters[freq] = filter;
     });
     
-    this.backgroundParticles = new THREE.Points(particleGeometry, particleMaterial);
+    // Connect EQ chain
+    let prevFilter = this.gainNode;
+    Object.values(this.eqFilters).forEach(filter => {
+      prevFilter.connect(filter);
+      prevFilter = filter;
+    });
+    prevFilter.connect(this.analyser);
+    this.analyser.connect(this.audioContext.destination);
+  }
+
+  createBackgroundParticles() {
+    const geometry = new THREE.BufferGeometry();
+    const vertices = [];
+    
+    for (let i = 0; i < 1000; i++) {
+      vertices.push(
+        (Math.random() - 0.5) * 100,
+        (Math.random() - 0.5) * 100,
+        (Math.random() - 0.5) * 100
+      );
+    }
+    
+    geometry.setAttribute('position', new THREE.Float32BufferAttribute(vertices, 3));
+    
+    const material = new THREE.PointsMaterial({
+      color: 0xffffff,
+      size: 0.5,
+      transparent: true,
+      opacity: 0.5
+    });
+    
+    this.backgroundParticles = new THREE.Points(geometry, material);
     this.scene.add(this.backgroundParticles);
   }
 
-  initVisualizer() {
-    this.createVisualizer(this.currentVizType);
-  }
-
   createVisualizer(type) {
-    // Remove old visualizer
     if (this.visualizer) {
       this.scene.remove(this.visualizer);
       if (this.visualizer.geometry) this.visualizer.geometry.dispose();
       if (this.visualizer.material) this.visualizer.material.dispose();
     }
-    
+
     switch(type) {
       case 'particleSphere':
         this.createParticleSphere();
         break;
-      case 'dnaHelix':
-        this.createDNAHelix();
+      case 'bars3D':
+        this.createBars3D();
         break;
-      case 'cubeMatrix':
-        this.createCubeMatrix();
+      case 'waveform3D':
+        this.createWaveform3D();
         break;
-      case 'waveField':
-        this.createWaveField();
+      case 'ribbonFlow':
+        this.createRibbonFlow();
         break;
-      case 'galaxySpiral':
-        this.createGalaxySpiral();
+      case 'particleGalaxy':
+        this.createParticleGalaxy();
         break;
-      case 'crystalRing':
-        this.createCrystalRing();
+      case 'geometricDance':
+        this.createGeometricDance();
         break;
-      case 'neonTunnel':
-        this.createNeonTunnel();
+      case 'vortexTunnel':
+        this.createVortexTunnel();
         break;
-      case 'atomicOrbit':
-        this.createAtomicOrbit();
+      case 'fireFlower':
+        this.createFireFlower();
         break;
     }
+
+    this.scene.add(this.visualizer);
   }
 
   createParticleSphere() {
-    const geometry = new THREE.IcosahedronGeometry(10, 4);
-    const material = new THREE.MeshPhongMaterial({
-      color: this.config.vizColor1,
-      wireframe: this.config.wireframe,
-      emissive: this.config.vizColor1,
-      emissiveIntensity: 0.2
-    });
+    const geometry = new THREE.BufferGeometry();
+    const count = this.config.particleCount;
+    const positions = new Float32Array(count * 3);
+    const colors = new Float32Array(count * 3);
     
-    this.visualizer = new THREE.Mesh(geometry, material);
-    this.visualizer.castShadow = true;
-    this.visualizer.receiveShadow = true;
-    
-    // Add particle cloud around sphere
-    const particleGeometry = new THREE.BufferGeometry();
-    const particleCount = 2000;
-    const positions = new Float32Array(particleCount * 3);
-    const colors = new Float32Array(particleCount * 3);
-    
-    for (let i = 0; i < particleCount; i++) {
+    for (let i = 0; i < count; i++) {
       const theta = Math.random() * Math.PI * 2;
       const phi = Math.acos(Math.random() * 2 - 1);
-      const r = 15 + Math.random() * 10;
+      const radius = 10;
       
-      positions[i * 3] = r * Math.sin(phi) * Math.cos(theta);
-      positions[i * 3 + 1] = r * Math.sin(phi) * Math.sin(theta);
-      positions[i * 3 + 2] = r * Math.cos(phi);
+      positions[i * 3] = radius * Math.sin(phi) * Math.cos(theta);
+      positions[i * 3 + 1] = radius * Math.sin(phi) * Math.sin(theta);
+      positions[i * 3 + 2] = radius * Math.cos(phi);
       
-      colors[i * 3] = Math.random();
-      colors[i * 3 + 1] = Math.random();
-      colors[i * 3 + 2] = Math.random();
+      const color = new THREE.Color();
+      color.setHSL(i / count, 0.8, 0.5);
+      colors[i * 3] = color.r;
+      colors[i * 3 + 1] = color.g;
+      colors[i * 3 + 2] = color.b;
     }
     
-    particleGeometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
-    particleGeometry.setAttribute('color', new THREE.BufferAttribute(colors, 3));
+    geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+    geometry.setAttribute('color', new THREE.BufferAttribute(colors, 3));
     
-    const particleMaterial = new THREE.PointsMaterial({
+    const material = new THREE.PointsMaterial({
       size: 0.3,
       vertexColors: true,
       transparent: true,
@@ -981,149 +998,105 @@ class N1K0Visualizer {
       blending: THREE.AdditiveBlending
     });
     
-    this.particleCloud = new THREE.Points(particleGeometry, particleMaterial);
-    this.visualizer.add(this.particleCloud);
-    
-    this.scene.add(this.visualizer);
+    this.visualizer = new THREE.Points(geometry, material);
+    this.visualizer.userData.originalPositions = positions.slice();
   }
 
-  createDNAHelix() {
-    const group = new THREE.Group();
+  createBars3D() {
+    this.visualizer = new THREE.Group();
+    const barsCount = 32;
+    const barGeometry = new THREE.BoxGeometry(0.5, 1, 0.5);
     
-    const sphereGeometry = new THREE.SphereGeometry(1, 16, 16);
-    const material1 = new THREE.MeshPhongMaterial({
-      color: this.config.vizColor1,
-      emissive: this.config.vizColor1,
-      emissiveIntensity: 0.3
-    });
-    const material2 = new THREE.MeshPhongMaterial({
-      color: this.config.vizColor2,
-      emissive: this.config.vizColor2,
-      emissiveIntensity: 0.3
-    });
-    
-    const helixPoints = 50;
-    const helixHeight = 30;
-    
-    for (let i = 0; i < helixPoints; i++) {
-      const t = i / helixPoints;
-      const angle = t * Math.PI * 8;
-      const y = (t - 0.5) * helixHeight;
-      
-      // First strand
-      const sphere1 = new THREE.Mesh(sphereGeometry, material1);
-      sphere1.position.set(
-        Math.cos(angle) * 8,
-        y,
-        Math.sin(angle) * 8
-      );
-      group.add(sphere1);
-      
-      // Second strand
-      const sphere2 = new THREE.Mesh(sphereGeometry, material2);
-      sphere2.position.set(
-        Math.cos(angle + Math.PI) * 8,
-        y,
-        Math.sin(angle + Math.PI) * 8
-      );
-      group.add(sphere2);
-      
-      // Connection
-      if (i % 3 === 0) {
-        const connectionGeometry = new THREE.CylinderGeometry(0.2, 0.2, 16);
-        const connectionMaterial = new THREE.MeshPhongMaterial({
-          color: 0xffffff,
-          emissive: 0xffffff,
-          emissiveIntensity: 0.1,
-          opacity: 0.5,
-          transparent: true
+    for (let i = 0; i < barsCount; i++) {
+      for (let j = 0; j < barsCount; j++) {
+        const material = new THREE.MeshPhongMaterial({
+          color: new THREE.Color().setHSL((i + j) / (barsCount * 2), 0.8, 0.5),
+          wireframe: this.config.wireframe
         });
-        const connection = new THREE.Mesh(connectionGeometry, connectionMaterial);
-        connection.position.set(0, y, 0);
-        connection.rotation.z = Math.PI / 2;
-        group.add(connection);
+        
+        const bar = new THREE.Mesh(barGeometry, material);
+        bar.position.x = (i - barsCount / 2) * 1.5;
+        bar.position.z = (j - barsCount / 2) * 1.5;
+        bar.userData.baseY = 0;
+        bar.userData.index = i * barsCount + j;
+        
+        this.visualizer.add(bar);
       }
     }
-    
-    this.visualizer = group;
-    this.scene.add(this.visualizer);
   }
 
-  createCubeMatrix() {
-    const group = new THREE.Group();
-    const cubeSize = 2;
-    const gridSize = 8;
-    const spacing = 3;
+  createWaveform3D() {
+    const points = [];
+    const segments = 128;
     
-    const geometry = new THREE.BoxGeometry(cubeSize, cubeSize, cubeSize);
-    
-    for (let x = 0; x < gridSize; x++) {
-      for (let y = 0; y < gridSize; y++) {
-        for (let z = 0; z < gridSize; z++) {
-          const hue = (x + y + z) / (gridSize * 3);
-          const color = new THREE.Color().setHSL(hue, 1, 0.5);
-          
-          const material = new THREE.MeshPhongMaterial({
-            color: color,
-            wireframe: this.config.wireframe,
-            emissive: color,
-            emissiveIntensity: 0.2
-          });
-          
-          const cube = new THREE.Mesh(geometry, material);
-          cube.position.set(
-            (x - gridSize / 2) * spacing,
-            (y - gridSize / 2) * spacing,
-            (z - gridSize / 2) * spacing
-          );
-          
-          cube.userData = { x, y, z };
-          group.add(cube);
-        }
-      }
+    for (let i = 0; i < segments; i++) {
+      const x = (i - segments / 2) * 0.5;
+      points.push(new THREE.Vector3(x, 0, 0));
     }
     
-    this.visualizer = group;
-    this.scene.add(this.visualizer);
-  }
-
-  createWaveField() {
-    const geometry = new THREE.PlaneGeometry(50, 50, 50, 50);
-    const material = new THREE.MeshPhongMaterial({
+    const geometry = new THREE.BufferGeometry().setFromPoints(points);
+    const material = new THREE.LineBasicMaterial({
       color: this.config.vizColor1,
-      wireframe: true,
-      side: THREE.DoubleSide,
-      emissive: this.config.vizColor1,
-      emissiveIntensity: 0.1
+      linewidth: 2,
+      transparent: true,
+      opacity: 0.8
     });
     
-    this.visualizer = new THREE.Mesh(geometry, material);
-    this.visualizer.rotation.x = -Math.PI / 2;
-    this.visualizer.position.y = -5;
+    this.visualizer = new THREE.Group();
     
-    // Store original vertices
-    this.visualizer.userData.originalVertices = geometry.attributes.position.array.slice();
-    
-    this.scene.add(this.visualizer);
+    // Create multiple waveform lines
+    for (let j = 0; j < 10; j++) {
+      const line = new THREE.Line(geometry.clone(), material.clone());
+      line.position.z = (j - 5) * 2;
+      line.userData.offset = j * 0.1;
+      this.visualizer.add(line);
+    }
   }
 
-  createGalaxySpiral() {
-    const group = new THREE.Group();
-    const particleCount = 5000;
+  createRibbonFlow() {
+    this.visualizer = new THREE.Group();
+    
+    const ribbonCount = 5;
+    for (let r = 0; r < ribbonCount; r++) {
+      const curve = new THREE.CatmullRomCurve3([
+        new THREE.Vector3(-10, 0, 0),
+        new THREE.Vector3(-5, 5, 0),
+        new THREE.Vector3(0, 0, 0),
+        new THREE.Vector3(5, -5, 0),
+        new THREE.Vector3(10, 0, 0)
+      ]);
+      
+      const geometry = new THREE.TubeGeometry(curve, 100, 0.5, 8, false);
+      const material = new THREE.MeshPhongMaterial({
+        color: new THREE.Color().setHSL(r / ribbonCount, 0.8, 0.5),
+        wireframe: this.config.wireframe,
+        transparent: true,
+        opacity: 0.7
+      });
+      
+      const ribbon = new THREE.Mesh(geometry, material);
+      ribbon.userData.index = r;
+      ribbon.rotation.z = (r / ribbonCount) * Math.PI * 2;
+      this.visualizer.add(ribbon);
+    }
+  }
+
+  createParticleGalaxy() {
     const geometry = new THREE.BufferGeometry();
+    const count = this.config.particleCount * 2;
+    const positions = new Float32Array(count * 3);
+    const colors = new Float32Array(count * 3);
     
-    const positions = new Float32Array(particleCount * 3);
-    const colors = new Float32Array(particleCount * 3);
-    
-    for (let i = 0; i < particleCount; i++) {
-      const angle = i * 0.1;
-      const radius = i * 0.01;
+    for (let i = 0; i < count; i++) {
+      const angle = (i / count) * Math.PI * 2 * 5;
+      const radius = (i / count) * 20;
       
       positions[i * 3] = Math.cos(angle) * radius;
       positions[i * 3 + 1] = (Math.random() - 0.5) * 2;
       positions[i * 3 + 2] = Math.sin(angle) * radius;
       
-      const color = new THREE.Color().setHSL(i / particleCount, 1, 0.5);
+      const color = new THREE.Color();
+      color.setHSL(i / count, 0.8, 0.5);
       colors[i * 3] = color.r;
       colors[i * 3 + 1] = color.g;
       colors[i * 3 + 2] = color.b;
@@ -1141,304 +1114,278 @@ class N1K0Visualizer {
     });
     
     this.visualizer = new THREE.Points(geometry, material);
-    this.scene.add(this.visualizer);
+    this.visualizer.userData.originalPositions = positions.slice();
   }
 
-  createCrystalRing() {
-    const group = new THREE.Group();
-    const crystalCount = 24;
-    const radius = 15;
+  createGeometricDance() {
+    this.visualizer = new THREE.Group();
     
-    const geometry = new THREE.OctahedronGeometry(2, 0);
+    const shapes = [
+      new THREE.TetrahedronGeometry(3),
+      new THREE.OctahedronGeometry(3),
+      new THREE.IcosahedronGeometry(3),
+      new THREE.DodecahedronGeometry(3)
+    ];
     
-    for (let i = 0; i < crystalCount; i++) {
-      const angle = (i / crystalCount) * Math.PI * 2;
-      const hue = i / crystalCount;
-      const color = new THREE.Color().setHSL(hue, 1, 0.5);
-      
+    shapes.forEach((geometry, i) => {
       const material = new THREE.MeshPhongMaterial({
-        color: color,
+        color: new THREE.Color().setHSL(i / shapes.length, 0.8, 0.5),
         wireframe: this.config.wireframe,
-        emissive: color,
-        emissiveIntensity: 0.5,
         transparent: true,
-        opacity: 0.8
+        opacity: 0.7
       });
       
-      const crystal = new THREE.Mesh(geometry, material);
-      crystal.position.set(
-        Math.cos(angle) * radius,
-        0,
-        Math.sin(angle) * radius
-      );
-      crystal.rotation.set(
-        Math.random() * Math.PI,
-        Math.random() * Math.PI,
-        Math.random() * Math.PI
-      );
-      
-      crystal.userData = { angle, index: i };
-      group.add(crystal);
-    }
-    
-    this.visualizer = group;
-    this.scene.add(this.visualizer);
+      const mesh = new THREE.Mesh(geometry, material);
+      mesh.position.x = (i - shapes.length / 2) * 8;
+      mesh.userData.index = i;
+      this.visualizer.add(mesh);
+    });
   }
 
-  createNeonTunnel() {
-    const group = new THREE.Group();
-    const ringCount = 30;
-    const ringRadius = 10;
-    const tunnelLength = 100;
+  createVortexTunnel() {
+    this.visualizer = new THREE.Group();
     
+    const ringCount = 30;
     for (let i = 0; i < ringCount; i++) {
-      const z = (i / ringCount - 0.5) * tunnelLength;
-      const hue = i / ringCount;
-      const color = new THREE.Color().setHSL(hue, 1, 0.5);
-      
-      const geometry = new THREE.TorusGeometry(ringRadius, 0.5, 8, 32);
+      const geometry = new THREE.TorusGeometry(5 + i * 0.5, 0.2, 8, 32);
       const material = new THREE.MeshPhongMaterial({
-        color: color,
-        emissive: color,
-        emissiveIntensity: 0.5
+        color: new THREE.Color().setHSL(i / ringCount, 0.8, 0.5),
+        wireframe: this.config.wireframe,
+        transparent: true,
+        opacity: 0.7
       });
       
       const ring = new THREE.Mesh(geometry, material);
-      ring.position.z = z;
-      ring.userData = { index: i };
-      
-      group.add(ring);
+      ring.position.z = -i * 2;
+      ring.userData.index = i;
+      this.visualizer.add(ring);
     }
-    
-    this.visualizer = group;
-    this.scene.add(this.visualizer);
   }
 
-  createAtomicOrbit() {
-    const group = new THREE.Group();
+  createFireFlower() {
+    this.visualizer = new THREE.Group();
     
-    // Nucleus
-    const nucleusGeometry = new THREE.SphereGeometry(3, 32, 32);
-    const nucleusMaterial = new THREE.MeshPhongMaterial({
-      color: 0xffff00,
-      emissive: 0xffff00,
-      emissiveIntensity: 0.5
-    });
-    const nucleus = new THREE.Mesh(nucleusGeometry, nucleusMaterial);
-    group.add(nucleus);
+    const petalCount = 12;
+    const petalGeometry = new THREE.ConeGeometry(2, 8, 4);
     
-    // Electron orbits
-    const orbitCount = 3;
-    const electronGeometry = new THREE.SphereGeometry(0.5, 16, 16);
-    
-    for (let i = 0; i < orbitCount; i++) {
-      const orbitRadius = 8 + i * 4;
-      const electronCount = 3 + i * 2;
-      
-      // Orbit ring
-      const orbitGeometry = new THREE.TorusGeometry(orbitRadius, 0.1, 4, 64);
-      const orbitMaterial = new THREE.MeshBasicMaterial({
-        color: 0x0088ff,
-        opacity: 0.3,
-        transparent: true
+    for (let i = 0; i < petalCount; i++) {
+      const material = new THREE.MeshPhongMaterial({
+        color: new THREE.Color().setHSL(i / petalCount * 0.2, 1, 0.5),
+        wireframe: this.config.wireframe,
+        transparent: true,
+        opacity: 0.8,
+        emissive: new THREE.Color(0xff4400),
+        emissiveIntensity: 0.2
       });
-      const orbit = new THREE.Mesh(orbitGeometry, orbitMaterial);
-      orbit.rotation.x = Math.random() * Math.PI;
-      orbit.rotation.y = Math.random() * Math.PI;
-      group.add(orbit);
       
-      // Electrons
-      for (let j = 0; j < electronCount; j++) {
-        const electronMaterial = new THREE.MeshPhongMaterial({
-          color: 0x00ffff,
-          emissive: 0x00ffff,
-          emissiveIntensity: 0.8
-        });
-        const electron = new THREE.Mesh(electronGeometry, electronMaterial);
-        electron.userData = {
-          orbit: i,
-          angle: (j / electronCount) * Math.PI * 2,
-          radius: orbitRadius,
-          speed: 1 + i * 0.5
-        };
-        group.add(electron);
-      }
+      const petal = new THREE.Mesh(petalGeometry, material);
+      const angle = (i / petalCount) * Math.PI * 2;
+      petal.position.x = Math.cos(angle) * 5;
+      petal.position.z = Math.sin(angle) * 5;
+      petal.rotation.z = angle;
+      petal.userData.index = i;
+      petal.userData.angle = angle;
+      
+      this.visualizer.add(petal);
     }
     
-    this.visualizer = group;
-    this.scene.add(this.visualizer);
+    // Center sphere
+    const centerGeometry = new THREE.SphereGeometry(2, 16, 16);
+    const centerMaterial = new THREE.MeshPhongMaterial({
+      color: 0xffaa00,
+      emissive: 0xff6600,
+      emissiveIntensity: 0.5
+    });
+    const center = new THREE.Mesh(centerGeometry, centerMaterial);
+    this.visualizer.add(center);
   }
 
   updateVisualizer() {
-    if (!this.visualizer || !this.dataArray) return;
+    if (!this.analyser || !this.visualizer || !this.dataArray) return;
     
     this.analyser.getByteFrequencyData(this.dataArray);
     
     const bass = this.getFrequencyRange(0, 10) * this.config.reactivity;
     const mid = this.getFrequencyRange(10, 100) * this.config.reactivity;
-    const treble = this.getFrequencyRange(100, 1000) * this.config.reactivity;
-    
+    const treble = this.getFrequencyRange(100, 512) * this.config.reactivity;
     const time = this.clock.getElapsedTime();
     
+    // Update based on visualizer type
     switch(this.currentVizType) {
       case 'particleSphere':
         this.updateParticleSphere(bass, mid, treble, time);
         break;
-      case 'dnaHelix':
-        this.updateDNAHelix(bass, mid, treble, time);
+      case 'bars3D':
+        this.updateBars3D(bass, mid, treble, time);
         break;
-      case 'cubeMatrix':
-        this.updateCubeMatrix(bass, mid, treble, time);
+      case 'waveform3D':
+        this.updateWaveform3D(bass, mid, treble, time);
         break;
-      case 'waveField':
-        this.updateWaveField(bass, mid, treble, time);
+      case 'ribbonFlow':
+        this.updateRibbonFlow(bass, mid, treble, time);
         break;
-      case 'galaxySpiral':
-        this.updateGalaxySpiral(bass, mid, treble, time);
+      case 'particleGalaxy':
+        this.updateParticleGalaxy(bass, mid, treble, time);
         break;
-      case 'crystalRing':
-        this.updateCrystalRing(bass, mid, treble, time);
+      case 'geometricDance':
+        this.updateGeometricDance(bass, mid, treble, time);
         break;
-      case 'neonTunnel':
-        this.updateNeonTunnel(bass, mid, treble, time);
+      case 'vortexTunnel':
+        this.updateVortexTunnel(bass, mid, treble, time);
         break;
-      case 'atomicOrbit':
-        this.updateAtomicOrbit(bass, mid, treble, time);
+      case 'fireFlower':
+        this.updateFireFlower(bass, mid, treble, time);
         break;
     }
+    
+    // Auto rotate
+    if (this.config.autoRotate) {
+      this.visualizer.rotation.y += 0.005;
+    }
+    
+    // Scale
+    const scale = this.config.vizScale * (1 + bass * 0.2);
+    this.visualizer.scale.set(scale, scale, scale);
     
     // Update lights based on audio
-    this.pointLight1.intensity = this.config.pointLight * (1 + bass * 0.5);
-    this.pointLight2.intensity = this.config.pointLight * 0.5 * (1 + treble * 0.5);
-    
-    // Camera movement
-    if (this.config.autoRotate) {
-      this.camera.position.x = Math.sin(time * 0.1) * 30;
-      this.camera.position.z = Math.cos(time * 0.1) * 30;
-      this.camera.lookAt(0, 0, 0);
-    }
+    this.pointLight1.intensity = this.config.pointLight * (1 + bass);
+    this.pointLight2.intensity = this.config.pointLight * (1 + mid);
   }
 
   updateParticleSphere(bass, mid, treble, time) {
-    const scale = this.config.vizScale * (1 + bass * 0.3);
-    this.visualizer.scale.set(scale, scale, scale);
-    this.visualizer.rotation.y = time * 0.5;
-    this.visualizer.rotation.x = time * 0.3;
-    
-    if (this.particleCloud) {
-      this.particleCloud.rotation.y = -time * 0.2;
-      this.particleCloud.scale.set(1 + mid * 0.2, 1 + mid * 0.2, 1 + mid * 0.2);
-    }
-    
-    // Morph vertices
     const positions = this.visualizer.geometry.attributes.position;
+    const originalPositions = this.visualizer.userData.originalPositions;
+    
     for (let i = 0; i < positions.count; i++) {
-      const vertex = new THREE.Vector3(
-        positions.getX(i),
-        positions.getY(i),
-        positions.getZ(i)
+      const i3 = i * 3;
+      const x = originalPositions[i3];
+      const y = originalPositions[i3 + 1];
+      const z = originalPositions[i3 + 2];
+      
+      const distance = Math.sqrt(x * x + y * y + z * z);
+      const scale = 1 + Math.sin(time * 2 + i * 0.01) * bass * 5 + 
+                    Math.cos(time + i * 0.02) * mid * 3 +
+                    Math.sin(time * 3 + i * 0.03) * treble * 2;
+      
+      positions.setXYZ(
+        i,
+        x * scale / distance * 10,
+        y * scale / distance * 10,
+        z * scale / distance * 10
       );
-      vertex.normalize();
-      const offset = 10 + bass * 5 + Math.sin(time + i) * treble * 2;
-      vertex.multiplyScalar(offset);
-      positions.setXYZ(i, vertex.x, vertex.y, vertex.z);
     }
+    
     positions.needsUpdate = true;
+    this.visualizer.material.size = 0.3 + bass * 0.5;
   }
 
-  updateDNAHelix(bass, mid, treble, time) {
-    this.visualizer.rotation.y = time * 0.5;
-    
-    this.visualizer.children.forEach((child, i) => {
-      if (child.geometry && child.geometry.type === 'SphereGeometry') {
-        const scale = 1 + Math.sin(time * 2 + i * 0.5) * bass * 0.5;
-        child.scale.set(scale, scale, scale);
+  updateBars3D(bass, mid, treble, time) {
+    this.visualizer.children.forEach((bar, i) => {
+      const freqIndex = Math.floor((i / this.visualizer.children.length) * this.dataArray.length);
+      const amplitude = this.dataArray[freqIndex] / 255;
+      
+      bar.scale.y = 0.1 + amplitude * 10 * this.config.reactivity;
+      bar.position.y = bar.scale.y / 2;
+      
+      // Color pulse
+      const hue = (amplitude + time * 0.1) % 1;
+      bar.material.color.setHSL(hue, 0.8, 0.5);
+    });
+  }
+
+  updateWaveform3D(bass, mid, treble, time) {
+    this.visualizer.children.forEach((line, lineIndex) => {
+      const positions = line.geometry.attributes.position;
+      const offset = line.userData.offset;
+      
+      for (let i = 0; i < positions.count; i++) {
+        const freqIndex = Math.floor((i / positions.count) * this.dataArray.length);
+        const amplitude = this.dataArray[freqIndex] / 255;
+        
+        positions.setY(
+          i,
+          Math.sin(time * 2 + i * 0.1 + offset) * amplitude * 10 * this.config.reactivity
+        );
       }
+      
+      positions.needsUpdate = true;
+      line.material.opacity = 0.3 + bass * 0.7;
     });
   }
 
-  updateCubeMatrix(bass, mid, treble, time) {
-    this.visualizer.rotation.y = time * 0.2;
-    this.visualizer.rotation.x = time * 0.1;
-    
-    this.visualizer.children.forEach((cube) => {
-      const { x, y, z } = cube.userData;
-      const waveOffset = Math.sin(time + x * 0.5) * Math.cos(time + y * 0.5) * Math.sin(time + z * 0.5);
-      const scale = 0.5 + waveOffset * 0.5 + bass * 0.5;
-      cube.scale.set(scale, scale, scale);
-      cube.rotation.x = time + x;
-      cube.rotation.y = time + y;
+  updateRibbonFlow(bass, mid, treble, time) {
+    this.visualizer.children.forEach((ribbon, i) => {
+      ribbon.rotation.x = time * 0.5 + i * 0.2;
+      ribbon.rotation.y = time * 0.3 + i * 0.1;
+      ribbon.scale.y = 1 + bass * 2;
+      ribbon.material.opacity = 0.3 + mid * 0.7;
     });
   }
 
-  updateWaveField(bass, mid, treble, time) {
-    const positions = this.visualizer.geometry.attributes.position;
-    const originalVertices = this.visualizer.userData.originalVertices;
-    
-    for (let i = 0; i < positions.count; i++) {
-      const x = originalVertices[i * 3];
-      const z = originalVertices[i * 3 + 2];
-      const distance = Math.sqrt(x * x + z * z);
-      
-      const waveHeight = Math.sin(distance * 0.5 - time * 2) * bass * 10 +
-                        Math.cos(distance * 0.3 + time) * mid * 5;
-      
-      positions.setY(i, waveHeight);
-    }
-    positions.needsUpdate = true;
-  }
-
-  updateGalaxySpiral(bass, mid, treble, time) {
+  updateParticleGalaxy(bass, mid, treble, time) {
     this.visualizer.rotation.y = time * 0.1;
     
     const positions = this.visualizer.geometry.attributes.position;
+    const originalPositions = this.visualizer.userData.originalPositions;
+    
     for (let i = 0; i < positions.count; i++) {
-      const y = positions.getY(i);
-      const newY = (Math.random() - 0.5) * 2 * (1 + bass);
-      positions.setY(i, y * 0.9 + newY * 0.1);
+      const i3 = i * 3;
+      const y = originalPositions[i3 + 1];
+      
+      positions.setY(
+        i,
+        y + Math.sin(time * 2 + i * 0.01) * bass * 5
+      );
     }
+    
     positions.needsUpdate = true;
   }
 
-  updateCrystalRing(bass, mid, treble, time) {
-    this.visualizer.rotation.y = time * 0.3;
-    
-    this.visualizer.children.forEach((crystal) => {
-      const { angle, index } = crystal.userData;
-      crystal.position.y = Math.sin(time * 2 + angle * 3) * bass * 5;
-      crystal.rotation.x += 0.01 + bass * 0.02;
-      crystal.rotation.y += 0.02 + mid * 0.01;
+  updateGeometricDance(bass, mid, treble, time) {
+    this.visualizer.children.forEach((shape, i) => {
+      shape.rotation.x = time + i * 0.5;
+      shape.rotation.y = time * 1.5 + i * 0.3;
       
-      const scale = 1 + Math.sin(time * 3 + index) * treble * 0.3;
-      crystal.scale.set(scale, scale, scale);
+      const scale = 1 + Math.sin(time * 2 + i) * bass * 2;
+      shape.scale.set(scale, scale, scale);
+      
+      shape.position.y = Math.sin(time + i) * mid * 5;
+      shape.material.opacity = 0.3 + treble * 0.7;
     });
   }
 
-  updateNeonTunnel(bass, mid, treble, time) {
-    this.visualizer.children.forEach((ring) => {
-      const { index } = ring.userData;
-      const scale = 1 + Math.sin(time * 2 + index * 0.5) * bass * 0.3;
+  updateVortexTunnel(bass, mid, treble, time) {
+    this.visualizer.children.forEach((ring, i) => {
+      ring.rotation.z = time + i * 0.1;
+      
+      const scale = 1 + Math.sin(time * 2 + i * 0.3) * bass;
       ring.scale.set(scale, scale, 1);
-      ring.rotation.z = time + index * 0.1;
+      
+      ring.material.opacity = 0.3 + mid * 0.7;
     });
     
-    this.visualizer.position.z = -time * 10 % 100;
+    this.visualizer.position.z = Math.sin(time) * 5;
   }
 
-  updateAtomicOrbit(bass, mid, treble, time) {
-    // Rotate nucleus
-    const nucleus = this.visualizer.children[0];
-    nucleus.rotation.y = time;
-    nucleus.scale.set(1 + bass * 0.5, 1 + bass * 0.5, 1 + bass * 0.5);
-    
-    // Update electrons
-    this.visualizer.children.forEach((child) => {
-      if (child.userData.orbit !== undefined) {
-        const { angle, radius, speed } = child.userData;
-        const currentAngle = angle + time * speed;
-        child.position.x = Math.cos(currentAngle) * radius * (1 + mid * 0.2);
-        child.position.z = Math.sin(currentAngle) * radius * (1 + mid * 0.2);
-        child.position.y = Math.sin(currentAngle * 2) * treble * 3;
+  updateFireFlower(bass, mid, treble, time) {
+    this.visualizer.children.forEach((child, i) => {
+      if (child.userData.angle !== undefined) {
+        // Petals
+        const angle = child.userData.angle;
+        const radius = 5 + bass * 10;
+        
+        child.position.x = Math.cos(angle + time) * radius;
+        child.position.z = Math.sin(angle + time) * radius;
+        child.position.y = Math.sin(time * 2 + i) * mid * 3;
+        
+        child.rotation.x = time + i * 0.2;
+        child.scale.y = 1 + treble * 2;
+        
+        child.material.emissiveIntensity = 0.2 + bass * 0.8;
+      } else {
+        // Center
+        child.scale.set(1 + bass * 2, 1 + bass * 2, 1 + bass * 2);
+        child.rotation.y = time * 2;
       }
     });
   }
@@ -1469,14 +1416,7 @@ class N1K0Visualizer {
       this.gridHelper.position.y = -10 + Math.sin(this.clock.getElapsedTime()) * bass * 2;
     }
     
-    // Render
-    if (this.config.motionBlur > 0) {
-      this.renderer.setClearColor(0x000000, 1 - this.config.motionBlur);
-    }
-    
     this.renderer.render(this.scene, this.camera);
-    
-    // Update stats
     this.updateStats();
   }
 
@@ -1489,306 +1429,141 @@ class N1K0Visualizer {
       let triangles = 0;
       this.scene.traverse((object) => {
         if (object.isMesh && object.geometry) {
-          triangles += object.geometry.attributes.position.count / 3;
+          const geometry = object.geometry;
+          if (geometry.index) {
+            triangles += geometry.index.count / 3;
+          } else if (geometry.attributes.position) {
+            triangles += geometry.attributes.position.count / 3;
+          }
         }
       });
       document.getElementById('triangles').textContent = Math.round(triangles);
       
       this.stats.fps = 0;
       this.stats.lastTime = now;
-    }
-    this.stats.fps++;
-  }
-
-  initControls() {
-    // All slider controls
-    const sliders = {
-      fogDensity: (v) => {
-        this.config.fogDensity = parseFloat(v);
-        this.scene.fog.density = this.config.fogDensity;
-      },
-      ambientLight: (v) => {
-        this.config.ambientLight = parseFloat(v);
-        this.ambientLight.intensity = this.config.ambientLight;
-      },
-      pointLight: (v) => {
-        this.config.pointLight = parseFloat(v);
-      },
-      vizScale: (v) => {
-        this.config.vizScale = parseFloat(v);
-      },
-      reactivity: (v) => {
-        this.config.reactivity = parseFloat(v);
-      },
-      smoothing: (v) => {
-        this.config.smoothing = parseFloat(v);
-        this.analyser.smoothingTimeConstant = this.config.smoothing;
-      },
-      gain: (v) => {
-        this.config.gain = parseFloat(v);
-        this.gainNode.gain.value = this.config.gain;
-      },
-      bloomStrength: (v) => {
-        this.config.bloomStrength = parseFloat(v);
-      },
-      motionBlur: (v) => {
-        this.config.motionBlur = parseFloat(v);
-      },
-      particleCount: (v) => {
-        this.config.particleCount = parseInt(v);
-        // Recreate particles with new count
-      }
-    };
-
-    Object.keys(sliders).forEach(key => {
-      const slider = document.getElementById(key);
-      const display = document.getElementById(key.replace(/([A-Z])/g, '$1').toLowerCase() + 'Val');
-      
-      if (slider && display) {
-        slider.addEventListener('input', (e) => {
-          display.textContent = e.target.value;
-          sliders[key](e.target.value);
-        });
-      }
-    });
-
-    // Color inputs
-    document.getElementById('fogColor')?.addEventListener('input', (e) => {
-      this.config.fogColor = parseInt(e.target.value.replace('#', '0x'), 16);
-      this.scene.fog.color = new THREE.Color(this.config.fogColor);
-    });
-
-    document.getElementById('lightColor')?.addEventListener('input', (e) => {
-      this.config.lightColor = parseInt(e.target.value.replace('#', '0x'), 16);
-      this.pointLight1.color = new THREE.Color(this.config.lightColor);
-    });
-
-    document.getElementById('vizColor1')?.addEventListener('input', (e) => {
-      this.config.vizColor1 = parseInt(e.target.value.replace('#', '0x'), 16);
-      this.createVisualizer(this.currentVizType);
-    });
-
-    document.getElementById('vizColor2')?.addEventListener('input', (e) => {
-      this.config.vizColor2 = parseInt(e.target.value.replace('#', '0x'), 16);
-      this.createVisualizer(this.currentVizType);
-    });
-
-    // Checkboxes
-    document.getElementById('autoRotate')?.addEventListener('change', (e) => {
-      this.config.autoRotate = e.target.checked;
-    });
-
-    document.getElementById('showFloor')?.addEventListener('change', (e) => {
-      this.config.showFloor = e.target.checked;
-      this.gridHelper.visible = this.config.showFloor;
-    });
-
-    document.getElementById('wireframe')?.addEventListener('change', (e) => {
-      this.config.wireframe = e.target.checked;
-      this.createVisualizer(this.currentVizType);
-    });
-
-    // Audio file input
-    document.getElementById('audioFile')?.addEventListener('change', (e) => {
-      if (e.target.files[0]) {
-        this.loadAudioFile(e.target.files[0]);
-      }
-    });
-
-    // FFT Size
-    document.getElementById('fftSize')?.addEventListener('change', (e) => {
-      this.analyser.fftSize = parseInt(e.target.value);
-      this.dataArray = new Uint8Array(this.analyser.frequencyBinCount);
-    });
-  }
-
-  loadAudioFile(file) {
-    const reader = new FileReader();
-    reader.onload = (e) => {
-      this.audioContext.decodeAudioData(e.target.result, (buffer) => {
-        this.audioBuffer = buffer;
-        this.playAudio();
-      });
-    };
-    reader.readAsArrayBuffer(file);
-  }
-
-  playAudio() {
-    if (this.audioSource) {
-      this.audioSource.stop();
-      this.audioSource.disconnect();
-    }
-
-    this.audioSource = this.audioContext.createBufferSource();
-    this.audioSource.buffer = this.audioBuffer;
-    this.audioSource.connect(this.gainNode);
-    this.audioSource.start(0);
-    this.isPlaying = true;
-
-    document.getElementById('playBtn').textContent = '⏸️';
-    
-    // Update progress
-    this.updateProgress();
-  }
-
-  updateProgress() {
-    if (!this.isPlaying || !this.audioBuffer) return;
-
-    const currentTime = this.audioContext.currentTime;
-    const duration = this.audioBuffer.duration;
-    const progress = (currentTime / duration) * 100;
-
-    document.getElementById('progress').style.width = progress + '%';
-    document.getElementById('currentTime').textContent = this.formatTime(currentTime);
-    document.getElementById('duration').textContent = this.formatTime(duration);
-
-    if (progress < 100) {
-      requestAnimationFrame(() => this.updateProgress());
-    } else {
-      this.isPlaying = false;
-      document.getElementById('playBtn').textContent = '▶️';
-    }
-  }
-
-  formatTime(seconds) {
-    const mins = Math.floor(seconds / 60);
-    const secs = Math.floor(seconds % 60);
-    return `${mins}:${secs.toString().padStart(2, '0')}`;
-  }
-
-  async useMicrophone() {
-    try {
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-      if (this.audioSource) {
-        this.audioSource.stop();
-        this.audioSource.disconnect();
-      }
-      
-      this.audioSource = this.audioContext.createMediaStreamSource(stream);
-      this.audioSource.connect(this.gainNode);
+	  this.audioSource.connect(this.gainNode);
+      document.getElementById('playBtn').textContent = '🎤';
       this.isPlaying = true;
-      document.getElementById('playBtn').textContent = '⏸️';
     } catch (error) {
       console.error('Error accessing microphone:', error);
-      alert('Could not access microphone. Please check permissions.');
+      alert('Unable to access microphone');
     }
   }
 
-  exportScene() {
-    this.renderer.render(this.scene, this.camera);
-    const dataURL = this.renderer.domElement.toDataURL('image/png');
-    const link = document.createElement('a');
-    link.download = 'n1k0-3d-visualization.png';
-    link.href = dataURL;
-    link.click();
-  }
-
-  toggleRecord() {
-    if (!this.isRecording) {
-      // Start recording
-      const stream = this.renderer.domElement.captureStream(30);
-      this.mediaRecorder = new MediaRecorder(stream, {
-        mimeType: 'video/webm'
-      });
-      
-      this.recordedChunks = [];
-      
-      this.mediaRecorder.ondataavailable = (e) => {
-        if (e.data.size > 0) {
-          this.recordedChunks.push(e.data);
-        }
-      };
-      
-      this.mediaRecorder.onstop = () => {
-        const blob = new Blob(this.recordedChunks, { type: 'video/webm' });
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = 'n1k0-3d-visualization.webm';
-        a.click();
-      };
-      
-      this.mediaRecorder.start();
-      this.isRecording = true;
-      alert('Recording started...');
-    } else {
-      // Stop recording
-      this.mediaRecorder.stop();
-      this.isRecording = false;
-      alert('Recording stopped. Downloading video...');
+  stopAudio() {
+    if (this.audioSource) {
+      this.audioSource.stop?.();
+      this.audioSource.disconnect();
+      this.audioSource = null;
     }
+    this.isPlaying = false;
+    document.getElementById('playBtn').textContent = '▶️';
   }
 }
 
-// ============================================
-// 🚀 GLOBAL FUNCTIONS
-// ============================================
-
+// Global functions
 let visualizer;
 
-function switchTab(tabName, element) {
-  // Hide all tabs
-  document.querySelectorAll('.tab-content').forEach(tab => {
-    tab.classList.remove('active');
-  });
+window.addEventListener('DOMContentLoaded', () => {
+  visualizer = new N1K0Visualizer();
   
-  // Remove active from all tab buttons
-  document.querySelectorAll('.tab').forEach(btn => {
-    btn.classList.remove('active');
-  });
-  
-  // Show selected tab
-  document.getElementById(`tab-${tabName}`).classList.add('active');
-  element.classList.add('active');
-}
+  // Hide loading screen
+  setTimeout(() => {
+    document.querySelector('.loading').style.display = 'none';
+  }, 1000);
+});
 
 function selectVisualizer(type, element) {
-  // Update UI
+  // Update active state
   document.querySelectorAll('.viz-card').forEach(card => {
     card.classList.remove('active');
   });
   element.classList.add('active');
   
-  // Update visualizer
+  // Change visualizer
   visualizer.currentVizType = type;
   visualizer.createVisualizer(type);
 }
 
+function switchTab(tabName, element) {
+  // Update tab buttons
+  document.querySelectorAll('.tab').forEach(tab => {
+    tab.classList.remove('active');
+  });
+  element.classList.add('active');
+  
+  // Update tab content
+  document.querySelectorAll('.tab-content').forEach(content => {
+    content.classList.remove('active');
+  });
+  document.getElementById(`tab-${tabName}`).classList.add('active');
+}
+
+function togglePanel() {
+  const panel = document.getElementById('controlPanel');
+  const toggle = document.querySelector('.toggle-panel');
+  const audioControls = document.getElementById('audioControls');
+  
+  panel.classList.toggle('hidden');
+  toggle.classList.toggle('collapsed');
+  audioControls.classList.toggle('expanded');
+  
+  // Resize renderer
+  setTimeout(() => visualizer.onResize(), 300);
+}
+
 function togglePlay() {
-  const btn = document.getElementById('playBtn');
+  if (!visualizer.audioBuffer && !visualizer.audioSource) {
+    alert('Please select an audio file first');
+    return;
+  }
   
   if (visualizer.isPlaying) {
-    // Pause
-    if (visualizer.audioSource) {
-      visualizer.audioSource.stop();
-    }
-    visualizer.isPlaying = false;
-    btn.textContent = '▶️';
+    visualizer.stopAudio();
   } else {
-    // Play
-    if (visualizer.audioBuffer) {
-      visualizer.playAudio();
-    }
+    visualizer.playAudio();
   }
+}
+
+function useMicrophone() {
+  visualizer.useMicrophone();
 }
 
 function seek(event) {
   if (!visualizer.audioBuffer) return;
   
-  const timeline = event.currentTarget;
+  const timeline = document.getElementById('timeline');
   const rect = timeline.getBoundingClientRect();
   const percent = (event.clientX - rect.left) / rect.width;
-  const time = percent * visualizer.audioBuffer.duration;
   
-  // Stop current playback and restart from position
+  // Stop current playback and start from new position
   if (visualizer.audioSource) {
     visualizer.audioSource.stop();
+    visualizer.audioSource.disconnect();
   }
   
   visualizer.audioSource = visualizer.audioContext.createBufferSource();
   visualizer.audioSource.buffer = visualizer.audioBuffer;
   visualizer.audioSource.connect(visualizer.gainNode);
-  visualizer.audioSource.start(0, time);
+  
+  const startTime = visualizer.audioBuffer.duration * percent;
+  visualizer.audioSource.start(0, startTime);
+  
+  // Update progress bar
+  document.getElementById('progress').style.width = (percent * 100) + '%';
+}
+
+function exportScene() {
+  // Take screenshot
+  visualizer.renderer.render(visualizer.scene, visualizer.camera);
+  visualizer.renderer.domElement.toBlob((blob) => {
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `N1K0-visualizer-${Date.now()}.png`;
+    a.click();
+    URL.revokeObjectURL(url);
+  });
 }
 
 function toggleFullscreen() {
@@ -1799,50 +1574,57 @@ function toggleFullscreen() {
   }
 }
 
-function useMicrophone() {
-  visualizer.useMicrophone();
-}
-
-function exportScene() {
-  visualizer.exportScene();
-}
-
-function toggleRecord() {
-  visualizer.toggleRecord();
-}
-
-// ============================================
-// 🎬 INITIALIZE ON LOAD
-// ============================================
-
-window.addEventListener('DOMContentLoaded', () => {
-  visualizer = new N1K0Visualizer();
+function setEQPreset(preset) {
+  const presets = {
+    flat: { 60: 0, 170: 0, 350: 0, 1000: 0, 3500: 0, 10000: 0 },
+    bass: { 60: 8, 170: 6, 350: 4, 1000: 0, 3500: 0, 10000: 0 },
+    vocal: { 60: -2, 170: 0, 350: 2, 1000: 4, 3500: 3, 10000: 0 },
+    rock: { 60: 5, 170: 3, 350: 0, 1000: 0, 3500: 3, 10000: 5 },
+    electronic: { 60: 6, 170: 4, 350: 0, 1000: -2, 3500: 2, 10000: 4 },
+    classical: { 60: 0, 170: 0, 350: 0, 1000: 0, 3500: 0, 10000: -3 }
+  };
   
-  // Hide loading screen if exists
-  const loading = document.querySelector('.loading');
-  if (loading) {
-    loading.style.display = 'none';
-  }
+  const values = presets[preset];
   
-  console.log('🎭 N1K∅ 3D Audio Visualizer initialized');
-  console.log('🚀 Three.js version:', THREE.REVISION);
-});
+  Object.keys(values).forEach(freq => {
+    const slider = document.getElementById(`eq-${freq}`);
+    const display = document.getElementById(`eq-${freq}-val`);
+    
+    if (slider && display) {
+      slider.value = values[freq];
+      display.textContent = values[freq] + 'dB';
+      
+      if (visualizer.eqFilters[freq]) {
+        visualizer.eqFilters[freq].gain.value = values[freq];
+      }
+    }
+  });
+}
 
-// Handle visibility change (pause when tab is not visible)
-document.addEventListener('visibilitychange', () => {
-  if (document.hidden && visualizer && visualizer.isPlaying) {
-    // Pause rendering when tab is hidden
-    visualizer.renderer.setAnimationLoop(null);
-  } else if (!document.hidden && visualizer) {
-    // Resume rendering
-    visualizer.renderer.setAnimationLoop(() => visualizer.animate());
+// Update time display
+setInterval(() => {
+  if (visualizer && visualizer.audioSource && visualizer.audioBuffer && visualizer.isPlaying) {
+    const currentTime = visualizer.audioContext.currentTime;
+    const duration = visualizer.audioBuffer.duration;
+    
+    // Update progress bar
+    const progress = (currentTime / duration) * 100;
+    document.getElementById('progress').style.width = progress + '%';
+    
+    // Update time display
+    const formatTime = (seconds) => {
+      const mins = Math.floor(seconds / 60);
+      const secs = Math.floor(seconds % 60);
+      return `${mins}:${secs.toString().padStart(2, '0')}`;
+    };
+    
+    document.getElementById('currentTime').textContent = formatTime(currentTime);
+    document.getElementById('duration').textContent = formatTime(duration);
   }
-});
+}, 100);
 
 // Keyboard shortcuts
 document.addEventListener('keydown', (e) => {
-  if (!visualizer) return;
-  
   switch(e.key) {
     case ' ':
       e.preventDefault();
@@ -1852,41 +1634,90 @@ document.addEventListener('keydown', (e) => {
     case 'F':
       toggleFullscreen();
       break;
-    case 's':
-    case 'S':
-      if (e.ctrlKey || e.metaKey) {
-        e.preventDefault();
-        exportScene();
-      }
+    case 'h':
+    case 'H':
+      togglePanel();
       break;
-    case 'r':
-    case 'R':
-      if (e.ctrlKey || e.metaKey) {
-        e.preventDefault();
-        toggleRecord();
-      }
-      break;
-    case 'ArrowLeft':
-      // Previous visualizer
-      const vizCards = document.querySelectorAll('.viz-card');
-      const currentIndex = Array.from(vizCards).findIndex(card => card.classList.contains('active'));
-      if (currentIndex > 0) {
-        vizCards[currentIndex - 1].click();
-      }
-      break;
-    case 'ArrowRight':
-      // Next visualizer
-      const vizCards2 = document.querySelectorAll('.viz-card');
-      const currentIndex2 = Array.from(vizCards2).findIndex(card => card.classList.contains('active'));
-      if (currentIndex2 < vizCards2.length - 1) {
-        vizCards2[currentIndex2 + 1].click();
+    case '1':
+    case '2':
+    case '3':
+    case '4':
+    case '5':
+    case '6':
+    case '7':
+    case '8':
+      const vizTypes = ['particleSphere', 'bars3D', 'waveform3D', 'ribbonFlow', 
+                        'particleGalaxy', 'geometricDance', 'vortexTunnel', 'fireFlower'];
+      const index = parseInt(e.key) - 1;
+      if (vizTypes[index]) {
+        const card = document.querySelectorAll('.viz-card')[index];
+        selectVisualizer(vizTypes[index], card);
       }
       break;
   }
 });
 
-console.log('✨ Welcome to N1K∅ 3D Audio Visualizer');
-console.log('🎮 Use keyboard shortcuts: Space (play/pause), F (fullscreen), Ctrl+S (screenshot), Ctrl+R (record)');
+// Mouse wheel for zoom
+document.getElementById('canvas-container').addEventListener('wheel', (e) => {
+  e.preventDefault();
+  visualizer.camera.position.z += e.deltaY * 0.05;
+  visualizer.camera.position.z = Math.max(10, Math.min(100, visualizer.camera.position.z));
+});
+
+// Touch controls for mobile
+let touchStartX = 0;
+let touchStartY = 0;
+
+document.getElementById('canvas-container').addEventListener('touchstart', (e) => {
+  touchStartX = e.touches[0].clientX;
+  touchStartY = e.touches[0].clientY;
+});
+
+document.getElementById('canvas-container').addEventListener('touchmove', (e) => {
+  e.preventDefault();
+  
+  const deltaX = e.touches[0].clientX - touchStartX;
+  const deltaY = e.touches[0].clientY - touchStartY;
+  
+  if (visualizer.visualizer) {
+    visualizer.visualizer.rotation.y += deltaX * 0.01;
+    visualizer.visualizer.rotation.x += deltaY * 0.01;
+  }
+  
+  touchStartX = e.touches[0].clientX;
+  touchStartY = e.touches[0].clientY;
+});
+
+// Performance monitoring
+let lastFrameTime = performance.now();
+function monitorPerformance() {
+  const now = performance.now();
+  const delta = now - lastFrameTime;
+  
+  // If FPS drops below 30, reduce quality
+  if (delta > 33) {
+    if (visualizer.config.particleCount > 500) {
+      visualizer.config.particleCount = Math.max(500, visualizer.config.particleCount - 100);
+      console.log('Reducing particle count for performance');
+    }
+  }
+  
+  lastFrameTime = now;
+  requestAnimationFrame(monitorPerformance);
+}
+monitorPerformance();
+
+// Handle visibility change
+document.addEventListener('visibilitychange', () => {
+  if (document.hidden && visualizer.isPlaying) {
+    // Pause visualization when tab is hidden to save resources
+    visualizer.analyser.smoothingTimeConstant = 0.95;
+  } else {
+    visualizer.analyser.smoothingTimeConstant = visualizer.config.smoothing;
+  }
+});
+
+console.log('N1K∅ 3D Audio Visualizer initialized successfully!');
 </script>
 
 </body>
