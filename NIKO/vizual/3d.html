@@ -1282,24 +1282,24 @@ class RomanticVisualizer {
     
     // Update current visualizer
     switch(this.currentViz) {
-      case 'heartPulse':
-        this.updateHeartPulse(bass, mid, treble, time);
-        break;
-      case 'starryNight':
-        this.updateStarryNight(bass, mid, treble, time);
-        break;
-      case 'roseGarden':
-        this.updateRoseGarden(bass, mid, treble, time);
-        break;
-      case 'aurora':
-        this.updateAurora(bass, mid, treble, time);
-        break;
-      case 'butterflies':
-        this.updateButterflies(bass, mid, treble, time);
-        break;
-      case 'crystalRain':
-        this.updateCrystalRain(bass, mid, treble, time);
-        break;
+        case 'heartPulse':
+            this.updateHeartPulse(bass, mid, treble, time);
+            break;
+        case 'starryNight':
+            this.updateStarryNight(bass, mid, treble, time);
+            break;
+        case 'roseGarden':
+            this.updateRoseGarden(bass, mid, treble, time);
+            break;
+        case 'aurora':
+            this.updateAurora(bass, mid, treble, time);
+            break;
+        case 'butterflies':
+            this.updateButterflies(bass, mid, treble, time);
+            break;
+        case 'crystalRain':
+            this.updateCrystalRain(bass, mid, treble, time);
+            break;
     }
     
     // Update lights
@@ -1309,10 +1309,11 @@ class RomanticVisualizer {
     this.pointLight1.color.setHex(theme.primary);
     this.pointLight2.color.setHex(theme.secondary);
     
-        // Camera movement
+    // Camera movement
     this.camera.position.x = Math.sin(time * 0.2) * 5;
     this.camera.position.y = Math.cos(time * 0.3) * 3;
     this.camera.lookAt(0, 0, 0);
+}
     
     // Rotate camera around scene for dynamic view
     const cameraRadius = 60 + bass * 20;
@@ -1525,7 +1526,466 @@ animateGeometricDance(bass, mid, treble, time) {
         });
     }
 }
+getFrequencyRange(start, end) {
+    if (!this.dataArray) return 0;
+    let sum = 0;
+    for (let i = start; i < end && i < this.dataArray.length; i++) {
+        sum += this.dataArray[i];
+    }
+    return sum / (end - start) / 255;
+}
 
+updateHeartPulse(bass, mid, treble, time) {
+    const heartGroup = this.visualizers.heartPulse;
+    if (!heartGroup) return;
+    
+    heartGroup.children.forEach((child, i) => {
+        if (child.isMesh) {
+            const scale = 1 + bass * 0.5;
+            child.scale.setScalar(scale * (0.5 + i * 0.3));
+            child.rotation.y += 0.01;
+            child.rotation.z = Math.sin(time + i) * 0.1;
+        }
+    });
+}
+
+updateStarryNight(bass, mid, treble, time) {
+    const group = this.visualizers.starryNight;
+    if (!group) return;
+    
+    group.rotation.y += 0.001;
+}
+
+updateRoseGarden(bass, mid, treble, time) {
+    const group = this.visualizers.roseGarden;
+    if (!group) return;
+    
+    group.children.forEach(child => {
+        if (child.userData.rotationSpeed) {
+            child.rotation.y += child.userData.rotationSpeed;
+        }
+    });
+}
+
+updateAurora(bass, mid, treble, time) {
+    const group = this.visualizers.aurora;
+    if (!group) return;
+    
+    group.children.forEach(aurora => {
+        if (aurora.material) {
+            aurora.material.opacity = 0.3 + bass * 0.3;
+        }
+    });
+}
+
+updateButterflies(bass, mid, treble, time) {
+    const group = this.visualizers.butterflies;
+    if (!group) return;
+    
+    group.children.forEach(butterfly => {
+        if (butterfly.userData.phase !== undefined) {
+            butterfly.position.y += Math.sin(time + butterfly.userData.phase) * 0.1;
+        }
+    });
+}
+
+updateCrystalRain(bass, mid, treble, time) {
+    const group = this.visualizers.crystalRain;
+    if (!group) return;
+    
+    group.children.forEach(crystal => {
+        crystal.position.y -= crystal.userData.fallSpeed || 1;
+        if (crystal.position.y < -30) {
+            crystal.position.y = 30;
+        }
+        crystal.rotation.x += crystal.userData.rotationSpeed?.x || 0.01;
+        crystal.rotation.y += crystal.userData.rotationSpeed?.y || 0.01;
+    });
+}
+
+animate() {
+    this.animationId = requestAnimationFrame(() => this.animate());
+    this.updateVisualizers();
+    this.renderer.render(this.scene, this.camera);
+}
+
+onResize() {
+    this.camera.aspect = window.innerWidth / window.innerHeight;
+    this.camera.updateProjectionMatrix();
+    this.renderer.setSize(window.innerWidth, window.innerHeight);
+}
+  initControls() {
+    // Обработчики для слайдеров
+    document.getElementById('glowIntensity').addEventListener('input', (e) => {
+        const value = parseFloat(e.target.value);
+        document.getElementById('glowIntensityVal').textContent = value;
+        // Применение значения свечения
+        if (this.pointLight1 && this.pointLight2) {
+            this.pointLight1.intensity = value * 2;
+            this.pointLight2.intensity = value * 2;
+        }
+    });
+
+    document.getElementById('particleCount').addEventListener('input', (e) => {
+        const value = parseInt(e.target.value);
+        document.getElementById('particleCountVal').textContent = value;
+        // Обновление количества частиц потребует пересоздания геометрии
+    });
+
+    document.getElementById('colorTheme').addEventListener('change', (e) => {
+        this.currentTheme = e.target.value;
+    });
+
+    document.getElementById('depth3D').addEventListener('input', (e) => {
+        const value = parseInt(e.target.value);
+        document.getElementById('depth3DVal').textContent = value;
+        this.depthRange = value;
+    });
+
+    document.getElementById('bgBlur').addEventListener('input', (e) => {
+        const value = parseInt(e.target.value);
+        document.getElementById('bgBlurVal').textContent = value;
+        if (this.bgMesh && this.bgMesh.material) {
+            // Применение размытия через CSS filter к canvas
+            this.renderer.domElement.style.filter = `blur(${value}px)`;
+        }
+    });
+
+    document.getElementById('volume').addEventListener('input', (e) => {
+        const value = parseInt(e.target.value);
+        document.getElementById('volumeVal').textContent = value;
+        if (this.gainNode) {
+            this.gainNode.gain.value = value / 100;
+        }
+        if (this.audioElement) {
+            this.audioElement.volume = value / 100;
+        }
+    });
+
+    // Обработчик файла аудио
+    document.getElementById('audioFile').addEventListener('change', (e) => {
+        const file = e.target.files[0];
+        if (file) {
+            const url = URL.createObjectURL(file);
+            this.loadAudio(url);
+        }
+    });
+
+    // Обработчик фонового изображения
+    document.getElementById('bgImageFile').addEventListener('change', (e) => {
+        const file = e.target.files[0];
+        if (file) {
+            const url = URL.createObjectURL(file);
+            this.create3DBackground(url);
+        }
+    });
+}
+
+initWaveform() {
+    const canvas = document.getElementById('waveform');
+    const ctx = canvas.getContext('2d');
+    
+    // Настройка размера canvas
+    const resizeWaveform = () => {
+        canvas.width = canvas.offsetWidth;
+        canvas.height = canvas.offsetHeight;
+    };
+    
+    resizeWaveform();
+    window.addEventListener('resize', resizeWaveform);
+    
+    // Анимация формы волны
+    const drawWaveform = () => {
+        if (!this.analyser || !this.dataArray) return;
+        
+        this.analyser.getByteFrequencyData(this.dataArray);
+        
+        ctx.fillStyle = 'rgba(0, 0, 0, 0.2)';
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+        
+        const barWidth = (canvas.width / this.dataArray.length) * 2.5;
+        let barHeight;
+        let x = 0;
+        
+        const gradient = ctx.createLinearGradient(0, 0, 0, canvas.height);
+        gradient.addColorStop(0, '#ff006e');
+        gradient.addColorStop(0.5, '#8338ec');
+        gradient.addColorStop(1, '#3a86ff');
+        
+        for (let i = 0; i < this.dataArray.length; i++) {
+            barHeight = (this.dataArray[i] / 255) * canvas.height;
+            
+            ctx.fillStyle = gradient;
+            ctx.fillRect(x, canvas.height - barHeight, barWidth, barHeight);
+            
+            x += barWidth + 1;
+            
+            if (x > canvas.width) break;
+        }
+        
+        requestAnimationFrame(drawWaveform);
+    };
+    
+    drawWaveform();
+}
+
+updateProgress() {
+    if (!this.audioElement) return;
+    
+    const current = this.audioElement.currentTime;
+    const duration = this.audioElement.duration || 0;
+    
+    if (duration > 0) {
+        const percentage = (current / duration) * 100;
+        const progressBar = document.getElementById('progressBar');
+        if (progressBar) {
+            progressBar.style.width = percentage + '%';
+        }
+        
+        // Обновление времени
+        const currentTimeEl = document.getElementById('currentTime');
+        const durationEl = document.getElementById('duration');
+        
+        if (currentTimeEl) {
+            currentTimeEl.textContent = this.formatTime(current);
+        }
+        if (durationEl) {
+            durationEl.textContent = this.formatTime(duration);
+        }
+    }
+}
+
+updateDuration() {
+    if (!this.audioElement) return;
+    
+    const duration = this.audioElement.duration;
+    if (duration && !isNaN(duration)) {
+        const durationEl = document.getElementById('duration');
+        if (durationEl) {
+            durationEl.textContent = this.formatTime(duration);
+        }
+    }
+}
+
+// Вспомогательные методы
+formatTime(seconds) {
+    if (isNaN(seconds)) return '0:00';
+    
+    const minutes = Math.floor(seconds / 60);
+    const secs = Math.floor(seconds % 60);
+    return `${minutes}:${secs.toString().padStart(2, '0')}`;
+}
+
+loadAudio(url) {
+    if (this.audioElement) {
+        this.audioElement.pause();
+        this.audioElement.src = url;
+        
+        // Подключение к Web Audio API
+        if (!this.audioSource) {
+            this.audioSource = this.audioContext.createMediaElementSource(this.audioElement);
+            this.audioSource.connect(this.gainNode);
+        }
+        
+        this.audioElement.load();
+    }
+}
+
+// Глобальные функции для HTML onclick обработчиков
+window.togglePlay = () => {
+    if (!this.audioElement) return;
+    
+    const playBtn = document.getElementById('playBtn');
+    if (this.audioElement.paused) {
+        this.audioElement.play();
+        this.isPlaying = true;
+        if (playBtn) playBtn.textContent = '⏸️';
+    } else {
+        this.audioElement.pause();
+        this.isPlaying = false;
+        if (playBtn) playBtn.textContent = '▶️';
+    }
+}
+
+window.skipBack = () => {
+    if (this.audioElement) {
+        this.audioElement.currentTime = Math.max(0, this.audioElement.currentTime - 10);
+    }
+}
+
+window.skipForward = () => {
+    if (this.audioElement && this.audioElement.duration) {
+        this.audioElement.currentTime = Math.min(
+            this.audioElement.duration,
+            this.audioElement.currentTime + 10
+        );
+    }
+}
+
+window.seekAudio = (event) => {
+    if (!this.audioElement || !this.audioElement.duration) return;
+    
+    const seekBar = event.currentTarget;
+    const rect = seekBar.getBoundingClientRect();
+    const percentage = (event.clientX - rect.left) / rect.width;
+    this.audioElement.currentTime = percentage * this.audioElement.duration;
+}
+
+window.useMicrophone = async () => {
+    try {
+        const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+        
+        if (this.audioSource) {
+            this.audioSource.disconnect();
+        }
+        
+        this.audioSource = this.audioContext.createMediaStreamSource(stream);
+        this.audioSource.connect(this.gainNode);
+        
+        // Изменение кнопки для индикации
+        const micBtn = event.target;
+        micBtn.style.background = 'linear-gradient(135deg, #ff006e, #8338ec)';
+        micBtn.style.boxShadow = '0 0 20px rgba(255, 0, 110, 0.8)';
+        
+    } catch (err) {
+        console.error('Ошибка доступа к микрофону:', err);
+        alert('Не удалось получить доступ к микрофону');
+    }
+}
+
+window.selectVisualizer = (type, element) => {
+    // Удаление активного класса со всех карточек
+    document.querySelectorAll('.viz-card').forEach(card => {
+        card.classList.remove('active');
+    });
+    
+    // Добавление активного класса к выбранной карточке
+    element.classList.add('active');
+    
+    // Установка визуализатора
+    this.setVisualizer(type);
+}
+
+window.selectFormat = (format, element) => {
+    // Удаление выбора со всех форматов
+    document.querySelectorAll('.format-option').forEach(option => {
+        option.classList.remove('selected');
+    });
+    
+    // Добавление выбора к текущему формату
+    element.classList.add('selected');
+    
+    this.recordFormat = format;
+}
+
+window.togglePanel = () => {
+    const panel = document.getElementById('controlPanel');
+    const toggle = document.querySelector('.toggle-panel');
+    const audioPlayer = document.getElementById('audioPlayer');
+    
+    panel.classList.toggle('hidden');
+    toggle.classList.toggle('collapsed');
+    audioPlayer.classList.toggle('expanded');
+}
+
+window.startRecording = async () => {
+    if (this.isRecording) return;
+    
+    try {
+        const canvas = this.renderer.domElement;
+        const stream = canvas.captureStream(30); // 30 FPS
+        
+        // Добавление аудио, если есть
+        if (this.audioElement && !this.audioElement.paused) {
+            const audioStream = this.audioElement.captureStream();
+            audioStream.getAudioTracks().forEach(track => {
+                stream.addTrack(track);
+            });
+        }
+        
+        // Настройка MediaRecorder
+        const options = {
+            mimeType: 'video/webm;codecs=vp9',
+            videoBitsPerSecond: 5000000 // 5 Mbps
+        };
+        
+        this.mediaRecorder = new MediaRecorder(stream, options);
+        this.recordedChunks = [];
+        
+        this.mediaRecorder.ondataavailable = (event) => {
+            if (event.data.size > 0) {
+                this.recordedChunks.push(event.data);
+            }
+        };
+        
+        this.mediaRecorder.onstop = () => {
+            const blob = new Blob(this.recordedChunks, { type: 'video/webm' });
+            const url = URL.createObjectURL(blob);
+            
+            // Автоматическая загрузка файла
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `n1ko-romantic-${this.recordFormat}-${Date.now()}.webm`;
+            a.click();
+            
+            URL.revokeObjectURL(url);
+        };
+        
+        // Начало записи
+        this.mediaRecorder.start();
+        this.isRecording = true;
+        this.recordStartTime = Date.now();
+        
+        // Показ индикатора записи
+        const overlay = document.getElementById('recordingOverlay');
+        overlay.classList.add('active');
+        
+        // Обновление таймера записи
+        const updateRecordingTime = () => {
+            if (!this.isRecording) return;
+            
+            const elapsed = Math.floor((Date.now() - this.recordStartTime) / 1000);
+            const recTime = document.getElementById('recTime');
+            if (recTime) {
+                recTime.textContent = this.formatTime(elapsed);
+            }
+            
+            const maxDuration = parseInt(document.getElementById('recordSeconds').value);
+            if (elapsed >= maxDuration) {
+                this.stopRecording();
+            } else {
+                requestAnimationFrame(updateRecordingTime);
+            }
+        };
+        
+        updateRecordingTime();
+        
+        // Изменение кнопки
+        const btn = document.getElementById('startRecordBtn');
+        btn.textContent = '⏹️ Recording...';
+        btn.disabled = true;
+        
+    } catch (err) {
+        console.error('Ошибка начала записи:', err);
+        alert('Не удалось начать запись');
+    }
+}
+
+window.stopRecording = () => {
+    if (!this.isRecording || !this.mediaRecorder) return;
+    
+    this.mediaRecorder.stop();
+    this.isRecording = false;
+    
+    // Скрытие индикатора записи
+    const overlay = document.getElementById('recordingOverlay');
+    overlay.classList.remove('active');
+    
+    // Восстановление кнопки
+    const btn = document.getElementById('startRecordBtn');
+    btn.textContent = '🎬 Start Recording';
+    btn.disabled = false;
+}
 // Cleanup method
     dispose() {
         // Stop animation loop
