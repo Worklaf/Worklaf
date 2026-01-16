@@ -581,22 +581,22 @@ input[type="color"] {
           <div class="viz-name">Depth Tunnel</div>
         </div>
 
-        <div class="viz-card" onclick="selectViz('visualizeCube', this)">
-          <span class="viz-icon">🌌</span>
-          <div class="viz-name">Cube</div>
-        </div>
-        <div class="viz-card" onclick="selectViz('visualizeSphere', this)">
-          <span class="viz-icon">🌌</span>
-          <div class="viz-name">Sphere</div>
-        </div>
-        <div class="viz-card" onclick="selectViz('visualizeWaveform', this)">
-          <span class="viz-icon">🌌</span>
-          <div class="viz-name">Waveform</div>
-        </div>
-        <div class="viz-card" onclick="selectViz('visualizeStarField', this)">
-          <span class="viz-icon">🌌</span>
-          <div class="viz-name">StarField</div>
-        </div>
+        <div class="viz-card" onclick="selectViz('sphereCloud', this)">
+  <span class="viz-icon">🫧</span>
+  <div class="viz-name">Sphere Cloud 3D</div>
+</div>
+<div class="viz-card" onclick="selectViz('helixRibbon', this)">
+  <span class="viz-icon">🧬</span>
+  <div class="viz-name">Helix Ribbon 3D</div>
+</div>
+<div class="viz-card" onclick="selectViz('voxelField', this)">
+  <span class="viz-icon">🧊</span>
+  <div class="viz-name">Voxel Field 3D</div>
+</div>
+<div class="viz-card" onclick="selectViz('hyperSphere', this)">
+  <span class="viz-icon">🔮</span>
+  <div class="viz-name">Hypersphere 4D</div>
+</div>
       </div>
     </div>
 
@@ -766,7 +766,31 @@ let state = {
 // =============================================
 // 🔧 ВСПОМОГАТЕЛЬНЫЕ ФУНКЦИИ
 // =============================================
-function hexToRgba(hex, alpha) {
+function rotate3D(p, ax, ay, az) {
+  let {x, y, z} = p;
+  // X
+  let cy = Math.cos(ax), sy = Math.sin(ax);
+  let y1 = y * cy - z * sy;
+  let z1 = y * sy + z * cy;
+  y = y1; z = z1;
+  // Y
+  let cx = Math.cos(ay), sx = Math.sin(ay);
+  let x1 = x * cx + z * sx;
+  let z2 = -x * sx + z * cx;
+  x = x1; z = z2;
+  // Z
+  let cz = Math.cos(az), sz = Math.sin(az);
+  let x2 = x * cz - y * sz;
+  let y2 = x * sz + y * cz;
+  return {x: x2, y: y2, z};
+}
+
+// 4D -> 3D (проекция по W)
+function project4Dto3D(p4, wDist) {
+  const scale = wDist / (wDist - p4.w);
+  return { x: p4.x * scale, y: p4.y * scale, z: p4.z * scale };
+}
+  function hexToRgba(hex, alpha) {
   if (!hex) return `rgba(255,255,255,${alpha})`;
   let h = hex.replace('#', '');
   if (h.length === 3) h = h.split('').map(c => c + c).join('');
@@ -1917,90 +1941,158 @@ const Visualizers = {
 
     ctx.restore();
     ctx.shadowBlur = 0;
+  },
+  sphereCloud(ctx, centerX, centerY, dataArray) {
+  const points = 900;
+  const radius = Math.min(config.width, config.height) * 0.22 * state.vizScale;
+  const bass = (dataArray[2] || 0) / 255;
+  const ax = time * 0.4 * state.rotSpeed;
+  const ay = time * 0.6 * state.rotSpeed;
+  const az = time * 0.2 * state.rotSpeed;
+
+  ctx.save();
+  ctx.shadowBlur = state.vizGlow;
+  ctx.shadowColor = state.vizColor;
+
+  // генерируем сферу
+  for (let i = 0; i < points; i++) {
+    const t = i / points;
+    const phi = Math.acos(1 - 2 * t);
+    const theta = Math.PI * (1 + Math.sqrt(5)) * i;
+
+    let x = Math.cos(theta) * Math.sin(phi);
+    let y = Math.sin(theta) * Math.sin(phi);
+    let z = Math.cos(phi);
+
+    const freqIndex = Math.floor(t * dataArray.length);
+    const v = (dataArray[freqIndex] || 0) / 255;
+
+    const r = radius * (0.8 + v * 0.8 + bass * 0.4);
+    let p = rotate3D({x: x * r, y: y * r, z: z * r}, ax, ay, az);
+
+    const proj = project3D(p.x, p.y, p.z + radius, centerX, centerY, 800);
+    const alpha = 0.2 + v * 0.8;
+    const size = 1 + v * 3;
+
+    ctx.fillStyle = hexToRgba(state.vizColor, alpha);
+    ctx.beginPath();
+    ctx.arc(proj.x, proj.y, size * proj.scale, 0, Math.PI * 2);
+    ctx.fill();
   }
+
+  ctx.restore();
 },
-  // Визуализатор куба
-visualizeCube(ctx, centerX, centerY, dataArray) {
-  const cube = document.createElement('div');
-  cube.style.position = 'absolute';
-  cube.style.top = '50%';
-  cube.style.left = '50%';
-  cube.style.transform = 'translate(-50%, -50%)';
-  
-  // Создаем сетку
-  const grid = document.createElement('div');
-  grid.style.position = 'absolute';
-  grid.style.top = '20%';
-  grid.style.left = '20%';
-  grid.style.width = '60%';
-  grid.style.height = '60%';
-  grid.style.backgroundColor = '#000';
-  grid.style.gridTemplateColumns = 'repeat(auto-fit, minmax(10px, 1fr))';
-  grid.style.gridGap = '10px';
-  
-  for (let i = 0; i < 10; i++) {
-    for (let j = 0; j < 10; j++) {
-      const cell = document.createElement('div');
-      cell.style.position = 'absolute';
-      cell.style.top = `${i * 10}px`;
-      cell.style.left = `${j * 10}px`;
-      cell.style.width = '10px';
-      cell.style.height = '10px';
-      cell.style.backgroundColor = `hsl(${Math.random() * 360}, 100%, 50%)`;
-      grid.appendChild(cell);
+
+helixRibbon(ctx, centerX, centerY, dataArray) {
+  const turns = 6;
+  const steps = 500;
+  const radius = Math.min(config.width, config.height) * 0.18 * state.vizScale;
+  const length = Math.min(config.width, config.height) * 0.9;
+  const ax = time * 0.3 * state.rotSpeed;
+  const ay = time * 0.5 * state.rotSpeed;
+
+  ctx.save();
+  ctx.lineWidth = 3;
+  ctx.shadowBlur = state.vizGlow;
+  ctx.shadowColor = state.vizColor;
+
+  ctx.beginPath();
+  for (let i = 0; i < steps; i++) {
+    const t = i / (steps - 1);
+    const angle = t * Math.PI * 2 * turns + time * 1.2 * state.rotSpeed;
+    const freqIndex = Math.floor(t * dataArray.length);
+    const v = (dataArray[freqIndex] || 0) / 255;
+
+    const x = Math.cos(angle) * (radius + v * 60);
+    const y = Math.sin(angle) * (radius + v * 60);
+    const z = (t - 0.5) * length;
+
+    const p = rotate3D({x, y, z}, ax, ay, 0);
+    const proj = project3D(p.x, p.y, p.z + 400, centerX, centerY, 700);
+
+    if (i === 0) ctx.moveTo(proj.x, proj.y);
+    else ctx.lineTo(proj.x, proj.y);
+  }
+
+  ctx.strokeStyle = state.vizColor;
+  ctx.stroke();
+  ctx.restore();
+},
+
+voxelField(ctx, centerX, centerY, dataArray) {
+  const grid = 16;
+  const spacing = Math.min(config.width, config.height) * 0.05 * state.vizScale;
+  const baseZ = 300;
+  const ax = -0.5 + Math.sin(time * 0.3) * 0.2;
+  const ay = time * 0.4 * state.rotSpeed;
+
+  ctx.save();
+  ctx.shadowBlur = state.vizGlow * 0.6;
+  ctx.shadowColor = state.vizColor;
+
+  for (let y = 0; y < grid; y++) {
+    for (let x = 0; x < grid; x++) {
+      const idx = Math.floor(((y * grid + x) / (grid * grid)) * dataArray.length);
+      const v = (dataArray[idx] || 0) / 255;
+      const h = 20 + v * 160;
+
+      const px = (x - grid / 2) * spacing;
+      const py = (y - grid / 2) * spacing;
+      const p = rotate3D({x: px, y: py, z: -h}, ax, ay, 0);
+
+      const proj = project3D(p.x, p.y, baseZ + p.z, centerX, centerY, 700);
+      const size = spacing * 0.45 * proj.scale;
+
+      ctx.fillStyle = hexToRgba(state.vizColor, 0.2 + v * 0.8);
+      ctx.fillRect(proj.x - size / 2, proj.y - size / 2, size, size);
     }
   }
-  
-  cube.appendChild(grid);
-  canvas.appendChild(cube);
+  ctx.restore();
 },
 
-// Визуализатор шарика
-visualizeSphere(ctx, centerX, centerY, dataArray) {
-  const sphere = document.createElement('div');
-  sphere.style.position = 'absolute';
-  sphere.style.top = '50%';
-  sphere.style.left = '50%';
-  sphere.style.transform = 'translate(-50%, -50%)';
-  
-  const material = new THREE.MeshBasicMaterial({ color: 0x00ff00 });
-  const geometry = new THREE.SphereGeometry(1, 32, 32);
-  const mesh = new THREE.Mesh(geometry, material);
-  
-  sphere.appendChild(mesh);
-  canvas.appendChild(sphere);
-},
+hyperSphere(ctx, centerX, centerY, dataArray) {
+  const points = 700;
+  const radius = Math.min(config.width, config.height) * 0.18 * state.vizScale;
+  const bass = (dataArray[2] || 0) / 255;
 
-// Визуализатор волнового сигнала
-visualizeWaveform(ctx, centerX, centerY, dataArray) {
-  const waveform = document.createElement('div');
-  waveform.style.position = 'absolute';
-  waveform.style.top = '50%';
-  waveform.style.left = '50%';
-  waveform.style.transform = 'translate(-50%, -50%)';
-  
-  const material = new THREE.MeshBasicMaterial({ color: 0x00ff00 });
-  const geometry = new THREE.WaveGeometry(10, 10, 10);
-  const mesh = new THREE.Mesh(geometry, material);
-  
-  waveform.appendChild(mesh);
-  canvas.appendChild(waveform);
-},
+  const ax = time * 0.3 * state.rotSpeed;
+  const ay = time * 0.4 * state.rotSpeed;
+  const wRot = time * 0.7 * state.rotSpeed;
 
-// Визуализатор звездного неба
-visualizeStarField(ctx, centerX, centerY, dataArray) {
-  const starField = document.createElement('div');
-  starField.style.position = 'absolute';
-  starField.style.top = '50%';
-  starField.style.left = '50%';
-  starField.style.transform = 'translate(-50%, -50%)';
-  
-  const material = new THREE.MeshBasicMaterial({ color: 0xffffff });
-  const geometry = new THREE.BoxGeometry(1, 1, 1);
-  const mesh = new THREE.Mesh(geometry, material);
-  
-  starField.appendChild(mesh);
-  canvas.appendChild(starField);
+  ctx.save();
+  ctx.shadowBlur = state.vizGlow;
+  ctx.shadowColor = state.vizColor;
+
+  for (let i = 0; i < points; i++) {
+    const t = i / points;
+    const phi = Math.acos(1 - 2 * t);
+    const theta = Math.PI * (1 + Math.sqrt(5)) * i;
+
+    // 4D точка на гиперсфере
+    const x = Math.cos(theta) * Math.sin(phi);
+    const y = Math.sin(theta) * Math.sin(phi);
+    const z = Math.cos(phi);
+    const w = Math.sin(theta * 0.7 + wRot);
+
+    const freqIndex = Math.floor(t * dataArray.length);
+    const v = (dataArray[freqIndex] || 0) / 255;
+    const r = radius * (0.9 + v * 0.8 + bass * 0.3);
+
+    const p4 = { x: x * r, y: y * r, z: z * r, w: w * r };
+    // простое вращение по X/Y (в 3D), а по W через project4Dto3D
+    let p3 = project4Dto3D(p4, 600);
+    p3 = rotate3D(p3, ax, ay, 0);
+
+    const proj = project3D(p3.x, p3.y, p3.z + radius, centerX, centerY, 800);
+    const alpha = 0.2 + v * 0.8;
+
+    ctx.fillStyle = hexToRgba(state.vizColor, alpha);
+    ctx.beginPath();
+    ctx.arc(proj.x, proj.y, 1.5 * proj.scale + v * 2, 0, Math.PI * 2);
+    ctx.fill();
+  }
+
+  ctx.restore();
 };
 
 // =============================================
