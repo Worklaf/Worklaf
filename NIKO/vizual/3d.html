@@ -1,584 +1,1570 @@
 <!DOCTYPE html>
-<html lang="ru">
+<html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <title>N1K∅ Cinema Visualizer & Recorder</title>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
-    <style>
-        body { margin: 0; background: #050505; color: white; font-family: 'Segoe UI', sans-serif; overflow: hidden; }
-        canvas { display: block; }
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>N1K∅ Romantic 3D Visualizer - Advanced Edition</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<style>
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
 
-        /* UI Overlay */
-        #ui-root { position: fixed; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 10; }
-        .interactive { pointer-events: auto; }
+body {
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  background: #000;
+  color: #fff;
+  overflow: hidden;
+  position: relative;
+}
 
-        /* Sidebar */
-        .sidebar { position: absolute; right: 0; top: 0; width: 300px; height: 100%; background: rgba(0,0,0,0.8); backdrop-filter: blur(20px); padding: 20px; border-left: 1px solid rgba(255,255,255,0.1); overflow-y: auto; }
-        
-        /* Bottom Player */
-        .player-bar { position: absolute; bottom: 0; left: 0; width: calc(100% - 300px); background: rgba(0,0,0,0.9); padding: 20px; border-top: 1px solid rgba(255,255,255,0.1); }
-        .progress-container { width: 100%; height: 6px; background: #333; cursor: pointer; border-radius: 3px; margin-bottom: 10px; position: relative; }
-        .progress-fill { height: 100%; background: #ff2d55; width: 0%; border-radius: 3px; }
+#canvas-container {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 1;
+}
 
-        /* Recording Preview Mode */
-        #record-frame { 
-            position: fixed; top: 50%; left: 40%; transform: translate(-50%, -50%); 
-            border: 2px solid #ff2d55; display: none; box-shadow: 0 0 50px rgba(255,45,85,0.5);
-        }
+.control-panel {
+  position: fixed;
+  top: 0;
+  right: 0;
+  width: 380px;
+  height: 100vh;
+  background: linear-gradient(180deg, rgba(10, 10, 10, 0.98) 0%, rgba(20, 10, 20, 0.95) 100%);
+  backdrop-filter: blur(20px);
+  z-index: 1000;
+  overflow-y: auto;
+  border-left: 1px solid rgba(255, 255, 255, 0.1);
+  transition: transform 0.3s ease;
+}
 
-        .btn { background: #ff2d55; border: none; color: white; padding: 10px 20px; border-radius: 5px; cursor: pointer; font-weight: bold; width: 100%; margin: 5px 0; }
-        .btn:hover { background: #ff5e7e; }
-        .btn.secondary { background: #333; }
-        
-        label { font-size: 12px; color: #aaa; margin-top: 10px; display: block; }
-        select, input { width: 100%; background: #222; border: 1px solid #444; color: white; padding: 8px; margin-top: 5px; border-radius: 4px; }
+.control-panel.hidden {
+  transform: translateX(100%);
+}
 
-        .status-rec { color: #ff2d55; font-weight: bold; animation: blink 1s infinite; display: none; }
-        @keyframes blink { 0% { opacity: 1; } 50% { opacity: 0; } }
-    </style>
+.toggle-panel {
+  position: fixed;
+  top: 50%;
+  right: 380px;
+  transform: translateY(-50%);
+  background: linear-gradient(135deg, rgba(255, 0, 150, 0.3), rgba(0, 150, 255, 0.3));
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 10px 0 0 10px;
+  padding: 20px 12px;
+  cursor: pointer;
+  z-index: 1001;
+  transition: all 0.3s ease;
+}
+
+.toggle-panel:hover {
+  background: linear-gradient(135deg, rgba(255, 0, 150, 0.5), rgba(0, 150, 255, 0.5));
+}
+
+.toggle-panel.collapsed {
+  right: 0;
+}
+
+.header {
+  padding: 25px;
+  background: linear-gradient(135deg, #ff006e 0%, #8338ec 50%, #3a86ff 100%);
+  text-align: center;
+  position: relative;
+  overflow: hidden;
+}
+
+.header::before {
+  content: '';
+  position: absolute;
+  top: -50%;
+  left: -50%;
+  width: 200%;
+  height: 200%;
+  background: radial-gradient(circle, rgba(255,255,255,0.1) 0%, transparent 70%);
+  animation: shimmer 3s infinite;
+}
+
+@keyframes shimmer {
+  0%, 100% { transform: rotate(0deg); }
+  50% { transform: rotate(180deg); }
+}
+
+.header h1 {
+  font-size: 28px;
+  margin-bottom: 5px;
+  position: relative;
+  z-index: 1;
+  text-shadow: 0 0 20px rgba(255,255,255,0.5);
+}
+
+.header p {
+  opacity: 0.9;
+  position: relative;
+  z-index: 1;
+}
+
+.viz-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 12px;
+  padding: 20px;
+}
+
+.viz-card {
+  background: linear-gradient(135deg, rgba(255, 0, 150, 0.1), rgba(0, 150, 255, 0.1));
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 12px;
+  padding: 20px;
+  cursor: pointer;
+  transition: all 0.3s;
+  text-align: center;
+  position: relative;
+  overflow: hidden;
+}
+
+.viz-card::before {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 0;
+  height: 0;
+  background: radial-gradient(circle, rgba(255, 0, 150, 0.4), transparent);
+  transition: all 0.5s;
+  transform: translate(-50%, -50%);
+}
+
+.viz-card:hover::before {
+  width: 100%;
+  height: 100%;
+}
+
+.viz-card:hover {
+  transform: translateY(-3px) scale(1.02);
+  box-shadow: 0 10px 30px rgba(255, 0, 150, 0.3);
+}
+
+.viz-card.active {
+  background: linear-gradient(135deg, rgba(255, 0, 150, 0.3), rgba(0, 150, 255, 0.3));
+  border-color: #ff006e;
+  box-shadow: 0 0 20px rgba(255, 0, 150, 0.5);
+}
+
+.viz-card .icon {
+  font-size: 32px;
+  margin-bottom: 8px;
+  filter: drop-shadow(0 0 10px rgba(255, 255, 255, 0.5));
+}
+
+.viz-card .name {
+  font-size: 14px;
+  font-weight: 600;
+  margin-bottom: 5px;
+}
+
+.viz-card .desc {
+  font-size: 11px;
+  opacity: 0.7;
+}
+
+.control-group {
+  margin-bottom: 25px;
+  padding: 0 20px;
+}
+
+.control-group label {
+  display: block;
+  margin-bottom: 10px;
+  font-size: 12px;
+  text-transform: uppercase;
+  opacity: 0.8;
+  letter-spacing: 1px;
+}
+
+.slider {
+  -webkit-appearance: none;
+  width: 100%;
+  height: 6px;
+  background: linear-gradient(90deg, rgba(255, 0, 150, 0.3), rgba(0, 150, 255, 0.3));
+  outline: none;
+  border-radius: 3px;
+  position: relative;
+}
+
+.slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 18px;
+  height: 18px;
+  background: linear-gradient(135deg, #ff006e, #8338ec);
+  border-radius: 50%;
+  cursor: pointer;
+  box-shadow: 0 0 10px rgba(255, 0, 150, 0.5);
+}
+
+.slider-container {
+  display: flex;
+  align-items: center;
+  gap: 15px;
+}
+
+.slider-value {
+  min-width: 45px;
+  text-align: right;
+  font-size: 14px;
+  font-weight: bold;
+  color: #ff006e;
+}
+
+/* Audio Player */
+.audio-player {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 380px;
+  background: linear-gradient(180deg, rgba(10, 10, 10, 0.95) 0%, rgba(20, 10, 20, 0.98) 100%);
+  backdrop-filter: blur(20px);
+  padding: 25px;
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+  z-index: 100;
+  transition: right 0.3s ease;
+}
+
+.audio-player.expanded {
+  right: 0;
+}
+
+.waveform-container {
+  height: 60px;
+  background: rgba(0, 0, 0, 0.5);
+  border-radius: 10px;
+  margin-bottom: 20px;
+  position: relative;
+  overflow: hidden;
+}
+
+#waveform {
+  width: 100%;
+  height: 100%;
+}
+
+.progress-bar {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 0%;
+  height: 100%;
+  background: linear-gradient(90deg, rgba(255, 0, 150, 0.3), rgba(0, 150, 255, 0.3));
+  pointer-events: none;
+}
+
+.seek-bar {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  cursor: pointer;
+  z-index: 2;
+}
+
+.time-display {
+  position: absolute;
+  bottom: 5px;
+  right: 10px;
+  font-size: 12px;
+  background: rgba(0, 0, 0, 0.7);
+  padding: 2px 8px;
+  border-radius: 3px;
+}
+
+.player-controls {
+  display: flex;
+  align-items: center;
+  gap: 15px;
+}
+
+.player-btn {
+  width: 50px;
+  height: 50px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, rgba(255, 0, 150, 0.2), rgba(0, 150, 255, 0.2));
+  border: 2px solid rgba(255, 255, 255, 0.2);
+  color: #fff;
+  font-size: 20px;
+  cursor: pointer;
+  transition: all 0.3s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.player-btn:hover {
+  background: linear-gradient(135deg, rgba(255, 0, 150, 0.4), rgba(0, 150, 255, 0.4));
+  transform: scale(1.1);
+  box-shadow: 0 0 20px rgba(255, 0, 150, 0.5);
+}
+
+.player-btn.main {
+  width: 60px;
+  height: 60px;
+  font-size: 24px;
+}
+
+/* Recording Overlay */
+.recording-overlay {
+  position: fixed;
+  top: 20px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: rgba(255, 0, 0, 0.9);
+  padding: 15px 30px;
+  border-radius: 30px;
+  display: none;
+  align-items: center;
+  gap: 15px;
+  z-index: 2000;
+  box-shadow: 0 0 30px rgba(255, 0, 0, 0.5);
+}
+
+.recording-overlay.active {
+  display: flex;
+  animation: pulse 1s infinite;
+}
+
+@keyframes pulse {
+  0%, 100% { transform: translateX(-50%) scale(1); }
+  50% { transform: translateX(-50%) scale(1.05); }
+}
+
+.rec-dot {
+  width: 12px;
+  height: 12px;
+  background: #fff;
+  border-radius: 50%;
+  animation: blink 1s infinite;
+}
+
+@keyframes blink {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.3; }
+}
+
+.recording-time {
+  font-size: 18px;
+  font-weight: bold;
+}
+
+.stop-rec-btn {
+  padding: 8px 20px;
+  background: #fff;
+  color: #ff0000;
+  border: none;
+  border-radius: 20px;
+  cursor: pointer;
+  font-weight: bold;
+}
+
+/* Format Selector */
+.format-selector {
+  padding: 20px;
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.format-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  margin-bottom: 15px;
+}
+
+.format-option {
+  padding: 12px;
+  background: rgba(30, 30, 30, 0.5);
+  border: 2px solid rgba(255, 255, 255, 0.1);
+  border-radius: 8px;
+  cursor: pointer;
+  text-align: center;
+  transition: all 0.3s;
+}
+
+.format-option:hover {
+  background: rgba(50, 50, 50, 0.5);
+}
+
+.format-option.selected {
+  border-color: #ff006e;
+  background: rgba(255, 0, 110, 0.2);
+}
+
+.format-name {
+  font-weight: bold;
+  margin-bottom: 3px;
+}
+
+.format-size {
+  font-size: 11px;
+  opacity: 0.7;
+}
+
+.record-settings {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 15px;
+}
+
+.record-btn-main {
+  width: 100%;
+  padding: 15px;
+  background: linear-gradient(135deg, #ff006e, #8338ec);
+  border: none;
+  border-radius: 10px;
+  color: #fff;
+  font-size: 16px;
+  font-weight: bold;
+  cursor: pointer;
+  transition: all 0.3s;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+
+.record-btn-main:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 10px 30px rgba(255, 0, 110, 0.5);
+}
+
+.record-btn-main:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* 3D Background Settings */
+.bg-3d-settings {
+  padding: 20px;
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.bg-3d-option {
+  margin-bottom: 15px;
+}
+
+.checkbox-label {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  cursor: pointer;
+}
+
+.checkbox-label input[type="checkbox"] {
+  width: 20px;
+  height: 20px;
+  cursor: pointer;
+}
+
+/* File inputs */
+.file-input {
+  display: none;
+}
+
+.file-label {
+  display: block;
+  width: 100%;
+  padding: 12px;
+  background: linear-gradient(135deg, rgba(255, 0, 150, 0.2), rgba(0, 150, 255, 0.2));
+  border: 2px solid rgba(255, 255, 255, 0.2);
+  border-radius: 8px;
+  text-align: center;
+  cursor: pointer;
+  transition: all 0.3s;
+}
+
+.file-label:hover {
+  background: linear-gradient(135deg, rgba(255, 0, 150, 0.3), rgba(0, 150, 255, 0.3));
+  transform: translateY(-2px);
+}
+
+.loading {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(135deg, #0a0a0a, #1a0a1a);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 9999;
+}
+
+.loading-content {
+  text-align: center;
+}
+
+.loading-heart {
+  font-size: 60px;
+  animation: heartbeat 1s infinite;
+}
+
+@keyframes heartbeat {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.2); }
+}
+
+.loading-text {
+  font-size: 24px;
+  margin-top: 20px;
+  background: linear-gradient(90deg, #ff006e, #8338ec, #3a86ff);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  animation: gradient 2s linear infinite;
+}
+
+@keyframes gradient {
+  0% { background-position: 0% 50%; }
+  100% { background-position: 100% 50%; }
+}
+</style>
 </head>
 <body>
 
-<div id="ui-root">
-    <!-- Sidebar -->
-    <div class="sidebar interactive">
-        <h2 style="color: #ff2d55">N1K∅ PRO</h2>
-        
-        <label>1. АУДИО</label>
-        <input type="file" id="audio-input" accept="audio/*">
-        
-        <label>2. 3D ФОН (ФОТО)</label>
-        <input type="file" id="image-input" accept="image/*">
-
-        <label>3. ВИЗУАЛИЗАТОР</label>
-        <select id="viz-type">
-            <option value="crystalHearts">💎 Crystal Hearts (Романтика)</option>
-            <option value="spatialImage">🌌 Spatial Photo (Объемное фото)</option>
-            <option value="nebulaLove">☁️ Nebula Love (Туманность)</option>
-            <option value="hyperCubePulse">🧊 HyperCube Pulse (4D/5D)</option>
-        </select>
-
-        <label>РЕЖИМ ДВИЖЕНИЯ</label>
-        <select id="movement-mode">
-            <option value="orbit">Орбита</option>
-            <option value="spin">Вращение</option>
-            <option value="pulse">Пульсация</option>
-            <option value="chaos">Хаос</option>
-        </select>
-
-        <label>ИЗМЕРЕНИЯ</label>
-        <select id="dimension-mode">
-            <option value="2D">2D проекция</option>
-            <option value="3D" selected>3D</option>
-            <option value="4D">4D проекция</option>
-            <option value="5D">5D проекция</option>
-        </select>
-
-        <label>ИНТЕНСИВНОСТЬ 3D</label>
-        <input type="range" id="depth-range" min="1" max="50" value="20">
-
-        <div style="margin-top: 30px;">
-            <div id="rec-status" class="status-rec">● ИДЕТ ЗАПИСЬ...</div>
-            <button class="btn" id="start-rec">НАЧАТЬ ЗАПИСЬ ВИДЕО</button>
-            <button class="btn secondary" id="stop-rec" style="display:none">ОСТАНОВИТЬ И СОХРАНИТЬ</button>
-        </div>
-    </div>
-
-    <!-- Player Bar -->
-    <div class="player-bar interactive">
-        <div class="progress-container" id="progress-bar">
-            <div class="progress-fill" id="progress-fill"></div>
-        </div>
-        <div style="display: flex; justify-content: space-between; align-items: center;">
-            <button id="play-btn" style="background:none; border:none; color:white; font-size:24px; cursor:pointer;">▶</button>
-            <div id="time-display">00:00 / 00:00</div>
-            <div style="font-size: 12px; color: #666;">Spatial Engine v2.5</div>
-        </div>
-    </div>
+<div class="loading">
+  <div class="loading-content">
+    <div class="loading-heart">💖</div>
+    <div class="loading-text">N1K∅ Romantic Vision Loading...</div>
+  </div>
 </div>
 
-<!-- Рамка для предпросмотра записи -->
-<div id="record-frame"></div>
+<div id="canvas-container"></div>
+
+<div class="recording-overlay" id="recordingOverlay">
+  <div class="rec-dot"></div>
+  <div class="recording-time">
+    <span id="recTime">00:00</span> / <span id="recDuration">00:15</span>
+  </div>
+  <button class="stop-rec-btn" onclick="stopRecording()">STOP</button>
+</div>
+
+<div class="toggle-panel" onclick="togglePanel()">
+  <span>💫</span>
+</div>
+
+<div class="control-panel" id="controlPanel">
+  <div class="header">
+    <h1>N1K∅ Romantic</h1>
+    <p>3D Visual Experience</p>
+  </div>
+
+  <div class="viz-grid">
+    <div class="viz-card active" onclick="selectVisualizer('heartPulse', this)">
+      <div class="icon">💖</div>
+      <div class="name">Heart Pulse</div>
+      <div class="desc">Romantic heartbeat</div>
+    </div>
+    
+    <div class="viz-card" onclick="selectVisualizer('starryNight', this)">
+      <div class="icon">✨</div>
+      <div class="name">Starry Night</div>
+      <div class="desc">Magical stars</div>
+    </div>
+    
+    <div class="viz-card" onclick="selectVisualizer('roseGarden', this)">
+      <div class="icon">🌹</div>
+      <div class="name">Rose Garden</div>
+      <div class="desc">Blooming roses</div>
+    </div>
+    
+    <div class="viz-card" onclick="selectVisualizer('aurora', this)">
+      <div class="icon">🌌</div>
+      <div class="name">Aurora Dreams</div>
+      <div class="desc">Northern lights</div>
+    </div>
+    
+    <div class="viz-card" onclick="selectVisualizer('butterflies', this)">
+      <div class="icon">🦋</div>
+      <div class="name">Butterflies</div>
+      <div class="desc">Dancing butterflies</div>
+    </div>
+    
+    <div class="viz-card" onclick="selectVisualizer('crystalRain', this)">
+      <div class="icon">💎</div>
+      <div class="name">Crystal Rain</div>
+      <div class="desc">Diamond shower</div>
+    </div>
+  </div>
+
+  <div class="bg-3d-settings">
+    <h3 style="margin-bottom: 15px;">🌆 3D Background</h3>
+    
+    <div class="bg-3d-option">
+      <input type="file" id="bgImageFile" class="file-input" accept="image/*">
+      <label for="bgImageFile" class="file-label">📷 Choose Background Image</label>
+    </div>
+    
+    <div class="bg-3d-option">
+      <label class="checkbox-label">
+        <input type="checkbox" id="enable3DBg" checked>
+        <span>Enable 3D Depth Effect</span>
+      </label>
+    </div>
+    
+    <div class="control-group">
+      <label>3D Depth</label>
+      <div class="slider-container">
+        <input type="range" class="slider" id="depth3D" min="0" max="100" value="50">
+        <span class="slider-value" id="depth3DVal">50</span>
+      </div>
+    </div>
+    
+    <div class="control-group">
+      <label>Background Blur</label>
+      <div class="slider-container">
+        <input type="range" class="slider" id="bgBlur" min="0" max="20" value="5">
+        <span class="slider-value" id="bgBlurVal">5</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="control-group">
+    <label>Glow Intensity</label>
+    <div class="slider-container">
+      <input type="range" class="slider" id="glowIntensity" min="0" max="2" step="0.1" value="1">
+      <span class="slider-value" id="glowIntensityVal">1</span>
+    </div>
+  </div>
+
+  <div class="control-group">
+    <label>Particle Count</label>
+    <div class="slider-container">
+      <input type="range" class="slider" id="particleCount" min="100" max="10000" step="100" value="5000">
+      <span class="slider-value" id="particleCountVal">5000</span>
+    </div>
+  </div>
+
+  <div class="control-group">
+    <label>Color Theme</label>
+    <select id="colorTheme" style="width: 100%; padding: 10px; background: rgba(30,30,30,0.5); border: 1px solid rgba(255,255,255,0.2); border-radius: 5px; color: white;">
+      <option value="romantic">💖 Romantic Pink</option>
+      <option value="ocean">🌊 Ocean Blue</option>
+      <option value="sunset">🌅 Sunset Orange</option>
+      <option value="galaxy">🌌 Galaxy Purple</option>
+      <option value="forest">🌲 Forest Green</option>
+      <option value="gold">✨ Golden</option>
+    </select>
+  </div>
+
+  <div class="format-selector">
+    <h3 style="margin-bottom: 15px;">📹 Video Export</h3>
+    
+    <div class="format-grid">
+      <div class="format-option selected" onclick="selectFormat('tiktok', this)">
+        <div class="format-name">TikTok</div>
+        <div class="format-size">9:16</div>
+      </div>
+      
+      <div class="format-option" onclick="selectFormat('instagram', this)">
+        <div class="format-name">Instagram</div>
+        <div class="format-size">1:1</div>
+      </div>
+      
+      <div class="format-option" onclick="selectFormat('youtube', this)">
+        <div class="format-name">YouTube</div>
+        <div class="format-size">16:9</div>
+      </div>
+      
+      <div class="format-option" onclick="selectFormat('stories', this)">
+        <div class="format-name">Stories</div>
+        <div class="format-size">9:16</div>
+      </div>
+    </div>
+    
+    <div class="record-settings">
+      <input type="number" id="recordSeconds" value="15" min="5" max="60" style="width: 80px; padding: 10px; background: rgba(30,30,30,0.5); border: 1px solid rgba(255,255,255,0.2); border-radius: 5px; color: white;">
+      <select id="recordQuality" style="flex: 1; padding: 10px; background: rgba(30,30,30,0.5); border: 1px solid rgba(255,255,255,0.2); border-radius: 5px; color: white;">
+        <option value="high">HD Quality</option>
+        <option value="medium">Medium</option>
+        <option value="low">Low</option>
+      </select>
+    </div>
+    
+    <button class="record-btn-main" id="startRecordBtn" onclick="startRecording()">
+      🎬 Start Recording
+    </button>
+  </div>
+</div>
+
+<div class="audio-player" id="audioPlayer">
+  <div class="waveform-container">
+    <canvas id="waveform"></canvas>
+    <div class="progress-bar" id="progressBar"></div>
+    <div class="seek-bar" onclick="seekAudio(event)"></div>
+    <div class="time-display">
+      <span id="currentTime">0:00</span> / <span id="duration">0:00</span>
+    </div>
+  </div>
+  
+  <div class="player-controls">
+    <button class="player-btn" onclick="skipBack()">⏮️</button>
+    <button class="player-btn main" id="playBtn" onclick="togglePlay()">▶️</button>
+    <button class="player-btn" onclick="skipForward()">⏭️</button>
+    
+    <input type="file" id="audioFile" class="file-input" accept="audio/*">
+    <label for="audioFile" class="file-label" style="flex: 1;">🎵 Choose Music</label>
+    
+    <button class="player-btn" onclick="useMicrophone()">🎤</button>
+    
+    <div class="slider-container" style="flex: 1;">
+      <span style="margin-right: 10px;">🔊</span>
+      <input type="range" class="slider" id="volume" min="0" max="100" value="70">
+      <span class="slider-value" id="volumeVal">70</span>
+    </div>
+  </div>
+</div>
 
 <script>
-let scene, camera, renderer, analyser, dataArray, audio, audioContext;
-let visualizerGroup, backgroundParticles;
-let isPlaying = false;
-let recorder, recordedChunks = [];
-let spatialPoints = null;
-
-let currentViz = 'crystalHearts';
-let movementMode = 'orbit';
-let dimensionMode = '3D';
-
-// данные для гиперкуба
-let hyperCubeGroup = null;
-let hyperCubeVertices4D = [];
-
-// Инициализация
-function init() {
-    scene = new THREE.Scene();
-    camera = new THREE.PerspectiveCamera(75, (window.innerWidth - 300) / window.innerHeight, 0.1, 1000);
-    camera.position.z = 50;
-
-    renderer = new THREE.WebGLRenderer({ antialias: true, preserveDrawingBuffer: true });
-    renderer.setSize(window.innerWidth - 300, window.innerHeight);
-    document.body.appendChild(renderer.domElement);
-
-    visualizerGroup = new THREE.Group();
-    scene.add(visualizerGroup);
-
-    window.addEventListener('resize', onWindowResize);
-    setupAudioControls();
-    setupVisualizerChange();
-    setupModeControls();
-    animate();
-}
-
-// 1. ТЕХНОЛОГИЯ: ОБЪЕМНОЕ ФОТО (Spatial Image)
-function createSpatialImage(imgElement) {
-    if (spatialPoints) scene.remove(spatialPoints);
+class RomanticVisualizer {
+  constructor() {
+    this.scene = null;
+    this.camera = null;
+    this.renderer = null;
+    this.composer = null;
     
-    const canvas = document.createElement('canvas');
-    const ctx = canvas.getContext('2d');
-    const w = 128, h = 128; // Плотность точек
-    canvas.width = w; canvas.height = h;
-    ctx.drawImage(imgElement, 0, 0, w, h);
-    const imageData = ctx.getImageData(0, 0, w, h).data;
-
-    const geometry = new THREE.BufferGeometry();
-    const positions = [];
-    const colors = [];
-
-    for (let y = 0; y < h; y++) {
-        for (let x = 0; x < w; x++) {
-            const idx = (y * w + x) * 4;
-            const r = imageData[idx] / 255;
-            const g = imageData[idx+1] / 255;
-            const b = imageData[idx+2] / 255;
-
-            positions.push((x - w/2) * 0.5, (h/2 - y) * 0.5, 0);
-            colors.push(r, g, b);
-        }
-    }
-
-    geometry.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
-    geometry.setAttribute('color', new THREE.Float32BufferAttribute(colors, 3));
+    this.visualizers = {};
+    this.currentViz = 'heartPulse';
+    this.bgMesh = null;
     
-    const material = new THREE.PointsMaterial({ size: 0.2, vertexColors: true });
-    spatialPoints = new THREE.Points(geometry, material);
-    scene.add(spatialPoints);
-}
+    this.audioContext = null;
+    this.analyser = null;
+    this.dataArray = null;
+    this.audioSource = null;
+    this.audioElement = null;
+    this.isPlaying = false;
+    
+    this.mediaRecorder = null;
+    this.recordedChunks = [];
+    this.isRecording = false;
+    this.recordFormat = 'tiktok';
+    this.recordStartTime = 0;
+    
+    this.clock = new THREE.Clock();
+    
+    this.colorThemes = {
+      romantic: { primary: 0xff006e, secondary: 0xff4d94, glow: 0xff99cc },
+      ocean: { primary: 0x006eff, secondary: 0x4d94ff, glow: 0x99ccff },
+      sunset: { primary: 0xff6e00, secondary: 0xff944d, glow: 0xffcc99 },
+      galaxy: { primary: 0x6e00ff, secondary: 0x944dff, glow: 0xcc99ff },
+      forest: { primary: 0x00ff6e, secondary: 0x4dff94, glow: 0x99ffcc },
+      gold: { primary: 0xffd700, secondary: 0xffed4d, glow: 0xfff599 }
+    };
+    
+    this.currentTheme = 'romantic';
+    
+    this.init();
+  }
 
-// 2. РОМАНТИЧЕСКИЙ ВИЗУАЛИЗАТОР: Crystal Hearts
-function createHearts() {
-    visualizerGroup.clear();
-    hyperCubeGroup = null;
+  init() {
+    this.initThree();
+    this.initAudio();
+    this.initVisualizers();
+    this.initControls();
+    this.initWaveform();
+    this.animate();
+    
+    setTimeout(() => {
+      document.querySelector('.loading').style.display = 'none';
+    }, 2000);
+  }
 
-    const heartShape = new THREE.Shape();
-    heartShape.moveTo(0, 0);
-    heartShape.bezierCurveTo(0, -3, -5, -3, -5, 0);
-    heartShape.bezierCurveTo(-5, 5, 0, 8, 0, 12);
-    heartShape.bezierCurveTo(0, 8, 5, 5, 5, 0);
-    heartShape.bezierCurveTo(5, -3, 0, -3, 0, 0);
-
-    for(let i=0; i<30; i++) {
-        const geom = new THREE.ExtrudeGeometry(heartShape, { depth: 1, bevelEnabled: true });
-        const mat = new THREE.MeshPhongMaterial({ color: 0xff2d55, shininess: 100 });
-        const heart = new THREE.Mesh(geom, mat);
-        heart.rotation.x = Math.PI;
-        heart.position.set(Math.random()*60-30, Math.random()*40-20, Math.random()*20-10);
-        heart.scale.set(0.2, 0.2, 0.2);
-        visualizerGroup.add(heart);
-    }
-    const light = new THREE.PointLight(0xffffff, 1);
-    light.position.set(0,0,20);
-    visualizerGroup.add(light);
-}
-
-// 3. ТУМАННОСТЬ: Nebula Love
-function createNebula() {
-    visualizerGroup.clear();
-    hyperCubeGroup = null;
-
-    const geometry = new THREE.BufferGeometry();
-    const count = 4000;
-    const positions = new Float32Array(count * 3);
-    const colors = new Float32Array(count * 3);
-
-    for (let i = 0; i < count; i++) {
-        const r = 20 * Math.random();
-        const theta = Math.random() * Math.PI * 2;
-        const phi = Math.acos(2 * Math.random() - 1);
-
-        const x = r * Math.sin(phi) * Math.cos(theta);
-        const y = r * Math.sin(phi) * Math.sin(theta);
-        const z = r * Math.cos(phi);
-
-        positions[i*3] = x;
-        positions[i*3+1] = y;
-        positions[i*3+2] = z;
-
-        const c = 0.4 + Math.random() * 0.6;
-        colors[i*3] = c;
-        colors[i*3+1] = c * 0.4;
-        colors[i*3+2] = 1.0;
-    }
-
-    geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
-    geometry.setAttribute('color', new THREE.BufferAttribute(colors, 3));
-
-    const material = new THREE.PointsMaterial({
-        size: 0.25,
-        vertexColors: true,
-        transparent: true,
-        opacity: 0.9,
-        depthWrite: false
+  initThree() {
+    // Scene
+    this.scene = new THREE.Scene();
+    this.scene.fog = new THREE.FogExp2(0x000000, 0.002);
+    
+    // Camera
+    this.camera = new THREE.PerspectiveCamera(
+      75,
+      window.innerWidth / window.innerHeight,
+      0.1,
+      1000
+    );
+    this.camera.position.z = 50;
+    
+    // Renderer
+    this.renderer = new THREE.WebGLRenderer({ 
+      antialias: true, 
+      alpha: true,
+      preserveDrawingBuffer: true 
     });
-
-    const points = new THREE.Points(geometry, material);
-    visualizerGroup.add(points);
-}
-
-// 4. МОЙ ВИЗУАЛИЗАТОР: HyperCube Pulse (4D/5D)
-function createHyperCube() {
-    visualizerGroup.clear();
-    hyperCubeGroup = new THREE.Group();
-    visualizerGroup.add(hyperCubeGroup);
-
-    hyperCubeVertices4D = [];
-
-    // вершины 4D-гиперкуба (tesseract): все комбинации ±1 по 4 осям
-    const size = 6;
-    const base = [-1, 1];
-    const vertices = [];
-    for (let x of base) for (let y of base) for (let z of base) for (let w of base) {
-        vertices.push([x, y, z, w]);
-    }
-
-    hyperCubeVertices4D = vertices.map(v => v.map(c => c * size * 0.5));
-
-    const material = new THREE.LineBasicMaterial({ color: 0x66ccff, transparent: true, opacity: 0.9 });
-
-    // рёбра: соединяем вершины, отличающиеся на 1 координату
-    const edges = [];
-    for (let i = 0; i < hyperCubeVertices4D.length; i++) {
-        for (let j = i+1; j < hyperCubeVertices4D.length; j++) {
-            let diff = 0;
-            for (let k = 0; k < 4; k++) {
-                if (hyperCubeVertices4D[i][k] !== hyperCubeVertices4D[j][k]) diff++;
-            }
-            if (diff === 1) edges.push([i, j]);
-        }
-    }
-
-    const geometry = new THREE.BufferGeometry();
-    const positions = new Float32Array(edges.length * 2 * 3);
-    geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
-
-    const lineSegments = new THREE.LineSegments(geometry, material);
-    lineSegments.userData.edges = edges;
-    hyperCubeGroup.add(lineSegments);
-}
-
-// 4D вращение
-function rotate4D(point4, angleXY, angleXW) {
-    let [x, y, z, w] = point4;
-
-    // XY
-    let cosA = Math.cos(angleXY), sinA = Math.sin(angleXY);
-    let x1 = x * cosA - y * sinA;
-    let y1 = x * sinA + y * cosA;
-
-    // XW
-    let cosB = Math.cos(angleXW), sinB = Math.sin(angleXW);
-    let x2 = x1 * cosB - w * sinB;
-    let w1 = x1 * sinB + w * cosB;
-
-    return [x2, y1, z, w1];
-}
-
-// 4D -> 3D
-function project4Dto3D(point4, distance = 8) {
-    const [x, y, z, w] = point4;
-    const k = distance / (distance - w);
-    return new THREE.Vector3(x * k, y * k, z * k);
-}
-
-// 5D -> 3D (добавляем параметр v как масштаб)
-function project5Dto3D(point5, distance = 8) {
-    const [x, y, z, w, v] = point5;
-    const k = distance / (distance - w);
-    const scale = 1 + v * 0.4;
-    return new THREE.Vector3(x * k * scale, y * k * scale, z * k * scale);
-}
-
-// УПРАВЛЕНИЕ АУДИО И ПЕРЕМОТКА
-function setupAudioControls() {
-    const audioInput = document.getElementById('audio-input');
-    const playBtn = document.getElementById('play-btn');
-    const progressFill = document.getElementById('progress-fill');
-    const progressBar = document.getElementById('progress-bar');
-    const timeDisplay = document.getElementById('time-display');
-
-    audio = new Audio();
+    this.renderer.setSize(window.innerWidth, window.innerHeight);
+    this.renderer.setPixelRatio(window.devicePixelRatio);
+    this.renderer.shadowMap.enabled = true;
+    this.renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+    document.getElementById('canvas-container').appendChild(this.renderer.domElement);
     
-    audioInput.onchange = (e) => {
-        const file = e.target.files[0];
-        audio.src = URL.createObjectURL(file);
-        initAudioContext();
-    };
-
-    playBtn.onclick = () => {
-        if (audio.paused) { audio.play(); playBtn.innerText = '⏸'; }
-        else { audio.pause(); playBtn.innerText = '▶'; }
-    };
-
-    audio.ontimeupdate = () => {
-        const pct = (audio.currentTime / audio.duration) * 100;
-        progressFill.style.width = pct + '%';
-        timeDisplay.innerText = `${formatTime(audio.currentTime)} / ${formatTime(audio.duration)}`;
-    };
-
-    progressBar.onclick = (e) => {
-        const rect = progressBar.getBoundingClientRect();
-        const pct = (e.clientX - rect.left) / rect.width;
-        audio.currentTime = pct * audio.duration;
-    };
-
-    // Загрузка фото
-    document.getElementById('image-input').onchange = (e) => {
-        const img = new Image();
-        img.src = URL.createObjectURL(e.target.files[0]);
-        img.onload = () => createSpatialImage(img);
-    };
-}
-
-function initAudioContext() {
-    if (audioContext) return;
-    audioContext = new AudioContext();
-    analyser = audioContext.createAnalyser();
-    const source = audioContext.createMediaElementSource(audio);
-    source.connect(analyser);
-    analyser.connect(audioContext.destination);
-    analyser.fftSize = 256;
-    dataArray = new Uint8Array(analyser.frequencyBinCount);
-}
-
-// СИСТЕМА ЗАПИСИ
-const startRecBtn = document.getElementById('start-rec');
-const stopRecBtn = document.getElementById('stop-rec');
-const recStatus = document.getElementById('rec-status');
-
-startRecBtn.onclick = async () => {
-    const format = document.getElementById('export-format').value;
-    let w = 1080, h = 1920; // Default 9:16
+    // Lights
+    this.ambientLight = new THREE.AmbientLight(0xffffff, 0.4);
+    this.scene.add(this.ambientLight);
     
-    if (format === '16/9') { w = 1920; h = 1080; }
-    if (format === '1/1') { w = 1080; h = 1080; }
-
-    renderer.setSize(w, h);
-    camera.aspect = w / h;
-    camera.updateProjectionMatrix();
-
-    const stream = renderer.domElement.captureStream(60);
-    // Добавляем аудиодорожку
-    if (audioContext) {
-        const dest = audioContext.createMediaStreamDestination();
-        analyser.connect(dest);
-        stream.addTrack(dest.stream.getAudioTracks()[0]);
-    }
-
-    recorder = new MediaRecorder(stream, { mimeType: 'video/webm;codecs=vp9', videoBitsPerSecond: 8000000 });
-    recordedChunks = [];
-
-    recorder.ondataavailable = e => recordedChunks.push(e.data);
-    recorder.onstop = saveVideo;
-
-    recorder.start();
-    startRecBtn.style.display = 'none';
-    stopRecBtn.style.display = 'block';
-    recStatus.style.display = 'block';
-};
-
-stopRecBtn.onclick = () => {
-    recorder.stop();
-    startRecBtn.style.display = 'block';
-    stopRecBtn.style.display = 'none';
-    recStatus.style.display = 'none';
-    onWindowResize(); // Возвращаем размер экрана
-};
-
-function saveVideo() {
-    const blob = new Blob(recordedChunks, { type: 'video/webm' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `Visualizer_${Date.now()}.webm`;
-    a.click();
-}
-
-function setupVisualizerChange() {
-    document.getElementById('viz-type').onchange = (e) => {
-        currentViz = e.target.value;
-        if (currentViz === 'crystalHearts') createHearts();
-        else if (currentViz === 'nebulaLove') createNebula();
-        else if (currentViz === 'hyperCubePulse') createHyperCube();
-        else if (currentViz === 'spatialImage') {
-            visualizerGroup.clear();
-            hyperCubeGroup = null;
-        }
-    };
-}
-
-function setupModeControls() {
-    document.getElementById('movement-mode').onchange = (e) => {
-        movementMode = e.target.value;
-    };
-    document.getElementById('dimension-mode').onchange = (e) => {
-        dimensionMode = e.target.value;
-    };
-}
-
-function animate() {
-    requestAnimationFrame(animate);
+    this.spotLight = new THREE.SpotLight(0xffffff, 1);
+    this.spotLight.position.set(50, 50, 50);
+    this.spotLight.castShadow = true;
+    this.scene.add(this.spotLight);
     
-    if (analyser) {
-        analyser.getByteFrequencyData(dataArray);
-        const bass = dataArray[2] / 255;
-        const mid = dataArray[10] / 255;
-        const high = dataArray[40] / 255;
+    // Point lights for glow
+    this.pointLight1 = new THREE.PointLight(0xff006e, 2, 100);
+    this.pointLight1.position.set(20, 20, 20);
+    this.scene.add(this.pointLight1);
+    
+    this.pointLight2 = new THREE.PointLight(0x8338ec, 2, 100);
+    this.pointLight2.position.set(-20, -20, 20);
+    this.scene.add(this.pointLight2);
+    
+    window.addEventListener('resize', () => this.onResize());
+  }
 
-        // Анимация пространственного фото
-        if (spatialPoints) {
-            const depth = document.getElementById('depth-range').value;
-            const positions = spatialPoints.geometry.attributes.position.array;
-            for (let i = 0; i < positions.length; i += 3) {
-                positions[i + 2] = Math.sin(i + Date.now() * 0.001) * (bass * depth);
-            }
-            spatialPoints.geometry.attributes.position.needsUpdate = true;
-            spatialPoints.rotation.y = Math.sin(Date.now() * 0.0005) * 0.2;
+  initAudio() {
+    this.audioContext = new (window.AudioContext || window.webkitAudioContext)();
+    this.analyser = this.audioContext.createAnalyser();
+    this.analyser.fftSize = 2048;
+    this.analyser.smoothingTimeConstant = 0.8;
+    
+    this.dataArray = new Uint8Array(this.analyser.frequencyBinCount);
+    
+    this.gainNode = this.audioContext.createGain();
+    this.gainNode.connect(this.analyser);
+    this.analyser.connect(this.audioContext.destination);
+    
+    // Create audio element for playback control
+    this.audioElement = new Audio();
+    this.audioElement.addEventListener('timeupdate', () => this.updateProgress());
+    this.audioElement.addEventListener('loadedmetadata', () => this.updateDuration());
+  }
+
+  initVisualizers() {
+    // Heart Pulse
+    this.createHeartPulse();
+    
+    // Starry Night
+    this.createStarryNight();
+    
+    // Rose Garden
+    this.createRoseGarden();
+    
+    // Aurora
+    this.createAurora();
+    
+    // Butterflies
+    this.createButterflies();
+    
+    // Crystal Rain
+    this.createCrystalRain();
+    
+    // Set initial visualizer
+    this.setVisualizer('heartPulse');
+  }
+
+  createHeartPulse() {
+    const group = new THREE.Group();
+    
+    // Create heart shape
+    const heartShape = new THREE.Shape();
+    const x = 0, y = 0;
+    heartShape.moveTo(x + 5, y + 5);
+    heartShape.bezierCurveTo(x + 5, y + 2.5, x + 2, y, x, y);
+    heartShape.bezierCurveTo(x - 3, y, x - 3, y + 3.5, x - 3, y + 3.5);
+    heartShape.bezierCurveTo(x - 3, y + 5.5, x - 1.5, y + 7.7, x + 2.5, y + 9.5);
+    heartShape.bezierCurveTo(x + 6, y + 7.7, x + 8, y + 4.5, x + 8, y + 3.5);
+    heartShape.bezierCurveTo(x + 8, y + 3.5, x + 8, y, x + 5, y);
+    heartShape.bezierCurveTo(x + 3.5, y, x + 2.5, y + 2.5, x + 2.5, y + 2.5);
+    
+    // Multiple hearts
+    for (let i = 0; i < 5; i++) {
+      const geometry = new THREE.ExtrudeGeometry(heartShape, {
+        depth: 2,
+        bevelEnabled: true,
+        bevelSegments: 2,
+        steps: 2,
+        bevelSize: 1,
+        bevelThickness: 1
+      });
+      
+      const material = new THREE.MeshPhongMaterial({
+        color: new THREE.Color().setHSL(0.95, 1, 0.5 + i * 0.1),
+        emissive: 0xff006e,
+        emissiveIntensity: 0.3,
+        transparent: true,
+        opacity: 0.8 - i * 0.15
+      });
+      
+      const heart = new THREE.Mesh(geometry, material);
+      heart.scale.set(0.5 + i * 0.3, 0.5 + i * 0.3, 0.5 + i * 0.3);
+      heart.userData.index = i;
+      group.add(heart);
+    }
+    
+    // Add particles around hearts
+    const particleGeometry = new THREE.BufferGeometry();
+    const particleCount = 1000;
+    const positions = new Float32Array(particleCount * 3);
+    
+    for (let i = 0; i < particleCount; i++) {
+      const angle = Math.random() * Math.PI * 2;
+      const radius = 15 + Math.random() * 30;
+      positions[i * 3] = Math.cos(angle) * radius;
+      positions[i * 3 + 1] = (Math.random() - 0.5) * 40;
+      positions[i * 3 + 2] = Math.sin(angle) * radius;
+    }
+    
+    particleGeometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+    
+    const particleMaterial = new THREE.PointsMaterial({
+      size: 0.5,
+      color: 0xff99cc,
+      transparent: true,
+      opacity: 0.6,
+      blending: THREE.AdditiveBlending
+    });
+    
+    const particles = new THREE.Points(particleGeometry, particleMaterial);
+    group.add(particles);
+    
+    this.visualizers.heartPulse = group;
+  }
+
+  createStarryNight() {
+    const group = new THREE.Group();
+    
+    // Create stars
+    const starGeometry = new THREE.BufferGeometry();
+    const starCount = 5000;
+    const positions = new Float32Array(starCount * 3);
+    const colors = new Float32Array(starCount * 3);
+    const sizes = new Float32Array(starCount);
+    
+    for (let i = 0; i < starCount; i++) {
+      positions[i * 3] = (Math.random() - 0.5) * 100;
+      positions[i * 3 + 1] = (Math.random() - 0.5) * 100;
+      positions[i * 3 + 2] = (Math.random() - 0.5) * 100;
+      
+      const color = new THREE.Color();
+      color.setHSL(Math.random() * 0.2 + 0.5, 0.8, 0.8);
+      colors[i * 3] = color.r;
+      colors[i * 3 + 1] = color.g;
+      colors[i * 3 + 2] = color.b;
+      
+      sizes[i] = Math.random() * 2;
+    }
+    
+    starGeometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+    starGeometry.setAttribute('color', new THREE.BufferAttribute(colors, 3));
+    starGeometry.setAttribute('size', new THREE.BufferAttribute(sizes, 1));
+    
+    const starMaterial = new THREE.PointsMaterial({
+      size: 1,
+      vertexColors: true,
+      transparent: true,
+      opacity: 0.8,
+      blending: THREE.AdditiveBlending,
+      map: this.createStarTexture()
+    });
+    
+    const stars = new THREE.Points(starGeometry, starMaterial);
+    group.add(stars);
+    
+    // Add shooting stars
+    for (let i = 0; i < 10; i++) {
+      const shootingStarGeometry = new THREE.BufferGeometry();
+      const points = [];
+      for (let j = 0; j < 20; j++) {
+        points.push(new THREE.Vector3(j * 0.5, 0, 0));
+      }
+      shootingStarGeometry.setFromPoints(points);
+      
+      const shootingStarMaterial = new THREE.LineBasicMaterial({
+        color: 0xffffff,
+        transparent: true,
+        opacity: 0.5
+      });
+      
+      const shootingStar = new THREE.Line(shootingStarGeometry, shootingStarMaterial);
+      shootingStar.position.set(
+        (Math.random() - 0.5) * 100,
+        (Math.random() - 0.5) * 50,
+        (Math.random() - 0.5) * 50
+      );
+      shootingStar.userData.speed = Math.random() * 2 + 1;
+      group.add(shootingStar);
+    }
+    
+    this.visualizers.starryNight = group;
+  }
+
+  createStarTexture() {
+    const canvas = document.createElement('canvas');
+    canvas.width = 32;
+    canvas.height = 32;
+    const ctx = canvas.getContext('2d');
+    
+    const gradient = ctx.createRadialGradient(16, 16, 0, 16, 16, 16);
+    gradient.addColorStop(0, 'rgba(255,255,255,1)');
+    gradient.addColorStop(0.5, 'rgba(255,255,255,0.5)');
+    gradient.addColorStop(1, 'rgba(255,255,255,0)');
+    
+    ctx.fillStyle = gradient;
+    ctx.fillRect(0, 0, 32, 32);
+    
+    const texture = new THREE.CanvasTexture(canvas);
+    return texture;
+  }
+
+  createRoseGarden() {
+    const group = new THREE.Group();
+    
+    // Create roses
+    for (let i = 0; i < 20; i++) {
+      const roseGroup = new THREE.Group();
+      
+      // Rose petals
+      for (let j = 0; j < 8; j++) {
+        const petalGeometry = new THREE.SphereGeometry(2, 8, 8);
+        petalGeometry.scale(1, 0.5, 0.3);
+        
+        const petalMaterial = new THREE.MeshPhongMaterial({
+          color: new THREE.Color().setHSL(0.95, 1, 0.4 + Math.random() * 0.2),
+          emissive: 0xff0066,
+          emissiveIntensity: 0.2
+        });
+        
+        const petal = new THREE.Mesh(petalGeometry, petalMaterial);
+        petal.rotation.z = (j / 8) * Math.PI * 2;
+        petal.position.x = Math.cos((j / 8) * Math.PI * 2) * 1.5;
+        petal.position.y = Math.sin((j / 8) * Math.PI * 2) * 1.5;
+        roseGroup.add(petal);
+      }
+      
+      roseGroup.position.set(
+        (Math.random() - 0.5) * 40,
+        (Math.random() - 0.5) * 20,
+        (Math.random() - 0.5) * 40
+      );
+      roseGroup.userData.rotationSpeed = Math.random() * 0.02;
+      group.add(roseGroup);
+    }
+    
+    // Falling petals
+    const petalGeometry = new THREE.BufferGeometry();
+    const petalCount = 500;
+    const petalPositions = new Float32Array(petalCount * 3);
+    
+    for (let i = 0; i < petalCount; i++) {
+      petalPositions[i * 3] = (Math.random() - 0.5) * 60;
+      petalPositions[i * 3 + 1] = Math.random() * 40;
+      petalPositions[i * 3 + 2] = (Math.random() - 0.5) * 60;
+    }
+    
+    petalGeometry.setAttribute('position', new THREE.BufferAttribute(petalPositions, 3));
+    
+    const petalMaterial = new THREE.PointsMaterial({
+      size: 1.5,
+      color: 0xff66aa,
+      transparent: true,
+      opacity: 0.7,
+      blending: THREE.AdditiveBlending
+    });
+    
+    const fallingPetals = new THREE.Points(petalGeometry, petalMaterial);
+    group.add(fallingPetals);
+    
+    this.visualizers.roseGarden = group;
+  }
+
+  createAurora() {
+    const group = new THREE.Group();
+    
+    // Create aurora curtains
+    for (let k = 0; k < 5; k++) {
+      const geometry = new THREE.PlaneGeometry(80, 40, 50, 20);
+      const positions = geometry.attributes.position;
+      
+      for (let i = 0; i < positions.count; i++) {
+        const x = positions.getX(i);
+        const y = positions.getY(i);
+        positions.setZ(i, Math.sin(x * 0.1) * 5);
+      }
+      
+      const material = new THREE.MeshBasicMaterial({
+        color: new THREE.Color().setHSL(0.4 + k * 0.1, 1, 0.5),
+        transparent: true,
+        opacity: 0.3,
+        side: THREE.DoubleSide,
+        blending: THREE.AdditiveBlending
+      });
+      
+      const aurora = new THREE.Mesh(geometry, material);
+      aurora.position.y = k * 5 - 10;
+      aurora.position.z = -k * 10;
+      aurora.userData.offset = k;
+      group.add(aurora);
+    }
+    
+    this.visualizers.aurora = group;
+  }
+
+  createButterflies() {
+    const group = new THREE.Group();
+    
+    // Create butterflies
+    for (let i = 0; i < 30; i++) {
+      const butterflyGroup = new THREE.Group();
+      
+      // Wings
+      const wingGeometry = new THREE.PlaneGeometry(4, 3);
+      const wingMaterial = new THREE.MeshPhongMaterial({
+        color: new THREE.Color().setHSL(Math.random(), 0.8, 0.6),
+        emissive: new THREE.Color().setHSL(Math.random(), 1, 0.3),
+        emissiveIntensity: 0.3,
+        side: THREE.DoubleSide,
+        transparent: true,
+        opacity: 0.8
+      });
+      
+      const leftWing = new THREE.Mesh(wingGeometry, wingMaterial);
+      leftWing.position.x = -2;
+      butterflyGroup.add(leftWing);
+      
+      const rightWing = new THREE.Mesh(wingGeometry, wingMaterial.clone());
+      rightWing.position.x = 2;
+      butterflyGroup.add(rightWing);
+      
+      // Body
+      const bodyGeometry = new THREE.CylinderGeometry(0.3, 0.3, 3);
+      const bodyMaterial = new THREE.MeshPhongMaterial({ color: 0x333333 });
+      const body = new THREE.Mesh(bodyGeometry, bodyMaterial);
+      butterflyGroup.add(body);
+      
+      butterflyGroup.position.set(
+        (Math.random() - 0.5) * 50,
+        (Math.random() - 0.5) * 30,
+        (Math.random() - 0.5) * 50
+      );
+      
+      butterflyGroup.userData = {
+        speed: Math.random() * 0.5 + 0.5,
+        amplitude: Math.random() * 10 + 5,
+        phase: Math.random() * Math.PI * 2
+      };
+      
+      group.add(butterflyGroup);
+    }
+    
+    this.visualizers.butterflies = group;
+  }
+
+  createCrystalRain() {
+    const group = new THREE.Group();
+    
+    // Create crystals
+    for (let i = 0; i < 100; i++) {
+      const geometry = new THREE.OctahedronGeometry(1, 0);
+      const material = new THREE.MeshPhysicalMaterial({
+        color: new THREE.Color().setHSL(0.6, 0.5, 0.7),
+        metalness: 0.5,
+        roughness: 0.1,
+        transparent: true,
+        opacity: 0.8,
+        envMapIntensity: 1
+      });
+      
+      const crystal = new THREE.Mesh(geometry, material);
+      crystal.position.set(
+        (Math.random() - 0.5) * 60,
+        Math.random() * 50,
+        (Math.random() - 0.5) * 60
+      );
+      crystal.rotation.set(
+        Math.random() * Math.PI,
+        Math.random() * Math.PI,
+        Math.random() * Math.PI
+      );
+      crystal.scale.setScalar(Math.random() * 2 + 0.5);
+      crystal.userData.fallSpeed = Math.random() * 2 + 1;
+      crystal.userData.rotationSpeed = {
+        x: Math.random() * 0.02,
+        y: Math.random() * 0.02,
+        z: Math.random() * 0.02
+      };
+      
+      group.add(crystal);
+    }
+    
+    this.visualizers.crystalRain = group;
+  }
+
+  setVisualizer(type) {
+    // Hide all visualizers
+    Object.values(this.visualizers).forEach(viz => {
+      viz.visible = false;
+    });
+    
+    // Show selected visualizer
+    if (this.visualizers[type]) {
+      this.visualizers[type].visible = true;
+      this.currentViz = type;
+    }
+    
+    // Add all to scene if not already
+    Object.values(this.visualizers).forEach(viz => {
+      if (!viz.parent) {
+        this.scene.add(viz);
+      }
+    });
+  }
+
+  create3DBackground(imageUrl) {
+    const loader = new THREE.TextureLoader();
+    loader.load(imageUrl, (texture) => {
+      // Remove old background
+      if (this.bgMesh) {
+        this.scene.remove(this.bgMesh);
+      }
+      
+      // Create 3D layered background
+      const enable3D = document.getElementById('enable3DBg').checked;
+      
+      if (enable3D) {
+        // Create multiple layers for depth
+        for (let i = 0; i < 5; i++) {
+          const geometry = new THREE.PlaneGeometry(100, 60);
+          const material = new THREE.MeshBasicMaterial({
+            map: texture,
+            transparent: true,
+            opacity: 0.3 - i * 0.05,
+            side: THREE.DoubleSide
+          });
+          
+          const plane = new THREE.Mesh(geometry, material);
+          plane.position.z = -60 - i * 10;
+          plane.scale.setScalar(1 + i * 0.2);
+          
+          if (i === 0) {
+            this.bgMesh = plane;
+          }
+          
+          this.scene.add(plane);
         }
+      } else {
+        // Simple background
+        const geometry = new THREE.PlaneGeometry(100, 60);
+        const material = new THREE.MeshBasicMaterial({
+          map: texture,
+          transparent: true,
+          opacity: 0.5
+        });
+        
+        this.bgMesh = new THREE.Mesh(geometry, material);
+        this.bgMesh.position.z = -80;
+        this.scene.add(this.bgMesh);
+      }
+    });
+  }
 
-        // Анимация сердец
-        if (currentViz === 'crystalHearts') {
-            visualizerGroup.children.forEach((obj) => {
-                if (obj.type === "Mesh") {
-                    obj.scale.setScalar(0.2 + bass * 0.3);
-                    obj.rotation.y += 0.01 + (mid * 0.05);
-                }
-            });
+  updateVisualizers() {
+    if (!this.analyser) return;
+    
+    this.analyser.getByteFrequencyData(this.dataArray);
+    
+    const bass = this.getFrequencyRange(0, 10);
+    const mid = this.getFrequencyRange(10, 100);
+    const treble = this.getFrequencyRange(100, 512);
+    const time = this.clock.getElapsedTime();
+    
+    // Update current visualizer
+    switch(this.currentViz) {
+      case 'heartPulse':
+        this.updateHeartPulse(bass, mid, treble, time);
+        break;
+      case 'starryNight':
+        this.updateStarryNight(bass, mid, treble, time);
+        break;
+      case 'roseGarden':
+        this.updateRoseGarden(bass, mid, treble, time);
+        break;
+      case 'aurora':
+        this.updateAurora(bass, mid, treble, time);
+        break;
+      case 'butterflies':
+        this.updateButterflies(bass, mid, treble, time);
+        break;
+      case 'crystalRain':
+        this.updateCrystalRain(bass, mid, treble, time);
+        break;
+    }
+    
+    // Update lights
+    const theme = this.colorThemes[this.currentTheme];
+    this.pointLight1.intensity = 2 + bass * 3;
+    this.pointLight2.intensity = 2 + mid * 3;
+    this.pointLight1.color.setHex(theme.primary);
+    this.pointLight2.color.setHex(theme.secondary);
+    
+        // Camera movement
+    this.camera.position.x = Math.sin(time * 0.2) * 5;
+    this.camera.position.y = Math.cos(time * 0.3) * 3;
+    this.camera.lookAt(0, 0, 0);
+    
+    // Rotate camera around scene for dynamic view
+    const cameraRadius = 60 + bass * 20;
+    this.camera.position.z = Math.cos(time * 0.1) * cameraRadius;
+    
+    // Post-processing bloom effect intensity
+    if (this.bloomPass) {
+        this.bloomPass.strength = 1.5 + bass * 2;
+        this.bloomPass.radius = 0.4 + mid * 0.3;
+    }
+    
+    // Particle system updates
+    if (this.particleSystem) {
+        const positions = this.particleSystem.geometry.attributes.position.array;
+        const colors = this.particleSystem.geometry.attributes.color.array;
+        
+        for (let i = 0; i < positions.length; i += 3) {
+            // Wave motion based on frequency
+            positions[i + 1] += Math.sin(time * 2 + positions[i] * 0.1) * bass * 0.5;
+            positions[i + 2] = Math.sin(time + i * 0.01) * (mid * 10);
+            
+            // Color pulsation
+            const colorIndex = i / 3;
+            colors[i] = Math.sin(time * 2 + colorIndex * 0.1) * 0.5 + 0.5;
+            colors[i + 1] = Math.cos(time * 3 + colorIndex * 0.1) * 0.5 + 0.5;
+            colors[i + 2] = (bass + mid) * 0.5;
         }
-
-        // Nebula Love
-        if (currentViz === 'nebulaLove' && visualizerGroup.children[0] && visualizerGroup.children[0].isPoints) {
-            const points = visualizerGroup.children[0];
-            const positions = points.geometry.attributes.position.array;
-            for (let i = 0; i < positions.length; i += 3) {
-                const r = Math.sqrt(positions[i]*positions[i] + positions[i+1]*positions[i+1] + positions[i+2]*positions[i+2]);
-                const factor = 1 + bass * 0.4 * Math.sin(Date.now()*0.001 + r*0.1);
-                positions[i] *= factor * 0.999;
-                positions[i+1] *= factor * 0.999;
-                positions[i+2] *= factor * 0.999;
-            }
-            points.geometry.attributes.position.needsUpdate = true;
-            visualizerGroup.rotation.y += 0.001 + mid * 0.01;
-        }
-
-        // HyperCube Pulse
-        if (currentViz === 'hyperCubePulse' && hyperCubeGroup && hyperCubeGroup.children[0]) {
-            const lineSegments = hyperCubeGroup.children[0];
-            const positions = lineSegments.geometry.attributes.position.array;
-            const edges = lineSegments.userData.edges;
-
-            const time = Date.now() * 0.001;
-            const angleXY = time * 0.5;
-            const angleXW = time * 0.3 + high * 2;
-
-            const depth = 8;
-            const vExtra = bass * 2;
-
-            let idx = 0;
-
-            edges.forEach(([a, b]) => {
-                let pA4 = rotate4D(hyperCubeVertices4D[a], angleXY, angleXW);
-                let pB4 = rotate4D(hyperCubeVertices4D[b], angleXY, angleXW);
-
-                let pA3, pB3;
-
-                if (dimensionMode === '3D') {
-                    pA3 = project4Dto3D(pA4, depth);
-                    pB3 = project4Dto3D(pB4, depth);
-                } else if (dimensionMode === '2D') {
-                    const pA = project4Dto3D(pA4, depth);
-                    const pB = project4Dto3D(pB4, depth);
-                    pA3 = new THREE.Vector3(pA.x, pA.y, 0);
-                    pB3 = new THREE.Vector3(pB.x, pB.y, 0);
-                } else if (dimensionMode === '4D') {
-                    pA3 = project4Dto3D(pA4, depth);
-                    pB3 = project4Dto3D(pB4, depth);
-                } else { // 5D
-                    const pA5 = [pA4[0], pA4[1], pA4[2], pA4[3], vExtra];
-                    const pB5 = [pB4[0], pB4[1], pB4[2], pB4[3], vExtra];
-                    pA3 = project5Dto3D(pA5, depth);
-                    pB3 = project5Dto3D(pB5, depth);
-                }
-
-                // движение
-                if (movementMode === 'orbit') {
-                    const r = 1 + bass * 0.5;
-                    pA3.x *= r; pA3.y *= r; pA3.z *= r;
-                    pB3.x *= r; pB3.y *= r; pB3.z *= r;
-                } else if (movementMode === 'pulse') {
-                    const s = 1 + Math.sin(time * 4) * bass * 0.8;
-                    pA3.multiplyScalar(s);
-                    pB3.multiplyScalar(s);
-                } else if (movementMode === 'spin') {
-                    const rot = time * 0.7;
-                    const cosR = Math.cos(rot), sinR = Math.sin(rot);
-                    const ax = pA3.x * cosR - pA3.z * sinR;
-                    const az = pA3.x * sinR + pA3.z * cosR;
-                    const bx = pB3.x * cosR - pB3.z * sinR;
-                    const bz = pB3.x * sinR + pB3.z * cosR;
-                    pA3.x = ax; pA3.z = az;
-                    pB3.x = bx; pB3.z = bz;
-                } else if (movementMode === 'chaos') {
-                    pA3.x += (Math.random()-0.5) * bass;
-                    pA3.y += (Math.random()-0.5) * bass;
-                    pB3.x += (Math.random()-0.5) * bass;
-                    pB3.y += (Math.random()-0.5) * bass;
-                }
-
-                positions[idx++] = pA3.x;
-                positions[idx++] = pA3.y;
-                positions[idx++] = pA3.z;
-                positions[idx++] = pB3.x;
-                positions[idx++] = pB3.y;
-                positions[idx++] = pB3.z;
-            });
-
-            lineSegments.geometry.attributes.position.needsUpdate = true;
+        
+        this.particleSystem.geometry.attributes.position.needsUpdate = true;
+        this.particleSystem.geometry.attributes.color.needsUpdate = true;
+        this.particleSystem.rotation.y += 0.001 + bass * 0.01;
+    }
+    
+    // Visualizer-specific animations
+    switch(this.currentVisualizer) {
+        case 'crystalHearts':
+            this.animateCrystalHearts(bass, mid, treble, time);
+            break;
+        case 'spatialImage':
+            this.animateSpatialImage(bass, mid, treble, time);
+            break;
+        case 'nebulaLove':
+            this.animateNebulaLove(bass, mid, treble, time);
+            break;
+        case 'digitalRain':
+            this.animateDigitalRain(bass, mid, treble, time);
+            break;
+        case 'geometricDance':
+            this.animateGeometricDance(bass, mid, treble, time);
+            break;
+    }
+    
+    // Update background gradient
+    if (this.backgroundMesh) {
+        const gradientUniforms = this.backgroundMesh.material.uniforms;
+        if (gradientUniforms) {
+            gradientUniforms.time.value = time;
+            gradientUniforms.bass.value = bass;
+            gradientUniforms.mid.value = mid;
         }
     }
-
-    renderer.render(scene, camera);
+    
+    // Render scene
+    if (this.composer) {
+        this.composer.render();
+    } else {
+        this.renderer.render(this.scene, this.camera);
+    }
 }
 
-function onWindowResize() {
-    camera.aspect = (window.innerWidth - 300) / window.innerHeight;
-    camera.updateProjectionMatrix();
-    renderer.setSize(window.innerWidth - 300, window.innerHeight);
+animateCrystalHearts(bass, mid, treble, time) {
+    this.visualizerGroup.children.forEach((heart, index) => {
+        if (heart.isMesh) {
+            // Heartbeat effect
+            const baseScale = 0.2;
+            const pulseScale = baseScale + Math.sin(time * 10 + index * 0.5) * bass * 0.3;
+            heart.scale.setScalar(pulseScale);
+            
+            // Floating motion
+            heart.position.y += Math.sin(time * 2 + index) * 0.1;
+            heart.position.x += Math.cos(time * 1.5 + index) * 0.05;
+            
+            // Rotation
+            heart.rotation.y += 0.01 + mid * 0.05;
+            heart.rotation.z = Math.sin(time + index) * 0.1;
+            
+            // Material emission
+            if (heart.material.emissive) {
+                heart.material.emissiveIntensity = bass * 2;
+                heart.material.emissive.setHSL((time + index * 0.1) % 1, 1, 0.5);
+            }
+        }
+    });
 }
 
-function formatTime(seconds) {
-    if (!seconds) return "00:00";
-    const m = Math.floor(seconds / 60);
-    const s = Math.floor(seconds % 60);
-    return `${m < 10 ? '0'+m : m}:${s < 10 ? '0'+s : s}`;
+animateSpatialImage(bass, mid, treble, time) {
+    if (!this.spatialPoints) return;
+    
+    const positions = this.spatialPoints.geometry.attributes.position.array;
+    const originalPositions = this.spatialPoints.geometry.userData.originalPositions;
+    
+    if (originalPositions) {
+        for (let i = 0; i < positions.length; i += 3) {
+            // Z-depth based on audio
+            const depth = this.depthRange || 20;
+            positions[i + 2] = originalPositions[i + 2] + 
+                              Math.sin(i * 0.01 + time * 2) * bass * depth;
+            
+            // Ripple effect from center
+            const x = originalPositions[i];
+            const y = originalPositions[i + 1];
+            const distance = Math.sqrt(x * x + y * y);
+            const ripple = Math.sin(distance * 0.1 - time * 5) * mid * 2;
+            
+            positions[i] = originalPositions[i] + ripple * (x / distance || 0);
+            positions[i + 1] = originalPositions[i + 1] + ripple * (y / distance || 0);
+        }
+        
+        this.spatialPoints.geometry.attributes.position.needsUpdate = true;
+    }
+    
+    // Rotate entire image
+    this.spatialPoints.rotation.y = Math.sin(time * 0.5) * 0.2;
+    this.spatialPoints.rotation.x = Math.cos(time * 0.3) * 0.1;
 }
 
-init();
-createHearts(); // По умолчанию
+animateNebulaLove(bass, mid, treble, time) {
+    // Nebula cloud animation
+    if (this.nebulaCloud) {
+        this.nebulaCloud.children.forEach((cloud, i) => {
+            cloud.material.opacity = 0.3 + bass * 0.5;
+            cloud.scale.setScalar(1 + mid * 0.5);
+            cloud.rotation.z += 0.001 + treble * 0.01;
+            
+            // Color shifting
+            const hue = (time * 0.1 + i * 0.1) % 1;
+            cloud.material.color.setHSL(hue, 0.8, 0.5 + bass * 0.3);
+        });
+    }
+    
+    // Star particles
+    if (this.starField) {
+        const positions = this.starField.geometry.attributes.position.array;
+        for (let i = 0; i < positions.length; i += 3) {
+            positions[i + 2] += (Math.random() - 0.5) * bass * 2;
+            
+            // Reset stars that go too far
+            if (Math.abs(positions[i + 2]) > 50) {
+                positions[i + 2] = (Math.random() - 0.5) * 100;
+            }
+        }
+        this.starField.geometry.attributes.position.needsUpdate = true;
+        this.starField.material.size = 0.5 + bass * 2;
+    }
+}
+
+animateDigitalRain(bass, mid, treble, time) {
+    // Matrix-style digital rain
+    if (this.digitalRainParticles) {
+        const positions = this.digitalRainParticles.geometry.attributes.position.array;
+        const colors = this.digitalRainParticles.geometry.attributes.color.array;
+        
+        for (let i = 0; i < positions.length; i += 3) {
+            // Fall speed based on bass
+            positions[i + 1] -= 0.5 + bass * 2;
+            
+            // Reset at bottom
+            if (positions[i + 1] < -50) {
+                positions[i + 1] = 50;
+                positions[i] = (Math.random() - 0.5) * 100;
+            }
+            
+            // Color gradient (green to white)
+            const brightness = (positions[i + 1] + 50) / 100;
+            colors[i] = brightness * mid;
+            colors[i + 1] = brightness;
+            colors[i + 2] = brightness * treble;
+        }
+        
+        this.digitalRainParticles.geometry.attributes.position.needsUpdate = true;
+        this.digitalRainParticles.geometry.attributes.color.needsUpdate = true;
+    }
+}
+
+animateGeometricDance(bass, mid, treble, time) {
+    // Geometric shapes dancing
+    if (this.geometricShapes) {
+        this.geometricShapes.children.forEach((shape, index) => {
+            // Spiral movement
+            const angle = time * 2 + index * (Math.PI * 2 / this.geometricShapes.children.length);
+            const radius = 20 + bass * 30;
+            
+            shape.position.x = Math.cos(angle) * radius;
+            shape.position.z = Math.sin(angle) * radius;
+            shape.position.y = Math.sin(time * 3 + index) * 10 * mid;
+            
+            // Rotation based on frequencies
+            shape.rotation.x += bass * 0.1;
+            shape.rotation.y += mid * 0.1;
+            shape.rotation.z += treble * 0.1;
+            
+            // Scale pulsation
+            const scale = 1 + Math.sin(time * 10 + index) * bass * 0.5;
+            shape.scale.setScalar(scale);
+            
+            // Wireframe mode on high treble
+            if (shape.material) {
+                shape.material.wireframe = treble > 0.7;
+            }
+        });
+    }
+}
+
+// Cleanup method
+    dispose() {
+        // Stop animation loop
+        if (this.animationId) {
+            cancelAnimationFrame(this.animationId);
+        }
+        
+        // Dispose of geometries and materials
+        this.scene.traverse((child) => {
+            if (child.geometry) child.geometry.dispose();
+            if (child.material) {
+                if (Array.isArray(child.material)) {
+                    child.material.forEach(mat => mat.dispose());
+                } else {
+                    child.material.dispose();
+                }
+            }
+        });
+        
+        // Dispose renderer
+        this.renderer.dispose();
+        
+        // Clear references
+        this.scene = null;
+        this.camera = null;
+        this.renderer = null;
+    }
+} // Закрывающая скобка класса LoveVisualizer
+
+// Инициализация при загрузке страницы
+document.addEventListener('DOMContentLoaded', () => {
+    const visualizer = new LoveVisualizer();
+    
+    // Cleanup on page unload
+    window.addEventListener('beforeunload', () => {
+        visualizer.dispose();
+    });
+});
+
 </script>
 </body>
 </html>
