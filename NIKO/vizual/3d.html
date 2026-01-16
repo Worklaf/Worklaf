@@ -55,13 +55,23 @@
             <option value="crystalHearts">💎 Crystal Hearts (Романтика)</option>
             <option value="spatialImage">🌌 Spatial Photo (Объемное фото)</option>
             <option value="nebulaLove">☁️ Nebula Love (Туманность)</option>
+            <option value="hyperCubePulse">🧊 HyperCube Pulse (4D/5D)</option>
         </select>
 
-        <label>4. ФОРМАТ ЭКСПОРТА</label>
-        <select id="export-format">
-            <option value="9/16">TikTok / Reels (9:16)</option>
-            <option value="16/9">YouTube (16:9)</option>
-            <option value="1/1">Instagram Square (1:1)</option>
+        <label>РЕЖИМ ДВИЖЕНИЯ</label>
+        <select id="movement-mode">
+            <option value="orbit">Орбита</option>
+            <option value="spin">Вращение</option>
+            <option value="pulse">Пульсация</option>
+            <option value="chaos">Хаос</option>
+        </select>
+
+        <label>ИЗМЕРЕНИЯ</label>
+        <select id="dimension-mode">
+            <option value="2D">2D проекция</option>
+            <option value="3D" selected>3D</option>
+            <option value="4D">4D проекция</option>
+            <option value="5D">5D проекция</option>
         </select>
 
         <label>ИНТЕНСИВНОСТЬ 3D</label>
@@ -97,6 +107,14 @@ let isPlaying = false;
 let recorder, recordedChunks = [];
 let spatialPoints = null;
 
+let currentViz = 'crystalHearts';
+let movementMode = 'orbit';
+let dimensionMode = '3D';
+
+// данные для гиперкуба
+let hyperCubeGroup = null;
+let hyperCubeVertices4D = [];
+
 // Инициализация
 function init() {
     scene = new THREE.Scene();
@@ -113,6 +131,7 @@ function init() {
     window.addEventListener('resize', onWindowResize);
     setupAudioControls();
     setupVisualizerChange();
+    setupModeControls();
     animate();
 }
 
@@ -137,7 +156,6 @@ function createSpatialImage(imgElement) {
             const r = imageData[idx] / 255;
             const g = imageData[idx+1] / 255;
             const b = imageData[idx+2] / 255;
-            const brightness = (r + g + b) / 3;
 
             positions.push((x - w/2) * 0.5, (h/2 - y) * 0.5, 0);
             colors.push(r, g, b);
@@ -155,6 +173,8 @@ function createSpatialImage(imgElement) {
 // 2. РОМАНТИЧЕСКИЙ ВИЗУАЛИЗАТОР: Crystal Hearts
 function createHearts() {
     visualizerGroup.clear();
+    hyperCubeGroup = null;
+
     const heartShape = new THREE.Shape();
     heartShape.moveTo(0, 0);
     heartShape.bezierCurveTo(0, -3, -5, -3, -5, 0);
@@ -174,6 +194,122 @@ function createHearts() {
     const light = new THREE.PointLight(0xffffff, 1);
     light.position.set(0,0,20);
     visualizerGroup.add(light);
+}
+
+// 3. ТУМАННОСТЬ: Nebula Love
+function createNebula() {
+    visualizerGroup.clear();
+    hyperCubeGroup = null;
+
+    const geometry = new THREE.BufferGeometry();
+    const count = 4000;
+    const positions = new Float32Array(count * 3);
+    const colors = new Float32Array(count * 3);
+
+    for (let i = 0; i < count; i++) {
+        const r = 20 * Math.random();
+        const theta = Math.random() * Math.PI * 2;
+        const phi = Math.acos(2 * Math.random() - 1);
+
+        const x = r * Math.sin(phi) * Math.cos(theta);
+        const y = r * Math.sin(phi) * Math.sin(theta);
+        const z = r * Math.cos(phi);
+
+        positions[i*3] = x;
+        positions[i*3+1] = y;
+        positions[i*3+2] = z;
+
+        const c = 0.4 + Math.random() * 0.6;
+        colors[i*3] = c;
+        colors[i*3+1] = c * 0.4;
+        colors[i*3+2] = 1.0;
+    }
+
+    geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+    geometry.setAttribute('color', new THREE.BufferAttribute(colors, 3));
+
+    const material = new THREE.PointsMaterial({
+        size: 0.25,
+        vertexColors: true,
+        transparent: true,
+        opacity: 0.9,
+        depthWrite: false
+    });
+
+    const points = new THREE.Points(geometry, material);
+    visualizerGroup.add(points);
+}
+
+// 4. МОЙ ВИЗУАЛИЗАТОР: HyperCube Pulse (4D/5D)
+function createHyperCube() {
+    visualizerGroup.clear();
+    hyperCubeGroup = new THREE.Group();
+    visualizerGroup.add(hyperCubeGroup);
+
+    hyperCubeVertices4D = [];
+
+    // вершины 4D-гиперкуба (tesseract): все комбинации ±1 по 4 осям
+    const size = 6;
+    const base = [-1, 1];
+    const vertices = [];
+    for (let x of base) for (let y of base) for (let z of base) for (let w of base) {
+        vertices.push([x, y, z, w]);
+    }
+
+    hyperCubeVertices4D = vertices.map(v => v.map(c => c * size * 0.5));
+
+    const material = new THREE.LineBasicMaterial({ color: 0x66ccff, transparent: true, opacity: 0.9 });
+
+    // рёбра: соединяем вершины, отличающиеся на 1 координату
+    const edges = [];
+    for (let i = 0; i < hyperCubeVertices4D.length; i++) {
+        for (let j = i+1; j < hyperCubeVertices4D.length; j++) {
+            let diff = 0;
+            for (let k = 0; k < 4; k++) {
+                if (hyperCubeVertices4D[i][k] !== hyperCubeVertices4D[j][k]) diff++;
+            }
+            if (diff === 1) edges.push([i, j]);
+        }
+    }
+
+    const geometry = new THREE.BufferGeometry();
+    const positions = new Float32Array(edges.length * 2 * 3);
+    geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+
+    const lineSegments = new THREE.LineSegments(geometry, material);
+    hyperCubeGroup.add(lineSegments);
+}
+
+// 4D вращение
+function rotate4D(point4, angleXY, angleXW) {
+    let [x, y, z, w] = point4;
+
+    // XY
+    let cosA = Math.cos(angleXY), sinA = Math.sin(angleXY);
+    let x1 = x * cosA - y * sinA;
+    let y1 = x * sinA + y * cosA;
+
+    // XW
+    let cosB = Math.cos(angleXW), sinB = Math.sin(angleXW);
+    let x2 = x1 * cosB - w * sinB;
+    let w1 = x1 * sinB + w * cosB;
+
+    return [x2, y1, z, w1];
+}
+
+// 4D -> 3D
+function project4Dto3D(point4, distance = 8) {
+    const [x, y, z, w] = point4;
+    const k = distance / (distance - w);
+    return new THREE.Vector3(x * k, y * k, z * k);
+}
+
+// 5D -> 3D (добавляем параметр v как масштаб)
+function project5Dto3D(point5, distance = 8) {
+    const [x, y, z, w, v] = point5;
+    const k = distance / (distance - w);
+    const scale = 1 + v * 0.4;
+    return new THREE.Vector3(x * k * scale, y * k * scale, z * k * scale);
 }
 
 // УПРАВЛЕНИЕ АУДИО И ПЕРЕМОТКА
@@ -254,11 +390,10 @@ startRecBtn.onclick = async () => {
 
     recorder = new MediaRecorder(stream, { mimeType: 'video/webm;codecs=vp9', videoBitsPerSecond: 8000000 });
     recordedChunks = [];
-
     recorder.ondataavailable = e => recordedChunks.push(e.data);
     recorder.onstop = saveVideo;
-
     recorder.start();
+
     startRecBtn.style.display = 'none';
     stopRecBtn.style.display = 'block';
     recStatus.style.display = 'block';
@@ -269,7 +404,7 @@ stopRecBtn.onclick = () => {
     startRecBtn.style.display = 'block';
     stopRecBtn.style.display = 'none';
     recStatus.style.display = 'none';
-    onWindowResize(); // Возвращаем размер экрана
+    onWindowResize(); // вернуть размер
 };
 
 function saveVideo() {
@@ -282,39 +417,157 @@ function saveVideo() {
 }
 
 function setupVisualizerChange() {
-    document.getElementById('viz-type').onchange = (e) => {
-        if (e.target.value === 'crystalHearts') createHearts();
-        else visualizerGroup.clear();
+    const select = document.getElementById('viz-type');
+    select.onchange = (e) => {
+        currentViz = e.target.value;
+        if (currentViz === 'crystalHearts') createHearts();
+        else if (currentViz === 'nebulaLove') createNebula();
+        else if (currentViz === 'hyperCubePulse') createHyperCube();
+        else if (currentViz === 'spatialImage') {
+            visualizerGroup.clear();
+            hyperCubeGroup = null;
+        }
+    };
+}
+
+function setupModeControls() {
+    document.getElementById('movement-mode').onchange = (e) => {
+        movementMode = e.target.value;
+    };
+    document.getElementById('dimension-mode').onchange = (e) => {
+        dimensionMode = e.target.value;
     };
 }
 
 function animate() {
     requestAnimationFrame(animate);
-    
+
+    let bass = 0, mid = 0, high = 0;
+
     if (analyser) {
         analyser.getByteFrequencyData(dataArray);
-        const bass = dataArray[2] / 255;
-        const mid = dataArray[10] / 255;
+        bass = dataArray[2] / 255;
+        mid = dataArray[10] / 255;
+        high = dataArray[40] / 255;
 
-        // Анимация пространственного фото
+        // Spatial Image
         if (spatialPoints) {
             const depth = document.getElementById('depth-range').value;
             const positions = spatialPoints.geometry.attributes.position.array;
             for (let i = 0; i < positions.length; i += 3) {
-                // Двигаем точки по оси Z в зависимости от баса
                 positions[i + 2] = Math.sin(i + Date.now() * 0.001) * (bass * depth);
             }
             spatialPoints.geometry.attributes.position.needsUpdate = true;
             spatialPoints.rotation.y = Math.sin(Date.now() * 0.0005) * 0.2;
         }
 
-        // Анимация сердец
-        visualizerGroup.children.forEach((obj, i) => {
-            if (obj.type === "Mesh") {
+        // Hearts
+        visualizerGroup.children.forEach((obj) => {
+            if (obj.type === "Mesh" && currentViz === 'crystalHearts') {
                 obj.scale.setScalar(0.2 + bass * 0.3);
                 obj.rotation.y += 0.01 + (mid * 0.05);
             }
         });
+
+        // Nebula
+        if (currentViz === 'nebulaLove' && visualizerGroup.children[0] && visualizerGroup.children[0].isPoints) {
+            const points = visualizerGroup.children[0];
+            const positions = points.geometry.attributes.position.array;
+            for (let i = 0; i < positions.length; i += 3) {
+                const r = Math.sqrt(positions[i]*positions[i] + positions[i+1]*positions[i+1] + positions[i+2]*positions[i+2]);
+                const factor = 1 + bass * 0.4 * Math.sin(Date.now()*0.001 + r*0.1);
+                positions[i] *= factor * 0.999;
+                positions[i+1] *= factor * 0.999;
+                positions[i+2] *= factor * 0.999;
+            }
+            points.geometry.attributes.position.needsUpdate = true;
+            visualizerGroup.rotation.y += 0.001 + mid * 0.01;
+        }
+
+        // HyperCube Pulse
+        if (currentViz === 'hyperCubePulse' && hyperCubeGroup && hyperCubeGroup.children[0]) {
+            const lineSegments = hyperCubeGroup.children[0];
+            const positions = lineSegments.geometry.attributes.position.array;
+
+            const time = Date.now() * 0.001;
+            const angleXY = time * 0.5;
+            const angleXW = time * 0.3 + high * 2;
+
+            const depth = 8;
+            const vExtra = bass * 2;
+
+            let idx = 0;
+            // пересчёт рёбер
+            const edges = [];
+            for (let i = 0; i < hyperCubeVertices4D.length; i++) {
+                for (let j = i+1; j < hyperCubeVertices4D.length; j++) {
+                    let diff = 0;
+                    for (let k = 0; k < 4; k++) {
+                        if (hyperCubeVertices4D[i][k] !== hyperCubeVertices4D[j][k]) diff++;
+                    }
+                    if (diff === 1) edges.push([i, j]);
+                }
+            }
+
+            edges.forEach(([a, b]) => {
+                let pA4 = rotate4D(hyperCubeVertices4D[a], angleXY, angleXW);
+                let pB4 = rotate4D(hyperCubeVertices4D[b], angleXY, angleXW);
+
+                let pA3, pB3;
+
+                if (dimensionMode === '3D') {
+                    pA3 = project4Dto3D(pA4, depth);
+                    pB3 = project4Dto3D(pB4, depth);
+                } else if (dimensionMode === '2D') {
+                    const pA = project4Dto3D(pA4, depth);
+                    const pB = project4Dto3D(pB4, depth);
+                    pA3 = new THREE.Vector3(pA.x, pA.y, 0);
+                    pB3 = new THREE.Vector3(pB.x, pB.y, 0);
+                } else if (dimensionMode === '4D') {
+                    pA3 = project4Dto3D(pA4, depth);
+                    pB3 = project4Dto3D(pB4, depth);
+                } else { // 5D
+                    const pA5 = [pA4[0], pA4[1], pA4[2], pA4[3], vExtra];
+                    const pB5 = [pB4[0], pB4[1], pB4[2], pB4[3], vExtra];
+                    pA3 = project5Dto3D(pA5, depth);
+                    pB3 = project5Dto3D(pB5, depth);
+                }
+
+                // движение
+                if (movementMode === 'orbit') {
+                    const r = 1 + bass * 0.5;
+                    pA3.x *= r; pA3.y *= r; pA3.z *= r;
+                    pB3.x *= r; pB3.y *= r; pB3.z *= r;
+                } else if (movementMode === 'pulse') {
+                    const s = 1 + Math.sin(time * 4) * bass * 0.8;
+                    pA3.multiplyScalar(s);
+                    pB3.multiplyScalar(s);
+                } else if (movementMode === 'spin') {
+                    const rot = time * 0.7;
+                    const cosR = Math.cos(rot), sinR = Math.sin(rot);
+                    const ax = pA3.x * cosR - pA3.z * sinR;
+                    const az = pA3.x * sinR + pA3.z * cosR;
+                    const bx = pB3.x * cosR - pB3.z * sinR;
+                    const bz = pB3.x * sinR + pB3.z * cosR;
+                    pA3.x = ax; pA3.z = az;
+                    pB3.x = bx; pB3.z = bz;
+                } else if (movementMode === 'chaos') {
+                    pA3.x += (Math.random()-0.5) * bass;
+                    pA3.y += (Math.random()-0.5) * bass;
+                    pB3.x += (Math.random()-0.5) * bass;
+                    pB3.y += (Math.random()-0.5) * bass;
+                }
+
+                positions[idx++] = pA3.x;
+                positions[idx++] = pA3.y;
+                positions[idx++] = pA3.z;
+                positions[idx++] = pB3.x;
+                positions[idx++] = pB3.y;
+                positions[idx++] = pB3.z;
+            });
+
+            lineSegments.geometry.attributes.position.needsUpdate = true;
+        }
     }
 
     renderer.render(scene, camera);
@@ -334,7 +587,7 @@ function formatTime(seconds) {
 }
 
 init();
-createHearts(); // По умолчанию
+createHearts(); // по умолчанию
 </script>
 </body>
 </html>
