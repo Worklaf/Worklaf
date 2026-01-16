@@ -766,7 +766,42 @@ select {
   <div>Objects: <span id="objects">0</span></div>
   <div>Triangles: <span id="triangles">0</span></div>
 </div>
-
+<div class="audio-buttons">
+  <button class="audio-btn" id="playBtn" onclick="togglePlay()">▶️</button>
+  <label for="audioFile" class="file-label">Choose Audio</label>
+  <input type="file" id="audioFile" class="file-input" accept="audio/*">
+  <button class="audio-btn" onclick="useMicrophone()">🎤</button>
+  <button class="audio-btn" onclick="exportScene()">📸</button>
+  <button class="audio-btn" onclick="toggleFullscreen()">⛶</button>
+  <button class="audio-btn" onclick="exportVideo()">📹</button> <!-- Новая кнопка для экспорта видео -->
+</div>
+  <div class="control-group">
+  <label>Video Size</label>
+  <select id="videoSize">
+    <option value="{ width: 1920, height: 1080 }">1920x1080 (Full HD)</option>
+    <option value="{ width: 1280, height: 720 }">1280x720 (HD)</option>
+    <option value="{ width: 1080, height: 1920 }">1080x1920 (Vertical)</option>
+    <option value="{ width: 1024, height: 576 }">1024x576 (WVGA)</option>
+    <option value="{ width: 960, height: 540 }">960x540 (HD)</option>
+    <option value="{ width: 854, height: 480 }">854x480 (WVGA)</option>
+    <option value="{ width: 640, height: 360 }">640x360 (nHD)</option>
+    <option value="{ width: 480, height: 360 }">480x360 (WVGA)</option>
+    <option value="{ width: 426, height: 240 }">426x240 (240p)</option>
+    <option value="{ width: 320, height: 180 }">320x180 (180p)</option>
+    <option value="{ width: 320, height: 240 }">320x240 (240p)</option>
+    <option value="{ width: 352, height: 288 }">352x288 (NTSC)</option>
+    <option value="{ width: 320, height: 240 }">320x240 (VGA)</option>
+    <option value="{ width: 640, height: 480 }">640x480 (VGA)</option>
+    <option value="{ width: 800, height: 450 }">800x450 (XGA)</option>
+    <option value="{ width: 1024, height: 768 }">1024x768 (XGA)</option>
+    <option value="{ width: 1280, height: 720 }">1280x720 (HD)</option>
+    <option value="{ width: 1366, height: 768 }">1366x768 (HD+)</option>
+    <option value="{ width: 1600, height: 900 }">1600x900 (HD+)</option>
+    <option value="{ width: 1920, height: 1080 }">1920x1080 (Full HD)</option>
+    <option value="{ width: 2560, height: 1440 }">2560x1440 (QHD)</option>
+    <option value="{ width: 3840, height: 2160 }">3840x2160 (4K)</option>
+  </select>
+</div>
 <script>
 class N1K0Visualizer {
   constructor() {
@@ -1686,7 +1721,48 @@ function togglePanel() {
   // Resize renderer
   setTimeout(() => visualizer.onResize(), 300);
 }
+async function exportVideo() {
+  if (!visualizer.audioBuffer || !visualizer.audioSource) {
+    alert('Please select an audio file first');
+    return;
+  }
 
+  const videoSize = document.getElementById('videoSize').value;
+  const backgroundImage = document.getElementById('background-image').src;
+
+  // Создаем видео элемент
+  const videoElement = document.createElement('video');
+  videoElement.width = videoSize.width;
+  videoElement.height = videoSize.height;
+  videoElement.style.position = 'absolute';
+  videoElement.style.top = '-9999px';
+
+  document.body.appendChild(videoElement);
+
+  // Создаем медиастрим из аудиоконтекста
+  const mediaStream = await navigator.mediaDevices.getDisplayMedia({ video: true });
+  const mediaStreamTrack = mediaStream.getVideoTracks()[0];
+  const mediaRecorder = new MediaRecorder(mediaStream);
+
+  mediaRecorder.ondataavailable = async (event) => {
+    const blob = event.data;
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `N1K0-visualizer-${Date.now()}.mp4`;
+    a.click();
+    URL.revokeObjectURL(url);
+    mediaStreamTrack.stop();
+    document.body.removeChild(videoElement);
+  };
+
+  mediaRecorder.start();
+
+  // Запускаем визуализатор и записываем видео
+  visualizer.playAudio();
+  visualizer.renderer.domElement.srcObject = mediaStream;
+  visualizer.renderer.domElement.play();
+}
 function togglePlay() {
   if (!visualizer.audioBuffer && !visualizer.audioSource) {
     alert('Please select an audio file first');
