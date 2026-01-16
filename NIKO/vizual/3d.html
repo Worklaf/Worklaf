@@ -3,13 +3,23 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>N1K∅ Romantic 3D Visualizer - Advanced Edition</title>
-<!-- Three.js Library -->
+<title>N1K∅ Romantic 3D Visualizer - Ultimate Edition</title>
+
+<!-- 1. Основная библиотека Three.js -->
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
-<!-- Three.js Post-processing modules -->
-<script src="https://unpkg.com/three@0.128.0/examples/js/postprocessing/EffectComposer.js"></script>
-<script src="https://unpkg.com/three@0.128.0/examples/js/postprocessing/RenderPass.js"></script>
-<script src="https://unpkg.com/three@0.128.0/examples/js/postprocessing/UnrealBloomPass.js"></script>
+
+<!-- 2. Шейдеры (ОБЯЗАТЕЛЬНО для Post-processing) -->
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/shaders/CopyShader.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/shaders/LuminosityHighPassShader.js"></script>
+
+<!-- 3. Ядро Post-processing -->
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/postprocessing/EffectComposer.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/postprocessing/ShaderPass.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/postprocessing/RenderPass.js"></script>
+
+<!-- 4. Сам эффект Bloom -->
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/postprocessing/UnrealBloomPass.js"></script>
+
 <style>
 * {
   margin: 0;
@@ -769,20 +779,36 @@ class RomanticVisualizer {
     
     this.currentTheme = 'romantic'; // Default color theme
     
-    this.init();
+    // Safety check: ensure init runs after DOM is ready
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', () => this.init());
+    } else {
+        this.init();
+    }
   }
 
   init() {
-    this.initThree();
-    this.initAudio();
-    this.initVisualizers();
-    this.initControls();
-    this.initWaveform();
-    this.animate();
-    
-    setTimeout(() => {
-      document.querySelector('.loading').style.display = 'none';
-    }, 2000);
+    try {
+        console.log("Starting initialization...");
+        this.initThree();
+        this.initAudio();
+        this.initVisualizers();
+        this.initControls();
+        this.initWaveform();
+        this.animate();
+        
+        console.log("Initialization successful.");
+        // Force hide loading screen
+        const loader = document.querySelector('.loading');
+        if (loader) loader.style.display = 'none';
+
+    } catch (e) {
+        console.error("CRITICAL ERROR during initialization:", e);
+        alert("An error occurred starting the visualizer. Check console for details.\nError: " + e.message);
+        // Force hide loading even on error so user can see UI
+        const loader = document.querySelector('.loading');
+        if (loader) loader.style.display = 'none';
+    }
   }
 
   initThree() {
@@ -829,17 +855,21 @@ class RomanticVisualizer {
     this.pointLight2.position.set(-20, -20, 20);
     this.scene.add(this.pointLight2);
 
-    // Post-processing
-    this.composer = new THREE.EffectComposer(this.renderer);
-    this.composer.addPass(new THREE.RenderPass(this.scene, this.camera));
+    // Post-processing setup with error checking
+    if (typeof THREE.EffectComposer !== 'undefined' && typeof THREE.UnrealBloomPass !== 'undefined') {
+        this.composer = new THREE.EffectComposer(this.renderer);
+        this.composer.addPass(new THREE.RenderPass(this.scene, this.camera));
 
-    this.bloomPass = new THREE.UnrealBloomPass(
-      new THREE.Vector2(window.innerWidth, window.innerHeight),
-      0.8, // strength
-      0.4, // radius
-      0.85 // threshold
-    );
-    this.composer.addPass(this.bloomPass);
+        this.bloomPass = new THREE.UnrealBloomPass(
+          new THREE.Vector2(window.innerWidth, window.innerHeight),
+          0.8, // strength
+          0.4, // radius
+          0.85 // threshold
+        );
+        this.composer.addPass(this.bloomPass);
+    } else {
+        console.warn("Post-processing scripts failed to load. Bloom effect disabled.");
+    }
     
     window.addEventListener('resize', () => this.onResize());
   }
@@ -858,6 +888,7 @@ class RomanticVisualizer {
     
     // Create audio element for playback control
     this.audioElement = new Audio();
+    this.audioElement.crossOrigin = "anonymous"; // Try to fix cross origin issues
     this.audioElement.addEventListener('timeupdate', () => this.updateProgress());
     this.audioElement.addEventListener('loadedmetadata', () => this.updateDuration());
     this.audioElement.addEventListener('ended', () => {
@@ -1751,6 +1782,11 @@ loadAudio(url) {
 togglePlay() {
     if (!this.audioElement || !this.audioElement.src) return;
     
+    // Audio Context Resume Hack for Browsers
+    if (this.audioContext.state === 'suspended') {
+        this.audioContext.resume();
+    }
+    
     const playBtn = document.getElementById('playBtn');
     if (this.audioElement.paused) {
         this.audioElement.play().then(() => {
@@ -1789,6 +1825,10 @@ seekAudio(event) {
 }
 
 useMicrophone(event) {
+    if (this.audioContext.state === 'suspended') {
+        this.audioContext.resume();
+    }
+
     // Stop any existing audio playing from file
     if (this.audioElement && !this.audioElement.paused) {
         this.audioElement.pause();
@@ -2040,16 +2080,17 @@ stopRecording() {
 } // Закрывающая скобка класса RomanticVisualizer
 
 // Инициализация при загрузке страницы
+// Make visualizer globally available for onclick handlers
+window.visualizer = null;
+
 document.addEventListener('DOMContentLoaded', () => {
-    // Сделать экземпляр visualizer глобально доступным
     window.visualizer = new RomanticVisualizer();
     
     // Cleanup on page unload
     window.addEventListener('beforeunload', () => {
-        window.visualizer.dispose();
+        if(window.visualizer) window.visualizer.dispose();
     });
 });
-
 </script>
 </body>
 </html>
