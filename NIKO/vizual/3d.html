@@ -277,6 +277,7 @@ function createHyperCube() {
     geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
 
     const lineSegments = new THREE.LineSegments(geometry, material);
+    lineSegments.userData.edges = edges;
     hyperCubeGroup.add(lineSegments);
 }
 
@@ -390,10 +391,11 @@ startRecBtn.onclick = async () => {
 
     recorder = new MediaRecorder(stream, { mimeType: 'video/webm;codecs=vp9', videoBitsPerSecond: 8000000 });
     recordedChunks = [];
+
     recorder.ondataavailable = e => recordedChunks.push(e.data);
     recorder.onstop = saveVideo;
-    recorder.start();
 
+    recorder.start();
     startRecBtn.style.display = 'none';
     stopRecBtn.style.display = 'block';
     recStatus.style.display = 'block';
@@ -404,7 +406,7 @@ stopRecBtn.onclick = () => {
     startRecBtn.style.display = 'block';
     stopRecBtn.style.display = 'none';
     recStatus.style.display = 'none';
-    onWindowResize(); // вернуть размер
+    onWindowResize(); // Возвращаем размер экрана
 };
 
 function saveVideo() {
@@ -417,8 +419,7 @@ function saveVideo() {
 }
 
 function setupVisualizerChange() {
-    const select = document.getElementById('viz-type');
-    select.onchange = (e) => {
+    document.getElementById('viz-type').onchange = (e) => {
         currentViz = e.target.value;
         if (currentViz === 'crystalHearts') createHearts();
         else if (currentViz === 'nebulaLove') createNebula();
@@ -441,16 +442,14 @@ function setupModeControls() {
 
 function animate() {
     requestAnimationFrame(animate);
-
-    let bass = 0, mid = 0, high = 0;
-
+    
     if (analyser) {
         analyser.getByteFrequencyData(dataArray);
-        bass = dataArray[2] / 255;
-        mid = dataArray[10] / 255;
-        high = dataArray[40] / 255;
+        const bass = dataArray[2] / 255;
+        const mid = dataArray[10] / 255;
+        const high = dataArray[40] / 255;
 
-        // Spatial Image
+        // Анимация пространственного фото
         if (spatialPoints) {
             const depth = document.getElementById('depth-range').value;
             const positions = spatialPoints.geometry.attributes.position.array;
@@ -461,15 +460,17 @@ function animate() {
             spatialPoints.rotation.y = Math.sin(Date.now() * 0.0005) * 0.2;
         }
 
-        // Hearts
-        visualizerGroup.children.forEach((obj) => {
-            if (obj.type === "Mesh" && currentViz === 'crystalHearts') {
-                obj.scale.setScalar(0.2 + bass * 0.3);
-                obj.rotation.y += 0.01 + (mid * 0.05);
-            }
-        });
+        // Анимация сердец
+        if (currentViz === 'crystalHearts') {
+            visualizerGroup.children.forEach((obj) => {
+                if (obj.type === "Mesh") {
+                    obj.scale.setScalar(0.2 + bass * 0.3);
+                    obj.rotation.y += 0.01 + (mid * 0.05);
+                }
+            });
+        }
 
-        // Nebula
+        // Nebula Love
         if (currentViz === 'nebulaLove' && visualizerGroup.children[0] && visualizerGroup.children[0].isPoints) {
             const points = visualizerGroup.children[0];
             const positions = points.geometry.attributes.position.array;
@@ -488,6 +489,7 @@ function animate() {
         if (currentViz === 'hyperCubePulse' && hyperCubeGroup && hyperCubeGroup.children[0]) {
             const lineSegments = hyperCubeGroup.children[0];
             const positions = lineSegments.geometry.attributes.position.array;
+            const edges = lineSegments.userData.edges;
 
             const time = Date.now() * 0.001;
             const angleXY = time * 0.5;
@@ -497,17 +499,6 @@ function animate() {
             const vExtra = bass * 2;
 
             let idx = 0;
-            // пересчёт рёбер
-            const edges = [];
-            for (let i = 0; i < hyperCubeVertices4D.length; i++) {
-                for (let j = i+1; j < hyperCubeVertices4D.length; j++) {
-                    let diff = 0;
-                    for (let k = 0; k < 4; k++) {
-                        if (hyperCubeVertices4D[i][k] !== hyperCubeVertices4D[j][k]) diff++;
-                    }
-                    if (diff === 1) edges.push([i, j]);
-                }
-            }
 
             edges.forEach(([a, b]) => {
                 let pA4 = rotate4D(hyperCubeVertices4D[a], angleXY, angleXW);
@@ -587,7 +578,7 @@ function formatTime(seconds) {
 }
 
 init();
-createHearts(); // по умолчанию
+createHearts(); // По умолчанию
 </script>
 </body>
 </html>
