@@ -342,6 +342,7 @@ input[type="color"] {
   background: linear-gradient(90deg, var(--accent), var(--accent2));
   width: 0%;
   transition: width 0.1s linear;
+  pointer-events: none;
 }
 
 .timeline-handle {
@@ -354,17 +355,6 @@ input[type="color"] {
   background: #fff;
   border-radius: 50%;
   box-shadow: 0 0 10px rgba(255,255,255,0.5);
-}
-
-/* === WAVEFORM IN TIMELINE === */
-.timeline-waveform {
-  position: absolute;
-  bottom: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  opacity: 0.3;
-  pointer-events: none;
 }
 
 /* === REC INDICATOR === */
@@ -430,21 +420,6 @@ input[type="color"] {
   }
   .canvas-container {
     height: 50vh;
-  }
-}
-
-@media (max-width: 600px) {
-  .sidebar-header h1 {
-    font-size: 15px;
-  }
-  .tabs {
-    font-size: 10px;
-  }
-  .playback {
-    flex-wrap: wrap;
-  }
-  .time {
-    min-width: auto;
   }
 }
 </style>
@@ -545,7 +520,6 @@ input[type="color"] {
     <div class="section">
       <div class="section-title">Spectrum Style</div>
       <div class="viz-grid">
-        <!-- ВАШИ ОРИГИНАЛЬНЫЕ ВИЗУАЛИЗАТОРЫ -->
         <div class="viz-card active" onclick="selectViz('circular', this)">
           <span class="viz-icon">⭕</span>
           <div class="viz-name">Circular Bars</div>
@@ -590,69 +564,21 @@ input[type="color"] {
           <span class="viz-icon">🎵</span>
           <div class="viz-name">Waveform Circle</div>
         </div>
-        <div class="viz-card" onclick="selectViz('purpleSpiral', this)">
-          <span class="viz-icon">🌀</span>
-          <div class="viz-name">Purple Spiral</div>
-        </div>
-        <div class="viz-card" onclick="selectViz('eyeSpectrum', this)">
-          <span class="viz-icon">👁️</span>
-          <div class="viz-name">Eye Spectrum</div>
-        </div>
-        <div class="viz-card" onclick="selectViz('infinityBass', this)">
-          <span class="viz-icon">∞</span>
-          <div class="viz-name">Infinity Bass</div>
-        </div>
-        <div class="viz-card" onclick="selectViz('radialBurst', this)">
-          <span class="viz-icon">💫</span>
-          <div class="viz-name">Radial Burst</div>
-        </div>
         <div class="viz-card" onclick="selectViz('musicWave', this)">
           <span class="viz-icon">〰️</span>
           <div class="viz-name">Music Wave</div>
         </div>
-
-        <!-- НОВЫЕ РОМАНТИЧЕСКИЕ ВИЗУАЛИЗАТОРЫ -->
-        <div class="viz-card" onclick="selectViz('plasmaVortex', this)">
-  <span class="viz-icon">🌀</span>
-  <div class="viz-name">Plasma Vortex</div>
-</div>
         <div class="viz-card" onclick="selectViz('loveWave', this)">
           <span class="viz-icon">💕</span>
           <div class="viz-name">Love Wave</div>
         </div>
-        <div class="viz-card" onclick="selectViz('quantumField', this)">
-  <span class="viz-icon">⚛️</span>
-  <div class="viz-name">Quantum Field</div>
-</div>
-        <div class="viz-card" onclick="selectViz('crystalPrism', this)">
-  <span class="viz-icon">💎</span>
-  <div class="viz-name">Crystal Prism</div>
-</div>
-
-<div class="viz-card" onclick="selectViz('holographicOrbs', this)">
-  <span class="viz-icon">🔮</span>
-  <div class="viz-name">Holographic Orbs</div>
-</div>
-
-<div class="viz-card" onclick="selectViz('matrixGrid', this)">
-  <span class="viz-icon">🎛️</span>
-  <div class="viz-name">Matrix Grid</div>
-</div>
+        <div class="viz-card" onclick="selectViz('matrixGrid', this)">
+          <span class="viz-icon">🎛️</span>
+          <div class="viz-name">Matrix Grid</div>
+        </div>
         <div class="viz-card" onclick="selectViz('depthTunnel', this)">
           <span class="viz-icon">🌌</span>
           <div class="viz-name">Depth Tunnel</div>
-        </div>
-        <div class="viz-card" onclick="selectViz('waveSurface', this)">
-          <span class="viz-icon">🌊</span>
-          <div class="viz-name">3D Wave Surface</div>
-        </div>
-        <div class="viz-card" onclick="selectViz('', this)">
-  <span class="viz-icon">💥</span>
-  <div class="viz-name">Nebula Burst</div>
-</div>
-        <div class="viz-card" onclick="selectViz('dna3D', this)">
-          <span class="viz-icon">🧬</span>
-          <div class="viz-name">DNA Helix 3D</div>
         </div>
       </div>
     </div>
@@ -748,7 +674,6 @@ input[type="color"] {
       <button class="play-btn" id="playBtn" onclick="togglePlay()">▶️</button>
       <div class="time" id="timeDisplay">0:00 / 0:00</div>
       <div class="timeline" id="timeline" onclick="seekTimeline(event)">
-        <canvas class="timeline-waveform" id="waveformCanvas"></canvas>
         <div class="timeline-progress" id="progress">
           <div class="timeline-handle"></div>
         </div>
@@ -763,7 +688,7 @@ input[type="color"] {
 // 🎯 ГЛОБАЛЬНЫЕ ПЕРЕМЕННЫЕ
 // =============================================
 const canvas = document.getElementById('canvas');
-const ctx = canvas.getContext('2d');
+const ctx = canvas.getContext('2d', { willReadFrequently: true });
 
 let config = { width: 1920, height: 1080, fps: 30 };
 
@@ -815,8 +740,15 @@ let state = {
   emblemCircle: true,
   tunnelColors: ['#00E5FF', '#FF00E5', '#00FFAA'],
   rotSpeed: 1,
-  motionBlur: 0
+  motionBlur: 0,
+  fxFlicker: false,
+  fxBloom: false,
+  fxVignette: false
 };
+
+// =============================================
+// 🔧 ВСПОМОГАТЕЛЬНЫЕ ФУНКЦИИ
+// =============================================
 function hexToRgba(hex, alpha) {
   if (!hex) return `rgba(255,255,255,${alpha})`;
   let h = hex.replace('#', '');
@@ -837,8 +769,9 @@ function project3D(x, y, z, centerX, centerY, fov) {
     scale: scale
   };
 }
+
 // =============================================
-// 🎨 UI ФУНКЦИИ (В НАЧАЛЕ!)
+// 🎨 UI ФУНКЦИИ
 // =============================================
 function switchTab(tabName, button) {
   document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
@@ -867,7 +800,7 @@ function updateResolution() {
 }
 
 // =============================================
-// 🎵 АУДИО СИСТЕМА
+// 🎵 АУДИО СИСТЕМА (ИСПРАВЛЕНА)
 // =============================================
 function initAudio() {
   if (audioCtx) return;
@@ -892,6 +825,7 @@ function loadAudioFile(file) {
       function(buffer) {
         audioBuffer = buffer;
         duration = buffer.duration;
+        audioPauseTime = 0;
         
         console.log('✅ Аудио загружено:', duration.toFixed(2), 'сек');
         playAudio();
@@ -908,13 +842,16 @@ function loadAudioFile(file) {
 function playAudio() {
   if (!audioBuffer || !audioCtx) return;
 
+  // Останавливаем предыдущий источник
   if (audioSource) {
     try {
       audioSource.stop();
       audioSource.disconnect();
     } catch(e) {}
+    audioSource = null;
   }
 
+  // Создаем новый источник
   audioSource = audioCtx.createBufferSource();
   audioSource.buffer = audioBuffer;
   audioSource.connect(analyser);
@@ -930,22 +867,26 @@ function playAudio() {
   audioSource.onended = () => {
     if (isPlaying) {
       audioPauseTime = 0;
-      playAudio();
+      isPlaying = false;
+      document.getElementById('playBtn').innerHTML = '▶️';
     }
   };
 }
 
 function togglePlay() {
-  if (!audioCtx) {
+  if (!audioBuffer) {
     alert('❌ Сначала загрузите аудио файл!');
     return;
   }
+
+  if (!audioCtx) initAudio();
 
   if (audioCtx.state === 'suspended') {
     audioCtx.resume();
   }
 
   if (isPlaying) {
+    // Пауза
     if (audioSource) {
       audioPauseTime = audioCtx.currentTime - audioStartTime;
       audioSource.stop();
@@ -955,7 +896,8 @@ function togglePlay() {
     isPlaying = false;
     document.getElementById('playBtn').innerHTML = '▶️';
   } else {
-    if (audioBuffer) playAudio();
+    // Воспроизведение
+    playAudio();
   }
 }
 
@@ -970,17 +912,30 @@ function seekTimeline(event) {
   audioPauseTime = percent * duration;
   currentTime = audioPauseTime;
   
-  playAudio();
+  // Если играло - перезапускаем с новой позиции
+  if (isPlaying) {
+    playAudio();
+  }
 }
 
 function updateTimeline() {
-  if (!isPlaying || !audioBuffer || !audioCtx) return;
+  if (!audioBuffer) return;
 
-  currentTime = audioCtx.currentTime - audioStartTime;
-  
-  if (currentTime >= duration) {
-    currentTime = 0;
-    audioStartTime = audioCtx.currentTime;
+  if (isPlaying && audioCtx) {
+    currentTime = audioCtx.currentTime - audioStartTime;
+    
+    if (currentTime >= duration) {
+      currentTime = duration;
+      audioPauseTime = 0;
+      isPlaying = false;
+      document.getElementById('playBtn').innerHTML = '▶️';
+      if (audioSource) {
+        audioSource.disconnect();
+        audioSource = null;
+      }
+    }
+  } else {
+    currentTime = audioPauseTime;
   }
 
   const progress = (currentTime / duration) * 100;
@@ -1045,10 +1000,9 @@ function toggleRecord() {
 }
 
 // =============================================
-// 🎨 VISUALIZERS
+// 🎨 VISUALIZERS (ОСТАВЛЕНЫ ТОЛЬКО НУЖНЫЕ)
 // =============================================
 const Visualizers = {
-  // ВСЕ ВАШИ ОРИГИНАЛЬНЫЕ ВИЗУАЛИЗАТОРЫ СОХРАНЕНЫ
   circular(ctx, centerX, centerY, dataArray) {
     const radius = Math.min(config.width, config.height) * 0.25 * state.vizScale;
     const bars = 180;
@@ -1621,274 +1575,6 @@ const Visualizers = {
     ctx.shadowBlur = 0;
   },
 
-  purpleSpiral(ctx, centerX, centerY, dataArray) {
-    const maxRadius = Math.min(config.width, config.height) * 0.4 * state.vizScale;
-    
-    ctx.save();
-    
-    const circles = 5;
-    for (let c = 0; c < circles; c++) {
-      const circleRadius = (maxRadius / circles) * (c + 1);
-      const segments = 180;
-      
-      ctx.beginPath();
-      for (let i = 0; i <= segments; i++) {
-        const angle = (i / segments) * Math.PI * 2 + rotation * (c % 2 ? 1 : -1) * state.rotSpeed;
-        const freqIndex = Math.floor((i / segments) * dataArray.length * 0.5) + c * 20;
-        const value = dataArray[freqIndex % dataArray.length] || 0;
-        const offset = (value / 255) * 40;
-        
-        const r = circleRadius + offset * Math.sin(angle * 3 + time * 2);
-        const x = centerX + Math.cos(angle) * r;
-        const y = centerY + Math.sin(angle) * r;
-        
-        if (i === 0) ctx.moveTo(x, y);
-        else ctx.lineTo(x, y);
-      }
-      
-      const hue = 280 - c * 20;
-      ctx.strokeStyle = `hsl(${hue}, 100%, ${60 - c * 5}%)`;
-      ctx.lineWidth = 3 - c * 0.4;
-      ctx.shadowBlur = state.vizGlow;
-      ctx.shadowColor = `hsl(${hue}, 100%, 50%)`;
-      ctx.stroke();
-    }
-    
-    const dots = 60;
-    for (let i = 0; i < dots; i++) {
-      const angle = (i / dots) * Math.PI * 2;
-      const freqIndex = Math.floor(i / dots * dataArray.length);
-      const value = dataArray[freqIndex] || 0;
-      
-      if (value > 100) {
-        const r = maxRadius * 0.8 + (value / 255) * maxRadius * 0.3;
-        const x = centerX + Math.cos(angle + rotation * state.rotSpeed) * r;
-        const y = centerY + Math.sin(angle + rotation * state.rotSpeed) * r;
-        
-        ctx.beginPath();
-        ctx.arc(x, y, 2 + value / 100, 0, Math.PI * 2);
-        ctx.fillStyle = `hsl(280, 100%, ${50 + value / 5}%)`;
-        ctx.fill();
-      }
-    }
-    
-    ctx.restore();
-    ctx.shadowBlur = 0;
-  },
-
-  eyeSpectrum(ctx, centerX, centerY, dataArray) {
-    const radius = Math.min(config.width, config.height) * 0.22 * state.vizScale;
-    
-    ctx.save();
-    
-    const bass = dataArray[2] || 0;
-    const eyeRadius = radius * 0.15 + (bass / 255) * 20;
-    
-    const eyeGradient = ctx.createRadialGradient(centerX, centerY, 0, centerX, centerY, eyeRadius);
-    eyeGradient.addColorStop(0, '#ffffff');
-    eyeGradient.addColorStop(0.3, '#00ffff');
-    eyeGradient.addColorStop(1, '#0000ff');
-    
-    ctx.beginPath();
-    ctx.arc(centerX, centerY, eyeRadius, 0, Math.PI * 2);
-    ctx.fillStyle = eyeGradient;
-    ctx.shadowBlur = 30;
-    ctx.shadowColor = '#00ffff';
-    ctx.fill();
-    
-    const rays = 180;
-    for (let i = 0; i < rays; i++) {
-      const angle = (i / rays) * Math.PI * 2;
-      const freqIndex = Math.floor(i / rays * dataArray.length * 0.7);
-      const value = dataArray[freqIndex] || 0;
-      const rayLength = (value / 255) * radius * 1.2;
-      
-      const hue = (i / rays) * 360;
-      
-      const x1 = centerX + Math.cos(angle) * (eyeRadius + 10);
-      const y1 = centerY + Math.sin(angle) * (eyeRadius + 10);
-      const x2 = centerX + Math.cos(angle) * (eyeRadius + 10 + rayLength);
-      const y2 = centerY + Math.sin(angle) * (eyeRadius + 10 + rayLength);
-      
-      ctx.beginPath();
-      ctx.moveTo(x1, y1);
-      ctx.lineTo(x2, y2);
-      ctx.lineWidth = 2;
-      ctx.strokeStyle = `hsl(${hue}, 100%, 50%)`;
-      ctx.stroke();
-    }
-    
-    const waveWidth = radius * 1.5;
-    const samples = 100;
-    
-    ctx.beginPath();
-    for (let i = 0; i < samples; i++) {
-      const t = i / samples;
-      const x = centerX - radius * 1.5 - waveWidth * (1 - t);
-      const freqIndex = Math.floor(t * dataArray.length * 0.5);
-      const value = dataArray[freqIndex] || 0;
-      const y = centerY + (value / 255 - 0.5) * radius;
-      
-      if (i === 0) ctx.moveTo(x, y);
-      else ctx.lineTo(x, y);
-    }
-    ctx.strokeStyle = '#00ffff';
-    ctx.lineWidth = 3;
-    ctx.shadowBlur = state.vizGlow;
-    ctx.shadowColor = '#00ffff';
-    ctx.stroke();
-    
-    ctx.beginPath();
-    for (let i = 0; i < samples; i++) {
-      const t = i / samples;
-      const x = centerX + radius * 1.5 + waveWidth * t;
-      const freqIndex = Math.floor(t * dataArray.length * 0.5);
-      const value = dataArray[freqIndex] || 0;
-      const y = centerY + (value / 255 - 0.5) * radius;
-      
-      if (i === 0) ctx.moveTo(x, y);
-      else ctx.lineTo(x, y);
-    }
-    ctx.stroke();
-    
-    ctx.restore();
-    ctx.shadowBlur = 0;
-  },
-
-  infinityBass(ctx, centerX, centerY, dataArray) {
-    const size = Math.min(config.width, config.height) * 0.3 * state.vizScale;
-    
-    ctx.save();
-    
-    const bgGradient = ctx.createRadialGradient(centerX, centerY, 0, centerX, centerY, size * 1.5);
-    bgGradient.addColorStop(0, 'rgba(138,43,226,0.2)');
-    bgGradient.addColorStop(0.5, 'rgba(255,20,147,0.1)');
-    bgGradient.addColorStop(1, 'rgba(0,0,0,0)');
-    ctx.fillStyle = bgGradient;
-    ctx.fillRect(0, 0, config.width, config.height);
-    
-    const drawInfinity = (scale, alpha) => {
-      ctx.beginPath();
-      for (let t = 0; t <= Math.PI * 2; t += 0.01) {
-        const freqIndex = Math.floor((t / (Math.PI * 2)) * dataArray.length * 0.5);
-        const value = dataArray[freqIndex] || 0;
-        const offset = (value / 255) * 30;
-        
-        const x = centerX + scale * (Math.cos(t) / (1 + Math.sin(t) * Math.sin(t))) * size + offset * Math.sin(t * 4);
-        const y = centerY + scale * (Math.sin(t) * Math.cos(t) / (1 + Math.sin(t) * Math.sin(t))) * size * 0.6;
-        
-        if (t === 0) ctx.moveTo(x, y);
-        else ctx.lineTo(x, y);
-      }
-      
-      const gradient = ctx.createLinearGradient(centerX - size, centerY, centerX + size, centerY);
-      gradient.addColorStop(0, '#8a2be2');
-      gradient.addColorStop(0.5, '#ff1493');
-      gradient.addColorStop(1, '#ff69b4');
-      
-      ctx.strokeStyle = gradient;
-      ctx.lineWidth = 4 * scale;
-      ctx.globalAlpha = alpha;
-      ctx.shadowBlur = state.vizGlow * scale;
-      ctx.shadowColor = '#ff1493';
-      ctx.stroke();
-    };
-    
-    drawInfinity(1.2, 0.3);
-    drawInfinity(1.0, 0.6);
-    drawInfinity(0.8, 1.0);
-    
-    const bass = dataArray[2] || 0;
-    const centerRadius = size * 0.15 + (bass / 255) * 20;
-    
-    ctx.globalAlpha = 1;
-    ctx.beginPath();
-    ctx.arc(centerX, centerY, centerRadius, 0, Math.PI * 2);
-    const centerGradient = ctx.createRadialGradient(centerX, centerY, 0, centerX, centerY, centerRadius);
-    centerGradient.addColorStop(0, '#ffffff');
-    centerGradient.addColorStop(0.5, '#ff69b4');
-    centerGradient.addColorStop(1, '#8a2be2');
-    ctx.fillStyle = centerGradient;
-    ctx.fill();
-    
-    const indicators = 4;
-    const indicatorWidth = size * 2 / indicators;
-    for (let i = 0; i < indicators; i++) {
-      const x = centerX - size + i * indicatorWidth + indicatorWidth * 0.25;
-      const y = centerY + size * 0.8;
-      const value = dataArray[i * 30] || 0;
-      const height = (value / 255) * 40;
-      
-      ctx.fillStyle = `hsl(${280 + i * 20}, 100%, 50%)`;
-      ctx.fillRect(x, y + 20 - height, indicatorWidth * 0.5, height);
-      
-      ctx.font = '10px monospace';
-      ctx.fillStyle = '#ffffff';
-      ctx.fillText(`${(value / 2.55).toFixed(0)}`, x, y + 35);
-    }
-    
-    ctx.restore();
-    ctx.shadowBlur = 0;
-  },
-
-  radialBurst(ctx, centerX, centerY, dataArray) {
-    const radius = Math.min(config.width, config.height) * 0.35 * state.vizScale;
-    
-    ctx.save();
-    
-    const rays = 360;
-    for (let i = 0; i < rays; i++) {
-      const angle = (i / rays) * Math.PI * 2;
-      const freqIndex = Math.floor(i / rays * dataArray.length);
-      const value = dataArray[freqIndex] || 0;
-      
-      if (value > 50) {
-        const rayLength = (value / 255) * radius * 1.5;
-        const hue = (i / rays) * 360;
-        
-        const x1 = centerX;
-        const y1 = centerY;
-        const x2 = centerX + Math.cos(angle) * rayLength;
-        const y2 = centerY + Math.sin(angle) * rayLength;
-        
-        const rayGradient = ctx.createLinearGradient(x1, y1, x2, y2);
-        rayGradient.addColorStop(0, `hsla(${hue}, 100%, 50%, 0)`);
-        rayGradient.addColorStop(0.5, `hsla(${hue}, 100%, 50%, ${value/255})`);
-        rayGradient.addColorStop(1, `hsla(${hue}, 100%, 70%, 0)`);
-        
-        ctx.beginPath();
-        ctx.moveTo(x1, y1);
-        ctx.lineTo(x2, y2);
-        ctx.strokeStyle = rayGradient;
-        ctx.lineWidth = 2;
-        ctx.stroke();
-      }
-    }
-    
-    const bass = dataArray[2] || 0;
-    const centerRadius = radius * 0.1 + (bass / 255) * 30;
-    
-    ctx.beginPath();
-    ctx.arc(centerX, centerY, centerRadius, 0, Math.PI * 2);
-    const centerGradient = ctx.createRadialGradient(centerX, centerY, 0, centerX, centerY, centerRadius);
-    centerGradient.addColorStop(0, '#ffffff');
-    centerGradient.addColorStop(0.5, '#00ffff');
-    centerGradient.addColorStop(1, 'rgba(0,0,255,0)');
-    ctx.fillStyle = centerGradient;
-    ctx.shadowBlur = 40;
-    ctx.shadowColor = '#00ffff';
-    ctx.fill();
-    
-    ctx.beginPath();
-    ctx.arc(centerX, centerY, radius, 0, Math.PI * 2);
-    ctx.strokeStyle = 'rgba(0,255,255,0.3)';
-    ctx.lineWidth = 2;
-    ctx.stroke();
-    
-    ctx.restore();
-    ctx.shadowBlur = 0;
-  },
-
   musicWave(ctx, centerX, centerY, dataArray) {
     const width = config.width * 0.8;
     const amplitude = config.height * 0.2 * state.vizScale;
@@ -1978,73 +1664,6 @@ const Visualizers = {
     ctx.shadowBlur = 0;
   },
 
-  // =============================================
-  // 💖 РОМАНТИЧЕСКИЕ ВИЗУАЛИЗАТОРЫ
-  // =============================================
-
-  // 17. PLASMA VORTEX (вместо heartPulse)
-plasmaVortex(ctx, centerX, centerY, dataArray) {
-  const radius = Math.min(config.width, config.height) * 0.35 * state.vizScale;
-  
-  ctx.save();
-  
-  // Плазменные кольца
-  for (let ring = 0; ring < 8; ring++) {
-    const segments = 120;
-    ctx.beginPath();
-    
-    for (let i = 0; i <= segments; i++) {
-      const angle = (i / segments) * Math.PI * 2 + rotation * state.rotSpeed * (ring % 2 ? 1 : -1);
-      const freqIndex = Math.floor(((ring * segments + i) / (8 * segments)) * dataArray.length);
-      const value = dataArray[freqIndex] || 0;
-      
-      // Создаем закручивающуюся форму
-      const spiralOffset = Math.sin(angle * 3 + time * 2 + ring * 0.5) * 30;
-      const r = radius * (0.3 + ring * 0.1) + (value / 255) * 60 + spiralOffset;
-      
-      const x = centerX + Math.cos(angle) * r;
-      const y = centerY + Math.sin(angle) * r;
-      
-      if (i === 0) ctx.moveTo(x, y);
-      else ctx.lineTo(x, y);
-    }
-    
-    // Плазменные цвета
-    const hue = (ring * 45 + time * 50) % 360;
-    const gradient = ctx.createLinearGradient(
-      centerX - radius, centerY, 
-      centerX + radius, centerY
-    );
-    gradient.addColorStop(0, `hsla(${hue}, 100%, 50%, 0.3)`);
-    gradient.addColorStop(0.5, `hsla(${hue + 60}, 100%, 60%, 0.6)`);
-    gradient.addColorStop(1, `hsla(${hue + 120}, 100%, 50%, 0.3)`);
-    
-    ctx.strokeStyle = gradient;
-    ctx.lineWidth = 3 - ring * 0.2;
-    ctx.shadowBlur = state.vizGlow * 1.5;
-    ctx.shadowColor = `hsl(${hue}, 100%, 50%)`;
-    ctx.stroke();
-  }
-  
-  // Центральная энергетическая сфера
-  const bass = dataArray[2] || 0;
-  const coreRadius = radius * 0.15 + (bass / 255) * 40;
-  
-  const coreGradient = ctx.createRadialGradient(centerX, centerY, 0, centerX, centerY, coreRadius);
-  coreGradient.addColorStop(0, 'rgba(255,255,255,0.9)');
-  coreGradient.addColorStop(0.3, 'rgba(0,255,255,0.6)');
-  coreGradient.addColorStop(0.6, 'rgba(255,0,255,0.3)');
-  coreGradient.addColorStop(1, 'rgba(0,0,0,0)');
-  
-  ctx.fillStyle = coreGradient;
-  ctx.beginPath();
-  ctx.arc(centerX, centerY, coreRadius, 0, Math.PI * 2);
-  ctx.fill();
-  
-  ctx.restore();
-  ctx.shadowBlur = 0;
-},
-
   loveWave(ctx, centerX, centerY, dataArray) {
     const width = config.width * 0.9;
     const startX = (config.width - width) / 2;
@@ -2052,7 +1671,6 @@ plasmaVortex(ctx, centerX, centerY, dataArray) {
     
     ctx.save();
 
-    // Розовый градиентный фон
     const bgGradient = ctx.createLinearGradient(0, 0, config.width, config.height);
     bgGradient.addColorStop(0, 'rgba(255,105,180,0.1)');
     bgGradient.addColorStop(0.5, 'rgba(255,20,147,0.15)');
@@ -2060,7 +1678,6 @@ plasmaVortex(ctx, centerX, centerY, dataArray) {
     ctx.fillStyle = bgGradient;
     ctx.fillRect(0, 0, config.width, config.height);
 
-    // Волны в форме сердца
     for (let wave = 0; wave < 3; wave++) {
       ctx.beginPath();
       const samples = 200;
@@ -2071,7 +1688,6 @@ plasmaVortex(ctx, centerX, centerY, dataArray) {
         const freqIndex = Math.floor(t * dataArray.length * 0.7);
         const value = dataArray[freqIndex] || 0;
         
-        // Создаем форму похожую на сердце
         const heartShape = Math.abs(Math.sin(t * Math.PI)) * Math.abs(Math.cos(t * Math.PI * 2));
         const y = centerY + (value / 255) * amplitude * heartShape * Math.sin(time + wave);
         
@@ -2091,7 +1707,6 @@ plasmaVortex(ctx, centerX, centerY, dataArray) {
       ctx.stroke();
     }
 
-    // Парящие сердечки
     const hearts = 15;
     for (let i = 0; i < hearts; i++) {
       const freqIndex = Math.floor((i / hearts) * dataArray.length);
@@ -2112,338 +1727,77 @@ plasmaVortex(ctx, centerX, centerY, dataArray) {
     ctx.shadowBlur = 0;
   },
 
-  // 19. QUANTUM FIELD (вместо romanceRing)
-quantumField(ctx, centerX, centerY, dataArray) {
-  const size = Math.min(config.width, config.height) * 0.4 * state.vizScale;
-  
-  ctx.save();
-  
-  // Квантовые частицы в поле
-  const particles = 300;
-  for (let i = 0; i < particles; i++) {
-    const freqIndex = Math.floor((i / particles) * dataArray.length);
-    const value = dataArray[freqIndex] || 0;
+  matrixGrid(ctx, centerX, centerY, dataArray) {
+    const gridSize = 20;
+    const cellSize = Math.min(config.width, config.height) / (gridSize * 1.5);
+    const startX = centerX - (gridSize * cellSize) / 2;
+    const startY = centerY - (gridSize * cellSize) / 2;
     
-    // Квантовые орбиты
-    const orbit = (i % 5) / 5;
-    const angle = (i / particles) * Math.PI * 8 + time * state.rotSpeed * (orbit % 2 ? 1 : -1);
-    const distance = size * (0.3 + orbit * 0.4) + Math.sin(time * 3 + i) * 30;
+    ctx.save();
     
-    const x = centerX + Math.cos(angle) * distance * (1 + value / 1000);
-    const y = centerY + Math.sin(angle) * distance * (1 + value / 1000);
-    
-    // Энергетические связи между частицами
-    if (i % 15 === 0 && value > 100) {
-      const nextParticle = (i + 15) % particles;
-      const nextAngle = (nextParticle / particles) * Math.PI * 8 + time * state.rotSpeed;
-      const nextOrbit = (nextParticle % 5) / 5;
-      const nextDist = size * (0.3 + nextOrbit * 0.4);
-      
-      const x2 = centerX + Math.cos(nextAngle) * nextDist;
-      const y2 = centerY + Math.sin(nextAngle) * nextDist;
-      
-      ctx.beginPath();
-      ctx.moveTo(x, y);
-      ctx.lineTo(x2, y2);
-      ctx.strokeStyle = `hsla(${180 + orbit * 60}, 100%, 60%, ${value / 500})`;
-      ctx.lineWidth = 1;
-      ctx.stroke();
+    for (let y = 0; y < gridSize; y++) {
+      for (let x = 0; x < gridSize; x++) {
+        const freqIndex = Math.floor(((y * gridSize + x) / (gridSize * gridSize)) * dataArray.length);
+        const value = dataArray[freqIndex] || 0;
+        
+        const height = (value / 255) * 100;
+        
+        const perspective = 1 - (y / gridSize) * 0.5;
+        const cellX = startX + x * cellSize * perspective;
+        const cellY = startY + y * cellSize - height;
+        const size = cellSize * perspective;
+        
+        ctx.beginPath();
+        ctx.rect(cellX, cellY, size, size);
+        
+        const hue = ((x + y) / (gridSize * 2)) * 360 + time * 30;
+        const brightness = 30 + (value / 255) * 70;
+        
+        const cellGradient = ctx.createLinearGradient(cellX, cellY, cellX + size, cellY + size);
+        cellGradient.addColorStop(0, `hsl(${hue}, 100%, ${brightness}%)`);
+        cellGradient.addColorStop(1, `hsl(${hue + 20}, 100%, ${brightness - 20}%)`);
+        
+        ctx.fillStyle = cellGradient;
+        ctx.fill();
+        
+        if (value > 100) {
+          ctx.strokeStyle = `hsl(${hue}, 100%, 80%)`;
+          ctx.lineWidth = 2;
+          ctx.shadowBlur = state.vizGlow;
+          ctx.shadowColor = `hsl(${hue}, 100%, 50%)`;
+          ctx.stroke();
+        }
+        
+        if (height > 20) {
+          ctx.beginPath();
+          ctx.moveTo(cellX + size / 2, cellY + size);
+          ctx.lineTo(cellX + size / 2, cellY + size + height);
+          ctx.strokeStyle = `hsla(${hue}, 100%, 60%, 0.6)`;
+          ctx.lineWidth = 1;
+          ctx.stroke();
+        }
+      }
     }
     
-    // Рисуем частицу
-    const particleSize = 2 + (value / 255) * 4;
-    const hue = (i / particles) * 360 + time * 30;
-    
+    const scanY = (Math.sin(time * 2) * 0.5 + 0.5) * gridSize;
     ctx.beginPath();
-    ctx.arc(x, y, particleSize, 0, Math.PI * 2);
-    
-    const particleGlow = ctx.createRadialGradient(x, y, 0, x, y, particleSize * 2);
-    particleGlow.addColorStop(0, `hsl(${hue}, 100%, 80%)`);
-    particleGlow.addColorStop(0.5, `hsl(${hue}, 100%, 50%)`);
-    particleGlow.addColorStop(1, 'rgba(0,0,0,0)');
-    
-    ctx.fillStyle = particleGlow;
-    ctx.shadowBlur = state.vizGlow * (value / 255);
-    ctx.shadowColor = `hsl(${hue}, 100%, 50%)`;
-    ctx.fill();
-  }
-  
-  // Центральное квантовое ядро
-  const bass = dataArray[2] || 0;
-  ctx.beginPath();
-  ctx.arc(centerX, centerY, size * 0.1 + (bass / 255) * 20, 0, Math.PI * 2);
-  
-  const nucleusGradient = ctx.createRadialGradient(
-    centerX, centerY, 0,
-    centerX, centerY, size * 0.15
-  );
-  nucleusGradient.addColorStop(0, 'rgba(255,255,255,1)');
-  nucleusGradient.addColorStop(0.5, 'rgba(0,200,255,0.8)');
-  nucleusGradient.addColorStop(1, 'rgba(0,100,255,0)');
-  
-  ctx.fillStyle = nucleusGradient;
-  ctx.shadowBlur = 50;
-  ctx.shadowColor = '#00ffff';
-  ctx.fill();
-  
-  ctx.restore();
-  ctx.shadowBlur = 0;
-},
-
-// 20. CRYSTAL PRISM (вместо dreamyParticles)
-crystalPrism(ctx, centerX, centerY, dataArray) {
-  const size = Math.min(config.width, config.height) * 0.25 * state.vizScale;
-  
-  ctx.save();
-  
-  // Призматические грани
-  const sides = 6;
-  const layers = 5;
-  
-  for (let layer = 0; layer < layers; layer++) {
-    const layerSize = size * (1 - layer * 0.15);
-    const rotation_offset = (time * state.rotSpeed + layer * 0.5);
-    
-    ctx.beginPath();
-    for (let i = 0; i <= sides; i++) {
-      const angle = (i / sides) * Math.PI * 2 + rotation_offset;
-      const freqIndex = Math.floor(((layer * sides + i) / (layers * sides)) * dataArray.length * 0.7);
-      const value = dataArray[freqIndex] || 0;
-      
-      // Кристаллические искажения
-      const distortion = Math.sin(angle * 3 + time * 2) * (value / 255) * 40;
-      const r = layerSize + distortion;
-      
-      const x = centerX + Math.cos(angle) * r;
-      const y = centerY + Math.sin(angle) * r;
-      
-      if (i === 0) ctx.moveTo(x, y);
-      else ctx.lineTo(x, y);
-    }
-    ctx.closePath();
-    
-    // Призматические цвета (эффект преломления света)
-    const spectrum = [
-      [255, 0, 0],      // Красный
-      [255, 127, 0],    // Оранжевый
-      [255, 255, 0],    // Желтый
-      [0, 255, 0],      // Зеленый
-      [0, 0, 255]       // Синий
-    ];
-    
-    const colorIdx = layer % spectrum.length;
-    const [r, g, b] = spectrum[colorIdx];
-    
-    const gradient = ctx.createLinearGradient(
-      centerX - layerSize, centerY,
-      centerX + layerSize, centerY
-    );
-    gradient.addColorStop(0, `rgba(${r},${g},${b},0.2)`);
-    gradient.addColorStop(0.5, `rgba(${r},${g},${b},0.6)`);
-    gradient.addColorStop(1, `rgba(${r},${g},${b},0.2)`);
-    
-    ctx.strokeStyle = gradient;
+    ctx.moveTo(startX, startY + scanY * cellSize);
+    ctx.lineTo(startX + gridSize * cellSize, startY + scanY * cellSize);
+    ctx.strokeStyle = 'rgba(0,255,255,0.8)';
     ctx.lineWidth = 3;
-    ctx.shadowBlur = state.vizGlow * 2;
-    ctx.shadowColor = `rgb(${r},${g},${b})`;
+    ctx.shadowBlur = 30;
+    ctx.shadowColor = '#00ffff';
     ctx.stroke();
     
-    // Внутреннее свечение
-    ctx.fillStyle = gradient;
-    ctx.globalAlpha = 0.1;
-    ctx.fill();
-    ctx.globalAlpha = 1;
-  }
-  
-  // Энергетические лучи из центра
-  const rays = 12;
-  for (let i = 0; i < rays; i++) {
-    const angle = (i / rays) * Math.PI * 2 + rotation * state.rotSpeed;
-    const freqIndex = Math.floor((i / rays) * dataArray.length * 0.5);
-    const value = dataArray[freqIndex] || 0;
-    
-    if (value > 120) {
-      ctx.beginPath();
-      ctx.moveTo(centerX, centerY);
-      const rayLength = size * 1.5 * (value / 255);
-      ctx.lineTo(
-        centerX + Math.cos(angle) * rayLength,
-        centerY + Math.sin(angle) * rayLength
-      );
-      
-      ctx.strokeStyle = `hsla(${(i / rays) * 360}, 100%, 70%, ${value / 400})`;
-      ctx.lineWidth = 2;
-      ctx.shadowBlur = 20;
-      ctx.shadowColor = `hsl(${(i / rays) * 360}, 100%, 50%)`;
-      ctx.stroke();
-    }
-  }
-  
-  ctx.restore();
-  ctx.shadowBlur = 0;
-},
-
-// 21. HOLOGRAPHIC ORBS (вместо sphere3D)
-holographicOrbs(ctx, centerX, centerY, dataArray) {
-  const baseRadius = Math.min(config.width, config.height) * 0.15 * state.vizScale;
-  
-  ctx.save();
-  
-  // Множественные голографические сферы
-  const orbs = 5;
-  for (let orb = 0; orb < orbs; orb++) {
-    const angle = (orb / orbs) * Math.PI * 2 + rotation * state.rotSpeed;
-    const distance = baseRadius * 2;
-    const orbX = centerX + Math.cos(angle) * distance;
-    const orbY = centerY + Math.sin(angle) * distance;
-    
-    const freqIndex = Math.floor((orb / orbs) * dataArray.length * 0.6);
-    const value = dataArray[freqIndex] || 0;
-    const orbRadius = baseRadius * (0.8 + (value / 255) * 0.4);
-    
-    // Голографические кольца
-    const rings = 15;
-    for (let ring = 0; ring < rings; ring++) {
-      const ringRadius = orbRadius * (ring / rings);
-      const ringValue = dataArray[Math.floor(((orb * rings + ring) / (orbs * rings)) * dataArray.length)] || 0;
-      
-      ctx.beginPath();
-      ctx.arc(orbX, orbY, ringRadius, 0, Math.PI * 2);
-      
-      const alpha = (1 - ring / rings) * (ringValue / 255);
-      const hue = (orb * 72 + ring * 24 + time * 50) % 360;
-      
-      ctx.strokeStyle = `hsla(${hue}, 100%, ${60 + ring * 2}%, ${alpha})`;
-      ctx.lineWidth = 2 - (ring / rings);
-      ctx.shadowBlur = state.vizGlow * (1 - ring / rings);
-      ctx.shadowColor = `hsl(${hue}, 100%, 50%)`;
-      ctx.stroke();
-    }
-    
-    // Центр сферы
-    const coreGradient = ctx.createRadialGradient(orbX, orbY, 0, orbX, orbY, orbRadius * 0.3);
-    const orbHue = (orb * 72) % 360;
-    coreGradient.addColorStop(0, `hsla(${orbHue}, 100%, 80%, 0.9)`);
-    coreGradient.addColorStop(0.7, `hsla(${orbHue}, 100%, 50%, 0.5)`);
-    coreGradient.addColorStop(1, 'rgba(0,0,0,0)');
-    
-    ctx.fillStyle = coreGradient;
-    ctx.beginPath();
-    ctx.arc(orbX, orbY, orbRadius * 0.3, 0, Math.PI * 2);
-    ctx.fill();
-  }
-  
-  // Соединительные энергетические нити
-  for (let i = 0; i < orbs; i++) {
-    const angle1 = (i / orbs) * Math.PI * 2 + rotation * state.rotSpeed;
-    const angle2 = ((i + 1) % orbs / orbs) * Math.PI * 2 + rotation * state.rotSpeed;
-    const distance = baseRadius * 2;
-    
-    const x1 = centerX + Math.cos(angle1) * distance;
-    const y1 = centerY + Math.sin(angle1) * distance;
-    const x2 = centerX + Math.cos(angle2) * distance;
-    const y2 = centerY + Math.sin(angle2) * distance;
-    
-    const freqIndex = Math.floor((i / orbs) * dataArray.length);
-    const value = dataArray[freqIndex] || 0;
-    
-    if (value > 100) {
-      ctx.beginPath();
-      ctx.moveTo(x1, y1);
-      ctx.lineTo(x2, y2);
-      
-      const linkHue = (i * 72 + time * 30) % 360;
-      ctx.strokeStyle = `hsla(${linkHue}, 100%, 50%, ${value / 400})`;
-      ctx.lineWidth = 1 + (value / 255) * 2;
-      ctx.stroke();
-    }
-  }
-  
-  ctx.restore();
-  ctx.shadowBlur = 0;
-},
-
-// 22. MATRIX GRID (вместо cubeMatrix)
-matrixGrid(ctx, centerX, centerY, dataArray) {
-  const gridSize = 20;
-  const cellSize = Math.min(config.width, config.height) / (gridSize * 1.5);
-  const startX = centerX - (gridSize * cellSize) / 2;
-  const startY = centerY - (gridSize * cellSize) / 2;
-  
-  ctx.save();
-  
-  // 3D сетка с перспективой
-  for (let y = 0; y < gridSize; y++) {
-    for (let x = 0; x < gridSize; x++) {
-      const freqIndex = Math.floor(((y * gridSize + x) / (gridSize * gridSize)) * dataArray.length);
-      const value = dataArray[freqIndex] || 0;
-      
-      // 3D высота
-      const height = (value / 255) * 100;
-      
-      // Перспективная проекция
-      const perspective = 1 - (y / gridSize) * 0.5;
-      const cellX = startX + x * cellSize * perspective;
-      const cellY = startY + y * cellSize - height;
-      const size = cellSize * perspective;
-      
-      // Рисуем ячейку с 3D эффектом
-      ctx.beginPath();
-      ctx.rect(cellX, cellY, size, size);
-      
-      const hue = ((x + y) / (gridSize * 2)) * 360 + time * 30;
-      const brightness = 30 + (value / 255) * 70;
-      
-      // Градиент для 3D эффекта
-      const cellGradient = ctx.createLinearGradient(cellX, cellY, cellX + size, cellY + size);
-      cellGradient.addColorStop(0, `hsl(${hue}, 100%, ${brightness}%)`);
-      cellGradient.addColorStop(1, `hsl(${hue + 20}, 100%, ${brightness - 20}%)`);
-      
-      ctx.fillStyle = cellGradient;
-      ctx.fill();
-      
-      // Границы
-      if (value > 100) {
-        ctx.strokeStyle = `hsl(${hue}, 100%, 80%)`;
-        ctx.lineWidth = 2;
-        ctx.shadowBlur = state.vizGlow;
-        ctx.shadowColor = `hsl(${hue}, 100%, 50%)`;
-        ctx.stroke();
-      }
-      
-      // Вертикальные линии (столбы)
-      if (height > 20) {
-        ctx.beginPath();
-        ctx.moveTo(cellX + size / 2, cellY + size);
-        ctx.lineTo(cellX + size / 2, cellY + size + height);
-        ctx.strokeStyle = `hsla(${hue}, 100%, 60%, 0.6)`;
-        ctx.lineWidth = 1;
-        ctx.stroke();
-      }
-    }
-  }
-  
-  // Сканирующая волна
-  const scanY = (Math.sin(time * 2) * 0.5 + 0.5) * gridSize;
-  ctx.beginPath();
-  ctx.moveTo(startX, startY + scanY * cellSize);
-  ctx.lineTo(startX + gridSize * cellSize, startY + scanY * cellSize);
-  ctx.strokeStyle = 'rgba(0,255,255,0.8)';
-  ctx.lineWidth = 3;
-  ctx.shadowBlur = 30;
-  ctx.shadowColor = '#00ffff';
-  ctx.stroke();
-  
-  ctx.restore();
-  ctx.shadowBlur = 0;
-},
+    ctx.restore();
+    ctx.shadowBlur = 0;
+  },
 
   depthTunnel(ctx, centerX, centerY, dataArray) {
     const maxRadius = Math.min(config.width, config.height) * 0.4;
     
     ctx.save();
 
-    // Туннель с глубиной
     const layers = 30;
     for (let layer = layers; layer >= 0; layer--) {
       const depth = layer / layers;
@@ -2481,219 +1835,17 @@ matrixGrid(ctx, centerX, centerY, dataArray) {
 
     ctx.restore();
     ctx.shadowBlur = 0;
-  },
-
-  waveSurface(ctx, centerX, centerY, dataArray) {
-    const gridSize = 30;
-    const spacing = (Math.min(config.width, config.height) * 0.8) / gridSize;
-    const amplitude = 100 * state.vizScale;
-    
-    ctx.save();
-
-    // 3D волновая поверхность
-    for (let y = 0; y < gridSize; y++) {
-      ctx.beginPath();
-      
-      for (let x = 0; x <= gridSize; x++) {
-        const freqIndex = Math.floor(((y * gridSize + x) / (gridSize * gridSize)) * dataArray.length);
-        const value = dataArray[freqIndex] || 0;
-        
-        // 3D координаты
-        const x3d = (x - gridSize / 2) * spacing;
-        const z3d = (y - gridSize / 2) * spacing;
-        const y3d = Math.sin(x * 0.2 + time * 2) * Math.cos(y * 0.2 + time * 2) * amplitude * (value / 255);
-        
-        // Проекция
-        const projected = project3D(x3d, y3d, z3d, centerX, centerY - 100, 800);
-        
-        if (x === 0) ctx.moveTo(projected.x, projected.y);
-        else ctx.lineTo(projected.x, projected.y);
-      }
-      
-      const depth = 1 - (y / gridSize);
-      const hue = (y / gridSize) * 180 + 180;
-      ctx.strokeStyle = `hsla(${hue}, 100%, ${40 + depth * 30}%, ${0.4 + depth * 0.6})`;
-      ctx.lineWidth = 1 + depth * 2;
-      ctx.shadowBlur = state.vizGlow * depth * 0.5;
-      ctx.shadowColor = `hsl(${hue}, 100%, 50%)`;
-      ctx.stroke();
-    }
-
-    ctx.restore();
-    ctx.shadowBlur = 0;
-  },
-
-  // 25. NEBULA BURST (вместо spiralGalaxy)
-nebulaBurst(ctx, centerX, centerY, dataArray) {
-  const radius = Math.min(config.width, config.height) * 0.4 * state.vizScale;
-  
-  ctx.save();
-  
-  // Туманность с частицами
-  const particles = 500;
-  for (let i = 0; i < particles; i++) {
-    const freqIndex = Math.floor((i / particles) * dataArray.length);
-    const value = dataArray[freqIndex] || 0;
-    
-    // Взрывное расширение
-    const explosionPhase = Math.sin(time * 2 + i * 0.1) * 0.5 + 0.5;
-    const angle = (i / particles) * Math.PI * 12 + rotation * state.rotSpeed;
-    const distance = radius * explosionPhase * (0.5 + (value / 255) * 0.5);
-    
-    const x = centerX + Math.cos(angle) * distance;
-    const y = centerY + Math.sin(angle) * distance;
-    
-    // Размер частиц зависит от расстояния
-    const particleSize = (1 - explosionPhase) * 5 + (value / 255) * 3;
-    
-    // Цвет туманности
-    const nebulaHue = 240 + explosionPhase * 120 + (value / 255) * 60;
-    const alpha = (1 - explosionPhase) * (value / 255);
-    
-    // Свечение частицы
-    const particleGradient = ctx.createRadialGradient(x, y, 0, x, y, particleSize * 3);
-    particleGradient.addColorStop(0, `hsla(${nebulaHue}, 100%, 70%, ${alpha})`);
-    particleGradient.addColorStop(0.5, `hsla(${nebulaHue}, 100%, 50%, ${alpha * 0.5})`);
-    particleGradient.addColorStop(1, 'rgba(0,0,0,0)');
-    
-    ctx.fillStyle = particleGradient;
-    ctx.beginPath();
-    ctx.arc(x, y, particleSize * 2, 0, Math.PI * 2);
-    ctx.fill();
-    
-    // Яркие звезды
-    if (value > 200 && i % 20 === 0) {
-      ctx.fillStyle = 'rgba(255,255,255,0.9)';
-      ctx.shadowBlur = 20;
-      ctx.shadowColor = '#ffffff';
-      ctx.beginPath();
-      ctx.arc(x, y, 2, 0, Math.PI * 2);
-      ctx.fill();
-    }
-  }
-  
-  // Энергетические волны
-  const waves = 5;
-  for (let wave = 0; wave < waves; wave++) {
-    const wavePhase = (time * 2 + wave * 0.4) % 2;
-    const waveRadius = radius * wavePhase;
-    
-    if (wavePhase < 1.5) {
-      ctx.beginPath();
-      ctx.arc(centerX, centerY, waveRadius, 0, Math.PI * 2);
-      
-      const waveAlpha = (1 - wavePhase / 1.5) * 0.5;
-      ctx.strokeStyle = `hsla(200, 100%, 60%, ${waveAlpha})`;
-      ctx.lineWidth = 3;
-      ctx.shadowBlur = 20;
-      ctx.shadowColor = '#00ffff';
-      ctx.stroke();
-    }
-  }
-  
-  // Центральная звезда
-  const bass = dataArray[2] || 0;
-  const starRadius = radius * 0.08 + (bass / 255) * 30;
-  
-  const starGradient = ctx.createRadialGradient(centerX, centerY, 0, centerX, centerY, starRadius);
-  starGradient.addColorStop(0, 'rgba(255,255,255,1)');
-  starGradient.addColorStop(0.2, 'rgba(255,200,100,0.9)');
-  starGradient.addColorStop(0.5, 'rgba(255,100,0,0.5)');
-  starGradient.addColorStop(1, 'rgba(255,0,0,0)');
-  
-  ctx.fillStyle = starGradient;
-  ctx.shadowBlur = 50;
-  ctx.shadowColor = '#ffaa00';
-  ctx.beginPath();
-  ctx.arc(centerX, centerY, starRadius, 0, Math.PI * 2);
-  ctx.fill();
-  
-  ctx.restore();
-  ctx.shadowBlur = 0;
-},
-
-  dna3D(ctx, centerX, centerY, dataArray) {
-    const height = config.height * 0.6;
-    const radius = Math.min(config.width, config.height) * 0.15 * state.vizScale;
-    const segments = 50;
-    
-    ctx.save();
-
-    // Двойная спираль ДНК
-    for (let strand = 0; strand < 2; strand++) {
-      ctx.beginPath();
-      
-      for (let i = 0; i <= segments; i++) {
-        const t = i / segments;
-        const y = centerY - height / 2 + t * height;
-        const angle = t * Math.PI * 4 + rotation * state.rotSpeed + strand * Math.PI;
-        
-        const freqIndex = Math.floor(t * dataArray.length * 0.7);
-        const value = dataArray[freqIndex] || 0;
-        const audioRadius = radius + (value / 255) * radius * 0.5;
-        
-        // 3D координаты
-        const x3d = Math.cos(angle) * audioRadius;
-        const y3d = (t - 0.5) * height;
-        const z3d = Math.sin(angle) * audioRadius;
-        
-        const projected = project3D(x3d, y3d, z3d, centerX, centerY, 600);
-        
-        if (i === 0) ctx.moveTo(projected.x, projected.y);
-        else ctx.lineTo(projected.x, projected.y);
-      }
-      
-      const hue = strand === 0 ? 180 : 280;
-      ctx.strokeStyle = `hsl(${hue}, 100%, 50%)`;
-      ctx.lineWidth = 3;
-      ctx.shadowBlur = state.vizGlow;
-      ctx.shadowColor = `hsl(${hue}, 100%, 50%)`;
-      ctx.stroke();
-    }
-
-    // Соединительные перекладины
-    for (let i = 0; i < segments; i += 3) {
-      const t = i / segments;
-      const y = centerY - height / 2 + t * height;
-      const angle1 = t * Math.PI * 4 + rotation * state.rotSpeed;
-      const angle2 = angle1 + Math.PI;
-      
-      const freqIndex = Math.floor(t * dataArray.length * 0.7);
-      const value = dataArray[freqIndex] || 0;
-      const audioRadius = radius + (value / 255) * radius * 0.5;
-      
-      const x1 = Math.cos(angle1) * audioRadius;
-      const z1 = Math.sin(angle1) * audioRadius;
-      const x2 = Math.cos(angle2) * audioRadius;
-      const z2 = Math.sin(angle2) * audioRadius;
-      
-      const y3d = (t - 0.5) * height;
-      const p1 = project3D(x1, y3d, z1, centerX, centerY, 600);
-      const p2 = project3D(x2, y3d, z2, centerX, centerY, 600);
-      
-      ctx.beginPath();
-      ctx.moveTo(p1.x, p1.y);
-      ctx.lineTo(p2.x, p2.y);
-      
-      const hue = 130 + t * 120;
-      ctx.strokeStyle = `hsl(${hue}, 100%, ${50 + (value / 255) * 30}%)`;
-      ctx.lineWidth = 2;
-      ctx.shadowBlur = state.vizGlow * 0.5;
-      ctx.shadowColor = `hsl(${hue}, 100%, 50%)`;
-      ctx.stroke();
-    }
-
-    ctx.restore();
-    ctx.shadowBlur = 0;
   }
 };
 
 // =============================================
-// 🎆 ЧАСТИЦЫ
+// 🎆 СИСТЕМА ЧАСТИЦ (РАБОТАЕТ)
 // =============================================
 function initParticles() {
   particles = [];
-  for (let i = 0; i < 500; i++) {
+  const amount = state.partAmount;
+  
+  for (let i = 0; i < amount; i++) {
     particles.push({
       x: Math.random() * config.width,
       y: Math.random() * config.height,
@@ -2701,8 +1853,182 @@ function initParticles() {
       speed: Math.random() * 2 + 0.5,
       opacity: Math.random(),
       angle: Math.random() * Math.PI * 2,
-      hue: Math.random() * 360
+      hue: Math.random() * 360,
+      char: String.fromCharCode(33 + Math.floor(Math.random() * 94))
     });
+  }
+}
+
+function updateAndDrawParticles(ctx) {
+  if (state.partType === 'none') return;
+  
+  const bass = dataArray ? (dataArray[2] || 0) / 255 : 0;
+  
+  particles.forEach(p => {
+    // Обновление позиции
+    switch(state.partType) {
+      case 'snow':
+        p.y += p.speed;
+        p.x += Math.sin(time + p.angle) * 0.5;
+        if (p.y > config.height) p.y = -10;
+        break;
+      case 'stars':
+        p.y += p.speed * 0.5;
+        if (p.y > config.height) {
+          p.y = -10;
+          p.x = Math.random() * config.width;
+        }
+        break;
+      case 'bubbles':
+        p.y -= p.speed;
+        p.x += Math.sin(time * 2 + p.angle) * 0.8;
+        if (p.y < -10) p.y = config.height + 10;
+        break;
+      case 'fireflies':
+        p.x += Math.cos(time + p.angle) * p.speed;
+        p.y += Math.sin(time * 1.5 + p.angle) * p.speed;
+        if (p.x < 0 || p.x > config.width) p.angle = Math.PI - p.angle;
+        if (p.y < 0 || p.y > config.height) p.angle = -p.angle;
+        break;
+      case 'matrix':
+        p.y += p.speed * 3;
+        if (p.y > config.height) {
+          p.y = -10;
+          p.x = Math.random() * config.width;
+        }
+        break;
+      case 'hearts':
+        p.y += p.speed;
+        p.x += Math.sin(time * 2 + p.angle) * 1.5;
+        if (p.y > config.height) p.y = -10;
+        break;
+      case 'notes':
+        p.y -= p.speed * (1 + bass);
+        p.x += Math.cos(time + p.angle) * 0.5;
+        if (p.y < -10) {
+          p.y = config.height + 10;
+          p.x = Math.random() * config.width;
+        }
+        break;
+      case 'glitter':
+        p.opacity = Math.sin(time * 5 + p.angle) * 0.5 + 0.5;
+        break;
+      case 'plasma':
+        p.x += Math.cos(time + p.angle) * 2;
+        p.y += Math.sin(time * 0.7 + p.angle) * 2;
+        if (p.x < -50 || p.x > config.width + 50) p.x = config.width / 2;
+        if (p.y < -50 || p.y > config.height + 50) p.y = config.height / 2;
+        break;
+    }
+    
+    // Отрисовка
+    ctx.save();
+    ctx.globalAlpha = p.opacity;
+    
+    switch(state.partType) {
+      case 'snow':
+        ctx.fillStyle = '#ffffff';
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
+        ctx.fill();
+        break;
+      case 'stars':
+        ctx.fillStyle = `hsl(${p.hue}, 100%, 70%)`;
+        ctx.font = `${p.size * 4}px Arial`;
+        ctx.fillText('★', p.x, p.y);
+        break;
+      case 'bubbles':
+        ctx.strokeStyle = `hsla(${p.hue}, 100%, 70%, 0.6)`;
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, p.size * 3, 0, Math.PI * 2);
+        ctx.stroke();
+        break;
+      case 'fireflies':
+        const gradient = ctx.createRadialGradient(p.x, p.y, 0, p.x, p.y, p.size * 4);
+        gradient.addColorStop(0, `hsla(${p.hue}, 100%, 70%, ${p.opacity})`);
+        gradient.addColorStop(1, 'rgba(0,0,0,0)');
+        ctx.fillStyle = gradient;
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, p.size * 4, 0, Math.PI * 2);
+        ctx.fill();
+        break;
+      case 'matrix':
+        ctx.fillStyle = `hsl(120, 100%, ${50 + p.opacity * 30}%)`;
+        ctx.font = `${p.size * 6}px monospace`;
+        ctx.fillText(p.char, p.x, p.y);
+        break;
+      case 'hearts':
+        ctx.fillStyle = `hsla(340, 100%, 60%, ${p.opacity})`;
+        ctx.font = `${p.size * 6}px Arial`;
+        ctx.fillText('❤️', p.x, p.y);
+        break;
+      case 'notes':
+        ctx.fillStyle = `hsla(${p.hue}, 100%, 60%, ${p.opacity})`;
+        ctx.font = `${p.size * 5}px Arial`;
+        ctx.fillText('♪', p.x, p.y);
+        break;
+      case 'glitter':
+        ctx.fillStyle = `hsla(${p.hue}, 100%, 70%, ${p.opacity})`;
+        ctx.shadowBlur = 10;
+        ctx.shadowColor = `hsl(${p.hue}, 100%, 50%)`;
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
+        ctx.fill();
+        break;
+      case 'plasma':
+        const plasmaGrad = ctx.createRadialGradient(p.x, p.y, 0, p.x, p.y, p.size * 6);
+        plasmaGrad.addColorStop(0, `hsla(${p.hue}, 100%, 70%, ${p.opacity})`);
+        plasmaGrad.addColorStop(0.5, `hsla(${(p.hue + 60) % 360}, 100%, 50%, ${p.opacity * 0.5})`);
+        plasmaGrad.addColorStop(1, 'rgba(0,0,0,0)');
+        ctx.fillStyle = plasmaGrad;
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, p.size * 6, 0, Math.PI * 2);
+        ctx.fill();
+        break;
+    }
+    
+    ctx.restore();
+  });
+}
+
+// =============================================
+// 🎬 SCREEN EFFECTS (РАБОТАЮТ)
+// =============================================
+function applyScreenEffects(ctx) {
+  const bass = dataArray ? (dataArray[2] || 0) / 255 : 0;
+  
+  // Flicker on Bass
+  if (state.fxFlicker && bass > 0.7) {
+    ctx.save();
+    ctx.globalAlpha = (bass - 0.7) * 0.5;
+    ctx.fillStyle = '#ffffff';
+    ctx.fillRect(0, 0, config.width, config.height);
+    ctx.restore();
+  }
+  
+  // Bloom / Glow
+  if (state.fxBloom) {
+    ctx.save();
+    ctx.globalCompositeOperation = 'lighter';
+    ctx.filter = 'blur(20px)';
+    ctx.globalAlpha = 0.3;
+    ctx.drawImage(canvas, 0, 0);
+    ctx.restore();
+    ctx.filter = 'none';
+  }
+  
+  // Vignette
+  if (state.fxVignette) {
+    const gradient = ctx.createRadialGradient(
+      config.width / 2, config.height / 2, config.height * 0.3,
+      config.width / 2, config.height / 2, config.height * 0.8
+    );
+    gradient.addColorStop(0, 'rgba(0,0,0,0)');
+    gradient.addColorStop(1, 'rgba(0,0,0,0.7)');
+    
+    ctx.fillStyle = gradient;
+    ctx.fillRect(0, 0, config.width, config.height);
   }
 }
 
@@ -2712,7 +2038,7 @@ function initParticles() {
 function animate() {
   requestAnimationFrame(animate);
 
-  // Очистка
+  // Очистка с Motion Blur
   if (state.motionBlur > 0) {
     ctx.fillStyle = `rgba(0,0,0,${1 - state.motionBlur})`;
     ctx.fillRect(0, 0, config.width, config.height);
@@ -2747,6 +2073,9 @@ function animate() {
     Visualizers[state.visualizer](ctx, centerX, centerY, dataArray || new Uint8Array(512));
   }
 
+  // Частицы
+  updateAndDrawParticles(ctx);
+
   // Эмблема
   if (emblemImage) {
     const size = Math.min(config.width, config.height) * state.emblemSize;
@@ -2762,6 +2091,9 @@ function animate() {
     ctx.drawImage(emblemImage, x - size / 2, y - size / 2, size, size);
     ctx.restore();
   }
+
+  // Screen Effects
+  applyScreenEffects(ctx);
 
   updateTimeline();
 }
@@ -2802,58 +2134,52 @@ function setupControls() {
         if (key === 'audioSmooth' && analyser) {
           analyser.smoothingTimeConstant = state[key];
         }
+        
+        if (key === 'partAmount') {
+          initParticles();
+        }
       });
     }
   });
 
   // Файл аудио
-  const audioFileInput = document.getElementById('audioFile');
-  if (audioFileInput) {
-    audioFileInput.addEventListener('change', (e) => {
-      console.log('🎵 Выбран файл:', e.target.files[0]?.name);
-      if (e.target.files[0]) {
-        loadAudioFile(e.target.files[0]);
-      }
-    });
-  }
+  document.getElementById('audioFile').addEventListener('change', (e) => {
+    if (e.target.files[0]) {
+      loadAudioFile(e.target.files[0]);
+    }
+  });
 
   // Фоновое изображение
-  const bgImageInput = document.getElementById('bgImage');
-  if (bgImageInput) {
-    bgImageInput.addEventListener('change', (e) => {
-      if (e.target.files[0]) {
-        const reader = new FileReader();
-        reader.onload = (event) => {
-          const img = new Image();
-          img.onload = () => { 
-            bgImage = img;
-            console.log('✅ Фон загружен');
-          };
-          img.src = event.target.result;
+  document.getElementById('bgImage').addEventListener('change', (e) => {
+    if (e.target.files[0]) {
+      const reader = new FileReader();
+      reader.onload = (event) => {
+        const img = new Image();
+        img.onload = () => { 
+          bgImage = img;
+          console.log('✅ Фон загружен');
         };
-        reader.readAsDataURL(e.target.files[0]);
-      }
-    });
-  }
+        img.src = event.target.result;
+      };
+      reader.readAsDataURL(e.target.files[0]);
+    }
+  });
 
   // Эмблема
-  const emblemInput = document.getElementById('emblemImage');
-  if (emblemInput) {
-    emblemInput.addEventListener('change', (e) => {
-      if (e.target.files[0]) {
-        const reader = new FileReader();
-        reader.onload = (event) => {
-          const img = new Image();
-          img.onload = () => { 
-            emblemImage = img;
-            console.log('✅ Эмблема загружена');
-          };
-          img.src = event.target.result;
+  document.getElementById('emblemImage').addEventListener('change', (e) => {
+    if (e.target.files[0]) {
+      const reader = new FileReader();
+      reader.onload = (event) => {
+        const img = new Image();
+        img.onload = () => { 
+          emblemImage = img;
+          console.log('✅ Эмблема загружена');
         };
-        reader.readAsDataURL(e.target.files[0]);
-      }
-    });
-  }
+        img.src = event.target.result;
+      };
+      reader.readAsDataURL(e.target.files[0]);
+    }
+  });
 
   // Цвета
   document.getElementById('bgColor').addEventListener('input', (e) => {
@@ -2862,6 +2188,28 @@ function setupControls() {
 
   document.getElementById('vizColor').addEventListener('input', (e) => {
     state.vizColor = e.target.value;
+  });
+
+  // Tunnel Colors
+  document.getElementById('tunnelPalettePreset').addEventListener('change', (e) => {
+    const presets = {
+      cyberpunk: ['#00E5FF', '#FF00E5', '#00FFAA'],
+      ocean: ['#00FFFF', '#00AAFF', '#0000FF'],
+      lava: ['#FF4500', '#FF8C00', '#FFD700'],
+      emerald: ['#00FF7F', '#7FFF00', '#008080']
+    };
+    
+    if (e.target.value !== 'custom' && presets[e.target.value]) {
+      state.tunnelColors = presets[e.target.value];
+      document.getElementById('tunnelColorsInput').value = state.tunnelColors.join(',');
+    }
+  });
+
+  document.getElementById('tunnelColorsInput').addEventListener('input', (e) => {
+    const colors = e.target.value.split(',').map(c => c.trim()).filter(c => c.match(/^#[0-9A-Fa-f]{6}$/));
+    if (colors.length > 0) {
+      state.tunnelColors = colors;
+    }
   });
 
   // Чекбоксы
@@ -2877,6 +2225,7 @@ function setupControls() {
   // Партиклы
   document.getElementById('partType').addEventListener('change', (e) => {
     state.partType = e.target.value;
+    initParticles();
   });
 
   // FPS
@@ -2903,7 +2252,7 @@ window.addEventListener('load', () => {
   animate();
   
   console.log('✅ Приложение запущено!');
-  console.log('📝 Нажмите на "Выбрать файл" чтобы загрузить аудио');
+  console.log('📝 Загрузите аудио файл для начала работы');
 });
 </script>
 </body>
