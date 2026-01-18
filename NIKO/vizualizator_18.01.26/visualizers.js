@@ -1160,46 +1160,65 @@ const VisualizerLibrary = {
   name: 'SpeedTunnel',
   icon: '🚄',
   render(ctx, centerX, centerY, dataArray, state, time, rotation, config) {
+     // Центр светится синим
     ctx.shadowBlur = 50;
     ctx.shadowColor = '#0066ff';
     ctx.fillStyle = '#000';
     ctx.beginPath();
-    ctx.arc(centerX, centerY, 30, 0, Math.PI * 2);
+    ctx.arc(centerX, centerY, 30, 0, Math.PI*2);
     ctx.fill();
     ctx.shadowBlur = 0;
 
+    // Рисуем бары по спирали от центра к краям
     const count = 80;
-    const layers = 5;
-    const rot = Number.isFinite(rotation) ? rotation : 0;
+    const layers = 5; // Слои глубины
+    
+    for(let l=0; l<layers; l++) {
+        const depth = 1 - (l/layers); // 1 = близко, 0 = далеко
+        const radius = (100 + l * 80) * state.vizScale; 
+        
+        for(let i=0; i<count; i++) {
+            // Берем данные, смещаясь по спектру для разных слоев
+            const idx = (i + l*10) % dataArray.length;
+            const val = dataArray[idx] || 0;
+            if(val < 50) continue;
 
-    for (let l = 0; l < layers; l++) {
-      const depth = 1 - (l / layers);
-      const radius = (100 + l * 80) * state.vizScale;
-
-      for (let i = 0; i < count; i++) {
-        const idx = (i + l * 10) % dataArray.length;
-        const val = dataArray[idx] || 0;
-        if (val < 50) continue;
-
-        const angle = (i / count) * Math.PI * 2 + rot * (l + 1);
-        const barW = 10 * depth;
-        const barH = (val / 255) * 40 * depth;
-        const x = centerX + Math.cos(angle) * radius;
-        const y = centerY + Math.sin(angle) * radius;
-
-        ctx.save();
-        ctx.translate(x, y);
-        ctx.rotate(angle);
-
-        const hue = (i / count) * 360 + l * 50;
-        ctx.fillStyle = `hsla(${hue}, 100%, 50%, ${depth})`;
-
-        ctx.fillRect(0, -barW / 2, barH, barW);
-        ctx.restore();
-      }  // ← закрываем внутренний for (i)
-    }    // ← ДОБАВЬТЕ ЭТУ СКОБКУ для внешнего for (l)
-  }      // ← закрываем render
-},
+            const angle = (i/count) * Math.PI * 2 + rotation * (l+1); // Слои вращаются с разной скоростью
+            
+            const barW = 10 * depth;
+            const barH = (val/255) * 40 * depth;
+            
+            const x = centerX + Math.cos(angle) * radius;
+            const y = centerY + Math.sin(angle) * radius;
+            
+            // Поворачиваем контекст чтобы бар смотрел из центра
+            ctx.save();
+            ctx.translate(x, y);
+            ctx.rotate(angle);
+            
+            // Цвета радуги по кругу
+            const hue = (i/count)*360 + l*50;
+            ctx.fillStyle = `hsla(${hue}, 100%, 50%, ${depth})`;
+            
+            ctx.fillRect(0, -barW/2, barH, barW); // Рисуем прямоугольник
+            ctx.restore();
+        }
+    }
+    
+    // Эффект скорости (полоски из центра)
+    const bass = dataArray[2] || 0;
+    if(bass > 180) {
+        ctx.strokeStyle = 'rgba(255,255,255,0.5)';
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        for(let i=0; i<10; i++){
+            const a = Math.random() * Math.PI * 2;
+            ctx.moveTo(centerX, centerY);
+            ctx.lineTo(centerX + Math.cos(a)*config.width, centerY + Math.sin(a)*config.height);
+        }
+        ctx.stroke();
+    }
+  },
 
   visualizeWaveform: {
     name: 'Waveform',
