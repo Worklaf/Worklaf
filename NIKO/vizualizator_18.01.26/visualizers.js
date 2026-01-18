@@ -1158,7 +1158,7 @@ const VisualizerLibrary = {
 
   visualizeSpeedTunnel: {
     name: 'SpeedTunnel',
-    icon: '⚪',
+    icon: '🚄',
     render(ctx, centerX, centerY, dataArray, state, time, rotation, config) {
      // Центр светится синим
     ctx.shadowBlur = 50;
