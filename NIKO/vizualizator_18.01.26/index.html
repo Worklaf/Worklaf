@@ -1,388 +1,613 @@
 <!DOCTYPE html>
 <html lang="ru">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width,initial-scale=1">
-<title>N1K∅ Super Video Creator — Pro Edition</title>
-<style>
-/* ВСЕ ВАШИ СТИЛИ ОСТАЮТСЯ БЕЗ ИЗМЕНЕНИЙ */
-/* Добавим только стили для новой секции */
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>N1K∅ Audio Visualizer</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
 
-.custom-viz-section {
-  background: rgba(255,77,166,0.05);
-  border: 1px dashed var(--accent);
-  border-radius: 8px;
-  padding: 12px;
-  margin-top: 16px;
-}
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background: linear-gradient(135deg, #0f0c29, #302b63, #24243e);
+      color: #fff;
+      overflow: hidden;
+      user-select: none;
+    }
 
-.code-editor {
-  width: 100%;
-  min-height: 200px;
-  background: #000;
-  color: #0f0;
-  font-family: 'Courier New', monospace;
-  font-size: 11px;
-  padding: 8px;
-  border: 1px solid var(--border);
-  border-radius: 6px;
-  resize: vertical;
-}
+    #canvas {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: #000;
+      z-index: 1;
+    }
 
-.custom-viz-controls {
-  display: flex;
-  gap: 8px;
-  margin-top: 8px;
-}
+    #controls {
+      position: fixed;
+      top: 20px;
+      left: 20px;
+      z-index: 10;
+      background: rgba(0, 0, 0, 0.85);
+      padding: 20px;
+      border-radius: 15px;
+      backdrop-filter: blur(15px);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
+      max-width: 320px;
+      transition: all 0.3s ease;
+    }
 
-.custom-viz-controls input {
-  flex: 1;
-  padding: 8px;
-  background: rgba(255,255,255,0.05);
-  border: 1px solid var(--border);
-  color: var(--text);
-  border-radius: 6px;
-}
-</style>
+    #controls.minimized {
+      padding: 10px;
+      max-width: 60px;
+    }
+
+    #controls.minimized .control-group,
+    #controls.minimized h2,
+    #controls.minimized #fileInput,
+    #controls.minimized #fileName {
+      display: none;
+    }
+
+    h2 {
+      font-size: 20px;
+      margin-bottom: 15px;
+      color: #00e5ff;
+      text-shadow: 0 0 10px rgba(0, 229, 255, 0.5);
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .logo {
+      font-size: 24px;
+      font-weight: bold;
+      letter-spacing: 2px;
+    }
+
+    .control-group {
+      margin-bottom: 15px;
+    }
+
+    label {
+      display: block;
+      margin-bottom: 5px;
+      font-size: 13px;
+      color: #aaa;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+    }
+
+    input[type="file"] {
+      display: none;
+    }
+
+    .file-label {
+      display: inline-block;
+      padding: 12px 20px;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      border-radius: 8px;
+      cursor: pointer;
+      text-align: center;
+      transition: all 0.3s ease;
+      font-weight: 600;
+      box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);
+    }
+
+    .file-label:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 6px 20px rgba(102, 126, 234, 0.6);
+    }
+
+    #fileName {
+      margin-top: 8px;
+      font-size: 12px;
+      color: #00e5ff;
+      word-break: break-word;
+    }
+
+    input[type="range"] {
+      width: 100%;
+      height: 6px;
+      background: rgba(255, 255, 255, 0.1);
+      border-radius: 10px;
+      outline: none;
+      cursor: pointer;
+      -webkit-appearance: none;
+    }
+
+    input[type="range"]::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      appearance: none;
+      width: 18px;
+      height: 18px;
+      background: #00e5ff;
+      cursor: pointer;
+      border-radius: 50%;
+      box-shadow: 0 0 10px rgba(0, 229, 255, 0.8);
+      transition: all 0.2s ease;
+    }
+
+    input[type="range"]::-webkit-slider-thumb:hover {
+      transform: scale(1.2);
+      box-shadow: 0 0 15px rgba(0, 229, 255, 1);
+    }
+
+    input[type="range"]::-moz-range-thumb {
+      width: 18px;
+      height: 18px;
+      background: #00e5ff;
+      cursor: pointer;
+      border-radius: 50%;
+      border: none;
+      box-shadow: 0 0 10px rgba(0, 229, 255, 0.8);
+    }
+
+    .value-display {
+      display: inline-block;
+      float: right;
+      color: #00e5ff;
+      font-weight: 600;
+      font-size: 12px;
+    }
+
+    input[type="color"] {
+      width: 100%;
+      height: 40px;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+      background: transparent;
+    }
+
+    button {
+      width: 100%;
+      padding: 12px;
+      margin-top: 10px;
+      background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+      border: none;
+      border-radius: 8px;
+      color: white;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      box-shadow: 0 4px 15px rgba(245, 87, 108, 0.4);
+    }
+
+    button:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 6px 20px rgba(245, 87, 108, 0.6);
+    }
+
+    button:active {
+      transform: translateY(0);
+    }
+
+    #toggleMinimize {
+      position: absolute;
+      top: 10px;
+      right: 10px;
+      width: 30px;
+      height: 30px;
+      padding: 0;
+      margin: 0;
+      background: rgba(255, 255, 255, 0.1);
+      border-radius: 50%;
+      font-size: 16px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: all 0.3s ease;
+    }
+
+    #toggleMinimize:hover {
+      background: rgba(255, 255, 255, 0.2);
+      transform: rotate(90deg);
+    }
+
+    #visualizerSelector {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 8px;
+      margin-top: 10px;
+    }
+
+    .viz-option {
+      padding: 10px 5px;
+      background: rgba(255, 255, 255, 0.05);
+      border: 2px solid transparent;
+      border-radius: 8px;
+      cursor: pointer;
+      text-align: center;
+      transition: all 0.3s ease;
+      font-size: 11px;
+    }
+
+    .viz-option:hover {
+      background: rgba(255, 255, 255, 0.1);
+      border-color: rgba(0, 229, 255, 0.5);
+    }
+
+    .viz-option.active {
+      background: rgba(0, 229, 255, 0.2);
+      border-color: #00e5ff;
+      box-shadow: 0 0 15px rgba(0, 229, 255, 0.5);
+    }
+
+    .viz-icon {
+      font-size: 24px;
+      display: block;
+      margin-bottom: 5px;
+    }
+
+    #info {
+      position: fixed;
+      bottom: 20px;
+      left: 20px;
+      z-index: 10;
+      background: rgba(0, 0, 0, 0.7);
+      padding: 15px 20px;
+      border-radius: 10px;
+      backdrop-filter: blur(10px);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      font-size: 14px;
+      color: #aaa;
+    }
+
+    #playPauseBtn {
+      width: 60px;
+      height: 60px;
+      position: fixed;
+      bottom: 20px;
+      right: 20px;
+      z-index: 10;
+      border-radius: 50%;
+      font-size: 24px;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      box-shadow: 0 8px 32px rgba(102, 126, 234, 0.6);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin: 0;
+      padding: 0;
+    }
+
+    #playPauseBtn:hover {
+      transform: scale(1.1);
+      box-shadow: 0 12px 40px rgba(102, 126, 234, 0.8);
+    }
+
+    @keyframes pulse {
+      0%, 100% { transform: scale(1); }
+      50% { transform: scale(1.05); }
+    }
+
+    .playing {
+      animation: pulse 1s infinite;
+    }
+
+    @media (max-width: 768px) {
+      #controls {
+        max-width: 280px;
+        font-size: 12px;
+      }
+
+      #visualizerSelector {
+        grid-template-columns: repeat(2, 1fr);
+      }
+    }
+  </style>
 </head>
 <body>
+  <canvas id="canvas"></canvas>
 
-<!-- ... ВСЕ ВАШИ СУЩЕСТВУЮЩИЕ ЭЛЕМЕНТЫ ... -->
+  <div id="controls">
+    <button id="toggleMinimize">−</button>
+    <h2><span class="logo">N1K∅</span> Visualizer</h2>
 
-<!-- В TAB: VISUALIZER добавим секцию для кастомных визуализаторов -->
-<div class="tab-content" id="tab-viz">
-  <div class="section">
-    <div class="section-title">Spectrum Style</div>
-    <div class="viz-grid" id="vizGrid">
-      <!-- Карточки создаются динамически через JS -->
+    <div class="control-group">
+      <label for="fileInput">📁 Загрузить аудио</label>
+      <label for="fileInput" class="file-label">Выбрать файл</label>
+      <input type="file" id="fileInput" accept="audio/*">
+      <div id="fileName"></div>
     </div>
+
+    <div class="control-group">
+      <label>🎨 Визуализатор</label>
+      <div id="visualizerSelector"></div>
+    </div>
+
+    <div class="control-group">
+      <label for="colorPicker">🎨 Цвет <span class="value-display" id="colorValue">#00E5FF</span></label>
+      <input type="color" id="colorPicker" value="#00E5FF">
+    </div>
+
+    <div class="control-group">
+      <label for="scaleSlider">📐 Масштаб <span class="value-display" id="scaleValue">1.0</span></label>
+      <input type="range" id="scaleSlider" min="0.5" max="2" step="0.1" value="1">
+    </div>
+
+    <div class="control-group">
+      <label for="glowSlider">✨ Свечение <span class="value-display" id="glowValue">15</span></label>
+      <input type="range" id="glowSlider" min="0" max="50" value="15">
+    </div>
+
+    <div class="control-group">
+      <label for="rotSpeedSlider">🔄 Скорость вращения <span class="value-display" id="rotSpeedValue">1.0</span></label>
+      <input type="range" id="rotSpeedSlider" min="0" max="3" step="0.1" value="1">
+    </div>
+
+    <div class="control-group">
+      <label for="trailSlider">👻 След <span class="value-display" id="trailValue">0.1</span></label>
+      <input type="range" id="trailSlider" min="0" max="1" step="0.05" value="0.1">
+    </div>
+
+    <button id="randomizeBtn">🎲 Случайные настройки</button>
   </div>
 
-  <!-- НОВАЯ СЕКЦИЯ: Кастомные визуализаторы -->
-  <div class="section custom-viz-section">
-    <div class="section-title">🎨 Create Custom Visualizer</div>
-    <p style="font-size:10px;color:var(--muted);margin-bottom:8px;">
-      Write JavaScript code. Available: ctx, centerX, centerY, dataArray, state, time, rotation
-    </p>
-    
-    <textarea class="code-editor" id="customVizCode" placeholder="// Example:
-const radius = 100 * state.vizScale;
-for (let i = 0; i < 180; i++) {
-  const angle = (i / 180) * Math.PI * 2;
-  const value = dataArray[i] || 0;
-  const r = radius + (value / 255) * 50;
-  const x = centerX + Math.cos(angle) * r;
-  const y = centerY + Math.sin(angle) * r;
-  ctx.fillStyle = state.vizColor;
-  ctx.fillRect(x, y, 3, 3);
-}"></textarea>
+  <button id="playPauseBtn">▶</button>
 
-    <div class="custom-viz-controls">
-      <input type="text" id="customVizName" placeholder="Visualizer Name">
-      <input type="text" id="customVizIcon" placeholder="Icon (emoji)" maxlength="2">
-      <button class="btn" onclick="addCustomVisualizer()">➕ Add</button>
-    </div>
-
-    <div id="customVizList" style="margin-top:12px;font-size:11px;color:var(--muted);">
-      <!-- Список кастомных визуализаторов -->
-    </div>
+  <div id="info">
+    <div>ℹ️ Загрузите аудиофайл для начала</div>
   </div>
 
-  <!-- Остальные секции остаются без изменений -->
-</div>
+  <!-- Подключаем библиотеку визуализаторов -->
+  <script src="visualizers.js"></script>
 
-<!-- Подключаем файл с визуализаторами -->
-<script src="visualizers.js"></script>
+  <script>
+    // =============================================
+    // 🎵 ИНИЦИАЛИЗАЦИЯ
+    // =============================================
+    const canvas = document.getElementById('canvas');
+    const ctx = canvas.getContext('2d');
+    const fileInput = document.getElementById('fileInput');
+    const fileNameDisplay = document.getElementById('fileName');
+    const playPauseBtn = document.getElementById('playPauseBtn');
+    const colorPicker = document.getElementById('colorPicker');
+    const scaleSlider = document.getElementById('scaleSlider');
+    const glowSlider = document.getElementById('glowSlider');
+    const rotSpeedSlider = document.getElementById('rotSpeedSlider');
+    const trailSlider = document.getElementById('trailSlider');
+    const randomizeBtn = document.getElementById('randomizeBtn');
+    const toggleMinimizeBtn = document.getElementById('toggleMinimize');
+    const controlsPanel = document.getElementById('controls');
+    const info = document.getElementById('info');
+    const visualizerSelectorDiv = document.getElementById('visualizerSelector');
 
-<script>
-// =============================================
-// 🎯 ОСНОВНОЙ КОД (СОКРАЩЕННЫЙ)
-// =============================================
+    let audioContext, analyser, source, dataArray, bufferLength;
+    let audio = new Audio();
+    let isPlaying = false;
+    let animationId;
 
-const canvas = document.getElementById('canvas');
-const ctx = canvas.getContext('2d', { willReadFrequently: true });
-
-let config = { width: 1920, height: 1080, fps: 30 };
-let state = {
-  visualizer: 'circular',
-  bgColor: '#000000',
-  bgBlur: 0,
-  bgBright: 100,
-  bgReact: 0.05,
-  vizColor: '#00a2ff',
-  vizGlow: 15,
-  vizScale: 1,
-  vizY: 0.5,
-  audioSmooth: 0.85,
-  partType: 'none',
-  partAmount: 150,
-  emblemSize: 0.3,
-  emblemX: 0.5,
-  emblemY: 0.5,
-  emblemCircle: true,
-  tunnelColors: ['#00E5FF', '#FF00E5', '#00FFAA'],
-  rotSpeed: 1,
-  motionBlur: 0,
-  fxFlicker: false,
-  fxBloom: false,
-  fxVignette: false
-};
-
-let audioCtx, analyser, audioSource, audioBuffer, dataArray;
-let isPlaying = false, audioStartTime = 0, audioPauseTime = 0, currentTime = 0, duration = 0;
-let bgImage = null, emblemImage = null;
-let particles = [];
-let rotation = 0, time = 0;
-let mediaRecorder = null, recordedChunks = [], isRecording = false;
-
-// Хранилище кастомных визуализаторов
-let customVisualizers = {};
-
-// =============================================
-// 🎨 ИНИЦИАЛИЗАЦИЯ ВИЗУАЛИЗАТОРОВ
-// =============================================
-function initVisualizerGrid() {
-  const grid = document.getElementById('vizGrid');
-  grid.innerHTML = '';
-
-  // Добавляем стандартные визуализаторы
-  Object.keys(VisualizerLibrary).forEach(key => {
-    if (key === 'helpers') return; // Пропускаем helpers
-    
-    const viz = VisualizerLibrary[key];
-    const card = document.createElement('div');
-    card.className = 'viz-card' + (state.visualizer === key ? ' active' : '');
-    card.innerHTML = `
-      <span class="viz-icon">${viz.icon}</span>
-      <div class="viz-name">${viz.name}</div>
-    `;
-    card.onclick = () => selectViz(key, card);
-    grid.appendChild(card);
-  });
-
-  // Добавляем кастомные визуализаторы
-  Object.keys(customVisualizers).forEach(key => {
-    const viz = customVisualizers[key];
-    const card = document.createElement('div');
-    card.className = 'viz-card' + (state.visualizer === key ? ' active' : '');
-    card.innerHTML = `
-      <span class="viz-icon">${viz.icon}</span>
-      <div class="viz-name">${viz.name}</div>
-      <button class="btn" style="margin-top:4px;padding:4px;font-size:10px;" onclick="deleteCustomViz('${key}')">🗑️</button>
-    `;
-    card.onclick = (e) => {
-      if (e.target.tagName !== 'BUTTON') {
-        selectViz(key, card);
-      }
-    };
-    grid.appendChild(card);
-  });
-
-  loadCustomVisualizers();
-}
-
-function selectViz(vizName, card) {
-  state.visualizer = vizName;
-  document.querySelectorAll('.viz-card').forEach(c => c.classList.remove('active'));
-  if (card) card.classList.add('active');
-  console.log('✅ Выбран визуализатор:', vizName);
-}
-
-// =============================================
-// 🆕 ДОБАВЛЕНИЕ КАСТОМНЫХ ВИЗУАЛИЗАТОРОВ
-// =============================================
-function addCustomVisualizer() {
-  const code = document.getElementById('customVizCode').value.trim();
-  const name = document.getElementById('customVizName').value.trim();
-  const icon = document.getElementById('customVizIcon').value.trim() || '🎨';
-
-  if (!code || !name) {
-    alert('⚠️ Введите код и название визуализатора!');
-    return;
-  }
-
-  const key = 'custom_' + Date.now();
-
-  try {
-    // Создаем функцию из кода
-    const renderFunc = new Function('ctx', 'centerX', 'centerY', 'dataArray', 'state', 'time', 'rotation', code);
-    
-    customVisualizers[key] = {
-      name: name,
-      icon: icon,
-      code: code,
-      render: renderFunc
+    // =============================================
+    // 🎨 СОСТОЯНИЕ ВИЗУАЛИЗАЦИИ
+    // =============================================
+    const state = {
+      currentVisualizer: 'circular',
+      vizColor: '#00E5FF',
+      vizScale: 1.0,
+      vizGlow: 15,
+      rotSpeed: 1.0,
+      trailAmount: 0.1,
+      rotation: 0,
+      time: 0,
+      tunnelColors: ['#00E5FF', '#FF00E5', '#00FFAA']
     };
 
-    // Сохраняем в localStorage
-    saveCustomVisualizers();
+    // =============================================
+    // 📊 СОЗДАНИЕ СЕЛЕКТОРА ВИЗУАЛИЗАТОРОВ
+    // =============================================
+    function createVisualizerSelector() {
+      visualizerSelectorDiv.innerHTML = '';
+      
+      Object.keys(VisualizerLibrary).forEach(key => {
+        if (key === 'helpers') return;
+        
+        const viz = VisualizerLibrary[key];
+        const option = document.createElement('div');
+        option.className = 'viz-option';
+        if (key === state.currentVisualizer) option.classList.add('active');
+        
+        option.innerHTML = `
+          <span class="viz-icon">${viz.icon}</span>
+          <span>${viz.name}</span>
+        `;
+        
+        option.addEventListener('click', () => {
+          document.querySelectorAll('.viz-option').forEach(el => el.classList.remove('active'));
+          option.classList.add('active');
+          state.currentVisualizer = key;
+        });
+        
+        visualizerSelectorDiv.appendChild(option);
+      });
+    }
 
-    // Обновляем список
-    initVisualizerGrid();
-    updateCustomVisualizerList();
+    createVisualizerSelector();
 
-    // Очищаем форму
-    document.getElementById('customVizCode').value = '';
-    document.getElementById('customVizName').value = '';
-    document.getElementById('customVizIcon').value = '';
+    // =============================================
+    // 🎧 НАСТРОЙКА АУДИО
+    // =============================================
+    function setupAudio() {
+      audioContext = new (window.AudioContext || window.webkitAudioContext)();
+      analyser = audioContext.createAnalyser();
+      analyser.fftSize = 512;
+      bufferLength = analyser.frequencyBinCount;
+      dataArray = new Uint8Array(bufferLength);
 
-    alert(`✅ Визуализатор "${name}" добавлен!`);
-  } catch (error) {
-    alert('❌ Ошибка в коде:\n' + error.message);
-    console.error(error);
-  }
-}
+      source = audioContext.createMediaElementSource(audio);
+      source.connect(analyser);
+      analyser.connect(audioContext.destination);
+    }
 
-function deleteCustomViz(key) {
-  if (confirm('Удалить этот визуализатор?')) {
-    delete customVisualizers[key];
-    saveCustomVisualizers();
-    initVisualizerGrid();
-    updateCustomVisualizerList();
-  }
-}
+    // =============================================
+    // 📂 ЗАГРУЗКА ФАЙЛА
+    // =============================================
+    fileInput.addEventListener('change', (e) => {
+      const file = e.target.files[0];
+      if (!file) return;
 
-function saveCustomVisualizers() {
-  const data = {};
-  Object.keys(customVisualizers).forEach(key => {
-    data[key] = {
-      name: customVisualizers[key].name,
-      icon: customVisualizers[key].icon,
-      code: customVisualizers[key].code
-    };
-  });
-  localStorage.setItem('customVisualizers', JSON.stringify(data));
-}
+      fileNameDisplay.textContent = `🎵 ${file.name}`;
+      
+      const url = URL.createObjectURL(file);
+      audio.src = url;
 
-function loadCustomVisualizers() {
-  try {
-    const data = JSON.parse(localStorage.getItem('customVisualizers') || '{}');
-    Object.keys(data).forEach(key => {
-      const viz = data[key];
-      customVisualizers[key] = {
-        name: viz.name,
-        icon: viz.icon,
-        code: viz.code,
-        render: new Function('ctx', 'centerX', 'centerY', 'dataArray', 'state', 'time', 'rotation', viz.code)
-      };
+      if (!audioContext) setupAudio();
+
+      audio.play().then(() => {
+        isPlaying = true;
+        playPauseBtn.textContent = '⏸';
+        playPauseBtn.classList.add('playing');
+        info.innerHTML = '<div>🎵 Воспроизведение...</div>';
+        animate();
+      }).catch(err => {
+        console.error('Ошибка воспроизведения:', err);
+      });
     });
-    updateCustomVisualizerList();
-  } catch (error) {
-    console.error('Ошибка загрузки кастомных визуализаторов:', error);
-  }
-}
 
-function updateCustomVisualizerList() {
-  const list = document.getElementById('customVizList');
-  const count = Object.keys(customVisualizers).length;
-  list.textContent = count > 0 
-    ? `💾 Сохранено кастомных визуализаторов: ${count}` 
-    : 'Нет сохраненных визуализаторов';
-}
+    // =============================================
+    // ⏯️ ВОСПРОИЗВЕДЕНИЕ / ПАУЗА
+    // =============================================
+    playPauseBtn.addEventListener('click', () => {
+      if (!audio.src) {
+        info.innerHTML = '<div>⚠️ Сначала загрузите аудиофайл</div>';
+        return;
+      }
 
-// =============================================
-// 🎬 АНИМАЦИЯ (ИЗМЕНЕНА)
-// =============================================
-function animate() {
-  requestAnimationFrame(animate);
+      if (isPlaying) {
+        audio.pause();
+        playPauseBtn.textContent = '▶';
+        playPauseBtn.classList.remove('playing');
+        info.innerHTML = '<div>⏸ Пауза</div>';
+      } else {
+        audio.play();
+        playPauseBtn.textContent = '⏸';
+        playPauseBtn.classList.add('playing');
+        info.innerHTML = '<div>🎵 Воспроизведение...</div>';
+        animate();
+      }
+      isPlaying = !isPlaying;
+    });
 
-  // Очистка
-  if (state.motionBlur > 0) {
-    ctx.fillStyle = `rgba(0,0,0,${1 - state.motionBlur})`;
-    ctx.fillRect(0, 0, config.width, config.height);
-  } else {
-    ctx.fillStyle = state.bgColor;
-    ctx.fillRect(0, 0, config.width, config.height);
-  }
+    // =============================================
+    // 🎨 ОБРАБОТЧИКИ УПРАВЛЕНИЯ
+    // =============================================
+    colorPicker.addEventListener('input', (e) => {
+      state.vizColor = e.target.value;
+      document.getElementById('colorValue').textContent = e.target.value.toUpperCase();
+    });
 
-  // Фон
-  if (bgImage) {
-    ctx.save();
-    ctx.filter = `blur(${state.bgBlur}px) brightness(${state.bgBright}%)`;
-    ctx.globalAlpha = 0.5;
-    ctx.drawImage(bgImage, 0, 0, config.width, config.height);
-    ctx.restore();
-    ctx.filter = 'none';
-  }
+    scaleSlider.addEventListener('input', (e) => {
+      state.vizScale = parseFloat(e.target.value);
+      document.getElementById('scaleValue').textContent = state.vizScale.toFixed(1);
+    });
 
-  // Аудио данные
-  if (analyser) {
-    analyser.getByteFrequencyData(dataArray);
-  }
+    glowSlider.addEventListener('input', (e) => {
+      state.vizGlow = parseInt(e.target.value);
+      document.getElementById('glowValue').textContent = state.vizGlow;
+    });
 
-  time += 0.016;
-  rotation += 0.01;
+    rotSpeedSlider.addEventListener('input', (e) => {
+      state.rotSpeed = parseFloat(e.target.value);
+      document.getElementById('rotSpeedValue').textContent = state.rotSpeed.toFixed(1);
+    });
 
-  // ВИЗУАЛИЗАТОР (НОВАЯ ЛОГИКА)
-  const centerX = config.width / 2;
-  const centerY = config.height * state.vizY;
+    trailSlider.addEventListener('input', (e) => {
+      state.trailAmount = parseFloat(e.target.value);
+      document.getElementById('trailValue').textContent = state.trailAmount.toFixed(2);
+    });
 
-  // Проверяем стандартные визуализаторы
-  if (VisualizerLibrary[state.visualizer]) {
-    VisualizerLibrary[state.visualizer].render(
-      ctx, centerX, centerY, 
-      dataArray || new Uint8Array(512), 
-      state, time, rotation
-    );
-  }
-  // Проверяем кастомные визуализаторы
-  else if (customVisualizers[state.visualizer]) {
-    try {
-      customVisualizers[state.visualizer].render(
-        ctx, centerX, centerY, 
-        dataArray || new Uint8Array(512), 
-        state, time, rotation
-      );
-    } catch (error) {
-      console.error('Ошибка в кастомном визуализаторе:', error);
+    // =============================================
+    // 🎲 СЛУЧАЙНЫЕ НАСТРОЙКИ
+    // =============================================
+    randomizeBtn.addEventListener('click', () => {
+      const randomColor = '#' + Math.floor(Math.random() * 16777215).toString(16).padStart(6, '0');
+      colorPicker.value = randomColor;
+      state.vizColor = randomColor;
+      document.getElementById('colorValue').textContent = randomColor.toUpperCase();
+
+      const randomScale = (Math.random() * 1.5 + 0.5).toFixed(1);
+      scaleSlider.value = randomScale;
+      state.vizScale = parseFloat(randomScale);
+      document.getElementById('scaleValue').textContent = randomScale;
+
+      const randomGlow = Math.floor(Math.random() * 50);
+      glowSlider.value = randomGlow;
+      state.vizGlow = randomGlow;
+      document.getElementById('glowValue').textContent = randomGlow;
+
+      const randomRotSpeed = (Math.random() * 3).toFixed(1);
+      rotSpeedSlider.value = randomRotSpeed;
+      state.rotSpeed = parseFloat(randomRotSpeed);
+      document.getElementById('rotSpeedValue').textContent = randomRotSpeed;
+
+      const visualizers = Object.keys(VisualizerLibrary).filter(k => k !== 'helpers');
+      const randomViz = visualizers[Math.floor(Math.random() * visualizers.length)];
+      state.currentVisualizer = randomViz;
+      
+      document.querySelectorAll('.viz-option').forEach((el, idx) => {
+        el.classList.toggle('active', visualizers[idx] === randomViz);
+      });
+    });
+
+    // =============================================
+    // 🔽 СВОРАЧИВАНИЕ ПАНЕЛИ
+    // =============================================
+    toggleMinimizeBtn.addEventListener('click', () => {
+      controlsPanel.classList.toggle('minimized');
+      toggleMinimizeBtn.textContent = controlsPanel.classList.contains('minimized') ? '+' : '−';
+    });
+
+    // =============================================
+    // 🖼️ АДАПТИВНЫЙ CANVAS
+    // =============================================
+    function resizeCanvas() {
+      canvas.width = window.innerWidth;
+      canvas.height = window.innerHeight;
     }
-  }
+    window.addEventListener('resize', resizeCanvas);
+    resizeCanvas();
 
-  // Частицы, эмблема, эффекты...
-  updateAndDrawParticles(ctx);
-  
-  if (emblemImage) {
-    const size = Math.min(config.width, config.height) * state.emblemSize;
-    const x = config.width * state.emblemX;
-    const y = config.height * state.emblemY;
-    
-    ctx.save();
-    if (state.emblemCircle) {
-      ctx.beginPath();
-      ctx.arc(x, y, size / 2, 0, Math.PI * 2);
-      ctx.clip();
+    // =============================================
+    // 🎬 АНИМАЦИЯ
+    // =============================================
+    function animate() {
+      if (!isPlaying) return;
+      animationId = requestAnimationFrame(animate);
+
+      analyser.getByteFrequencyData(dataArray);
+
+      ctx.fillStyle = `rgba(0, 0, 0, ${state.trailAmount})`;
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+      const centerX = canvas.width / 2;
+      const centerY = canvas.height / 2;
+
+      state.rotation += 0.01;
+      state.time += 0.016;
+
+      const visualizer = VisualizerLibrary[state.currentVisualizer];
+      if (visualizer && visualizer.render) {
+        visualizer.render(ctx, centerX, centerY, dataArray, state, state.time, state.rotation, {
+          width: canvas.width,
+          height: canvas.height
+        });
+      }
     }
-    ctx.drawImage(emblemImage, x - size / 2, y - size / 2, size, size);
-    ctx.restore();
-  }
 
-  applyScreenEffects(ctx);
-  updateTimeline();
-}
-
-// =============================================
-// 🚀 ЗАПУСК
-// =============================================
-window.addEventListener('load', () => {
-  console.log('🚀 Запуск приложения...');
-  
-  canvas.width = config.width;
-  canvas.height = config.height;
-  
-  initAudio();
-  initVisualizerGrid();
-  setupControls();
-  initParticles();
-  
-  animate();
-  
-  console.log('✅ Приложение запущено!');
-});
-
-// ВСЕ ОСТАЛЬНЫЕ ФУНКЦИИ ОСТАЮТСЯ БЕЗ ИЗМЕНЕНИЙ
-// (initAudio, playAudio, pauseAudio, togglePlay, updateTimeline, 
-//  toggleRecord, initParticles, updateAndDrawParticles, 
-//  applyScreenEffects, setupControls и т.д.)
-</script>
+    // =============================================
+    // 🚀 ЗАПУСК
+    // =============================================
+    info.innerHTML = '<div>👋 Привет! Загрузите аудиофайл для начала визуализации</div>';
+  </script>
 </body>
 </html>
