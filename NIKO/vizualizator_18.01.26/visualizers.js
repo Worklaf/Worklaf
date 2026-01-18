@@ -1225,18 +1225,38 @@ const VisualizerLibrary = {
         }
       }
 
-      const bass = dataArray[2] || 0;
-      if (bass > 180) {
-        ctx.strokeStyle = 'rgba(255,255,255,0.5)';
-        ctx.lineWidth = 2;
-        ctx.beginPath();
-        for (let i = 0; i < 10; i++) {
-          const a = Math.random() * Math.PI * 2;
-          ctx.moveTo(centerX, centerY);
-          ctx.lineTo(centerX + Math.cos(a) * config.width, centerY + Math.sin(a) * config.height);
-        }
-        ctx.stroke();
-      }
+      // Эффект скорости (музыкальные лучи)
+const bass = dataArray[2] || 0;
+const bassNormalized = bass / 255;
+
+const beatThreshold = 0.4; // Порог срабатывания (от 0 до 1)
+if (bassNormalized > beatThreshold) {
+    const intensity = (bassNormalized - beatThreshold) / (1 - beatThreshold);
+    const numRays = Math.floor(8 + intensity * 8); // 8-16 лучей в зависимости от баса
+    const rayLength = config.width * 0.3 * intensity;
+    const pulse = Math.sin(time * 4) * 0.5 + 0.5; // Эффект пульсации
+    
+    // Цвет и свечение зависят от интенсивности баса
+    ctx.strokeStyle = `rgba(255,255,255,${intensity * pulse})`;
+    ctx.lineWidth = 1 + intensity * 3;
+    ctx.shadowBlur = state.vizGlow * intensity * pulse;
+    ctx.shadowColor = state.vizColor;
+    
+    ctx.beginPath();
+    for (let i = 0; i < numRays; i++) {
+        // Равномерно распределенные лучи с плавным вращением
+        const angle = (i / numRays) * Math.PI * 2 + time * 1.5 + rotation;
+        const waveOffset = Math.sin(time * 3 + i * 0.5) * 15;
+        const finalLength = rayLength + waveOffset;
+        
+        ctx.moveTo(centerX, centerY);
+        ctx.lineTo(
+            centerX + Math.cos(angle) * finalLength,
+            centerY + Math.sin(angle) * finalLength
+        );
+    }
+    ctx.stroke();
+}
     }
   },
 
