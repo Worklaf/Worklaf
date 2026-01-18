@@ -1,613 +1,1417 @@
 <!DOCTYPE html>
 <html lang="ru">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>N1K∅ Audio Visualizer</title>
-  <style>
-    * {
-      margin: 0;
-      padding: 0;
-      box-sizing: border-box;
-    }
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>N1K∅ Super Video Creator — Pro Edition</title>
+<style>
+:root {
+  --bg: #07060a;
+  --card: #0b0b10;
+  --border: #1a1a20;
+  --accent: #ff4da6;
+  --accent2: #00d1ff;
+  --text: #eaeaf2;
+  --muted: #8a8a9a;
+}
 
-    body {
-      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-      background: linear-gradient(135deg, #0f0c29, #302b63, #24243e);
-      color: #fff;
-      overflow: hidden;
-      user-select: none;
-    }
+* { box-sizing: border-box; margin: 0; padding: 0; }
 
-    #canvas {
-      position: fixed;
-      top: 0;
-      left: 0;
-      width: 100%;
-      height: 100%;
-      background: #000;
-      z-index: 1;
-    }
+body {
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  height: 100vh;
+  display: flex;
+  overflow: hidden;
+}
 
-    #controls {
-      position: fixed;
-      top: 20px;
-      left: 20px;
-      z-index: 10;
-      background: rgba(0, 0, 0, 0.85);
-      padding: 20px;
-      border-radius: 15px;
-      backdrop-filter: blur(15px);
-      border: 1px solid rgba(255, 255, 255, 0.1);
-      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
-      max-width: 320px;
-      transition: all 0.3s ease;
-    }
+/* === SIDEBAR === */
+.sidebar {
+  width: 320px;
+  background: var(--card);
+  border-right: 1px solid var(--border);
+  display: flex;
+  flex-direction: column;
+  overflow-y: auto;
+}
 
-    #controls.minimized {
-      padding: 10px;
-      max-width: 60px;
-    }
+.sidebar-header {
+  padding: 20px;
+  background: linear-gradient(180deg, #000, var(--card));
+  border-bottom: 1px solid var(--border);
+}
 
-    #controls.minimized .control-group,
-    #controls.minimized h2,
-    #controls.minimized #fileInput,
-    #controls.minimized #fileName {
-      display: none;
-    }
+.sidebar-header h1 {
+  font-size: 18px;
+  background: linear-gradient(90deg, var(--accent), var(--accent2));
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
 
-    h2 {
-      font-size: 20px;
-      margin-bottom: 15px;
-      color: #00e5ff;
-      text-shadow: 0 0 10px rgba(0, 229, 255, 0.5);
-      display: flex;
-      align-items: center;
-      gap: 10px;
-    }
+.tabs {
+  display: flex;
+  background: #000;
+  border-bottom: 1px solid var(--border);
+}
 
-    .logo {
-      font-size: 24px;
-      font-weight: bold;
-      letter-spacing: 2px;
-    }
+.tab {
+  flex: 1;
+  padding: 12px 8px;
+  background: none;
+  border: none;
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  cursor: pointer;
+  border-bottom: 2px solid transparent;
+  transition: all 0.2s;
+}
 
-    .control-group {
-      margin-bottom: 15px;
-    }
+.tab:hover { color: var(--text); }
+.tab.active { color: var(--accent); border-bottom-color: var(--accent); }
 
-    label {
-      display: block;
-      margin-bottom: 5px;
-      font-size: 13px;
-      color: #aaa;
-      text-transform: uppercase;
-      letter-spacing: 1px;
-    }
+.tab-content { display: none; padding: 16px; }
+.tab-content.active { display: block; }
 
-    input[type="file"] {
-      display: none;
-    }
+.section {
+  margin-bottom: 20px;
+  padding-bottom: 20px;
+  border-bottom: 1px solid var(--border);
+}
 
-    .file-label {
-      display: inline-block;
-      padding: 12px 20px;
-      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-      border-radius: 8px;
-      cursor: pointer;
-      text-align: center;
-      transition: all 0.3s ease;
-      font-weight: 600;
-      box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);
-    }
+.section:last-child { border: none; margin-bottom: 0; }
 
-    .file-label:hover {
-      transform: translateY(-2px);
-      box-shadow: 0 6px 20px rgba(102, 126, 234, 0.6);
-    }
+.section-title {
+  font-size: 11px;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  margin-bottom: 12px;
+  font-weight: 700;
+}
 
-    #fileName {
-      margin-top: 8px;
-      font-size: 12px;
-      color: #00e5ff;
-      word-break: break-word;
-    }
+/* === INPUTS === */
+.input, select, input[type="file"] {
+  width: 100%;
+  padding: 10px 12px;
+  background: rgba(255,255,255,0.05);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  color: var(--text);
+  font-size: 12px;
+  margin-bottom: 10px;
+  transition: all 0.2s;
+}
 
-    input[type="range"] {
-      width: 100%;
-      height: 6px;
-      background: rgba(255, 255, 255, 0.1);
-      border-radius: 10px;
-      outline: none;
-      cursor: pointer;
-      -webkit-appearance: none;
-    }
+.input:focus, select:focus {
+  outline: none;
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px rgba(255,77,166,0.1);
+}
 
-    input[type="range"]::-webkit-slider-thumb {
-      -webkit-appearance: none;
-      appearance: none;
-      width: 18px;
-      height: 18px;
-      background: #00e5ff;
-      cursor: pointer;
-      border-radius: 50%;
-      box-shadow: 0 0 10px rgba(0, 229, 255, 0.8);
-      transition: all 0.2s ease;
-    }
+input[type="file"] {
+  font-size: 10px;
+  cursor: pointer;
+  padding: 8px;
+}
 
-    input[type="range"]::-webkit-slider-thumb:hover {
-      transform: scale(1.2);
-      box-shadow: 0 0 15px rgba(0, 229, 255, 1);
-    }
+input[type="color"] {
+  width: 100%;
+  height: 40px;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  cursor: pointer;
+  background: transparent;
+}
 
-    input[type="range"]::-moz-range-thumb {
-      width: 18px;
-      height: 18px;
-      background: #00e5ff;
-      cursor: pointer;
-      border-radius: 50%;
-      border: none;
-      box-shadow: 0 0 10px rgba(0, 229, 255, 0.8);
-    }
+/* === SLIDERS === */
+.slider-group {
+  margin-bottom: 12px;
+}
 
-    .value-display {
-      display: inline-block;
-      float: right;
-      color: #00e5ff;
-      font-weight: 600;
-      font-size: 12px;
-    }
+.slider-label {
+  display: flex;
+  justify-content: space-between;
+  font-size: 11px;
+  color: var(--muted);
+  margin-bottom: 6px;
+}
 
-    input[type="color"] {
-      width: 100%;
-      height: 40px;
-      border: none;
-      border-radius: 8px;
-      cursor: pointer;
-      background: transparent;
-    }
+.slider {
+  width: 100%;
+  height: 4px;
+  border-radius: 2px;
+  background: rgba(255,255,255,0.1);
+  outline: none;
+  -webkit-appearance: none;
+  cursor: pointer;
+}
 
-    button {
-      width: 100%;
-      padding: 12px;
-      margin-top: 10px;
-      background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
-      border: none;
-      border-radius: 8px;
-      color: white;
-      font-weight: 600;
-      cursor: pointer;
-      transition: all 0.3s ease;
-      text-transform: uppercase;
-      letter-spacing: 1px;
-      box-shadow: 0 4px 15px rgba(245, 87, 108, 0.4);
-    }
+.slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: var(--accent);
+  cursor: pointer;
+  box-shadow: 0 0 10px rgba(255,77,166,0.5);
+}
 
-    button:hover {
-      transform: translateY(-2px);
-      box-shadow: 0 6px 20px rgba(245, 87, 108, 0.6);
-    }
+.slider::-moz-range-thumb {
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: var(--accent);
+  border: none;
+  box-shadow: 0 0 10px rgba(255,77,166,0.5);
+}
 
-    button:active {
-      transform: translateY(0);
-    }
+/* === VISUALIZER GRID === */
+.viz-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+  gap: 8px;
+}
 
-    #toggleMinimize {
-      position: absolute;
-      top: 10px;
-      right: 10px;
-      width: 30px;
-      height: 30px;
-      padding: 0;
-      margin: 0;
-      background: rgba(255, 255, 255, 0.1);
-      border-radius: 50%;
-      font-size: 16px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      transition: all 0.3s ease;
-    }
+.viz-card {
+  background: rgba(255,255,255,0.03);
+  border: 2px solid var(--border);
+  border-radius: 10px;
+  padding: 16px 12px;
+  cursor: pointer;
+  text-align: center;
+  transition: all 0.2s;
+}
 
-    #toggleMinimize:hover {
-      background: rgba(255, 255, 255, 0.2);
-      transform: rotate(90deg);
-    }
+.viz-card:hover {
+  background: rgba(255,255,255,0.08);
+  transform: translateY(-2px);
+}
 
-    #visualizerSelector {
-      display: grid;
-      grid-template-columns: repeat(3, 1fr);
-      gap: 8px;
-      margin-top: 10px;
-    }
+.viz-card.active {
+  background: linear-gradient(135deg, rgba(255,77,166,0.2), rgba(0,209,255,0.2));
+  border-color: var(--accent);
+  box-shadow: 0 0 20px rgba(255,77,166,0.3);
+}
 
-    .viz-option {
-      padding: 10px 5px;
-      background: rgba(255, 255, 255, 0.05);
-      border: 2px solid transparent;
-      border-radius: 8px;
-      cursor: pointer;
-      text-align: center;
-      transition: all 0.3s ease;
-      font-size: 11px;
-    }
+.viz-icon {
+  font-size: 26px;
+  margin-bottom: 8px;
+  display: block;
+}
 
-    .viz-option:hover {
-      background: rgba(255, 255, 255, 0.1);
-      border-color: rgba(0, 229, 255, 0.5);
-    }
+.viz-name {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text);
+}
 
-    .viz-option.active {
-      background: rgba(0, 229, 255, 0.2);
-      border-color: #00e5ff;
-      box-shadow: 0 0 15px rgba(0, 229, 255, 0.5);
-    }
+/* === BUTTONS === */
+.btn {
+  width: 100%;
+  padding: 12px 16px;
+  background: rgba(255,255,255,0.05);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  color: var(--text);
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  transition: all 0.2s;
+  margin-bottom: 8px;
+}
 
-    .viz-icon {
-      font-size: 24px;
-      display: block;
-      margin-bottom: 5px;
-    }
+.btn:hover:not(:disabled) {
+  background: rgba(255,255,255,0.1);
+  transform: translateY(-2px);
+}
 
-    #info {
-      position: fixed;
-      bottom: 20px;
-      left: 20px;
-      z-index: 10;
-      background: rgba(0, 0, 0, 0.7);
-      padding: 15px 20px;
-      border-radius: 10px;
-      backdrop-filter: blur(10px);
-      border: 1px solid rgba(255, 255, 255, 0.1);
-      font-size: 14px;
-      color: #aaa;
-    }
+.btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
 
-    #playPauseBtn {
-      width: 60px;
-      height: 60px;
-      position: fixed;
-      bottom: 20px;
-      right: 20px;
-      z-index: 10;
-      border-radius: 50%;
-      font-size: 24px;
-      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-      box-shadow: 0 8px 32px rgba(102, 126, 234, 0.6);
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      margin: 0;
-      padding: 0;
-    }
+.btn-primary {
+  background: linear-gradient(90deg, var(--accent), var(--accent2));
+  border: none;
+  box-shadow: 0 4px 12px rgba(255,77,166,0.3);
+}
 
-    #playPauseBtn:hover {
-      transform: scale(1.1);
-      box-shadow: 0 12px 40px rgba(102, 126, 234, 0.8);
-    }
+.btn-primary:hover {
+  box-shadow: 0 6px 20px rgba(255,77,166,0.5);
+}
 
-    @keyframes pulse {
-      0%, 100% { transform: scale(1); }
-      50% { transform: scale(1.05); }
-    }
+.btn-danger {
+  background: rgba(255,0,0,0.2);
+  border-color: rgba(255,0,0,0.3);
+}
 
-    .playing {
-      animation: pulse 1s infinite;
-    }
+/* === MAIN AREA === */
+.main-area {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  padding: 20px;
+  gap: 16px;
+}
 
-    @media (max-width: 768px) {
-      #controls {
-        max-width: 280px;
-        font-size: 12px;
-      }
+.canvas-container {
+  flex: 1;
+  background: #000;
+  border-radius: 12px;
+  overflow: hidden;
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 10px 50px rgba(0,0,0,0.8);
+  border: 2px solid var(--border);
+}
 
-      #visualizerSelector {
-        grid-template-columns: repeat(2, 1fr);
-      }
-    }
-  </style>
+#canvas {
+  max-width: 100%;
+  max-height: 100%;
+  display: block;
+}
+
+/* === TIMELINE === */
+.timeline-area {
+  background: var(--card);
+  border-radius: 12px;
+  padding: 16px;
+  border: 1px solid var(--border);
+}
+
+.playback {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+.play-btn {
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  border: none;
+  background: linear-gradient(135deg, var(--accent), var(--accent2));
+  color: #fff;
+  font-size: 18px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 4px 15px rgba(255,77,166,0.4);
+  transition: all 0.2s;
+}
+
+.play-btn:hover {
+  transform: scale(1.1);
+  box-shadow: 0 6px 25px rgba(255,77,166,0.6);
+}
+
+.time {
+  font-size: 13px;
+  font-variant-numeric: tabular-nums;
+  color: var(--muted);
+  min-width: 100px;
+}
+
+.timeline {
+  flex: 1;
+  height: 40px;
+  background: rgba(255,255,255,0.05);
+  border-radius: 8px;
+  position: relative;
+  cursor: pointer;
+  overflow: hidden;
+}
+
+.timeline-progress {
+  position: absolute;
+  height: 100%;
+  background: linear-gradient(90deg, var(--accent), var(--accent2));
+  width: 0%;
+  transition: width 0.1s linear;
+  pointer-events: none;
+}
+
+.timeline-handle {
+  position: absolute;
+  top: 50%;
+  right: -8px;
+  transform: translateY(-50%);
+  width: 16px;
+  height: 16px;
+  background: #fff;
+  border-radius: 50%;
+  box-shadow: 0 0 10px rgba(255,255,255,0.5);
+}
+
+/* === REC INDICATOR === */
+.rec-indicator {
+  position: fixed;
+  top: 30px;
+  right: 30px;
+  background: rgba(255,0,0,0.9);
+  color: #fff;
+  padding: 12px 20px;
+  border-radius: 10px;
+  font-weight: 700;
+  font-size: 14px;
+  display: none;
+  align-items: center;
+  gap: 10px;
+  z-index: 9999;
+  box-shadow: 0 4px 20px rgba(255,0,0,0.5);
+  animation: pulse 2s infinite;
+}
+
+.rec-indicator.active { display: flex; }
+
+.rec-dot {
+  width: 10px;
+  height: 10px;
+  background: #fff;
+  border-radius: 50%;
+  animation: blink 1s infinite;
+}
+
+@keyframes blink {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.3; }
+}
+
+@keyframes pulse {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.05); }
+}
+
+/* === SCROLLBAR === */
+::-webkit-scrollbar { width: 8px; }
+::-webkit-scrollbar-track { background: rgba(255,255,255,0.05); }
+::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.2); border-radius: 4px; }
+::-webkit-scrollbar-thumb:hover { background: rgba(255,255,255,0.3); }
+
+/* === RESPONSIVE === */
+@media (max-width: 900px) {
+  body {
+    flex-direction: column;
+    height: auto;
+    overflow: auto;
+  }
+  .sidebar {
+    width: 100%;
+    max-height: 50vh;
+    border-right: none;
+    border-bottom: 1px solid var(--border);
+  }
+  .main-area {
+    padding: 12px;
+  }
+  .canvas-container {
+    height: 50vh;
+  }
+}
+</style>
 </head>
 <body>
-  <canvas id="canvas"></canvas>
 
-  <div id="controls">
-    <button id="toggleMinimize">−</button>
-    <h2><span class="logo">N1K∅</span> Visualizer</h2>
+<div class="rec-indicator" id="recIndicator">
+  <div class="rec-dot"></div>
+  REC
+</div>
 
-    <div class="control-group">
-      <label for="fileInput">📁 Загрузить аудио</label>
-      <label for="fileInput" class="file-label">Выбрать файл</label>
-      <input type="file" id="fileInput" accept="audio/*">
-      <div id="fileName"></div>
-    </div>
-
-    <div class="control-group">
-      <label>🎨 Визуализатор</label>
-      <div id="visualizerSelector"></div>
-    </div>
-
-    <div class="control-group">
-      <label for="colorPicker">🎨 Цвет <span class="value-display" id="colorValue">#00E5FF</span></label>
-      <input type="color" id="colorPicker" value="#00E5FF">
-    </div>
-
-    <div class="control-group">
-      <label for="scaleSlider">📐 Масштаб <span class="value-display" id="scaleValue">1.0</span></label>
-      <input type="range" id="scaleSlider" min="0.5" max="2" step="0.1" value="1">
-    </div>
-
-    <div class="control-group">
-      <label for="glowSlider">✨ Свечение <span class="value-display" id="glowValue">15</span></label>
-      <input type="range" id="glowSlider" min="0" max="50" value="15">
-    </div>
-
-    <div class="control-group">
-      <label for="rotSpeedSlider">🔄 Скорость вращения <span class="value-display" id="rotSpeedValue">1.0</span></label>
-      <input type="range" id="rotSpeedSlider" min="0" max="3" step="0.1" value="1">
-    </div>
-
-    <div class="control-group">
-      <label for="trailSlider">👻 След <span class="value-display" id="trailValue">0.1</span></label>
-      <input type="range" id="trailSlider" min="0" max="1" step="0.05" value="0.1">
-    </div>
-
-    <button id="randomizeBtn">🎲 Случайные настройки</button>
+<!-- === SIDEBAR === -->
+<div class="sidebar">
+  <div class="sidebar-header">
+    <h1>N1K∅ Video Creator</h1>
   </div>
 
-  <button id="playPauseBtn">▶</button>
-
-  <div id="info">
-    <div>ℹ️ Загрузите аудиофайл для начала</div>
+  <div class="tabs">
+    <button class="tab active" onclick="switchTab('project', this)">Project</button>
+    <button class="tab" onclick="switchTab('audio', this)">Audio</button>
+    <button class="tab" onclick="switchTab('viz', this)">Spectrum</button>
+    <button class="tab" onclick="switchTab('fx', this)">Effects</button>
   </div>
 
-  <!-- Подключаем библиотеку визуализаторов -->
-  <script src="visualizers.js"></script>
+  <!-- TAB: PROJECT -->
+  <div class="tab-content active" id="tab-project">
+    <div class="section">
+      <div class="section-title">Canvas Settings</div>
+      <select id="resolution" class="input" onchange="updateResolution()">
+        <option value="1920:1080">1920×1080 (16:9 Full HD)</option>
+        <option value="1280:720">1280×720 (16:9 HD)</option>
+        <option value="720:1280">720×1280 (9:16 TikTok)</option>
+        <option value="1080:1920">1080×1920 (9:16 Reels)</option>
+        <option value="1080:1080">1080×1080 (1:1 Instagram)</option>
+        <option value="1024:768">1024×768 (4:3)</option>
+      </select>
+      <select id="fps" class="input">
+        <option value="24">24 FPS</option>
+        <option value="30" selected>30 FPS</option>
+        <option value="60">60 FPS</option>
+      </select>
+    </div>
 
-  <script>
-    // =============================================
-    // 🎵 ИНИЦИАЛИЗАЦИЯ
-    // =============================================
-    const canvas = document.getElementById('canvas');
-    const ctx = canvas.getContext('2d');
-    const fileInput = document.getElementById('fileInput');
-    const fileNameDisplay = document.getElementById('fileName');
-    const playPauseBtn = document.getElementById('playPauseBtn');
-    const colorPicker = document.getElementById('colorPicker');
-    const scaleSlider = document.getElementById('scaleSlider');
-    const glowSlider = document.getElementById('glowSlider');
-    const rotSpeedSlider = document.getElementById('rotSpeedSlider');
-    const trailSlider = document.getElementById('trailSlider');
-    const randomizeBtn = document.getElementById('randomizeBtn');
-    const toggleMinimizeBtn = document.getElementById('toggleMinimize');
-    const controlsPanel = document.getElementById('controls');
-    const info = document.getElementById('info');
-    const visualizerSelectorDiv = document.getElementById('visualizerSelector');
+    <div class="section">
+      <div class="section-title">Background</div>
+      <input type="file" id="bgImage" accept="image/*">
+      <input type="color" id="bgColor" value="#000000">
+      <div class="slider-group">
+        <div class="slider-label"><span>Blur</span><span id="blurVal">0</span></div>
+        <input type="range" class="slider" id="bgBlur" min="0" max="20" value="0">
+      </div>
+      <div class="slider-group">
+        <div class="slider-label"><span>Brightness</span><span id="brightVal">100%</span></div>
+        <input type="range" class="slider" id="bgBright" min="0" max="200" value="100">
+      </div>
+      <div class="slider-group">
+        <div class="slider-label"><span>Reactiveness</span><span id="bgReactVal">0.05</span></div>
+        <input type="range" class="slider" id="bgReact" min="0" max="0.3" step="0.01" value="0.05">
+      </div>
+    </div>
 
-    let audioContext, analyser, source, dataArray, bufferLength;
-    let audio = new Audio();
-    let isPlaying = false;
-    let animationId;
+    <div class="section">
+      <div class="section-title">Emblem / Overlay</div>
+      <input type="file" id="emblemImage" accept="image/*">
+      <div class="slider-group">
+        <div class="slider-label"><span>Size</span><span id="emblemSizeVal">0.3</span></div>
+        <input type="range" class="slider" id="emblemSize" min="0.1" max="1" step="0.01" value="0.3">
+      </div>
+      <div class="slider-group">
+        <div class="slider-label"><span>X Position</span><span id="emblemXVal">0.5</span></div>
+        <input type="range" class="slider" id="emblemX" min="0" max="1" step="0.01" value="0.5">
+      </div>
+      <div class="slider-group">
+        <div class="slider-label"><span>Y Position</span><span id="emblemYVal">0.5</span></div>
+        <input type="range" class="slider" id="emblemY" min="0" max="1" step="0.01" value="0.5">
+      </div>
+      <label style="display:flex;align-items:center;gap:8px;margin:8px 0;cursor:pointer;">
+        <input type="checkbox" id="emblemCircle" checked>
+        <span style="font-size:12px;">Clip to Circle</span>
+      </label>
+    </div>
+  </div>
 
-    // =============================================
-    // 🎨 СОСТОЯНИЕ ВИЗУАЛИЗАЦИИ
-    // =============================================
-    const state = {
-      currentVisualizer: 'circular',
-      vizColor: '#00E5FF',
-      vizScale: 1.0,
-      vizGlow: 15,
-      rotSpeed: 1.0,
-      trailAmount: 0.1,
-      rotation: 0,
-      time: 0,
-      tunnelColors: ['#00E5FF', '#FF00E5', '#00FFAA']
+  <!-- TAB: AUDIO -->
+  <div class="tab-content" id="tab-audio">
+    <div class="section">
+      <div class="section-title">Audio File</div>
+      <input type="file" id="audioFile" accept="audio/*">
+      <div class="slider-group">
+        <div class="slider-label"><span>Smoothing</span><span id="smoothVal">0.85</span></div>
+        <input type="range" class="slider" id="audioSmooth" min="0" max="0.99" step="0.01" value="0.85">
+      </div>
+    </div>
+  </div>
+
+  <!-- TAB: VISUALIZER -->
+  <div class="tab-content" id="tab-viz">
+    <div class="section">
+      <div class="section-title">Spectrum Style</div>
+      <div class="viz-grid" id="vizGrid">
+        <!-- Генерируется динамически из visualizers.js -->
+      </div>
+    </div>
+
+    <div class="section">
+      <div class="section-title">Settings</div>
+      <input type="color" id="vizColor" value="#00a2ff" style="margin-bottom:10px;">
+      <div class="slider-group">
+        <div class="slider-label"><span>Glow</span><span id="glowVal">15</span></div>
+        <input type="range" class="slider" id="vizGlow" min="0" max="50" value="15">
+      </div>
+      <div class="slider-group">
+        <div class="slider-label"><span>Scale</span><span id="scaleVal">1.0</span></div>
+        <input type="range" class="slider" id="vizScale" min="0.3" max="2" step="0.1" value="1">
+      </div>
+      <div class="slider-group">
+        <div class="slider-label"><span>Position Y</span><span id="vizYVal">0.5</span></div>
+        <input type="range" class="slider" id="vizY" min="0" max="1" step="0.01" value="0.5">
+      </div>
+      <div class="slider-group">
+        <div class="slider-label"><span>Rotation Speed</span><span id="rotSpeedVal">1.0</span></div>
+        <input type="range" class="slider" id="rotSpeed" min="0" max="3" step="0.1" value="1">
+      </div>
+      <div class="slider-group">
+        <div class="slider-label"><span>Cyber Tunnel Colors</span></div>
+        <select id="tunnelPalettePreset" class="input" style="margin-bottom:8px;">
+          <option value="custom">Custom (Hex list)</option>
+          <option value="cyberpunk">Cyberpunk (#00E5FF,#FF00E5,#00FFAA)</option>
+          <option value="ocean">Ocean (#00FFFF,#00AAFF,#0000FF)</option>
+          <option value="lava">Lava (#FF4500,#FF8C00,#FFD700)</option>
+          <option value="emerald">Emerald (#00FF7F,#7FFF00,#008080)</option>
+        </select>
+        <input type="text" id="tunnelColorsInput" class="input" value="#00E5FF,#FF00E5,#00FFAA">
+        <div style="font-size:10px;color:var(--muted);margin-top:-6px;">
+          Hex цвета через запятую: #RRGGBB,#RRGGBB,...
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- TAB: EFFECTS -->
+  <div class="tab-content" id="tab-fx">
+    <div class="section">
+      <div class="section-title">Particles</div>
+      <select id="partType" class="input">
+        <option value="none">None</option>
+        <option value="snow">Snowflakes</option>
+        <option value="stars">Stars</option>
+        <option value="bubbles">Bubbles</option>
+        <option value="fireflies">Fireflies</option>
+        <option value="matrix">Matrix Rain</option>
+        <option value="hearts">Hearts</option>
+        <option value="notes">Music Notes</option>
+        <option value="glitter">Glitter</option>
+        <option value="plasma">Plasma Orbs</option>
+      </select>
+      <div class="slider-group">
+        <div class="slider-label"><span>Amount</span><span id="partAmountVal">150</span></div>
+        <input type="range" class="slider" id="partAmount" min="0" max="500" value="150">
+      </div>
+    </div>
+
+    <div class="section">
+      <div class="section-title">Screen FX</div>
+      <label style="display:flex;align-items:center;gap:8px;margin:8px 0;cursor:pointer;">
+        <input type="checkbox" id="fxFlicker">
+        <span style="font-size:12px;">Flicker on Bass</span>
+      </label>
+      <label style="display:flex;align-items:center;gap:8px;margin:8px 0;cursor:pointer;">
+        <input type="checkbox" id="fxBloom">
+        <span style="font-size:12px;">Bloom / Glow</span>
+      </label>
+      <label style="display:flex;align-items:center;gap:8px;margin:8px 0;cursor:pointer;">
+        <input type="checkbox" id="fxVignette">
+        <span style="font-size:12px;">Vignette</span>
+      </label>
+      <div class="slider-group">
+        <div class="slider-label"><span>Motion Blur</span><span id="motionBlurVal">0</span></div>
+        <input type="range" class="slider" id="motionBlur" min="0" max="0.95" step="0.05" value="0">
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- === MAIN AREA === -->
+<div class="main-area">
+  <div class="canvas-container">
+    <canvas id="canvas"></canvas>
+  </div>
+
+  <div class="timeline-area">
+    <div class="playback">
+      <button class="play-btn" id="playBtn" onclick="togglePlay()">▶️</button>
+      <div class="time" id="timeDisplay">0:00 / 0:00</div>
+      <div class="timeline" id="timeline" onclick="seekTimeline(event)">
+        <div class="timeline-progress" id="progress">
+          <div class="timeline-handle"></div>
+        </div>
+      </div>
+    </div>
+    <button class="btn btn-primary" id="recordBtn" onclick="toggleRecord()">⏺️ Start Recording</button>
+  </div>
+</div>
+
+<!-- Подключаем библиотеку визуализаторов -->
+<script src="visualizers.js"></script>
+
+<script>
+// =============================================
+// 🎯 ГЛОБАЛЬНЫЕ ПЕРЕМЕННЫЕ
+// =============================================
+const canvas = document.getElementById('canvas');
+const ctx = canvas.getContext('2d', { willReadFrequently: true });
+
+let config = { width: 1920, height: 1080, fps: 30 };
+
+// Аудио
+let audioCtx = null;
+let analyser = null;
+let audioSource = null;
+let audioBuffer = null;
+let dataArray = null;
+
+// Плейбек
+let isPlaying = false;
+let audioStartTime = 0;
+let audioPauseTime = 0;
+let currentTime = 0;
+let duration = 0;
+
+// Изображения
+let bgImage = null;
+let emblemImage = null;
+
+// Анимация
+let particles = [];
+let rotation = 0;
+let time = 0;
+
+// Запись
+let mediaRecorder = null;
+let recordedChunks = [];
+let isRecording = false;
+
+// Состояние
+let state = {
+  visualizer: 'circular',
+  bgColor: '#000000',
+  bgBlur: 0,
+  bgBright: 100,
+  bgReact: 0.05,
+  vizColor: '#00a2ff',
+  vizGlow: 15,
+  vizScale: 1,
+  vizY: 0.5,
+  audioSmooth: 0.85,
+  partType: 'none',
+  partAmount: 150,
+  emblemSize: 0.3,
+  emblemX: 0.5,
+  emblemY: 0.5,
+  emblemCircle: true,
+  tunnelColors: ['#00E5FF', '#FF00E5', '#00FFAA'],
+  rotSpeed: 1,
+  motionBlur: 0,
+  fxFlicker: false,
+  fxBloom: false,
+  fxVignette: false
+};
+
+// =============================================
+// 🎨 СОЗДАНИЕ ВИЗУАЛИЗАТОРОВ ИЗ БИБЛИОТЕКИ
+// =============================================
+function createVisualizerGrid() {
+  const vizGrid = document.getElementById('vizGrid');
+  vizGrid.innerHTML = '';
+  
+  let isFirst = true;
+  
+  Object.keys(VisualizerLibrary).forEach(key => {
+    if (key === 'helpers') return;
+    
+    const viz = VisualizerLibrary[key];
+    const card = document.createElement('div');
+    card.className = 'viz-card';
+    if (isFirst) {
+      card.classList.add('active');
+      state.visualizer = key;
+      isFirst = false;
+    }
+    
+    card.innerHTML = `
+      <span class="viz-icon">${viz.icon}</span>
+      <div class="viz-name">${viz.name}</div>
+    `;
+    
+    card.addEventListener('click', () => {
+      document.querySelectorAll('.viz-card').forEach(c => c.classList.remove('active'));
+      card.classList.add('active');
+      state.visualizer = key;
+      console.log('✅ Выбран визуализатор:', viz.name);
+    });
+    
+    vizGrid.appendChild(card);
+  });
+}
+
+// =============================================
+// 🎨 UI ФУНКЦИИ
+// =============================================
+function switchTab(tabName, button) {
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+  
+  button.classList.add('active');
+  document.getElementById('tab-' + tabName).classList.add('active');
+}
+
+function updateResolution() {
+  const select = document.getElementById('resolution');
+  const [w, h] = select.value.split(':').map(Number);
+  config.width = w;
+  config.height = h;
+  canvas.width = w;
+  canvas.height = h;
+  initParticles();
+  console.log('✅ Разрешение изменено:', w, 'x', h);
+}
+
+// =============================================
+// 🎵 АУДИО СИСТЕМА
+// =============================================
+function initAudio() {
+  if (audioCtx) return;
+  
+  audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+  analyser = audioCtx.createAnalyser();
+  analyser.fftSize = 2048;
+  analyser.smoothingTimeConstant = state.audioSmooth;
+  dataArray = new Uint8Array(analyser.frequencyBinCount);
+  
+  console.log('✅ Аудио инициализировано');
+}
+
+function loadAudioFile(file) {
+  console.log('📂 Загрузка файла:', file.name);
+  
+  if (!audioCtx) initAudio();
+
+  const reader = new FileReader();
+  reader.onload = function(e) {
+    audioCtx.decodeAudioData(e.target.result, 
+      function(buffer) {
+        audioBuffer = buffer;
+        duration = buffer.duration;
+        audioPauseTime = 0;
+        currentTime = 0;
+        isPlaying = false;
+        
+        if (audioSource) {
+          try {
+            audioSource.onended = null;
+            audioSource.stop();
+            audioSource.disconnect();
+          } catch(e) {}
+          audioSource = null;
+        }
+        
+        document.getElementById('playBtn').innerHTML = '▶️';
+        console.log('✅ Аудио загружено:', duration.toFixed(2), 'сек');
+      }, 
+      function(error) {
+        console.error('❌ Ошибка декодирования:', error);
+        alert('Не удалось загрузить аудио файл');
+      }
+    );
+  };
+  reader.readAsArrayBuffer(file);
+}
+
+function playAudio() {
+  if (!audioBuffer || !audioCtx) {
+    console.warn('⚠️ Нет аудио буфера');
+    return;
+  }
+
+  if (audioSource) {
+    try {
+      audioSource.onended = null;
+      audioSource.stop();
+      audioSource.disconnect();
+    } catch(e) {
+      console.warn('Источник уже остановлен');
+    }
+    audioSource = null;
+  }
+
+  if (audioCtx.state === 'suspended') {
+    audioCtx.resume();
+  }
+
+  audioSource = audioCtx.createBufferSource();
+  audioSource.buffer = audioBuffer;
+  audioSource.connect(analyser);
+  analyser.connect(audioCtx.destination);
+  
+  const startPos = Math.min(audioPauseTime, duration - 0.1);
+  
+  try {
+    audioSource.start(0, startPos);
+    audioStartTime = audioCtx.currentTime - startPos;
+    
+    isPlaying = true;
+    document.getElementById('playBtn').innerHTML = '⏸️';
+    
+    console.log('▶️ Воспроизведение с позиции:', startPos.toFixed(2));
+    
+    audioSource.onended = function() {
+      const elapsed = audioCtx.currentTime - audioStartTime;
+      if (elapsed >= duration - 0.1 && isPlaying) {
+        console.log('🎵 Трек завершен');
+        audioPauseTime = 0;
+        currentTime = 0;
+        isPlaying = false;
+        document.getElementById('playBtn').innerHTML = '▶️';
+      }
     };
+  } catch(e) {
+    console.error('❌ Ошибка запуска:', e);
+    isPlaying = false;
+    document.getElementById('playBtn').innerHTML = '▶️';
+  }
+}
 
-    // =============================================
-    // 📊 СОЗДАНИЕ СЕЛЕКТОРА ВИЗУАЛИЗАТОРОВ
-    // =============================================
-    function createVisualizerSelector() {
-      visualizerSelectorDiv.innerHTML = '';
+function pauseAudio() {
+  if (!audioSource || !audioCtx) {
+    console.warn('⚠️ Нет активного источника');
+    return;
+  }
+  
+  audioPauseTime = Math.max(0, Math.min(duration, audioCtx.currentTime - audioStartTime));
+  
+  try {
+    audioSource.onended = null;
+    audioSource.stop();
+    audioSource.disconnect();
+  } catch(e) {
+    console.warn('Ошибка остановки:', e);
+  }
+  
+  audioSource = null;
+  isPlaying = false;
+  document.getElementById('playBtn').innerHTML = '▶️';
+  
+  console.log('⏸️ Пауза на позиции:', audioPauseTime.toFixed(2));
+}
+
+function togglePlay() {
+  if (!audioBuffer) {
+    alert('❌ Сначала загрузите аудио файл!\n\nПерейдите на вкладку "Audio" и выберите MP3 файл.');
+    return;
+  }
+
+  if (!audioCtx) initAudio();
+
+  if (isPlaying) {
+    pauseAudio();
+  } else {
+    playAudio();
+  }
+}
+
+function seekTimeline(event) {
+  if (!audioBuffer || !audioCtx) {
+    console.warn('⚠️ Нет аудио для перемотки');
+    return;
+  }
+
+  const timeline = document.getElementById('timeline');
+  const rect = timeline.getBoundingClientRect();
+  const x = event.clientX - rect.left;
+  const percent = Math.max(0, Math.min(1, x / rect.width));
+  
+  audioPauseTime = percent * duration;
+  currentTime = audioPauseTime;
+  
+  console.log('⏩ Перемотка на:', audioPauseTime.toFixed(2), 'секунд');
+  
+  if (isPlaying) {
+    playAudio();
+  }
+}
+
+function updateTimeline() {
+  if (!audioBuffer) return;
+
+  if (isPlaying && audioCtx) {
+    currentTime = audioCtx.currentTime - audioStartTime;
+    
+    if (currentTime >= duration) {
+      currentTime = 0;
+      audioPauseTime = 0;
+      isPlaying = false;
+      document.getElementById('playBtn').innerHTML = '▶️';
       
-      Object.keys(VisualizerLibrary).forEach(key => {
-        if (key === 'helpers') return;
+      if (audioSource) {
+        try {
+          audioSource.onended = null;
+          audioSource.stop();
+          audioSource.disconnect();
+        } catch(e) {}
+        audioSource = null;
+      }
+    } else {
+      audioPauseTime = currentTime;
+    }
+  } else {
+    currentTime = audioPauseTime;
+  }
+
+  const progress = (currentTime / duration) * 100;
+  document.getElementById('progress').style.width = Math.min(100, Math.max(0, progress)) + '%';
+
+  const formatTime = (sec) => {
+    const m = Math.floor(sec / 60);
+    const s = Math.floor(sec % 60);
+    return `${m}:${s.toString().padStart(2, '0')}`;
+  };
+
+  document.getElementById('timeDisplay').textContent = 
+    `${formatTime(currentTime)} / ${formatTime(duration)}`;
+}
+
+// =============================================
+// 🎥 ЗАПИСЬ
+// =============================================
+function toggleRecord() {
+  const btn = document.getElementById('recordBtn');
+  const indicator = document.getElementById('recIndicator');
+  
+  if (!isRecording) {
+    recordedChunks = [];
+    
+    const stream = canvas.captureStream(config.fps);
+    mediaRecorder = new MediaRecorder(stream, {
+      mimeType: 'video/webm;codecs=vp9',
+      videoBitsPerSecond: 8000000
+    });
+    
+    mediaRecorder.ondataavailable = (e) => {
+      if (e.data.size > 0) recordedChunks.push(e.data);
+    };
+    
+    mediaRecorder.onstop = () => {
+      const blob = new Blob(recordedChunks, { type: 'video/webm' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `video_${Date.now()}.webm`;
+      a.click();
+      URL.revokeObjectURL(url);
+    };
+    
+    mediaRecorder.start();
+    isRecording = true;
+    
+    btn.innerHTML = '⏹️ Stop Recording';
+    btn.classList.add('btn-danger');
+    indicator.classList.add('active');
+  } else {
+    if (mediaRecorder && mediaRecorder.state !== 'inactive') {
+      mediaRecorder.stop();
+    }
+    isRecording = false;
+    
+    btn.innerHTML = '⏺️ Start Recording';
+    btn.classList.remove('btn-danger');
+    indicator.classList.remove('active');
+  }
+}
+
+// =============================================
+// 🎆 СИСТЕМА ЧАСТИЦ
+// =============================================
+function initParticles() {
+  particles = [];
+  const amount = state.partAmount;
+  
+  for (let i = 0; i < amount; i++) {
+    particles.push({
+      x: Math.random() * config.width,
+      y: Math.random() * config.height,
+      size: Math.random() * 3 + 1,
+      speed: Math.random() * 2 + 0.5,
+      opacity: Math.random(),
+      angle: Math.random() * Math.PI * 2,
+      hue: Math.random() * 360,
+      char: String.fromCharCode(33 + Math.floor(Math.random() * 94))
+    });
+  }
+}
+
+function updateAndDrawParticles(ctx) {
+  if (state.partType === 'none') return;
+  
+  const bass = dataArray ? (dataArray[2] || 0) / 255 : 0;
+  
+  particles.forEach(p => {
+    switch(state.partType) {
+      case 'snow':
+        p.y += p.speed;
+        p.x += Math.sin(time + p.angle) * 0.5;
+        if (p.y > config.height) p.y = -10;
+        break;
+      case 'stars':
+        p.y += p.speed * 0.5;
+        if (p.y > config.height) {
+          p.y = -10;
+          p.x = Math.random() * config.width;
+        }
+        break;
+      case 'bubbles':
+        p.y -= p.speed;
+        p.x += Math.sin(time * 2 + p.angle) * 0.8;
+        if (p.y < -10) p.y = config.height + 10;
+        break;
+      case 'fireflies':
+        p.x += Math.cos(time + p.angle) * p.speed;
+        p.y += Math.sin(time * 1.5 + p.angle) * p.speed;
+        if (p.x < 0 || p.x > config.width) p.angle = Math.PI - p.angle;
+        if (p.y < 0 || p.y > config.height) p.angle = -p.angle;
+        break;
+      case 'matrix':
+        p.y += p.speed * 3;
+        if (p.y > config.height) {
+          p.y = -10;
+          p.x = Math.random() * config.width;
+        }
+        break;
+      case 'hearts':
+        p.y += p.speed;
+        p.x += Math.sin(time * 2 + p.angle) * 1.5;
+        if (p.y > config.height) p.y = -10;
+        break;
+      case 'notes':
+        p.y -= p.speed * (1 + bass);
+        p.x += Math.cos(time + p.angle) * 0.5;
+        if (p.y < -10) {
+          p.y = config.height + 10;
+          p.x = Math.random() * config.width;
+        }
+        break;
+      case 'glitter':
+        p.opacity = Math.sin(time * 5 + p.angle) * 0.5 + 0.5;
+        break;
+      case 'plasma':
+        p.x += Math.cos(time + p.angle) * 2;
+        p.y += Math.sin(time * 0.7 + p.angle) * 2;
+        if (p.x < -50 || p.x > config.width + 50) p.x = config.width / 2;
+        if (p.y < -50 || p.y > config.height + 50) p.y = config.height / 2;
+        break;
+    }
+    
+    ctx.save();
+    ctx.globalAlpha = p.opacity;
+    
+    switch(state.partType) {
+      case 'snow':
+        ctx.fillStyle = '#ffffff';
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
+        ctx.fill();
+        break;
+      case 'stars':
+        ctx.fillStyle = `hsl(${p.hue}, 100%, 70%)`;
+        ctx.font = `${p.size * 4}px Arial`;
+        ctx.fillText('★', p.x, p.y);
+        break;
+      case 'bubbles':
+        ctx.strokeStyle = `hsla(${p.hue}, 100%, 70%, 0.6)`;
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, p.size * 3, 0, Math.PI * 2);
+        ctx.stroke();
+        break;
+      case 'fireflies':
+        const gradient = ctx.createRadialGradient(p.x, p.y, 0, p.x, p.y, p.size * 4);
+        gradient.addColorStop(0, `hsla(${p.hue}, 100%, 70%, ${p.opacity})`);
+        gradient.addColorStop(1, 'rgba(0,0,0,0)');
+        ctx.fillStyle = gradient;
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, p.size * 4, 0, Math.PI * 2);
+        ctx.fill();
+        break;
+      case 'matrix':
+        ctx.fillStyle = `hsl(120, 100%, ${50 + p.opacity * 30}%)`;
+        ctx.font = `${p.size * 6}px monospace`;
+        ctx.fillText(p.char, p.x, p.y);
+        break;
+      case 'hearts':
+        ctx.fillStyle = `hsla(340, 100%, 60%, ${p.opacity})`;
+        ctx.font = `${p.size * 6}px Arial`;
+        ctx.fillText('❤️', p.x, p.y);
+        break;
+      case 'notes':
+        ctx.fillStyle = `hsla(${p.hue}, 100%, 60%, ${p.opacity})`;
+        ctx.font = `${p.size * 5}px Arial`;
+        ctx.fillText('♪', p.x, p.y);
+        break;
+      case 'glitter':
+        ctx.fillStyle = `hsla(${p.hue}, 100%, 70%, ${p.opacity})`;
+        ctx.shadowBlur = 10;
+        ctx.shadowColor = `hsl(${p.hue}, 100%, 50%)`;
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
+        ctx.fill();
+        break;
+      case 'plasma':
+        const plasmaGrad = ctx.createRadialGradient(p.x, p.y, 0, p.x, p.y, p.size * 6);
+        plasmaGrad.addColorStop(0, `hsla(${p.hue}, 100%, 70%, ${p.opacity})`);
+        plasmaGrad.addColorStop(0.5, `hsla(${(p.hue + 60) % 360}, 100%, 50%, ${p.opacity * 0.5})`);
+        plasmaGrad.addColorStop(1, 'rgba(0,0,0,0)');
+        ctx.fillStyle = plasmaGrad;
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, p.size * 6, 0, Math.PI * 2);
+        ctx.fill();
+        break;
+    }
+    
+    ctx.restore();
+  });
+}
+
+// =============================================
+// 🎬 SCREEN EFFECTS
+// =============================================
+function applyScreenEffects(ctx) {
+  const bass = dataArray ? (dataArray[2] || 0) / 255 : 0;
+  
+  if (state.fxFlicker && bass > 0.7) {
+    ctx.save();
+    ctx.globalAlpha = (bass - 0.7) * 0.5;
+    ctx.fillStyle = '#ffffff';
+    ctx.fillRect(0, 0, config.width, config.height);
+    ctx.restore();
+  }
+  
+  if (state.fxBloom) {
+    ctx.save();
+    ctx.globalCompositeOperation = 'lighter';
+    ctx.filter = 'blur(20px)';
+    ctx.globalAlpha = 0.3;
+    ctx.drawImage(canvas, 0, 0);
+    ctx.restore();
+    ctx.filter = 'none';
+  }
+  
+  if (state.fxVignette) {
+    const gradient = ctx.createRadialGradient(
+      config.width / 2, config.height / 2, config.height * 0.3,
+      config.width / 2, config.height / 2, config.height * 0.8
+    );
+    gradient.addColorStop(0, 'rgba(0,0,0,0)');
+    gradient.addColorStop(1, 'rgba(0,0,0,0.7)');
+    
+    ctx.fillStyle = gradient;
+    ctx.fillRect(0, 0, config.width, config.height);
+  }
+}
+
+// =============================================
+// 🎬 АНИМАЦИЯ
+// =============================================
+function animate() {
+  requestAnimationFrame(animate);
+
+  // Очистка с Motion Blur
+  if (state.motionBlur > 0) {
+    ctx.fillStyle = `rgba(0,0,0,${1 - state.motionBlur})`;
+    ctx.fillRect(0, 0, config.width, config.height);
+  } else {
+    ctx.fillStyle = state.bgColor;
+    ctx.fillRect(0, 0, config.width, config.height);
+  }
+
+  // Фон с реактивностью
+  if (bgImage) {
+    ctx.save();
+    const bass = dataArray ? (dataArray[2] || 0) / 255 : 0;
+    const reactiveBlur = state.bgBlur + bass * state.bgReact * 50;
+    const reactiveBright = state.bgBright + bass * state.bgReact * 100;
+    
+    ctx.filter = `blur(${reactiveBlur}px) brightness(${reactiveBright}%)`;
+    ctx.globalAlpha = 0.5;
+    ctx.drawImage(bgImage, 0, 0, config.width, config.height);
+    ctx.restore();
+    ctx.filter = 'none';
+  }
+
+  // Аудио данные
+  if (analyser) {
+    analyser.getByteFrequencyData(dataArray);
+  }
+
+  time += 0.016;
+  rotation += 0.01;
+
+  // Визуализатор из библиотеки
+  const centerX = config.width / 2;
+  const centerY = config.height * state.vizY;
+
+  const visualizer = VisualizerLibrary[state.visualizer];
+  if (visualizer && visualizer.render) {
+    visualizer.render(ctx, centerX, centerY, dataArray || new Uint8Array(512), state, time, rotation, config);
+  }
+
+  // Частицы
+  updateAndDrawParticles(ctx);
+
+  // Эмблема
+  if (emblemImage) {
+    const size = Math.min(config.width, config.height) * state.emblemSize;
+    const x = config.width * state.emblemX;
+    const y = config.height * state.emblemY;
+    
+    ctx.save();
+    if (state.emblemCircle) {
+      ctx.beginPath();
+      ctx.arc(x, y, size / 2, 0, Math.PI * 2);
+      ctx.clip();
+    }
+    ctx.drawImage(emblemImage, x - size / 2, y - size / 2, size, size);
+    ctx.restore();
+  }
+
+  // Screen Effects
+  applyScreenEffects(ctx);
+
+  updateTimeline();
+}
+
+// =============================================
+// ⚙️ НАСТРОЙКА КОНТРОЛОВ
+// =============================================
+function setupControls() {
+  const sliders = {
+    bgBlur: 'blurVal',
+    bgBright: 'brightVal',
+    bgReact: 'bgReactVal',
+    emblemSize: 'emblemSizeVal',
+    emblemX: 'emblemXVal',
+    emblemY: 'emblemYVal',
+    audioSmooth: 'smoothVal',
+    vizGlow: 'glowVal',
+    vizScale: 'scaleVal',
+    vizY: 'vizYVal',
+    rotSpeed: 'rotSpeedVal',
+    partAmount: 'partAmountVal',
+    motionBlur: 'motionBlurVal'
+  };
+
+  Object.entries(sliders).forEach(([key, displayId]) => {
+    const slider = document.getElementById(key);
+    const display = document.getElementById(displayId);
+    
+    if (slider && display) {
+      slider.value = state[key];
+      display.textContent = key.includes('Bright') ? state[key] + '%' : state[key];
+      
+      slider.addEventListener('input', (e) => {
+        state[key] = parseFloat(e.target.value);
+        display.textContent = key.includes('Bright') ? state[key] + '%' : state[key];
         
-        const viz = VisualizerLibrary[key];
-        const option = document.createElement('div');
-        option.className = 'viz-option';
-        if (key === state.currentVisualizer) option.classList.add('active');
+        if (key === 'audioSmooth' && analyser) {
+          analyser.smoothingTimeConstant = state[key];
+        }
         
-        option.innerHTML = `
-          <span class="viz-icon">${viz.icon}</span>
-          <span>${viz.name}</span>
-        `;
-        
-        option.addEventListener('click', () => {
-          document.querySelectorAll('.viz-option').forEach(el => el.classList.remove('active'));
-          option.classList.add('active');
-          state.currentVisualizer = key;
-        });
-        
-        visualizerSelectorDiv.appendChild(option);
+        if (key === 'partAmount') {
+          initParticles();
+        }
       });
     }
+  });
 
-    createVisualizerSelector();
-
-    // =============================================
-    // 🎧 НАСТРОЙКА АУДИО
-    // =============================================
-    function setupAudio() {
-      audioContext = new (window.AudioContext || window.webkitAudioContext)();
-      analyser = audioContext.createAnalyser();
-      analyser.fftSize = 512;
-      bufferLength = analyser.frequencyBinCount;
-      dataArray = new Uint8Array(bufferLength);
-
-      source = audioContext.createMediaElementSource(audio);
-      source.connect(analyser);
-      analyser.connect(audioContext.destination);
+  document.getElementById('audioFile').addEventListener('change', (e) => {
+    if (e.target.files[0]) {
+      loadAudioFile(e.target.files[0]);
     }
+  });
 
-    // =============================================
-    // 📂 ЗАГРУЗКА ФАЙЛА
-    // =============================================
-    fileInput.addEventListener('change', (e) => {
-      const file = e.target.files[0];
-      if (!file) return;
+  document.getElementById('bgImage').addEventListener('change', (e) => {
+    if (e.target.files[0]) {
+      const reader = new FileReader();
+      reader.onload = (event) => {
+        const img = new Image();
+        img.onload = () => { 
+          bgImage = img;
+          console.log('✅ Фон загружен');
+        };
+        img.src = event.target.result;
+      };
+      reader.readAsDataURL(e.target.files[0]);
+    }
+  });
 
-      fileNameDisplay.textContent = `🎵 ${file.name}`;
-      
-      const url = URL.createObjectURL(file);
-      audio.src = url;
+  document.getElementById('emblemImage').addEventListener('change', (e) => {
+    if (e.target.files[0]) {
+      const reader = new FileReader();
+      reader.onload = (event) => {
+        const img = new Image();
+        img.onload = () => { 
+          emblemImage = img;
+          console.log('✅ Эмблема загружена');
+        };
+        img.src = event.target.result;
+      };
+      reader.readAsDataURL(e.target.files[0]);
+    }
+  });
 
-      if (!audioContext) setupAudio();
+  document.getElementById('bgColor').addEventListener('input', (e) => {
+    state.bgColor = e.target.value;
+  });
 
-      audio.play().then(() => {
-        isPlaying = true;
-        playPauseBtn.textContent = '⏸';
-        playPauseBtn.classList.add('playing');
-        info.innerHTML = '<div>🎵 Воспроизведение...</div>';
-        animate();
-      }).catch(err => {
-        console.error('Ошибка воспроизведения:', err);
+  document.getElementById('vizColor').addEventListener('input', (e) => {
+    state.vizColor = e.target.value;
+  });
+
+  document.getElementById('tunnelPalettePreset').addEventListener('change', (e) => {
+    const presets = {
+      cyberpunk: ['#00E5FF', '#FF00E5', '#00FFAA'],
+      ocean: ['#00FFFF', '#00AAFF', '#0000FF'],
+      lava: ['#FF4500', '#FF8C00', '#FFD700'],
+      emerald: ['#00FF7F', '#7FFF00', '#008080']
+    };
+    
+    if (e.target.value !== 'custom' && presets[e.target.value]) {
+      state.tunnelColors = presets[e.target.value];
+      document.getElementById('tunnelColorsInput').value = state.tunnelColors.join(',');
+    }
+  });
+
+  document.getElementById('tunnelColorsInput').addEventListener('input', (e) => {
+    const colors = e.target.value.split(',').map(c => c.trim()).filter(c => c.match(/^#[0-9A-Fa-f]{6}$/));
+    if (colors.length > 0) {
+      state.tunnelColors = colors;
+    }
+  });
+
+  ['emblemCircle', 'fxFlicker', 'fxBloom', 'fxVignette'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) {
+      el.addEventListener('change', (e) => {
+        state[id] = e.target.checked;
       });
-    });
-
-    // =============================================
-    // ⏯️ ВОСПРОИЗВЕДЕНИЕ / ПАУЗА
-    // =============================================
-    playPauseBtn.addEventListener('click', () => {
-      if (!audio.src) {
-        info.innerHTML = '<div>⚠️ Сначала загрузите аудиофайл</div>';
-        return;
-      }
-
-      if (isPlaying) {
-        audio.pause();
-        playPauseBtn.textContent = '▶';
-        playPauseBtn.classList.remove('playing');
-        info.innerHTML = '<div>⏸ Пауза</div>';
-      } else {
-        audio.play();
-        playPauseBtn.textContent = '⏸';
-        playPauseBtn.classList.add('playing');
-        info.innerHTML = '<div>🎵 Воспроизведение...</div>';
-        animate();
-      }
-      isPlaying = !isPlaying;
-    });
-
-    // =============================================
-    // 🎨 ОБРАБОТЧИКИ УПРАВЛЕНИЯ
-    // =============================================
-    colorPicker.addEventListener('input', (e) => {
-      state.vizColor = e.target.value;
-      document.getElementById('colorValue').textContent = e.target.value.toUpperCase();
-    });
-
-    scaleSlider.addEventListener('input', (e) => {
-      state.vizScale = parseFloat(e.target.value);
-      document.getElementById('scaleValue').textContent = state.vizScale.toFixed(1);
-    });
-
-    glowSlider.addEventListener('input', (e) => {
-      state.vizGlow = parseInt(e.target.value);
-      document.getElementById('glowValue').textContent = state.vizGlow;
-    });
-
-    rotSpeedSlider.addEventListener('input', (e) => {
-      state.rotSpeed = parseFloat(e.target.value);
-      document.getElementById('rotSpeedValue').textContent = state.rotSpeed.toFixed(1);
-    });
-
-    trailSlider.addEventListener('input', (e) => {
-      state.trailAmount = parseFloat(e.target.value);
-      document.getElementById('trailValue').textContent = state.trailAmount.toFixed(2);
-    });
-
-    // =============================================
-    // 🎲 СЛУЧАЙНЫЕ НАСТРОЙКИ
-    // =============================================
-    randomizeBtn.addEventListener('click', () => {
-      const randomColor = '#' + Math.floor(Math.random() * 16777215).toString(16).padStart(6, '0');
-      colorPicker.value = randomColor;
-      state.vizColor = randomColor;
-      document.getElementById('colorValue').textContent = randomColor.toUpperCase();
-
-      const randomScale = (Math.random() * 1.5 + 0.5).toFixed(1);
-      scaleSlider.value = randomScale;
-      state.vizScale = parseFloat(randomScale);
-      document.getElementById('scaleValue').textContent = randomScale;
-
-      const randomGlow = Math.floor(Math.random() * 50);
-      glowSlider.value = randomGlow;
-      state.vizGlow = randomGlow;
-      document.getElementById('glowValue').textContent = randomGlow;
-
-      const randomRotSpeed = (Math.random() * 3).toFixed(1);
-      rotSpeedSlider.value = randomRotSpeed;
-      state.rotSpeed = parseFloat(randomRotSpeed);
-      document.getElementById('rotSpeedValue').textContent = randomRotSpeed;
-
-      const visualizers = Object.keys(VisualizerLibrary).filter(k => k !== 'helpers');
-      const randomViz = visualizers[Math.floor(Math.random() * visualizers.length)];
-      state.currentVisualizer = randomViz;
-      
-      document.querySelectorAll('.viz-option').forEach((el, idx) => {
-        el.classList.toggle('active', visualizers[idx] === randomViz);
-      });
-    });
-
-    // =============================================
-    // 🔽 СВОРАЧИВАНИЕ ПАНЕЛИ
-    // =============================================
-    toggleMinimizeBtn.addEventListener('click', () => {
-      controlsPanel.classList.toggle('minimized');
-      toggleMinimizeBtn.textContent = controlsPanel.classList.contains('minimized') ? '+' : '−';
-    });
-
-    // =============================================
-    // 🖼️ АДАПТИВНЫЙ CANVAS
-    // =============================================
-    function resizeCanvas() {
-      canvas.width = window.innerWidth;
-      canvas.height = window.innerHeight;
     }
-    window.addEventListener('resize', resizeCanvas);
-    resizeCanvas();
+  });
 
-    // =============================================
-    // 🎬 АНИМАЦИЯ
-    // =============================================
-    function animate() {
-      if (!isPlaying) return;
-      animationId = requestAnimationFrame(animate);
+  document.getElementById('partType').addEventListener('change', (e) => {
+    state.partType = e.target.value;
+    initParticles();
+  });
 
-      analyser.getByteFrequencyData(dataArray);
+  document.getElementById('fps').addEventListener('change', (e) => {
+    config.fps = parseInt(e.target.value);
+  });
 
-      ctx.fillStyle = `rgba(0, 0, 0, ${state.trailAmount})`;
-      ctx.fillRect(0, 0, canvas.width, canvas.height);
+  console.log('✅ Контролы настроены');
+}
 
-      const centerX = canvas.width / 2;
-      const centerY = canvas.height / 2;
-
-      state.rotation += 0.01;
-      state.time += 0.016;
-
-      const visualizer = VisualizerLibrary[state.currentVisualizer];
-      if (visualizer && visualizer.render) {
-        visualizer.render(ctx, centerX, centerY, dataArray, state, state.time, state.rotation, {
-          width: canvas.width,
-          height: canvas.height
-        });
-      }
-    }
-
-    // =============================================
-    // 🚀 ЗАПУСК
-    // =============================================
-    info.innerHTML = '<div>👋 Привет! Загрузите аудиофайл для начала визуализации</div>';
-  </script>
+// =============================================
+// 🚀 ЗАПУСК
+// =============================================
+window.addEventListener('load', () => {
+  console.log('🚀 Запуск приложения...');
+  
+  canvas.width = config.width;
+  canvas.height = config.height;
+  
+  // Создаем сетку визуализаторов из библиотеки
+  createVisualizerGrid();
+  
+  initAudio();
+  setupControls();
+  initParticles();
+  
+  animate();
+  
+  console.log('✅ Приложение запущено!');
+  console.log(`📊 Загружено визуализаторов: ${Object.keys(VisualizerLibrary).length - 1}`);
+  console.log('📝 Загрузите аудио файл для начала работы');
+});
+</script>
 </body>
 </html>
