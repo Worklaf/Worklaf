@@ -1279,5 +1279,5 @@ visualizeStarField: {
 
 // Экспорт для использования в index.html
 if (typeof window !== 'undefined') {
-  window.VisualizerLibrary = VisualizerLibrary;
+  window.VisualizerLibrary = VisualizerLibrary
 }
