@@ -1203,8 +1203,8 @@ const VisualizerLibrary = {
             ctx.fillRect(0, -barW/2, barH, barW); // Рисуем прямоугольник
             ctx.restore();
         }
-      ]
-      ]
+    }
+    }
     },
 
   visualizeWaveform: {
