@@ -1,5 +1,5 @@
 // =============================================
-// 🎨 БИБЛИОТЕКА ВИЗУАЛИЗАТОРОВ N1K∅
+// 🎨 БИБЛИОТЕКА ВИЗУАЛИЗАТОВ N1K∅ (с панелью настроек)
 // =============================================
 
 const VisualizerLibrary = {
@@ -1115,7 +1115,7 @@ const VisualizerLibrary = {
     }
   },
 
-   visualizeCube: {
+  visualizeCube: {
     name: 'Cube',
     icon: '📦',
     render(ctx, centerX, centerY, dataArray, state, time, rotation, config) {
@@ -1225,41 +1225,559 @@ const VisualizerLibrary = {
         }
       }
 
-      // Эффект скорости (музыкальные лучи)
-const bass = dataArray[2] || 0;
-const bassNormalized = bass / 255;
-
-const beatThreshold = 0.4; // Порог срабатывания (от 0 до 1)
-if (bassNormalized > beatThreshold) {
-    const intensity = (bassNormalized - beatThreshold) / (1 - beatThreshold);
-    const numRays = Math.floor(8 + intensity * 8); // 8-16 лучей в зависимости от баса
-    const rayLength = config.width * 0.3 * intensity;
-    const pulse = Math.sin(time * 4) * 0.5 + 0.5; // Эффект пульсации
-    
-    // Цвет и свечение зависят от интенсивности баса
-    ctx.strokeStyle = `rgba(255,255,255,${intensity * pulse})`;
-    ctx.lineWidth = 1 + intensity * 3;
-    ctx.shadowBlur = state.vizGlow * intensity * pulse;
-    ctx.shadowColor = state.vizColor;
-    
-    ctx.beginPath();
-    for (let i = 0; i < numRays; i++) {
-        // Равномерно распределенные лучи с плавным вращением
-        const angle = (i / numRays) * Math.PI * 2 + time * 1.5 + rotation;
-        const waveOffset = Math.sin(time * 3 + i * 0.5) * 15;
-        const finalLength = rayLength + waveOffset;
+      const bass = dataArray[2] || 0;
+      const bassNormalized = bass / 255;
+      
+      const baseRadius = config.width * 0.1 * (state.vizScale || 1);
+      const shellThickness = baseRadius * 0.25;
+      
+      ctx.save();
+      ctx.globalCompositeOperation = 'lighter';
+      
+      const segments = 128;
+      
+      const outerPoints = [];
+      for (let s = 0; s < segments; s++) {
+        const angle = (s / segments) * Math.PI * 2;
         
-        ctx.moveTo(centerX, centerY);
-        ctx.lineTo(
-            centerX + Math.cos(angle) * finalLength,
-            centerY + Math.sin(angle) * finalLength
-        );
-    }
-    ctx.stroke();
-}
+        const bassWave = Math.sin(angle * 3) * shellThickness * bassNormalized * 1.5;
+        const fixedWave = Math.sin(angle * 4 + time * 0.05) * shellThickness * 0.4;
+        
+        const radius = baseRadius + shellThickness + bassWave + fixedWave;
+        
+        outerPoints.push({
+          x: centerX + Math.cos(angle) * radius,
+          y: centerY + Math.sin(angle) * radius,
+          angle
+        });
+      }
+      
+      const innerPoints = [];
+      for (let s = 0; s < segments; s++) {
+        const angle = (s / segments) * Math.PI * 2;
+        
+        const bassWave = Math.sin(angle * 3) * shellThickness * bassNormalized * 0.8;
+        const fixedWave = Math.sin(angle * 4 + time * 0.05) * shellThickness * 0.2;
+        
+        const radius = baseRadius + bassWave + fixedWave;
+        
+        innerPoints.push({
+          x: centerX + Math.cos(angle) * radius,
+          y: centerY + Math.sin(angle) * radius,
+          angle
+        });
+      }
+      
+      ctx.beginPath();
+      ctx.moveTo(outerPoints[0].x, outerPoints[0].y);
+      for (let i = 1; i < outerPoints.length; i++) {
+        ctx.lineTo(outerPoints[i].x, outerPoints[i].y);
+      }
+      ctx.lineTo(outerPoints[0].x, outerPoints[0].y);
+      
+      for (let i = innerPoints.length - 1; i >= 0; i--) {
+        ctx.lineTo(innerPoints[i].x, innerPoints[i].y);
+      }
+      ctx.closePath();
+      
+      const gradient = ctx.createRadialGradient(
+        centerX, centerY, baseRadius - shellThickness,
+        centerX, centerY, baseRadius + shellThickness * 2
+      );
+      gradient.addColorStop(0, `rgba(100, 220, 255, 0)`);
+      gradient.addColorStop(0.3, `rgba(100, 220, 255, ${0.3 + bassNormalized * 0.3})`);
+      gradient.addColorStop(0.7, `rgba(50, 150, 255, ${0.4 + bassNormalized * 0.2})`);
+      gradient.addColorStop(1, `rgba(0, 100, 255, ${0.2})`);
+      
+      ctx.fillStyle = gradient;
+      ctx.fill();
+      
+      ctx.strokeStyle = `rgba(150, 230, 255, ${0.6 + bassNormalized * 0.3})`;
+      ctx.lineWidth = 2 + bassNormalized * 2;
+      ctx.shadowBlur = 20 + bassNormalized * 30;
+      ctx.shadowColor = `rgba(0, 200, 255, ${bassNormalized * 0.8})`;
+      ctx.stroke();
+      
+      ctx.restore();
     }
   },
 
+  // =============== Trap Nation Spectrum Ears (исправлен) ===============
+ visualizeTrapLine: {
+  name: 'Trap Nation: Stable Ring',
+  icon: '〰️',
+  config: {
+    // Основные настройки
+    baseRadius: { type: 'range', label: 'Радиус круга', min: 30, max: 200, step: 5, default: 90 },
+    lineThickness: { type: 'range', label: 'Толщина линии', min: 1, max: 10, step: 0.5, default: 3 },
+    lineColor: { type: 'color', label: 'Цвет линии', default: '#FFFFFF' },
+    
+    // Настройки волн
+    waveHeight: { type: 'range', label: 'Высота волн', min: 5, max: 80, step: 2, default: 30 },
+    waveWidth: { type: 'range', label: 'Ширина волновой зоны', min: 0.1, max: 1.0, step: 0.05, default: 0.3 },
+    sensitivity: { type: 'range', label: 'Чувствительность', min: 0.5, max: 3.0, step: 0.1, default: 1.5 },
+    smoothness: { type: 'range', label: 'Сглаживание', min: 0.1, max: 0.95, step: 0.05, default: 0.85 },
+    
+    // Позиция волн
+    wavePosition: { 
+      type: 'select', 
+      label: 'Позиция волн', 
+      options: [
+        { value: 'sides', label: 'По бокам (лево/право)' },
+        { value: 'bottom', label: 'Снизу' },
+        { value: 'top', label: 'Сверху' },
+        { value: 'all', label: 'Везде' }
+      ], 
+      default: 'sides' 
+    },
+    
+    // Частотные настройки
+    bassRange: { type: 'range', label: 'Диапазон частот (бас)', min: 1, max: 40, step: 1, default: 12 },
+    
+    // Логотип/изображение
+    showCenter: { type: 'checkbox', label: 'Центральный элемент', default: true },
+    centerPulse: { type: 'checkbox', label: 'Пульсация центра', default: true },
+    centerScale: { type: 'range', label: 'Размер центра', min: 0.1, max: 1.0, step: 0.05, default: 0.6 },
+  },
+
+  // Буферы данных
+  _waveData: null,
+  _centerPulseData: 0,
+
+  render(ctx, centerX, centerY, dataArray, state, time, rotation, config) {
+    if (!config) return;
+
+    const radius = config.baseRadius || 90;
+    const waveH = config.waveHeight || 30;
+    const waveW = config.waveWidth || 0.3;
+    const sens = config.sensitivity || 1.5;
+    const smooth = config.smoothness || 0.85;
+    const bassRange = Math.min(config.bassRange || 12, dataArray.length - 1);
+
+    // Инициализация буфера волн
+    if (!this._waveData) {
+      this._waveData = {
+        left: new Float32Array(bassRange).fill(0),
+        right: new Float32Array(bassRange).fill(0),
+        bottom: new Float32Array(bassRange).fill(0),
+        top: new Float32Array(bassRange).fill(0)
+      };
+    }
+
+    // Обновление данных волн (только басы)
+    for (let i = 0; i < bassRange; i++) {
+      const rawValue = dataArray[i + 1] || 0; // Пропускаем DC компонент
+      
+      // Сглаживание для каждого направления
+      this._waveData.left[i] = this._waveData.left[i] * smooth + rawValue * (1 - smooth);
+      this._waveData.right[i] = this._waveData.right[i] * smooth + rawValue * (1 - smooth);
+      this._waveData.bottom[i] = this._waveData.bottom[i] * smooth + rawValue * (1 - smooth);
+      this._waveData.top[i] = this._waveData.top[i] * smooth + rawValue * (1 - smooth);
+    }
+
+    // Средний уровень для пульсации центра
+    const avgLevel = this._waveData.left.reduce((a, b) => a + b, 0) / bassRange;
+    this._centerPulseData = this._centerPulseData * 0.9 + (avgLevel / 255) * 0.1;
+
+    ctx.save();
+    
+    // Стиль линии
+    ctx.strokeStyle = config.lineColor;
+    ctx.lineWidth = config.lineThickness;
+    ctx.lineCap = 'round';
+    ctx.lineJoin = 'round';
+    ctx.shadowBlur = config.lineThickness * 1.5;
+    ctx.shadowColor = config.lineColor;
+
+    // Создаем путь кольца
+    const points = [];
+    const totalPoints = 360; // Высокая детализация для плавности
+    
+    for (let i = 0; i < totalPoints; i++) {
+      const angle = (i / totalPoints) * Math.PI * 2;
+      let waveOffset = 0;
+      
+      // Определяем, в какой зоне мы находимся
+      const normalizedAngle = ((angle + Math.PI * 2) % (Math.PI * 2));
+      
+      if (config.wavePosition === 'sides' || config.wavePosition === 'all') {
+        // Левая сторона (π ± waveWidth)
+        if (Math.abs(normalizedAngle - Math.PI) <= waveW * Math.PI) {
+          const waveProgress = (waveW * Math.PI - Math.abs(normalizedAngle - Math.PI)) / (waveW * Math.PI);
+          const dataIndex = Math.floor(waveProgress * (bassRange - 1));
+          waveOffset = (this._waveData.left[dataIndex] / 255) * waveH * sens;
+        }
+        
+        // Правая сторона (0 ± waveWidth)
+        const rightDist = Math.min(normalizedAngle, Math.PI * 2 - normalizedAngle);
+        if (rightDist <= waveW * Math.PI) {
+          const waveProgress = (waveW * Math.PI - rightDist) / (waveW * Math.PI);
+          const dataIndex = Math.floor(waveProgress * (bassRange - 1));
+          waveOffset = (this._waveData.right[dataIndex] / 255) * waveH * sens;
+        }
+      }
+      
+      if (config.wavePosition === 'bottom' || config.wavePosition === 'all') {
+        // Нижняя часть (π/2 ± waveWidth)
+        if (Math.abs(normalizedAngle - Math.PI/2) <= waveW * Math.PI) {
+          const waveProgress = (waveW * Math.PI - Math.abs(normalizedAngle - Math.PI/2)) / (waveW * Math.PI);
+          const dataIndex = Math.floor(waveProgress * (bassRange - 1));
+          waveOffset = (this._waveData.bottom[dataIndex] / 255) * waveH * sens;
+        }
+      }
+      
+      if (config.wavePosition === 'top' || config.wavePosition === 'all') {
+        // Верхняя часть (3π/2 ± waveWidth)
+        if (Math.abs(normalizedAngle - 3*Math.PI/2) <= waveW * Math.PI) {
+          const waveProgress = (waveW * Math.PI - Math.abs(normalizedAngle - 3*Math.PI/2)) / (waveW * Math.PI);
+          const dataIndex = Math.floor(waveProgress * (bassRange - 1));
+          waveOffset = (this._waveData.top[dataIndex] / 255) * waveH * sens;
+        }
+      }
+      
+      const finalRadius = radius + waveOffset;
+      
+      points.push({
+        x: centerX + Math.cos(angle) * finalRadius,
+        y: centerY + Math.sin(angle) * finalRadius
+      });
+    }
+
+    // Рисуем сглаженное кольцо
+    ctx.beginPath();
+    
+    if (points.length > 2) {
+      ctx.moveTo(points[0].x, points[0].y);
+      
+      for (let i = 0; i < points.length; i++) {
+        const current = points[i];
+        const next = points[(i + 1) % points.length];
+        
+        // Контрольная точка для сглаживания
+        const cp1x = current.x;
+        const cp1y = current.y;
+        const endX = (current.x + next.x) / 2;
+        const endY = (current.y + next.y) / 2;
+        
+        ctx.quadraticCurveTo(cp1x, cp1y, endX, endY);
+      }
+      
+      ctx.closePath();
+    }
+    
+    ctx.stroke();
+
+    // Центральный элемент (для привязки изображения)
+    if (config.showCenter) {
+      const centerSize = radius * (config.centerScale || 0.6);
+      const pulseOffset = config.centerPulse ? this._centerPulseData * 15 : 0;
+      
+      // Сохраняем масштаб и позицию для внешнего изображения
+      state.centerX = centerX;
+      state.centerY = centerY;
+      state.centerScale = (centerSize + pulseOffset) / radius;
+      state.pulseLevel = this._centerPulseData;
+      
+      // Рисуем placeholder (можно убрать, если используете изображение)
+      ctx.fillStyle = config.lineColor;
+      ctx.globalAlpha = 0.3;
+      ctx.beginPath();
+      ctx.arc(centerX, centerY, centerSize + pulseOffset, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.globalAlpha = 1;
+    }
+
+    ctx.restore();
+  }
+},
+visualizeSpectrumRings: {
+  name: 'Trap Nation Rings',
+  icon: '⭕',
+  config: {
+    vizScale: { type: 'range', label: 'Общий масштаб', min: 0.5, max: 2.5, step: 0.05, default: 1.0 },
+    yOffset: { type: 'range', label: 'Смещение по Y', min: -150, max: 150, step: 5, default: -20 },
+    baseRadius: { type: 'range', label: 'Базовый радиус', min: 30, max: 200, step: 5, default: 80 },
+    waveHeight: { type: 'range', label: 'Высота волн', min: 10, max: 100, step: 2, default: 40 },
+    
+    segments: { type: 'range', label: 'Количество сегментов', min: 32, max: 256, step: 8, default: 128 },
+    freqStart: { type: 'range', label: 'Частота начало', min: 0, max: 50, step: 1, default: 1 },
+    freqEnd: { type: 'range', label: 'Частота конец', min: 20, max: 255, step: 1, default: 80 },
+    sensitivity: { type: 'range', label: 'Чувствительность', min: 0.5, max: 3.0, step: 0.1, default: 1.5 },
+    
+    mirrorMode: { 
+      type: 'select', 
+      label: 'Режим симметрии', 
+      options: [
+        { value: 'none', label: 'Без зеркала' },
+        { value: 'vertical', label: 'Вертикальное зеркало' },
+        { value: 'horizontal', label: 'Горизонтальное зеркало' },
+        { value: 'both', label: 'Полное зеркало' }
+      ], 
+      default: 'vertical' 
+    },
+    
+    lineWidth: { type: 'range', label: 'Толщина линии', min: 0.5, max: 8, step: 0.5, default: 2 },
+    lineColor: { type: 'color', label: 'Цвет линии', default: '#00FFFF' },
+    glowIntensity: { type: 'range', label: 'Свечение', min: 0, max: 30, step: 1, default: 15 },
+    
+    showCenter: { type: 'checkbox', label: 'Центральная точка', default: true },
+    centerSize: { type: 'range', label: 'Размер центра', min: 1, max: 10, step: 0.5, default: 3 },
+    centerColor: { type: 'color', label: 'Цвет центра', default: '#FFFFFF' },
+    
+    smoothing: { type: 'range', label: 'Сглаживание', min: 0.1, max: 0.95, step: 0.05, default: 0.8 },
+    beatPulse: { type: 'checkbox', label: 'Пульсация от бита', default: true },
+  },
+
+  render(ctx, centerX, centerY, dataArray, state, time, rotation, config) {
+    if (!config) return;
+
+    const vScale = config.vizScale || 1;
+    const curY = centerY + (config.yOffset || 0) * vScale;
+    const baseR = (config.baseRadius || 80) * vScale;
+    const waveH = (config.waveHeight || 40) * vScale;
+    const segments = config.segments || 128;
+
+    // Инициализация
+    if (!state.smoothedData || state.smoothedData.length !== segments) {
+      state.smoothedData = new Float32Array(segments).fill(0);
+    }
+
+    ctx.save();
+    ctx.translate(centerX, curY);
+
+    // Пульсация от бита
+    let pulseOffset = 0;
+    if (config.beatPulse) {
+      const bassSum = dataArray.slice(0, 8).reduce((a, b) => a + b, 0);
+      const bassLevel = bassSum / (8 * 255);
+      pulseOffset = bassLevel * baseR * 0.2;
+    }
+
+    // Подготовка данных
+    const fStart = config.freqStart || 1;
+    const fEnd = Math.min(config.freqEnd || 80, dataArray.length - 1);
+    const freqRange = fEnd - fStart;
+    
+    // Заполнение данных с учетом зеркалирования
+    for (let i = 0; i < segments; i++) {
+      let dataValue = 0;
+      
+      if (config.mirrorMode === 'vertical') {
+        // Вертикальное зеркало (левая половина = правая половина)
+        const segmentPercent = (i / segments) * 2; // 0-2 диапазон
+        let mappedPercent;
+        
+        if (segmentPercent <= 1) {
+          // Первая половина (0-0.5 оборота)
+          mappedPercent = segmentPercent;
+        } else {
+          // Вторая половина (0.5-1 оборота) - зеркалим
+          mappedPercent = 2 - segmentPercent;
+        }
+        
+        const freqIndex = Math.floor(fStart + mappedPercent * freqRange);
+        dataValue = dataArray[Math.min(freqIndex, dataArray.length - 1)] || 0;
+        
+      } else if (config.mirrorMode === 'horizontal') {
+        // Горизонтальное зеркало (верх = низ)
+        const segmentPercent = i / segments;
+        let mappedPercent;
+        
+        if (segmentPercent <= 0.5) {
+          mappedPercent = segmentPercent * 2;
+        } else {
+          mappedPercent = (1 - segmentPercent) * 2;
+        }
+        
+        const freqIndex = Math.floor(fStart + mappedPercent * freqRange);
+        dataValue = dataArray[Math.min(freqIndex, dataArray.length - 1)] || 0;
+        
+      } else {
+        // Обычный режим
+        const segmentPercent = i / segments;
+        const freqIndex = Math.floor(fStart + segmentPercent * freqRange);
+        dataValue = dataArray[Math.min(freqIndex, dataArray.length - 1)] || 0;
+      }
+      
+      // Сглаживание
+      const smoothFactor = config.smoothing || 0.8;
+      state.smoothedData[i] = 
+        state.smoothedData[i] * smoothFactor + 
+        dataValue * (1 - smoothFactor);
+    }
+
+    // Настройка рендеринга
+    ctx.strokeStyle = config.lineColor || '#00FFFF';
+    ctx.lineWidth = (config.lineWidth || 2) * vScale;
+    ctx.lineCap = 'round';
+    ctx.lineJoin = 'round';
+    
+    if (config.glowIntensity > 0) {
+      ctx.shadowColor = config.lineColor || '#00FFFF';
+      ctx.shadowBlur = (config.glowIntensity || 0) * vScale;
+    }
+
+    // Рисуем волновое кольцо
+    ctx.beginPath();
+    
+    for (let i = 0; i <= segments; i++) {
+      const angle = (i / segments) * Math.PI * 2 - Math.PI / 2; // Начинаем сверху
+      const dataIndex = i % segments;
+      
+      // Вычисляем высоту волны
+      const amplitude = (state.smoothedData[dataIndex] / 255) * 
+                       (config.sensitivity || 1.5);
+      const waveOffset = amplitude * waveH;
+      
+      // Финальный радиус
+      const radius = baseR + pulseOffset + waveOffset;
+      
+      // Координаты точки
+      const x = Math.cos(angle) * radius;
+      const y = Math.sin(angle) * radius;
+      
+      if (i === 0) {
+        ctx.moveTo(x, y);
+      } else {
+        ctx.lineTo(x, y);
+      }
+    }
+    
+    ctx.closePath();
+    ctx.stroke();
+
+    // Центральная точка
+    if (config.showCenter) {
+      ctx.shadowBlur = (config.glowIntensity || 0) * 0.5 * vScale;
+      ctx.fillStyle = config.centerColor || '#FFFFFF';
+      ctx.beginPath();
+      ctx.arc(0, 0, (config.centerSize || 3) * vScale, 0, Math.PI * 2);
+      ctx.fill();
+    }
+
+    ctx.restore();
+  }
+},
+visualizeMultiRings: {
+  name: 'Multi Spectrum Rings',
+  icon: '🎯',
+  config: {
+    vizScale: { type: 'range', label: 'Масштаб', min: 0.5, max: 2, step: 0.05, default: 1.0 },
+    yOffset: { type: 'range', label: 'Смещение Y', min: -100, max: 100, step: 5, default: 0 },
+    
+    ringCount: { type: 'range', label: 'Количество колец', min: 1, max: 8, step: 1, default: 3 },
+    baseRadius: { type: 'range', label: 'Базовый радиус', min: 20, max: 150, step: 5, default: 60 },
+    ringSpacing: { type: 'range', label: 'Расстояние между кольцами', min: 10, max: 80, step: 2, default: 25 },
+    waveHeight: { type: 'range', label: 'Высота волн', min: 5, max: 60, step: 2, default: 20 },
+    
+    segments: { type: 'range', label: 'Детализация', min: 64, max: 360, step: 8, default: 180 },
+    mirrorSymmetry: { type: 'checkbox', label: 'Зеркальная симметрия', default: true },
+    
+    lineWidth: { type: 'range', label: 'Толщина линий', min: 0.5, max: 6, step: 0.5, default: 1.5 },
+    outerColor: { type: 'color', label: 'Цвет внешних колец', default: '#FF0080' },
+    innerColor: { type: 'color', label: 'Цвет внутренних колец', default: '#00FFFF' },
+    glowSize: { type: 'range', label: 'Размер свечения', min: 0, max: 20, step: 1, default: 8 },
+  },
+
+  render(ctx, centerX, centerY, dataArray, state, time, rotation, config) {
+    if (!config) return;
+    
+    const vScale = config.vizScale || 1;
+    const curY = centerY + (config.yOffset || 0) * vScale;
+    const baseR = (config.baseRadius || 60) * vScale;
+    const ringCount = config.ringCount || 3;
+    const ringSpacing = (config.ringSpacing || 25) * vScale;
+    const waveH = (config.waveHeight || 20) * vScale;
+    const segments = config.segments || 180;
+    
+    if (!state.ringData) {
+      state.ringData = Array.from({length: ringCount}, () => new Float32Array(segments).fill(0));
+    }
+    
+    ctx.save();
+    ctx.translate(centerX, curY);
+    
+    // Создаем градиент цветов для колец
+    const colors = [];
+    for (let ring = 0; ring < ringCount; ring++) {
+      const t = ring / Math.max(1, ringCount - 1);
+      colors.push(this.interpolateColor(config.innerColor, config.outerColor, t));
+    }
+    
+    // Обрабатываем каждое кольцо
+    for (let ring = 0; ring < ringCount; ring++) {
+      const radius = baseR + ring * ringSpacing;
+      const freqStart = Math.floor((ring / ringCount) * 40) + 1;
+      const freqEnd = Math.min(freqStart + 30, dataArray.length - 1);
+      
+      // Обновляем данные для кольца
+      for (let i = 0; i < segments; i++) {
+        let segmentPercent = i / segments;
+        
+        if (config.mirrorSymmetry) {
+          // Зеркальная симметрия
+          if (segmentPercent > 0.5) {
+            segmentPercent = 1 - segmentPercent;
+          }
+          segmentPercent *= 2; // Растягиваем на весь диапазон
+        }
+        
+        const freqIdx = Math.floor(freqStart + segmentPercent * (freqEnd - freqStart));
+        const rawValue = dataArray[Math.min(freqIdx, dataArray.length - 1)] || 0;
+        
+        // Сглаживание
+        state.ringData[ring][i] = 
+          state.ringData[ring][i] * 0.85 + rawValue * 0.15;
+      }
+      
+      // Рисуем кольцо
+      ctx.strokeStyle = colors[ring];
+      ctx.lineWidth = (config.lineWidth || 1.5) * vScale;
+      ctx.shadowColor = colors[ring];
+      ctx.shadowBlur = (config.glowSize || 0) * vScale;
+      
+      ctx.beginPath();
+      
+      for (let i = 0; i <= segments; i++) {
+        const angle = (i / segments) * Math.PI * 2 - Math.PI / 2;
+        const dataIdx = i % segments;
+        const amplitude = (state.ringData[ring][dataIdx] / 255) * 1.2;
+        const finalRadius = radius + amplitude * waveH;
+        
+        const x = Math.cos(angle) * finalRadius;
+        const y = Math.sin(angle) * finalRadius;
+        
+        if (i === 0) {
+          ctx.moveTo(x, y);
+        } else {
+          ctx.lineTo(x, y);
+        }
+      }
+      
+      ctx.closePath();
+      ctx.stroke();
+    }
+    
+    ctx.restore();
+  },
+  
+  interpolateColor(color1, color2, t) {
+    // Простая интерполяция цветов
+    const r1 = parseInt(color1.slice(1, 3), 16);
+    const g1 = parseInt(color1.slice(3, 5), 16);
+    const b1 = parseInt(color1.slice(5, 7), 16);
+    
+    const r2 = parseInt(color2.slice(1, 3), 16);
+    const g2 = parseInt(color2.slice(3, 5), 16);
+    const b2 = parseInt(color2.slice(5, 7), 16);
+    
+    const r = Math.round(r1 + (r2 - r1) * t);
+    const g = Math.round(g1 + (g2 - g1) * t);
+    const b = Math.round(b1 + (b2 - b1) * t);
+    
+    return `#${r.toString(16).padStart(2, '0')}${g.toString(16).padStart(2, '0')}${b.toString(16).padStart(2, '0')}`;
+  }
+},
   visualizeStarField: {
     name: 'StarField',
     icon: '✨',
@@ -1293,10 +1811,188 @@ if (bassNormalized > beatThreshold) {
       });
       ctx.restore();
     }
+  },
+
+  // =============================================
+  // 🧩 UI-ПАНЕЛЬ НАСТРОЕК (универсальная)
+  // =============================================
+  ui: {
+    selectedKey: 'visualizeSpectrumEars',
+    store: {}, // { key: configValues }
+    init() {
+      if (typeof document === 'undefined') return;
+      if (document.getElementById('viz-panel')) return;
+
+      // Кнопка-тогглер
+      const toggleBtn = document.createElement('button');
+      toggleBtn.id = 'viz-toggle';
+      toggleBtn.textContent = '⚙ TrapNation UI';
+      toggleBtn.style = `
+        position: fixed; top: 12px; right: 12px; z-index: 9999;
+        background:#20242a; color:#fff; border:1px solid #3a3f46; border-radius:8px;
+        padding:8px 12px; cursor:pointer; font-family:system-ui, Arial; font-size:13px;
+      `;
+      document.body.appendChild(toggleBtn);
+
+      const panel = document.createElement('div');
+      panel.id = 'viz-panel';
+      panel.style = `
+        position: fixed; top: 48px; right: 12px; z-index: 9999;
+        width: 300px; max-height: 70vh; overflow:auto;
+        background: rgba(18,18,22,0.92); color: #eaeaea; border: 1px solid #3a3f46; border-radius: 10px;
+        padding: 12px; box-shadow: 0 8px 24px rgba(0,0,0,0.5); display:none;
+        font-family: system-ui, Arial; font-size: 13px;
+      `;
+
+      const header = document.createElement('div');
+      header.innerHTML = `<div style="display:flex;align-items:center;justify-content:space-between;">
+        <strong>Visualizer Settings</strong>
+        <button id="viz-close" style="background:#2a2f36;color:#fff;border:1px solid #3a3f46;border-radius:6px;padding:4px 8px;cursor:pointer;">Закрыть</button>
+      </div>`;
+      panel.appendChild(header);
+
+      // Селектор визуализатора (показываем те, у кого есть config)
+      const selectWrap = document.createElement('div');
+      selectWrap.style.margin = '8px 0';
+      const select = document.createElement('select');
+      select.style = 'width:100%;background:#1b1f24;color:#fff;border:1px solid #3a3f46;border-radius:6px;padding:6px;';
+      const keys = Object.keys(VisualizerLibrary).filter(k => {
+        const v = VisualizerLibrary[k];
+        return v && typeof v === 'object' && 'render' in v;
+      });
+      keys.forEach(k => {
+        const option = document.createElement('option');
+        option.value = k;
+        option.textContent = `${VisualizerLibrary[k].icon || ''} ${VisualizerLibrary[k].name || k}`;
+        if (k === this.selectedKey) option.selected = true;
+        select.appendChild(option);
+      });
+      selectWrap.appendChild(select);
+      panel.appendChild(selectWrap);
+
+      const controls = document.createElement('div');
+      controls.id = 'viz-controls';
+      panel.appendChild(controls);
+
+      document.body.appendChild(panel);
+
+      // События
+      toggleBtn.onclick = () => { panel.style.display = panel.style.display === 'none' ? 'block' : 'none'; };
+      header.querySelector('#viz-close').onclick = () => { panel.style.display = 'none'; };
+      select.onchange = (e) => {
+        this.selectedKey = e.target.value;
+        this._renderControls(controls);
+      };
+
+      // Инициализация контролов
+      this._renderControls(controls);
+    },
+
+    _defaultsFor(key) {
+      const v = VisualizerLibrary[key];
+      const cfg = v && v.config ? v.config : null;
+      const out = {};
+      if (!cfg) return out;
+      for (const prop in cfg) {
+        const def = cfg[prop].default;
+        out[prop] = def !== undefined ? def : null;
+      }
+      return out;
+    },
+
+    getConfigFor(key) {
+      if (!this.store[key]) this.store[key] = this._defaultsFor(key);
+      return this.store[key];
+    },
+
+    _renderControls(container) {
+      container.innerHTML = '';
+      const v = VisualizerLibrary[this.selectedKey];
+      const cfg = v && v.config ? v.config : null;
+
+      if (!cfg) {
+        const p = document.createElement('div');
+        p.textContent = 'Для выбранного визуализатора нет настраиваемых параметров.';
+        container.appendChild(p);
+        return;
+      }
+
+      const values = this.getConfigFor(this.selectedKey);
+
+      const addControl = (label, node) => {
+        const wrap = document.createElement('div');
+        wrap.style = 'margin:8px 0;';
+        const lbl = document.createElement('label');
+        lbl.style = 'display:block;margin-bottom:4px;color:#cfd3da;';
+        lbl.textContent = label;
+        wrap.appendChild(lbl);
+        wrap.appendChild(node);
+        container.appendChild(wrap);
+      };
+
+      for (const key in cfg) {
+        const c = cfg[key];
+        let node;
+
+        if (c.type === 'range') {
+          const input = document.createElement('input');
+          input.type = 'range';
+          input.min = c.min; input.max = c.max; input.step = c.step;
+          input.value = values[key];
+          input.style = 'width:100%';
+          const valOut = document.createElement('div');
+          valOut.style = 'text-align:right;color:#9aa0a6;font-size:12px;';
+          valOut.textContent = values[key];
+          input.oninput = (e) => {
+            const val = parseFloat(e.target.value);
+            values[key] = val;
+            valOut.textContent = val;
+          };
+          const wrap = document.createElement('div');
+          wrap.appendChild(input);
+          wrap.appendChild(valOut);
+          node = wrap;
+        } else if (c.type === 'color') {
+          const input = document.createElement('input');
+          input.type = 'color';
+          input.value = values[key];
+          input.style = 'width:100%;height:32px;background:#1b1f24;border:1px solid #3a3f46;border-radius:6px;';
+          input.oninput = (e) => { values[key] = e.target.value; };
+          node = input;
+        } else if (c.type === 'text') {
+          const input = document.createElement('input');
+          input.type = 'text';
+          input.value = values[key];
+          input.style = 'width:100%;background:#1b1f24;color:#fff;border:1px solid #3a3f46;border-radius:6px;padding:6px;';
+          input.oninput = (e) => { values[key] = e.target.value; };
+          node = input;
+        } else {
+          const span = document.createElement('span');
+          span.textContent = '(неподдерживаемый тип)';
+          node = span;
+        }
+
+        addControl(c.label || key, node);
+      }
+
+      const hint = document.createElement('div');
+      hint.style = 'margin-top:10px;color:#8992a0;font-size:12px;';
+      hint.textContent = 'Применение: в вашем рендер-цикле объединяйте baseConfig с VisualizerLibrary.getConfigFor(selectedKey).';
+      container.appendChild(hint);
+    }
+  },
+
+  // Возврат текущих значений конфига из UI
+  getConfigFor(key) {
+    return VisualizerLibrary.ui.getConfigFor(key);
   }
 };
 
-// Экспорт для использования в index.html
+// Экспорт для использования в index.html и авто-монтаж UI
 if (typeof window !== 'undefined') {
   window.VisualizerLibrary = VisualizerLibrary;
+  // Автоматически добавить панель после загрузки DOM
+  window.addEventListener('DOMContentLoaded', () => {
+    try { VisualizerLibrary.ui.init(); } catch (e) { /* тихо игнорируем */ }
+  });
 }
