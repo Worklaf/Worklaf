@@ -1190,6 +1190,7 @@ function applyScreenEffects(ctx) {
   }
 }
 
+
 // =============================================
 // 🎬 АНИМАЦИЯ
 // =============================================
@@ -1231,9 +1232,21 @@ function animate() {
   const centerX = config.width / 2;
   const centerY = config.height * state.vizY;
 
-  const visualizer = VisualizerLibrary[state.visualizer];
+   const visualizer = VisualizerLibrary[state.visualizer];
   if (visualizer && visualizer.render) {
-    visualizer.render(ctx, centerX, centerY, dataArray || new Uint8Array(512), state, time, rotation, config);
+    // Получаем специфичные настройки для выбранного спектра из UI-панели
+    const uiParams = VisualizerLibrary.getConfigFor(state.visualizer);
+    
+    // Объединяем: базовый конфиг (экран) + параметры из UI + state
+    const mergedConfig = { 
+      ...config, 
+      ...uiParams,
+      vizScale: state.vizScale, // прокидываем старые ползунки для совместимости
+      vizGlow: state.vizGlow,
+      vizColor: state.vizColor
+    };
+
+    visualizer.render(ctx, centerX, centerY, dataArray || new Uint8Array(512), state, time, rotation, mergedConfig);
   }
 
   // Частицы
