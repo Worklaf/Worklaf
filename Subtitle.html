@@ -1,0 +1,231 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8" />
+  <title>Мой простой субтитр‑генератор</title>
+  <style>
+    body {
+      font-family: system-ui, sans-serif;
+      max-width: 800px;
+      margin: 20px auto;
+      padding: 0 10px;
+    }
+    h1 {
+      font-size: 24px;
+      margin-bottom: 10px;
+    }
+    .block {
+      margin-bottom: 20px;
+      padding: 10px;
+      border: 1px solid #ddd;
+      border-radius: 8px;
+    }
+    label {
+      font-weight: 600;
+      display: block;
+      margin-bottom: 6px;
+    }
+    input[type="file"] {
+      margin-top: 4px;
+    }
+    button {
+      padding: 8px 14px;
+      border-radius: 6px;
+      border: none;
+      background: #007bff;
+      color: #fff;
+      cursor: pointer;
+      font-size: 14px;
+      margin-right: 8px;
+    }
+    button:disabled {
+      background: #aaa;
+      cursor: default;
+    }
+    textarea {
+      width: 100%;
+      min-height: 160px;
+      padding: 8px;
+      border-radius: 6px;
+      border: 1px solid #ccc;
+      resize: vertical;
+      font-family: monospace;
+      font-size: 14px;
+    }
+    .status {
+      font-size: 13px;
+      color: #555;
+      margin-top: 6px;
+    }
+    audio {
+      width: 100%;
+      margin-top: 8px;
+    }
+  </style>
+</head>
+<body>
+  <h1>Субтитры из музыки / аудио</h1>
+
+  <div class="block">
+    <label for="audioInput">1. Загрузите файл (музыка / аудио / видео):</label>
+    <input id="audioInput" type="file" accept="audio/*,video/*" />
+    <audio id="audioPlayer" controls style="display:none;"></audio>
+    <div class="status" id="fileStatus">Файл пока не выбран.</div>
+  </div>
+
+  <div class="block">
+    <label>2. Распознать речь и получить текст:</label>
+    <button id="transcribeBtn" disabled>Распознать</button>
+    <div class="status" id="transcribeStatus">Ожидание файла…</div>
+  </div>
+
+  <div class="block">
+    <label for="textOutput">3. Предварительный просмотр текста (можно редактировать):</label>
+    <textarea id="textOutput" placeholder="Здесь появится распознанный текст…"></textarea>
+    <button id="downloadSrtBtn" disabled>Скачать .srt</button>
+    <div class="status" id="downloadStatus">Сначала нужно получить текст.</div>
+  </div>
+
+  <script>
+    // ⚙️ НАСТРОЙКА: сюда нужно поставить URL твоего backend‑сервиса,
+    // который принимает файл и возвращает JSON с субтитрами:
+    //
+    // [
+    //   { "start": 0.5, "end": 2.1, "text": "Привет, это тест." },
+    //   { "start": 2.2, "end": 4.0, "text": "Второй фрагмент." }
+    // ]
+    //
+    const TRANSCRIBE_API_URL = "https://your-backend-url.example.com/transcribe";
+
+    const audioInput = document.getElementById("audioInput");
+    const audioPlayer = document.getElementById("audioPlayer");
+    const fileStatus = document.getElementById("fileStatus");
+
+    const transcribeBtn = document.getElementById("transcribeBtn");
+    const transcribeStatus = document.getElementById("transcribeStatus");
+
+    const textOutput = document.getElementById("textOutput");
+    const downloadSrtBtn = document.getElementById("downloadSrtBtn");
+    const downloadStatus = document.getElementById("downloadStatus");
+
+    let currentFile = null;
+    let currentSegments = [];
+
+    audioInput.addEventListener("change", () => {
+      const file = audioInput.files[0];
+      if (!file) {
+        fileStatus.textContent = "Файл пока не выбран.";
+        audioPlayer.style.display = "none";
+        transcribeBtn.disabled = true;
+        return;
+      }
+      currentFile = file;
+      fileStatus.textContent = `Выбран файл: ${file.name} (${Math.round(file.size / 1024)} KB)`;
+
+      const url = URL.createObjectURL(file);
+      audioPlayer.src = url;
+      audioPlayer.style.display = "block";
+
+      transcribeBtn.disabled = false;
+      transcribeStatus.textContent = "Готово к распознаванию.";
+    });
+
+    transcribeBtn.addEventListener("click", async () => {
+      if (!currentFile) return;
+
+      transcribeBtn.disabled = true;
+      transcribeStatus.textContent = "Распознавание… подождите, идёт отправка файла.";
+      downloadSrtBtn.disabled = true;
+      downloadStatus.textContent = "Ожидание результата…";
+
+      try {
+        const formData = new FormData();
+        formData.append("file", currentFile);
+
+        const response = await fetch(TRANSCRIBE_API_URL, {
+          method: "POST",
+          body: formData
+        });
+
+        if (!response.ok) {
+          throw new Error("Ошибка сервера: " + response.status);
+        }
+
+        const segments = await response.json();
+        // Ожидаем массив объектов { start, end, text }
+        if (!Array.isArray(segments)) {
+          throw new Error("Неверный формат ответа от сервера.");
+        }
+
+        currentSegments = segments;
+
+        // Собираем простой текст для предварительного просмотра
+        const plainText = segments.map(s => s.text).join(" ");
+        textOutput.value = plainText;
+
+        transcribeStatus.textContent = "Распознавание завершено.";
+        downloadSrtBtn.disabled = false;
+        downloadStatus.textContent = "Можно скачать .srt или отредактировать текст.";
+      } catch (err) {
+        console.error(err);
+        transcribeStatus.textContent = "Ошибка при распознавании: " + err.message;
+        downloadStatus.textContent = "Скачивание .srt недоступно.";
+      } finally {
+        transcribeBtn.disabled = !currentFile;
+      }
+    });
+
+    downloadSrtBtn.addEventListener("click", () => {
+      if (!currentSegments || currentSegments.length === 0) {
+        downloadStatus.textContent = "Нет сегментов для экспорта.";
+        return;
+      }
+
+      const srtContent = segmentsToSrt(currentSegments);
+      const blob = new Blob([srtContent], { type: "text/plain;charset=utf-8" });
+      const url = URL.createObjectURL(blob);
+
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = "subtitles.srt";
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+
+      downloadStatus.textContent = "Файл subtitles.srt скачан.";
+    });
+
+    function segmentsToSrt(segments) {
+      return segments
+        .map((seg, index) => {
+          const start = secondsToSrtTime(seg.start);
+          const end = secondsToSrtTime(seg.end);
+          const text = seg.text || "";
+          return `${index + 1}\n${start} --> ${end}\n${text}\n`;
+        })
+        .join("\n");
+    }
+
+    function secondsToSrtTime(sec) {
+      const totalMs = Math.floor(sec * 1000);
+      const hours = Math.floor(totalMs / 3600000);
+      const minutes = Math.floor((totalMs % 3600000) / 60000);
+      const seconds = Math.floor((totalMs % 60000) / 1000);
+      const milliseconds = totalMs % 1000;
+
+      const pad = (num, size) => String(num).padStart(size, "0");
+
+      return (
+        pad(hours, 2) +
+        ":" +
+        pad(minutes, 2) +
+        ":" +
+        pad(seconds, 2) +
+        "," +
+        pad(milliseconds, 3)
+      );
+    }
+  </script>
+</body>
+</html>
