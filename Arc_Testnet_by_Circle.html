@@ -4,6 +4,10 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Полный список: Тестнет Arc (Circle)</title>
+    
+    <!-- Подключение библиотеки для Drag-and-Drop -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Sortable/1.15.0/Sortable.min.js"></script>
+
     <style>
         :root {
             --bg-color: #0f172a;
@@ -249,7 +253,41 @@
             gap: 10px;
         }
 
+        /* --- Стили для перетаскивания --- */
+        .favorites-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 4px 0;
+        }
+        
+        .favorites-item.sortable-ghost {
+            opacity: 0.4;
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 6px;
+        }
+
+        .drag-handle {
+            cursor: grab;
+            color: var(--text-muted);
+            font-size: 1.2rem;
+            line-height: 1;
+            user-select: none;
+            padding-right: 4px;
+            opacity: 0.6;
+        }
+        
+        .drag-handle:hover {
+            opacity: 1;
+            color: var(--accent);
+        }
+        
+        .favorites-item:active .drag-handle {
+            cursor: grabbing;
+        }
+
         .favorites-item a {
+            flex: 1; /* Чтобы ссылка занимала все место */
             display: inline-flex;
             align-items: center;
             gap: 8px;
@@ -258,6 +296,7 @@
             font-weight: 600;
             line-height: 1.35;
             transition: color 0.18s ease;
+            min-width: 0; /* Для text-overflow */
         }
 
         .favorites-item a:hover,
@@ -266,17 +305,21 @@
             text-decoration: underline;
         }
 
-        .favorites-list .link-inline {
-            width: 100%;
-            display: inline-flex;
-            align-items: center;
-            gap: 8px;
-            min-width: 0;
+        .remove-fav-btn {
+            background: none;
+            border: none;
+            color: rgba(239, 68, 68, 0.7);
+            cursor: pointer;
+            font-size: 1.2rem;
+            line-height: 1;
+            padding: 0 4px;
+        }
+        .remove-fav-btn:hover {
+            color: var(--alert-red);
+            transform: scale(1.1);
         }
 
-        .favorite-link {
-            width: 100%;
-        }
+        /* --- Конец стилей перетаскивания --- */
 
         .favorite-title {
             flex: 1 1 auto;
@@ -285,10 +328,6 @@
             text-overflow: ellipsis;
             white-space: nowrap;
             color: inherit;
-        }
-
-        .favorites-list .link-inline .click-info {
-            margin-left: auto;
         }
 
         .main-area {
@@ -1172,10 +1211,14 @@
     const PAGE_VERSION_KEY = 'arc_tracker_page_version_v2';
     const LEGEND_COLLAPSE_KEY = 'arc_tracker_legend_collapsed';
     const FAVORITES_KEY = 'arc_tracker_favorites_v1';
+    
+    // Новая переменная для порядка сортировки
+    const FAVORITES_ORDER_KEY = 'arc_tracker_favorites_order_v1';
     const PAGE_VERSION = '2026-02-01-v3';
 
     let newLinksSet = new Set();
     let knownLinksSet = new Set();
+    let favoritesSortable = null; // Для инстанса Sortable
 
     function loadFavorites() {
         try {
@@ -1189,7 +1232,18 @@
         }
     }
 
+    // Загрузка порядка сортировки
+    function loadFavoritesOrder() {
+        try {
+            const raw = localStorage.getItem(FAVORITES_ORDER_KEY);
+            return raw ? JSON.parse(raw) : [];
+        } catch (err) {
+            return [];
+        }
+    }
+
     let favoritesState = loadFavorites();
+    let favoritesOrder = loadFavoritesOrder();
     const favoriteControls = new Map();
     const DYNAMIC_CLASS_SET = new Set(['daily-active', 'visited-once', 'has-new-flag']);
 
@@ -1289,6 +1343,7 @@
 
     function saveFavorites() {
         localStorage.setItem(FAVORITES_KEY, JSON.stringify(favoritesState));
+        localStorage.setItem(FAVORITES_ORDER_KEY, JSON.stringify(favoritesOrder));
     }
 
     function getBaseClasses(link) {
@@ -1362,6 +1417,7 @@
         Object.keys(favoritesState).forEach(id => {
             if (!favoriteControls.has(id)) {
                 delete favoritesState[id];
+                favoritesOrder = favoritesOrder.filter(item => item !== id);
                 changed = true;
             }
         });
@@ -1379,6 +1435,7 @@
         document.querySelectorAll('.track-daily, .track-once').forEach(bindTrackingHandler);
     }
 
+    // --- Обновленная функция рендера списка избранного с Drag-and-Drop ---
     function renderFavoritesList() {
         const listEl = document.getElementById('favoritesList');
         const emptyEl = document.getElementById('favoritesEmpty');
@@ -1386,10 +1443,19 @@
         if (!listEl || !emptyEl || !countEl) return;
 
         listEl.innerHTML = '';
-        const entries = Object.entries(favoritesState);
-        entries.sort((a, b) => a[1].title.localeCompare(b[1].title, 'ru', { sensitivity: 'base' }));
+        const allIds = Object.keys(favoritesState);
 
-        if (entries.length === 0) {
+        // Синхронизация порядка с существующими ID
+        // 1. Убираем из Order ID, которых больше нет в State
+        favoritesOrder = favoritesOrder.filter(id => favoritesState[id]);
+        // 2. Добавляем в Order ID, которые есть в State, но нет в Order (в конец)
+        allIds.forEach(id => {
+            if (!favoritesOrder.includes(id)) {
+                favoritesOrder.push(id);
+            }
+        });
+
+        if (favoritesOrder.length === 0) {
             emptyEl.style.display = 'block';
             listEl.style.display = 'none';
             countEl.textContent = '0';
@@ -1400,9 +1466,21 @@
         listEl.style.display = 'flex';
         let favoritesMutated = false;
 
-        entries.forEach(([id, info]) => {
+        favoritesOrder.forEach(id => {
+            const info = favoritesState[id];
+            // Защита от сбоя, если вдруг ID есть в order, но нет в state
+            if (!info) return;
+
             const li = document.createElement('li');
             li.className = 'favorites-item';
+            li.dataset.id = id; // Важно для SortableJS
+
+            // Ручка перетаскивания
+            const handle = document.createElement('span');
+            handle.className = 'drag-handle';
+            handle.innerHTML = '⋮⋮';
+            handle.title = 'Перетащить';
+            li.appendChild(handle);
 
             const anchor = document.createElement('a');
             anchor.href = info.url;
@@ -1434,6 +1512,19 @@
             anchor.appendChild(titleSpan);
 
             li.appendChild(anchor);
+
+            // Кнопка удаления (крестик)
+            const removeBtn = document.createElement('button');
+            removeBtn.type = 'button';
+            removeBtn.className = 'remove-fav-btn';
+            removeBtn.innerHTML = '×';
+            removeBtn.title = 'Удалить из избранного';
+            removeBtn.onclick = (e) => {
+                e.stopPropagation();
+                toggleFavorite(id);
+            };
+            li.appendChild(removeBtn);
+
             listEl.appendChild(li);
 
             bindTrackingHandler(anchor);
@@ -1443,10 +1534,36 @@
             saveFavorites();
         }
 
-        countEl.textContent = String(entries.length);
+        countEl.textContent = String(favoritesOrder.length);
         initializeTooltips();
         updateNewIndicators();
         updateUI();
+        
+        // Инициализация Drag-and-Drop
+        initSortable();
+    }
+
+    // --- Инициализация SortableJS ---
+    function initSortable() {
+        const listEl = document.getElementById('favoritesList');
+        if (!listEl || typeof Sortable === 'undefined') return;
+
+        // Если уже инициализирован, не трогаем, или можно destroy() и создать заново
+        if (favoritesSortable) {
+            favoritesSortable.destroy();
+        }
+
+        favoritesSortable = new Sortable(listEl, {
+            animation: 150,
+            handle: '.drag-handle', // Тянуть только за ручку
+            ghostClass: 'sortable-ghost',
+            onEnd: function (evt) {
+                // Обновляем массив порядка после перетаскивания
+                const newOrder = Array.from(listEl.children).map(li => li.dataset.id);
+                favoritesOrder = newOrder;
+                saveFavorites();
+            }
+        });
     }
 
     function attachFavoriteControls() {
@@ -1496,10 +1613,15 @@
     function toggleFavorite(id) {
         const control = favoriteControls.get(id);
         if (!control) return;
+        
         if (favoritesState[id]) {
+            // Удаление
             delete favoritesState[id];
+            favoritesOrder = favoritesOrder.filter(item => item !== id);
         } else {
+            // Добавление
             favoritesState[id] = extractLinkInfo(control.link);
+            favoritesOrder.push(id);
         }
         saveFavorites();
         refreshFavoriteVisual(id);
