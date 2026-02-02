@@ -1,0 +1,1418 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TestNet Hub | Мои активности</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+
+        :root {
+            --bg-primary: #0b0f19;
+            --bg-secondary: #151b2b;
+            --bg-card: #1e2538;
+            --accent: #3b82f6;
+            --success: #10b981;
+            --warning: #f59e0b;
+            --danger: #ef4444;
+            --text-primary: #f1f5f9;
+            --text-secondary: #94a3b8;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            background-image: 
+                radial-gradient(circle at 20% 50%, rgba(59, 130, 246, 0.15) 0%, transparent 50%),
+                radial-gradient(circle at 80% 80%, rgba(16, 185, 129, 0.1) 0%, transparent 50%);
+            min-height: 100vh;
+        }
+
+        .glass-card {
+            background: rgba(30, 37, 56, 0.6);
+            backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            transition: all 0.3s ease;
+        }
+
+        .glass-card:hover {
+            transform: translateY(-2px);
+            border-color: var(--accent);
+            box-shadow: 0 10px 30px -10px rgba(0, 0, 0, 0.5);
+        }
+
+        .sidebar-link {
+            transition: all 0.2s;
+            border-left: 3px solid transparent;
+        }
+        
+        .sidebar-link:hover, .sidebar-link.active {
+            background: rgba(59, 130, 246, 0.1);
+            border-left-color: var(--accent);
+            color: white;
+        }
+
+        .sidebar-link.category-active {
+            background: rgba(59, 130, 246, 0.2);
+            border-left-color: #8b5cf6;
+            color: white;
+        }
+
+        .status-active { background: rgba(16, 185, 129, 0.2); color: #34d399; }
+        .status-soon { background: rgba(245, 158, 11, 0.2); color: #fbbf24; }
+        .status-ended { background: rgba(239, 68, 68, 0.2); color: #f87171; }
+
+        .tag {
+            background: rgba(59, 130, 246, 0.1);
+            border: 1px solid rgba(59, 130, 246, 0.2);
+            font-size: 0.75rem;
+            padding: 2px 8px;
+            border-radius: 12px;
+            color: #60a5fa;
+        }
+
+        .new-badge {
+            background: linear-gradient(135deg, #ef4444, #f59e0b);
+            color: white;
+            font-size: 0.65rem;
+            font-weight: bold;
+            padding: 2px 8px;
+            border-radius: 12px;
+            animation: pulse 2s infinite;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .modal {
+            display: none;
+            position: fixed;
+            inset: 0;
+            background: rgba(0, 0, 0, 0.8);
+            backdrop-filter: blur(8px);
+            z-index: 100;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+
+        .modal.active {
+            display: flex;
+        }
+
+        .modal-content {
+            background: var(--bg-card);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 16px;
+            max-width: 600px;
+            width: 100%;
+            max-height: 90vh;
+            overflow-y: auto;
+            animation: slideUp 0.3s ease;
+        }
+
+        .modal-large {
+            max-width: 800px;
+        }
+
+        @keyframes slideUp {
+            from { transform: translateY(20px); opacity: 0; }
+            to { transform: translateY(0); opacity: 1; }
+        }
+
+        .favorite-btn {
+            transition: all 0.2s;
+        }
+        
+        .favorite-btn.active {
+            color: #ef4444;
+            transform: scale(1.1);
+        }
+
+        .favorite-btn:hover {
+            transform: scale(1.1);
+        }
+
+        .edit-btn {
+            opacity: 0;
+            transition: all 0.2s;
+        }
+        
+        .glass-card:hover .edit-btn {
+            opacity: 1;
+        }
+
+        .guide-btn {
+            background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+            box-shadow: 0 4px 15px -3px rgba(59, 130, 246, 0.4);
+            transition: all 0.3s ease;
+        }
+        
+        .guide-btn:hover {
+            transform: translateY(-2px) scale(1.05);
+            box-shadow: 0 6px 20px -3px rgba(59, 130, 246, 0.6);
+        }
+
+        .category-input-group {
+            display: flex;
+            gap: 8px;
+        }
+
+        .category-select {
+            flex: 1;
+        }
+
+        .add-category-btn {
+            padding: 0 12px;
+            background: var(--bg-secondary);
+            border: 1px solid rgba(255,255,255,0.2);
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .add-category-btn:hover {
+            background: var(--accent);
+            border-color: var(--accent);
+        }
+
+        .admin-badge {
+            background: linear-gradient(135deg, #3b82f6, #8b5cf6);
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.8; }
+        }
+        
+        @keyframes pulse {
+            0% { opacity: 1; }
+            50% { opacity: 0.7; }
+            100% { opacity: 1; }
+        }
+
+        .animate-pulse {
+            animation: pulse 0.5s ease-in-out;
+        }
+        
+        ::-webkit-scrollbar { width: 8px; }
+        ::-webkit-scrollbar-track { background: var(--bg-primary); }
+        ::-webkit-scrollbar-thumb { background: #334155; border-radius: 4px; }
+    </style>
+</head>
+<body class="antialiased">
+
+    <!-- Header -->
+    <header class="sticky top-0 z-50 glass-card border-b border-white/10">
+        <div class="max-w-7xl mx-auto px-4 py-4">
+            <div class="flex flex-col md:flex-row justify-between items-center gap-4">
+                <div class="flex items-center gap-3">
+                    <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center text-xl">
+                        🚀
+                    </div>
+                    <div>
+                        <h1 class="text-xl font-bold">TestNet Hub</h1>
+                        <p class="text-xs text-slate-400" id="modeIndicator">Публичный просмотр</p>
+                    </div>
+                </div>
+
+                <div class="flex gap-6 text-sm cursor-pointer" onclick="filterProjects('today')">
+                    <div class="text-center hover:opacity-80 transition-opacity">
+                        <div class="text-2xl font-bold text-blue-400" id="statActive">0</div>
+                        <div class="text-slate-400 text-xs">Активных</div>
+                    </div>
+                    <div class="text-center hover:opacity-80 transition-opacity" onclick="event.stopPropagation(); filterProjects('today')">
+                        <div class="text-2xl font-bold text-pink-400" id="statToday">0</div>
+                        <div class="text-slate-400 text-xs">Сегодня</div>
+                    </div>
+                    <div class="text-center hover:opacity-80 transition-opacity" onclick="event.stopPropagation(); filterProjects('favorites')">
+                        <div class="text-2xl font-bold text-red-400" id="statFavorites">0</div>
+                        <div class="text-slate-400 text-xs">Избранное</div>
+                    </div>
+                </div>
+
+                <div class="flex gap-2 items-center">
+                    <!-- Админ-панель (скрыта по умолчанию) -->
+                    <div id="adminPanel" style="display: none;" class="flex gap-2 items-center">
+                        <span class="admin-badge text-xs px-2 py-1 rounded-lg font-bold text-white mr-2">ADMIN</span>
+                        <button onclick="loadExternalData()" class="bg-purple-600 hover:bg-purple-500 px-4 py-2 rounded-lg text-sm font-medium transition-colors" title="Загрузить актуальные данные с сервера">
+                            <i class="fas fa-cloud-download-alt"></i> Sync
+                        </button>
+                        <button onclick="exportData()" class="bg-slate-700 hover:bg-slate-600 px-4 py-2 rounded-lg text-sm font-medium transition-colors" title="Экспорт для GitHub">
+                            <i class="fas fa-download"></i>
+                        </button>
+                        <button onclick="document.getElementById('importFile').click()" class="bg-slate-700 hover:bg-slate-600 px-4 py-2 rounded-lg text-sm font-medium transition-colors">
+                            <i class="fas fa-upload"></i>
+                        </button>
+                        <input type="file" id="importFile" class="hidden" accept=".json" onchange="importData(this)">
+                        <button onclick="openAddModal()" class="bg-blue-600 hover:bg-blue-500 px-4 py-2 rounded-lg text-sm font-medium transition-colors flex items-center gap-2">
+                            <i class="fas fa-plus"></i> Добавить
+                        </button>
+                    </div>
+                    
+                    <!-- Обычный пользователь видит только избранное (локально) -->
+                    <div id="userPanel">
+                        <button onclick="filterProjects('favorites')" class="bg-slate-700 hover:bg-slate-600 px-4 py-2 rounded-lg text-sm font-medium transition-colors" title="Мои избранные">
+                            <i class="fas fa-heart text-red-400"></i> Избранное
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <div class="max-w-7xl mx-auto px-4 py-6 flex gap-6">
+        
+        <!-- Sidebar -->
+        <aside class="hidden lg:block w-64 shrink-0">
+            <div class="glass-card rounded-2xl p-4 sticky top-24">
+                <h3 class="font-semibold mb-4 text-slate-300">Фильтры</h3>
+                
+                <div class="space-y-2">
+                    <button onclick="filterProjects('all')" class="sidebar-link active w-full text-left px-4 py-2 rounded-lg text-sm text-slate-300 flex justify-between items-center" data-filter="all">
+                        <span><i class="fas fa-layer-group mr-2 w-5"></i>Все проекты</span>
+                        <span class="bg-slate-700 px-2 py-0.5 rounded text-xs" id="countAll">0</span>
+                    </button>
+                    <button onclick="filterProjects('today')" class="sidebar-link w-full text-left px-4 py-2 rounded-lg text-sm text-slate-300 flex justify-between items-center" data-filter="today">
+                        <span><i class="fas fa-calendar-day mr-2 w-5 text-pink-400"></i>Сегодня</span>
+                        <span class="bg-pink-900/50 text-pink-400 px-2 py-0.5 rounded text-xs" id="countToday">0</span>
+                    </button>
+                    <button onclick="filterProjects('active')" class="sidebar-link w-full text-left px-4 py-2 rounded-lg text-sm text-slate-300 flex justify-between items-center" data-filter="active">
+                        <span><i class="fas fa-play mr-2 w-5 text-emerald-400"></i>Активные</span>
+                        <span class="bg-emerald-900/50 text-emerald-400 px-2 py-0.5 rounded text-xs" id="countActive">0</span>
+                    </button>
+                    <button onclick="filterProjects('daily')" class="sidebar-link w-full text-left px-4 py-2 rounded-lg text-sm text-slate-300 flex justify-between items-center" data-filter="daily">
+                        <span><i class="fas fa-fire mr-2 w-5 text-orange-400"></i>Ежедневные</span>
+                        <span class="bg-orange-900/50 text-orange-400 px-2 py-0.5 rounded text-xs" id="countDaily">0</span>
+                    </button>
+                    <button onclick="filterProjects('favorites')" class="sidebar-link w-full text-left px-4 py-2 rounded-lg text-sm text-slate-300 flex justify-between items-center" data-filter="favorites">
+                        <span><i class="fas fa-heart mr-2 w-5 text-red-400"></i>Избранное</span>
+                        <span class="bg-red-900/50 text-red-400 px-2 py-0.5 rounded text-xs" id="countFavoritesSidebar">0</span>
+                    </button>
+                    <button onclick="filterProjects('ended')" class="sidebar-link w-full text-left px-4 py-2 rounded-lg text-sm text-slate-300 flex justify-between items-center" data-filter="ended">
+                        <span><i class="fas fa-check-circle mr-2 w-5 text-slate-500"></i>Завершённые</span>
+                        <span class="bg-slate-700 px-2 py-0.5 rounded text-xs" id="countEnded">0</span>
+                    </button>
+                </div>
+
+                <h3 class="font-semibold mb-3 mt-6 text-slate-300 text-sm">Категории</h3>
+                <div class="space-y-1" id="categoryFilters"></div>
+            </div>
+        </aside>
+
+        <!-- Main Content -->
+        <main class="flex-1">
+            <!-- Search -->
+            <div class="mb-6 flex gap-3">
+                <div class="relative flex-1">
+                    <i class="fas fa-search absolute left-3 top-1/2 -translate-y-1/2 text-slate-400"></i>
+                    <input type="text" id="searchInput" placeholder="Поиск проектов..." 
+                           class="w-full bg-slate-800/50 border border-slate-700 rounded-xl py-2.5 pl-10 pr-4 text-sm focus:border-blue-500 focus:outline-none transition-colors">
+                </div>
+                <select onchange="sortProjects(this.value)" class="bg-slate-800/50 border border-slate-700 rounded-xl px-4 text-sm focus:border-blue-500 outline-none">
+                    <option value="newest">Сначала новые</option>
+                    <option value="priority">По приоритету</option>
+                    <option value="name">По названию</option>
+                    <option value="updated">По обновлению</option>
+                </select>
+            </div>
+
+            <!-- Info для обычных пользователей -->
+            <div id="publicInfo" class="mb-4 p-3 bg-blue-900/20 border border-blue-800/50 rounded-lg text-sm text-blue-300 flex items-center gap-2">
+                <i class="fas fa-info-circle"></i>
+                <span>Нажмите на <strong>название проекта</strong> для подробной информации или на <strong>"Гайд"</strong> для перехода по внешней ссылке.</span>
+            </div>
+
+            <!-- Projects Grid -->
+            <div id="projectsGrid" class="grid grid-cols-1 gap-4">
+                <!-- Карточки генерируются JS -->
+            </div>
+
+            <div id="emptyState" class="hidden text-center py-20">
+                <div class="text-6xl mb-4">📭</div>
+                <h3 class="text-xl font-semibold text-slate-300 mb-2">Ничего не найдено</h3>
+                <p class="text-slate-500 mb-4">Попробуйте изменить фильтры</p>
+                <button onclick="resetFilters()" class="bg-blue-600 hover:bg-blue-500 px-4 py-2 rounded-lg text-sm font-medium transition-colors">
+                    Сбросить фильтры
+                </button>
+            </div>
+        </main>
+    </div>
+
+    <!-- Add/Edit Project Modal -->
+    <div id="addModal" class="modal">
+        <div class="modal-content p-6">
+            <div class="flex justify-between items-center mb-6">
+                <h2 class="text-xl font-bold" id="modalTitle">Добавить проект</h2>
+                <button onclick="closeAddModal()" class="text-slate-400 hover:text-white">
+                    <i class="fas fa-times text-xl"></i>
+                </button>
+            </div>
+
+            <form id="addProjectForm" onsubmit="saveProject(event)">
+                <input type="hidden" id="projId">
+                <div class="grid grid-cols-1 gap-4 mb-4">
+                    <div>
+                        <label class="block text-sm font-medium text-slate-300 mb-2">Название проекта *</label>
+                        <input type="text" id="projName" required class="w-full bg-slate-800 border border-slate-700 rounded-lg px-4 py-2 text-sm focus:border-blue-500 outline-none">
+                    </div>
+
+                    <div>
+                        <label class="block text-sm font-medium text-slate-300 mb-2">Категории</label>
+                        
+                        <!-- Существующие категории (чекбоксы) -->
+                        <div id="categoryCheckboxes" class="flex flex-wrap gap-2 mb-3 max-h-32 overflow-y-auto p-2 bg-slate-900/50 rounded-lg border border-slate-700">
+                            <!-- Заполняется JS -->
+                        </div>
+                        
+                        <!-- Добавление новых категорий -->
+                        <div class="bg-slate-800/50 rounded-lg p-3 border border-slate-700">
+                            <div class="flex gap-2 mb-2">
+                                <input type="text" id="newCategoryInput" placeholder="Новая категория..." 
+                                       class="flex-1 bg-slate-800 border border-slate-600 rounded-lg px-3 py-2 text-sm focus:border-blue-500 outline-none"
+                                       onkeypress="handleCategoryInput(event)">
+                                <button type="button" onclick="addCustomCategory()" 
+                                        class="bg-blue-600 hover:bg-blue-500 px-4 py-2 rounded-lg text-sm transition-colors">
+                                    <i class="fas fa-plus"></i>
+                                </button>
+                            </div>
+                            
+                            <!-- Контейнер для временных (новых) категорий -->
+                            <div id="customCategories" class="flex flex-wrap gap-2">
+                                <!-- Сюда добавляются теги новых категорий -->
+                            </div>
+                            
+                            <p class="text-xs text-slate-500 mt-2">
+                                <i class="fas fa-info-circle mr-1"></i>
+                                Нажмите Enter или + чтобы добавить. Можно ввести несколько через запятую (DeFi, Gaming, NFT)
+                            </p>
+                        </div>
+                    </div>
+
+                    <div>
+                        <label class="block text-sm font-medium text-slate-300 mb-2">URL Логотипа</label>
+                        <input type="url" id="projImage" placeholder="https://..." class="w-full bg-slate-800 border border-slate-700 rounded-lg px-4 py-2 text-sm focus:border-blue-500 outline-none">
+                    </div>
+
+                    <div>
+                        <label class="block text-sm font-medium text-slate-300 mb-2">Ссылка на гайд (внешняя)</label>
+                        <input type="url" id="projGuideUrl" placeholder="https://..." class="w-full bg-slate-800 border border-slate-700 rounded-lg px-4 py-2 text-sm focus:border-blue-500 outline-none">
+                    </div>
+
+                    <div>
+                        <label class="block text-sm font-medium text-slate-300 mb-2">Ссылка на CryptoRank</label>
+                        <input type="url" id="projCryptoRank" placeholder="https://cryptorank.io/..." class="w-full bg-slate-800 border border-slate-700 rounded-lg px-4 py-2 text-sm focus:border-blue-500 outline-none">
+                    </div>
+
+                    <div>
+                        <label class="block text-sm font-medium text-slate-300 mb-2">Twitter проекта</label>
+                        <input type="url" id="projTwitter" placeholder="https://twitter.com/..." class="w-full bg-slate-800 border border-slate-700 rounded-lg px-4 py-2 text-sm focus:border-blue-500 outline-none">
+                    </div>
+
+                    <div>
+                        <label class="block text-sm font-medium text-slate-300 mb-2">Реферальная ссылка (Website)</label>
+                        <input type="url" id="projRef" placeholder="https://..." class="w-full bg-slate-800 border border-slate-700 rounded-lg px-4 py-2 text-sm focus:border-blue-500 outline-none">
+                    </div>
+
+                    <div>
+                        <label class="block text-sm font-medium text-slate-300 mb-2">Описание</label>
+                        <textarea id="projDesc" rows="3" class="w-full bg-slate-800 border border-slate-700 rounded-lg px-4 py-2 text-sm focus:border-blue-500 outline-none"></textarea>
+                    </div>
+
+                    <div class="grid grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-sm font-medium text-slate-300 mb-2">Статус</label>
+                            <select id="projStatus" class="w-full bg-slate-800 border border-slate-700 rounded-lg px-4 py-2 text-sm focus:border-blue-500 outline-none">
+                                <option value="active">🟢 Active</option>
+                                <option value="soon">🟡 Soon</option>
+                                <option value="ended">🔴 Ended</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-slate-300 mb-2">Дата обновления</label>
+                            <input type="date" id="projLastUpdated" class="w-full bg-slate-800 border border-slate-700 rounded-lg px-4 py-2 text-sm focus:border-blue-500 outline-none">
+                        </div>
+                    </div>
+
+                    <div class="flex gap-6">
+                        <label class="flex items-center gap-2 text-sm text-slate-300 cursor-pointer">
+                            <input type="checkbox" id="projDaily" class="rounded bg-slate-800 border-slate-700 text-blue-600">
+                            <span>Есть ежедневные квесты</span>
+                        </label>
+                        <label class="flex items-center gap-2 text-sm text-slate-300 cursor-pointer">
+                            <input type="checkbox" id="projPriority" class="rounded bg-slate-800 border-slate-700 text-blue-600">
+                            <span>Высокий приоритет</span>
+                        </label>
+                    </div>
+                </div>
+
+                <div class="flex gap-3 pt-4 border-t border-slate-700">
+                    <button type="button" onclick="deleteProject()" id="deleteBtn" class="hidden bg-red-600/20 hover:bg-red-600/30 text-red-400 px-4 py-2 rounded-lg text-sm font-medium transition-colors">
+                        <i class="fas fa-trash"></i> Удалить
+                    </button>
+                    <button type="button" onclick="closeAddModal()" class="flex-1 bg-slate-700 hover:bg-slate-600 py-2.5 rounded-lg text-sm font-medium transition-colors">Отмена</button>
+                    <button type="submit" class="flex-1 bg-blue-600 hover:bg-blue-500 py-2.5 rounded-lg text-sm font-medium transition-colors">Сохранить</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Detail View Modal (Подробное описание) -->
+    <div id="detailModal" class="modal">
+        <div class="modal-content modal-large p-6">
+            <div class="flex justify-between items-start mb-6">
+                <div class="flex items-center gap-4">
+                    <img id="detailImage" src="" class="w-16 h-16 rounded-xl object-cover border border-slate-700">
+                    <div>
+                        <div class="flex items-center gap-2">
+                            <h2 class="text-2xl font-bold cursor-pointer hover:text-blue-400" id="detailName">Название</h2>
+                            <span id="detailNewBadge" class="new-badge hidden">NEW</span>
+                        </div>
+                        <div class="flex gap-2 mt-1 flex-wrap" id="detailCategory">
+                            <!-- Категории вставляются JS -->
+                        </div>
+                        <!-- ДОБАВЛЕНО: элемент для отображения статуса проекта -->
+                        <div id="detailStatus" class="mt-2 inline-block"></div>
+                    </div>
+                </div>
+                <div class="flex gap-2">
+                    <button id="detailEditBtn" onclick="editCurrentProject()" class="hidden bg-blue-600/20 hover:bg-blue-600/30 text-blue-400 px-3 py-2 rounded-lg text-sm transition-colors">
+                        <i class="fas fa-edit"></i> Редактировать
+                    </button>
+                    <button onclick="closeDetailModal()" class="text-slate-400 hover:text-white">
+                        <i class="fas fa-times text-xl"></i>
+                    </button>
+                </div>
+            </div>
+
+            <div class="space-y-4 mb-6">
+                <div class="bg-slate-800/50 p-4 rounded-xl border border-slate-700">
+                    <h3 class="text-sm font-bold text-blue-400 mb-2 uppercase tracking-wider">
+                        <i class="fas fa-book-open mr-2"></i>Пошаговый гайд
+                    </h3>
+                    <p id="detailDesc" class="text-slate-300 text-sm leading-relaxed whitespace-pre-line"></p>
+                </div>
+
+                <div class="grid grid-cols-2 gap-4 text-sm">
+                    <div class="bg-slate-800/30 p-3 rounded-lg">
+                        <span class="text-slate-500 block text-xs mb-1">Тип активности</span>
+                        <span id="detailDaily" class="text-slate-300 font-medium">Нет</span>
+                    </div>
+                    <div class="bg-slate-800/30 p-3 rounded-lg">
+                        <span class="text-slate-500 block text-xs mb-1">Приоритет</span>
+                        <span id="detailPriority" class="text-slate-300 font-medium">Обычный</span>
+                    </div>
+                    <div class="bg-slate-800/30 p-3 rounded-lg">
+                        <span class="text-slate-500 block text-xs mb-1">Дата добавления</span>
+                        <span id="detailCreated" class="text-slate-300 font-medium">—</span>
+                    </div>
+                    <div class="bg-slate-800/30 p-3 rounded-lg">
+                        <span class="text-slate-500 block text-xs mb-1">Последнее обновление</span>
+                        <span id="detailUpdated" class="text-slate-300 font-medium">—</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="flex gap-3 pt-4 border-t border-slate-700">
+                <button onclick="openGuideFromDetail()" class="flex-1 bg-blue-600 hover:bg-blue-500 py-3 rounded-lg text-sm font-medium transition-colors flex items-center justify-center gap-2">
+                    <i class="fas fa-book-open"></i> Открыть гайд
+                </button>
+                <button onclick="openDetailLink('ref')" class="flex-1 bg-blue-600 hover:bg-blue-500 py-3 rounded-lg text-sm font-medium transition-colors flex items-center justify-center gap-2">
+                    <i class="fas fa-globe"></i> Website
+                </button>
+                <button onclick="openDetailLink('twitter')" class="flex-1 bg-sky-600 hover:bg-sky-500 py-3 rounded-lg text-sm font-medium transition-colors flex items-center justify-center gap-2">
+                    <i class="fab fa-twitter"></i> Twitter
+                </button>
+                <button onclick="openDetailLink('cryptorank')" class="flex-1 bg-slate-700 hover:bg-slate-600 py-3 rounded-lg text-sm font-medium transition-colors flex items-center justify-center gap-2">
+                    <i class="fas fa-chart-line"></i> CryptoRank
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Toast -->
+    <div id="toast" class="fixed bottom-4 right-4 bg-slate-800 border border-slate-700 text-white px-6 py-3 rounded-xl shadow-2xl transform translate-y-20 opacity-0 transition-all duration-300 z-50 flex items-center gap-3">
+        <i class="fas fa-check-circle text-emerald-400"></i>
+        <span id="toastMessage">Действие выполнено</span>
+    </div>
+
+    <script>
+    // ==========================================
+    // КОНФИГУРАЦИЯ
+    // ==========================================
+    const EXTERNAL_DATA_URL = 'https://raw.githubusercontent.com/Worklaf/Worklaf/main/TestNet_Hub/projects.json';
+    
+    let projects = [];
+    let categories = ['DeFi', 'Gaming', 'Infra', 'L1/L2', 'NFT', 'Social', 'Other'];
+    
+    let currentFilters = {
+        status: 'all',
+        category: null
+    };
+    
+    let editingId = null;
+    let currentDetailId = null;
+    let isAdminMode = false;
+    let localFavorites = [];
+    let selectedCategories = []; // Для формы добавления/редактирования
+
+    // Инициализация
+    document.addEventListener('DOMContentLoaded', () => {
+        loadData();
+        setupSearchListener();
+        setupAdminUnlock();
+        
+        document.getElementById('searchInput').addEventListener('input', (e) => {
+            if (!e.target.value.toLowerCase().includes('worklaf')) {
+                applyFilters(e.target.value);
+            }
+        });
+    });
+
+    // ==========================================
+    // МНОЖЕСТВЕННЫЕ КАТЕГОРИИ - ВСПОМОГАТЕЛЬНЫЕ ФУНКЦИИ
+    // ==========================================
+    
+    // Нормализация категорий (обратная совместимость)
+    function normalizeCategories(project) {
+        if (!project.categories) {
+            // Если старый формат с одной категорией
+            if (project.category) {
+                project.categories = [project.category];
+                delete project.category;
+            } else {
+                project.categories = ['Other'];
+            }
+        }
+        return project;
+    }
+    
+    // Проверка принадлежности к категории
+    function hasCategory(project, category) {
+        return project.categories && project.categories.includes(category);
+    }
+    
+    // Получение всех уникальных категорий из проектов
+    function getAllCategoriesFromProjects() {
+        const cats = new Set();
+        projects.forEach(p => {
+            if (p.categories && Array.isArray(p.categories)) {
+                p.categories.forEach(c => cats.add(c));
+            }
+        });
+        return Array.from(cats).sort();
+    }
+
+    // ==========================================
+    // АДМИН-РЕЖИМ (5 нажатий на "Сегодня")
+    // ==========================================
+    
+    let adminClickCount = 0;
+    const ADMIN_CLICK_THRESHOLD = 5;
+    
+    function setupAdminUnlock() {
+        const todayBtn = document.getElementById('statToday');
+        if (!todayBtn) return;
+        
+        todayBtn.addEventListener('click', function(e) {
+            if (isAdminMode) return;
+            
+            // Проверяем, что клик был именно по кнопке "Сегодня", а не по статистике активных
+            if (e.target.closest('[onclick*="filterProjects(\'today\')"]') || e.target.id === 'statToday' || e.target.parentElement?.id === 'statToday') {
+                adminClickCount++;
+                
+                // Визуальное подтверждение
+                this.classList.add('animate-pulse', 'bg-pink-500/30');
+                setTimeout(() => {
+                    this.classList.remove('animate-pulse', 'bg-pink-500/30');
+                }, 300);
+                
+                if (adminClickCount >= ADMIN_CLICK_THRESHOLD) {
+                    activateAdminMode();
+                    showToast('🔓 Админ-режим активирован! (5 нажатий на "Сегодня")');
+                    adminClickCount = 0;
+                } else {
+                    showToast(`Нажатий: ${adminClickCount}/${ADMIN_CLICK_THRESHOLD}`);
+                }
+            }
+        });
+        
+        // Сброс при смене фильтра или поиска
+        document.querySelectorAll('.sidebar-link').forEach(btn => {
+            btn.addEventListener('click', () => adminClickCount = 0);
+        });
+        document.getElementById('searchInput').addEventListener('input', () => adminClickCount = 0);
+    }
+
+    function activateAdminMode() {
+        isAdminMode = true;
+        document.getElementById('adminPanel').style.display = 'flex';
+        document.getElementById('userPanel').style.display = 'none';
+        document.getElementById('publicInfo').innerHTML = '<i class="fas fa-shield-alt"></i><span>Режим администратора активирован. Вы можете редактировать проекты.</span>';
+        document.getElementById('publicInfo').className = "mb-4 p-3 bg-purple-900/20 border border-purple-800/50 rounded-lg text-sm text-purple-300 flex items-center gap-2";
+        document.getElementById('modeIndicator').textContent = 'Режим редактирования';
+        document.getElementById('modeIndicator').classList.add('text-purple-400', 'font-bold');
+        document.getElementById('detailEditBtn').classList.remove('hidden');
+        
+        loadLocalData();
+        showToast('Админ-режим активирован!');
+        applyFilters();
+    }
+
+    // Проверка секретного слова (резервный способ)
+    function setupSearchListener() {
+        const searchInput = document.getElementById('searchInput');
+        searchInput.addEventListener('keyup', (e) => {
+            if (e.target.value.toLowerCase() === 'worklaf') {
+                activateAdminMode();
+                e.target.value = '';
+            }
+        });
+    }
+
+    // ==========================================
+    // ЗАГРУЗКА ДАННЫХ
+    // ==========================================
+
+    async function loadData() {
+        await loadExternalData();
+        loadLocalDataAndMerge();
+        // Нормализуем все проекты (обратная совместимость)
+        projects = projects.map(normalizeCategories);
+        applyFilters();
+    }
+
+    async function loadExternalData() {
+        try {
+            showToast('Загрузка данных...');
+            const response = await fetch(EXTERNAL_DATA_URL + '?t=' + Date.now());
+            if (!response.ok) throw new Error('Network response was not ok');
+            
+            const data = await response.json();
+            
+            if (data.projects) {
+                projects = data.projects.map(normalizeCategories);
+            }
+            if (data.categories) {
+                categories = data.categories;
+            }
+            
+            showToast('Данные загружены!');
+        } catch (error) {
+            console.error('Error loading external data:', error);
+            showToast('Ошибка загрузки внешних данных');
+        }
+    }
+
+    function loadLocalDataAndMerge() {
+        const savedProjects = localStorage.getItem('testnet_projects');
+        if (savedProjects) {
+            const localProjects = JSON.parse(savedProjects).map(normalizeCategories);
+            localProjects.forEach(localProj => {
+                const index = projects.findIndex(p => p.id === localProj.id);
+                if (index >= 0) {
+                    projects[index] = localProj;
+                } else {
+                    projects.push(localProj);
+                }
+            });
+        }
+        
+        const savedCategories = localStorage.getItem('testnet_categories');
+        if (savedCategories) {
+            categories = JSON.parse(savedCategories);
+        }
+        
+        const savedFavorites = localStorage.getItem('local_favorites');
+        if (savedFavorites) {
+            localFavorites = JSON.parse(savedFavorites);
+        }
+    }
+
+    function loadLocalData() {
+        loadLocalDataAndMerge();
+    }
+
+    function saveProjects() {
+        if (!isAdminMode) return;
+        localStorage.setItem('testnet_projects', JSON.stringify(projects));
+        localStorage.setItem('testnet_categories', JSON.stringify(categories));
+    }
+
+    // ==========================================
+    // ФИЛЬТРАЦИЯ
+    // ==========================================
+    
+    function isToday(dateString) {
+        if (!dateString) return false;
+        const date = new Date(dateString);
+        const today = new Date();
+        return date.toDateString() === today.toDateString();
+    }
+
+    function getFilteredProjects(search = '') {
+        let filtered = projects.filter(p => {
+            if (currentFilters.status === 'active') return p.status === 'active';
+            if (currentFilters.status === 'ended') return p.status === 'ended';
+            if (currentFilters.status === 'daily') return p.hasDaily && p.status === 'active';
+            if (currentFilters.status === 'favorites') {
+                return isAdminMode ? p.isFavorite : localFavorites.includes(p.id);
+            }
+            if (currentFilters.status === 'today') {
+                return isToday(p.createdAt);
+            }
+            return true;
+        }).filter(p => {
+            if (currentFilters.category) {
+                return hasCategory(p, currentFilters.category);
+            }
+            return true;
+        }).filter(p => {
+            if (!search) return true;
+            return p.name.toLowerCase().includes(search.toLowerCase()) || 
+                   p.description.toLowerCase().includes(search.toLowerCase());
+        });
+        
+        return filtered;
+    }
+
+    function applyFilters(search = '') {
+        const filtered = getFilteredProjects(search);
+        renderCategories(filtered);
+        renderProjects(filtered);
+        updateSidebarActive();
+        updateCounts(filtered);
+        updateStats();
+    }
+
+    function filterProjects(status) {
+        currentFilters.status = status;
+        const searchValue = document.getElementById('searchInput').value;
+        applyFilters(searchValue);
+    }
+
+    function toggleCategory(cat) {
+        if (currentFilters.category === cat) {
+            currentFilters.category = null;
+        } else {
+            currentFilters.category = cat;
+        }
+        const searchValue = document.getElementById('searchInput').value;
+        applyFilters(searchValue);
+    }
+
+    function resetFilters() {
+        currentFilters = { status: 'all', category: null };
+        document.getElementById('searchInput').value = '';
+        applyFilters();
+    }
+
+    function updateSidebarActive() {
+        document.querySelectorAll('.sidebar-link').forEach(btn => {
+            btn.classList.remove('active');
+            if (btn.dataset.filter === currentFilters.status) {
+                btn.classList.add('active');
+            }
+        });
+    }
+
+    // ==========================================
+    // РЕНДЕРИНГ КАТЕГОРИЙ В САЙДБАРЕ
+    // ==========================================
+
+    function renderCategories(filteredProjects) {
+        const container = document.getElementById('categoryFilters');
+        const availableCategories = getAllCategoriesFromProjects();
+        
+        if (availableCategories.length === 0) {
+            container.innerHTML = '<p class="text-xs text-slate-600 px-4">Нет категорий</p>';
+            return;
+        }
+        
+        container.innerHTML = availableCategories.map(cat => {
+            const count = projects.filter(p => hasCategory(p, cat)).length;
+            const isActive = currentFilters.category === cat;
+            return `
+                <button onclick="toggleCategory('${cat}')" 
+                        class="w-full text-left px-4 py-2 rounded-lg text-sm transition-all flex justify-between items-center border-l-2 ${isActive ? 
+                            'bg-blue-600/20 border-blue-500 text-blue-400' : 
+                            'border-transparent text-slate-400 hover:bg-slate-800 hover:text-white'}">
+                    <span>${cat}</span>
+                    <span class="text-xs ${isActive ? 'bg-blue-900/50 text-blue-400' : 'bg-slate-800'} px-2 py-0.5 rounded">${count}</span>
+                </button>
+            `;
+        }).join('');
+    }
+
+    // ==========================================
+    // МОДАЛЬНОЕ ОКНО И ФОРМА (МУЛЬТИКАТЕГОРИИ)
+    // ==========================================
+    let tempCustomCategories = []; // Временное хранилище новых категорий перед сохранением
+    
+    function renderCategoryOptions() {
+        // Объединяем стандартные категории с теми, что используются в проектах
+        const allCats = new Set([...categories, ...getAllCategoriesFromProjects()]);
+        categories = Array.from(allCats).sort();
+        
+        const container = document.getElementById('categoryCheckboxes');
+        if (!container) return;
+        
+        // Получаем выбранные категории текущего проекта (при редактировании)
+        const selectedCats = editingId ? 
+            (projects.find(p => p.id === editingId)?.categories || []) : [];
+        
+        container.innerHTML = categories.map(cat => {
+            const isChecked = selectedCats.includes(cat) ? 'checked' : '';
+            return `
+                <label class="flex items-center gap-2 px-3 py-2 bg-slate-800 border border-slate-700 rounded-lg cursor-pointer hover:border-blue-500 transition-colors select-none">
+                    <input type="checkbox" value="${cat}" class="category-checkbox rounded bg-slate-700 border-slate-600 text-blue-600 focus:ring-blue-500" ${isChecked}>
+                    <span class="text-sm text-slate-300">${cat}</span>
+                </label>
+            `;
+        }).join('');
+    }
+    
+    function handleCategoryInput(e) {
+        if (e.key === 'Enter') {
+            e.preventDefault();
+            addCustomCategory();
+        }
+    }
+
+    function addCustomCategory() {
+        const input = document.getElementById('newCategoryInput');
+        const value = input.value.trim();
+        
+        if (!value) return;
+        
+        // Поддержка ввода через запятую
+        const newCats = value.split(',').map(c => c.trim()).filter(c => c);
+        
+        newCats.forEach(cat => {
+            // Проверяем, нет ли уже такой в списке
+            if (!tempCustomCategories.includes(cat) && !categories.includes(cat)) {
+                tempCustomCategories.push(cat);
+            }
+            // Если категория уже есть в основном списке, просто отмечаем чекбокс
+            if (categories.includes(cat) && !tempCustomCategories.includes(cat)) {
+                const checkbox = document.querySelector(`.category-checkbox[value="${cat}"]`);
+                if (checkbox) checkbox.checked = true;
+            }
+        });
+        
+        renderTempCategories();
+        input.value = '';
+        input.focus();
+    }
+    
+    function renderTempCategories() {
+        const container = document.getElementById('customCategories');
+        if (!container) return;
+        
+        container.innerHTML = tempCustomCategories.map((cat, index) => `
+            <span class="inline-flex items-center gap-1 px-3 py-1 bg-blue-600/20 border border-blue-500/50 rounded-full text-sm text-blue-300">
+                ${cat}
+                <button type="button" onclick="removeTempCategory(${index})" class="hover:text-red-400 ml-1">
+                    <i class="fas fa-times"></i>
+                </button>
+            </span>
+        `).join('');
+    }
+    
+    function removeTempCategory(index) {
+        tempCustomCategories.splice(index, 1);
+        renderTempCategories();
+    }
+    
+    function toggleNewCategory() {
+        const input = document.getElementById('newCategoryInput');
+        input.classList.toggle('hidden');
+        if (!input.classList.contains('hidden')) {
+            document.getElementById('newCategoryName').focus();
+        }
+    }
+
+    function getSelectedCategories() {
+        // Получаем выбранные из чекбоксов
+        const checkboxes = document.querySelectorAll('.category-checkbox:checked');
+        const selected = Array.from(checkboxes).map(cb => cb.value);
+        
+        // Добавляем временные (пользовательские) категории
+        tempCustomCategories.forEach(cat => {
+            if (!selected.includes(cat)) {
+                selected.push(cat);
+            }
+        });
+        
+        return selected.length > 0 ? selected : ['Other'];
+    }
+
+    function setSelectedCategories(cats) {
+        // Сбрасываем временные
+        tempCustomCategories = [];
+        renderTempCategories();
+        
+        // Устанавливаем чекбоксы
+        document.querySelectorAll('.category-checkbox').forEach(cb => {
+            cb.checked = cats && cats.includes(cb.value);
+        });
+        
+        // Проверяем, есть ли категории, которых нет в списке чекбоксов (новые)
+        if (cats) {
+            cats.forEach(cat => {
+                if (!categories.includes(cat)) {
+                    tempCustomCategories.push(cat);
+                }
+            });
+            renderTempCategories();
+        }
+    }
+
+    function openAddModal() {
+        if (!isAdminMode) {
+            showToast('Требуется доступ администратора');
+            return;
+        }
+        editingId = null;
+        currentDetailId = null;
+        document.getElementById('addProjectForm').reset();
+        document.getElementById('modalTitle').textContent = 'Добавить проект';
+        document.getElementById('deleteBtn').classList.add('hidden');
+        document.getElementById('projLastUpdated').valueAsDate = new Date();
+        document.getElementById('projId').value = '';
+        
+        // Сбрасываем временные категории
+        tempCustomCategories = [];
+        renderTempCategories();
+        renderCategoryOptions(); // Перерисовываем чекбоксы
+        
+        document.getElementById('addModal').classList.add('active');
+    }
+
+    function closeAddModal() {
+        document.getElementById('addModal').classList.remove('active');
+        editingId = null;
+        tempCustomCategories = []; // Очищаем временные категории
+    }
+
+    function editProject(id) {
+        if (!isAdminMode) return;
+        
+        const project = projects.find(p => p.id === id);
+        if (!project) return;
+        
+        editingId = id;
+        document.getElementById('projId').value = id;
+        document.getElementById('projName').value = project.name;
+        document.getElementById('projImage').value = project.image || '';
+        document.getElementById('projGuideUrl').value = project.guideUrl || '';
+        document.getElementById('projCryptoRank').value = project.cryptoRankUrl || '';
+        document.getElementById('projTwitter').value = project.twitterUrl || '';
+        document.getElementById('projRef').value = project.referralLink || '';
+        document.getElementById('projDesc').value = project.description || '';
+        document.getElementById('projStatus').value = project.status || 'active';
+        document.getElementById('projLastUpdated').value = project.lastUpdated || '';
+        document.getElementById('projDaily').checked = project.hasDaily || false;
+        document.getElementById('projPriority').checked = project.priority === 'high';
+        
+        // Устанавливаем категории (включая пользовательские)
+        setSelectedCategories(project.categories || []);
+        
+        document.getElementById('modalTitle').textContent = 'Редактировать проект';
+        document.getElementById('deleteBtn').classList.remove('hidden');
+        document.getElementById('addModal').classList.add('active');
+        
+        closeDetailModal();
+    }
+
+    // ДОБАВЛЕНО: функция для кнопки редактирования в детальном просмотре
+    function editCurrentProject() {
+        if (currentDetailId) {
+            editProject(currentDetailId);
+        }
+    }
+
+    function saveProject(e) {
+        e.preventDefault();
+        if (!isAdminMode) {
+            showToast('Нет доступа');
+            return;
+        }
+        
+        const now = new Date().toISOString();
+        const isNew = !editingId;
+        
+        const projectData = {
+            id: editingId || 'proj_' + Date.now(),
+            name: document.getElementById('projName').value,
+            categories: getSelectedCategories(),
+            status: document.getElementById('projStatus').value,
+            description: document.getElementById('projDesc').value,
+            image: document.getElementById('projImage').value || '',
+            guideUrl: document.getElementById('projGuideUrl').value || '',
+            cryptoRankUrl: document.getElementById('projCryptoRank').value,
+            twitterUrl: document.getElementById('projTwitter').value,
+            referralLink: document.getElementById('projRef').value,
+            hasDaily: document.getElementById('projDaily').checked,
+            priority: document.getElementById('projPriority').checked ? 'high' : 'normal',
+            lastUpdated: document.getElementById('projLastUpdated').value || now.split('T')[0],
+            createdAt: editingId ? (projects.find(p => p.id === editingId)?.createdAt || now) : now,
+            isFavorite: projects.find(p => p.id === editingId)?.isFavorite || false
+        };
+
+        // Добавляем новые категории в глобальный список перед сохранением
+        tempCustomCategories.forEach(cat => {
+            if (!categories.includes(cat)) {
+                categories.push(cat);
+            }
+        });
+
+        if (editingId) {
+            const idx = projects.findIndex(p => p.id === editingId);
+            if (idx !== -1) projects[idx] = { ...projects[idx], ...projectData };
+        } else {
+            projects.push(projectData);
+        }
+
+        saveProjects();
+        tempCustomCategories = []; // Очищаем временные
+        renderCategoryOptions(); // Обновляем чекбоксы для следующего раза
+        applyFilters();
+        closeAddModal();
+        showToast(isNew ? 'Проект добавлен!' : 'Проект обновлён!');
+    }
+
+    function deleteProject() {
+        if (!isAdminMode || !editingId) return;
+        if (!confirm('Удалить этот проект?')) return;
+        
+        projects = projects.filter(p => p.id !== editingId);
+        saveProjects();
+        applyFilters();
+        closeAddModal();
+        showToast('Проект удалён');
+    }
+
+    // ==========================================
+    // РЕНДЕРИНГ ПРОЕКТОВ (С ДАТАМИ И МНОЖЕСТВЕННЫМИ КАТЕГОРИЯМИ)
+    // ==========================================
+
+    function formatDate(dateString) {
+        if (!dateString) return '—';
+        const date = new Date(dateString);
+        return date.toLocaleDateString('ru-RU');
+    }
+
+    function renderProjects(filteredProjects) {
+        const grid = document.getElementById('projectsGrid');
+        const empty = document.getElementById('emptyState');
+        
+        if (filteredProjects.length === 0) {
+            grid.innerHTML = '';
+            empty.classList.remove('hidden');
+            return;
+        }
+        
+        empty.classList.add('hidden');
+        
+        // Сортировка
+        const sortValue = document.querySelector('select[onchange="sortProjects(this.value)"]').value;
+        if (sortValue === 'newest') {
+            filteredProjects.sort((a, b) => new Date(b.createdAt || 0) - new Date(a.createdAt || 0));
+        }
+        
+        grid.innerHTML = filteredProjects.map(project => {
+            const isFav = isAdminMode ? project.isFavorite : localFavorites.includes(project.id);
+            const isNew = isToday(project.createdAt);
+            
+            // Рендерим все категории
+            const categoriesHtml = (project.categories || ['Other']).map(cat => 
+                `<span class="bg-slate-800 px-2 py-1 rounded cursor-pointer hover:bg-slate-700 transition-colors" onclick="event.stopPropagation(); toggleCategory('${cat}')">${cat}</span>`
+            ).join('');
+            
+            return `
+            <div class="glass-card rounded-2xl p-4 relative group ${isNew ? 'border-pink-500/30' : ''}">
+                ${isNew ? '<div class="absolute -top-2 -right-2"><span class="new-badge"><i class="fas fa-star mr-1"></i>NEW</span></div>' : ''}
+                
+                <div class="flex items-start gap-4">
+                    <div class="shrink-0">
+                        ${project.image ? 
+                            `<img src="${project.image}" alt="${project.name}" class="w-12 h-12 rounded-lg object-cover border border-slate-700">` :
+                            `<div class="w-12 h-12 rounded-lg bg-slate-800 border border-slate-700 flex items-center justify-center text-xl">
+                                ${project.name.charAt(0).toUpperCase()}
+                            </div>`
+                        }
+                    </div>
+                    
+                    <div class="flex-1 min-w-0">
+                        <div class="flex items-start justify-between gap-2">
+                            <div class="flex-1">
+                                <div class="flex items-center gap-2 flex-wrap">
+                                    <h3 class="font-bold text-lg leading-tight mb-1 text-white cursor-pointer hover:text-blue-400 ${isNew ? 'text-pink-400' : ''}" onclick="openDetail('${project.id}')">
+                                        ${isNew ? '<i class="fas fa-star text-pink-400 mr-1"></i>' : ''}${project.name}
+                                    </h3>
+                                    ${isAdminMode ? `
+                                    <button onclick="event.stopPropagation(); editProject('${project.id}')" class="text-slate-500 hover:text-blue-400 text-xs edit-btn" title="Редактировать">
+                                        <i class="fas fa-pencil-alt"></i>
+                                    </button>
+                                    ` : ''}
+                                </div>
+                                <div class="flex flex-wrap gap-2 items-center text-xs text-slate-400 mb-2">
+                                    <div class="flex flex-wrap gap-1">${categoriesHtml}</div>
+                                    <span class="status-${project.status} px-2 py-1 rounded font-medium">
+                                        ${project.status === 'active' ? 'Active' : project.status === 'soon' ? 'Soon' : 'Ended'}
+                                    </span>
+                                    ${project.hasDaily ? '<span class="text-orange-400"><i class="fas fa-fire mr-1"></i>Daily</span>' : ''}
+                                    ${project.priority === 'high' ? '<span class="text-red-400"><i class="fas fa-star mr-1"></i>High</span>' : ''}
+                                </div>
+                                
+                                <!-- ДАТЫ В КАРТОЧКЕ -->
+                                <div class="flex gap-3 text-xs text-slate-500 mb-2">
+                                    <span title="Дата добавления"><i class="fas fa-plus-circle mr-1"></i>${formatDate(project.createdAt)}</span>
+                                    <span title="Последнее обновление"><i class="fas fa-sync-alt mr-1"></i>${formatDate(project.lastUpdated)}</span>
+                                </div>
+                            </div>
+                            
+                            <div class="flex items-center gap-2">
+                                <button onclick="openGuide('${project.id}')" class="guide-btn text-white px-4 py-2 rounded-lg text-sm font-bold flex items-center gap-2 whitespace-nowrap" title="Открыть гайд">
+                                    <i class="fas fa-book-open"></i>
+                                    <span>Гайд</span>
+                                </button>
+                                
+                                <button onclick="event.stopPropagation(); toggleFavorite('${project.id}')" class="favorite-btn ${isFav ? 'active' : 'text-slate-500'} p-2 hover:text-red-500 transition-colors w-10 h-10 flex items-center justify-center rounded-lg hover:bg-slate-800" title="${isFav ? 'Убрать из избранного' : 'Добавить в избранное'}">
+                                    <i class="fas fa-heart ${isFav ? 'fill-current' : ''} text-lg"></i>
+                                </button>
+                            </div>
+                        </div>
+                        
+                        <p class="text-slate-400 text-sm mt-2 line-clamp-2">${project.description || 'Нет описания'}</p>
+                    </div>
+                </div>
+                
+                <div class="mt-4 pt-3 border-t border-slate-700/50 flex gap-2">
+                    <button onclick="openLink('${project.referralLink || project.cryptoRankUrl}')" 
+                            class="flex-1 bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-300 py-2 rounded-lg text-sm font-medium transition-colors flex items-center justify-center gap-2 ${!project.referralLink && !project.cryptoRankUrl ? 'opacity-50 cursor-not-allowed' : ''}">
+                        <i class="fas fa-globe"></i> Website
+                    </button>
+                    <button onclick="openLink('${project.twitterUrl}')" 
+                            class="flex-1 bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-300 py-2 rounded-lg text-sm font-medium transition-colors flex items-center justify-center gap-2 ${!project.twitterUrl ? 'opacity-50 cursor-not-allowed' : ''}">
+                        <i class="fab fa-twitter"></i> Twitter
+                    </button>
+                    <button onclick="openLink('${project.cryptoRankUrl}')" 
+                            class="flex-1 bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-300 py-2 rounded-lg text-sm font-medium transition-colors flex items-center justify-center gap-2 ${!project.cryptoRankUrl ? 'opacity-50 cursor-not-allowed' : ''}">
+                        <i class="fas fa-chart-line"></i> CR
+                    </button>
+                </div>
+            </div>
+            `;
+        }).join('');
+    }
+
+    // ==========================================
+    // ДЕТАЛЬНЫЙ ПРОСМОТР (ОБНОВЛЁННЫЙ)
+    // ==========================================
+
+    function openDetail(id) {
+        const project = projects.find(p => p.id === id);
+        if (!project) return;
+        
+        currentDetailId = id;
+        
+        document.getElementById('detailName').textContent = project.name;
+        document.getElementById('detailDesc').textContent = project.description || 'Подробное описание пока не добавлено.';
+        
+        // Обновляем категории в детальном виде
+        const catContainer = document.getElementById('detailCategory');
+        catContainer.innerHTML = (project.categories || ['Other']).map(cat => 
+            `<span class="tag cursor-pointer hover:bg-blue-600/20" onclick="closeDetailModal(); toggleCategory('${cat}')">${cat}</span>`
+        ).join('');
+        
+        const statusEl = document.getElementById('detailStatus');
+        statusEl.textContent = project.status === 'active' ? 'Active' : project.status === 'soon' ? 'Soon' : 'Ended';
+        statusEl.className = `px-2 py-1 rounded-full text-xs font-medium status-${project.status}`;
+        
+        const isNew = isToday(project.createdAt);
+        const newBadge = document.getElementById('detailNewBadge');
+        if (isNew) {
+            newBadge.classList.remove('hidden');
+        } else {
+            newBadge.classList.add('hidden');
+        }
+        
+        document.getElementById('detailImage').src = project.image || '';
+        document.getElementById('detailImage').onerror = function() {
+            this.src = 'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 64 64"%3E%3Crect width="64" height="64" fill="%231e2538"/%3E%3Ctext x="32" y="40" font-family="Arial" font-size="24" fill="%2394a3b8" text-anchor="middle"%3E' + project.name.charAt(0).toUpperCase() + '%3C/text%3E%3C/svg%3E';
+        };
+        
+        document.getElementById('detailCreated').textContent = formatDate(project.createdAt);
+        document.getElementById('detailUpdated').textContent = formatDate(project.lastUpdated);
+        document.getElementById('detailDaily').textContent = project.hasDaily ? 'Ежедневные квесты' : 'Обычные задания';
+        document.getElementById('detailPriority').textContent = project.priority === 'high' ? '🔥 Высокий (срочно)' : 'Обычный';
+        
+        const editBtn = document.getElementById('detailEditBtn');
+        if (isAdminMode) {
+            editBtn.classList.remove('hidden');
+        } else {
+            editBtn.classList.add('hidden');
+        }
+        
+        document.getElementById('detailModal').classList.add('active');
+    }
+
+    function openGuide(id) {
+        const project = projects.find(p => p.id === id);
+        if (project && project.guideUrl) {
+            window.open(project.guideUrl, '_blank');
+        } else {
+            openDetail(id);
+        }
+    }
+
+    function openGuideFromDetail() {
+        if (currentDetailId) {
+            openGuide(currentDetailId);
+        }
+    }
+
+    function closeDetailModal() {
+        document.getElementById('detailModal').classList.remove('active');
+        currentDetailId = null;
+    }
+
+    function openDetailLink(type) {
+        const project = projects.find(p => p.id === currentDetailId);
+        if (!project) return;
+        
+        let url = '';
+        if (type === 'ref') url = project.referralLink || project.cryptoRankUrl;
+        else if (type === 'twitter') url = project.twitterUrl;
+        else if (type === 'cryptorank') url = project.cryptoRankUrl;
+        
+        if (url) window.open(url, '_blank');
+    }
+
+    function openLink(url) {
+        if (url) window.open(url, '_blank');
+    }
+
+    function toggleFavorite(id) {
+        if (isAdminMode) {
+            const project = projects.find(p => p.id === id);
+            if (project) {
+                project.isFavorite = !project.isFavorite;
+                saveProjects();
+                applyFilters(document.getElementById('searchInput').value);
+                showToast(project.isFavorite ? 'Добавлено в избранное' : 'Убрано из избранного');
+            }
+        } else {
+            const idx = localFavorites.indexOf(id);
+            if (idx > -1) {
+                localFavorites.splice(idx, 1);
+            } else {
+                localFavorites.push(id);
+            }
+            localStorage.setItem('local_favorites', JSON.stringify(localFavorites));
+            applyFilters(document.getElementById('searchInput').value);
+        }
+    }
+
+    function sortProjects(by) {
+        if (by === 'name') {
+            projects.sort((a, b) => a.name.localeCompare(b.name));
+        } else if (by === 'priority') {
+            projects.sort((a, b) => (b.priority === 'high' ? 1 : 0) - (a.priority === 'high' ? 1 : 0));
+        } else if (by === 'updated') {
+            projects.sort((a, b) => new Date(b.lastUpdated || 0) - new Date(a.lastUpdated || 0));
+        } else if (by === 'newest') {
+            projects.sort((a, b) => new Date(b.createdAt || 0) - new Date(a.createdAt || 0));
+        }
+        applyFilters(document.getElementById('searchInput').value);
+    }
+
+    function updateStats() {
+        document.getElementById('statActive').textContent = projects.filter(p => p.status === 'active').length;
+        document.getElementById('statToday').textContent = projects.filter(p => isToday(p.createdAt)).length;
+        document.getElementById('statFavorites').textContent = isAdminMode ? 
+            projects.filter(p => p.isFavorite).length : localFavorites.length;
+    }
+
+    function updateCounts(filteredProjects) {
+        document.getElementById('countAll').textContent = projects.length;
+        document.getElementById('countToday').textContent = projects.filter(p => isToday(p.createdAt)).length;
+        document.getElementById('countActive').textContent = projects.filter(p => p.status === 'active').length;
+        document.getElementById('countDaily').textContent = projects.filter(p => p.hasDaily && p.status === 'active').length;
+        document.getElementById('countFavoritesSidebar').textContent = isAdminMode ? 
+            projects.filter(p => p.isFavorite).length : localFavorites.length;
+        document.getElementById('countEnded').textContent = projects.filter(p => p.status === 'ended').length;
+    }
+
+    function showToast(msg) {
+        const toast = document.getElementById('toast');
+        document.getElementById('toastMessage').textContent = msg;
+        toast.classList.remove('translate-y-20', 'opacity-0');
+        setTimeout(() => {
+            toast.classList.add('translate-y-20', 'opacity-0');
+        }, 3000);
+    }
+
+    // Экспорт/Импорт
+    function exportData() {
+        if (!isAdminMode) return;
+        
+        const data = {
+            projects: projects,
+            categories: categories,
+            exportDate: new Date().toISOString()
+        };
+        const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `projects.json`;
+        a.click();
+        URL.revokeObjectURL(url);
+        showToast('Файл projects.json скачан!');
+    }
+
+    function importData(input) {
+        if (!isAdminMode) return;
+        
+        const file = input.files[0];
+        if (!file) return;
+        
+        const reader = new FileReader();
+        reader.onload = (e) => {
+            try {
+                const data = JSON.parse(e.target.result);
+                if (data.projects) {
+                    projects = data.projects.map(normalizeCategories);
+                }
+                if (data.categories) {
+                    categories = data.categories;
+                }
+                saveProjects();
+                renderCategoryOptions();
+                applyFilters();
+                showToast('Данные импортированы!');
+            } catch (err) {
+                showToast('Ошибка импорта файла');
+            }
+        };
+        reader.readAsText(file);
+        input.value = '';
+    }
+
+    // Загрузка локальных избранных при старте
+    const savedLocalFav = localStorage.getItem('local_favorites');
+    if (savedLocalFav) {
+        localFavorites = JSON.parse(savedLocalFav);
+    }
+    
+    // Инициализация
+    renderCategoryOptions();
+</script>
+</body>
+</html>
