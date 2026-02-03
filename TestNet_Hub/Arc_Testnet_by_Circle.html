@@ -4,9 +4,9 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Полный список: Тестнет Arc (Circle)</title>
-    
     <script src="https://cdnjs.cloudflare.com/ajax/libs/Sortable/1.15.0/Sortable.min.js"></script>
-
+    <!-- Подключаем иконки -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
         :root {
             --bg-color: #0f172a;
@@ -103,6 +103,63 @@
             flex-direction: column;
             gap: 18px;
         }
+
+        /* --- Стили для панели авторизации --- */
+        .auth-panel-arc {
+            background: rgba(59, 130, 246, 0.1);
+            border: 1px solid rgba(59, 130, 246, 0.3);
+            border-radius: 12px;
+            padding: 16px;
+            margin-bottom: 10px;
+            text-align: center;
+        }
+        
+        .auth-btn-arc {
+            width: 100%;
+            padding: 10px 16px;
+            border: none;
+            border-radius: 8px;
+            font-weight: 600;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            transition: all 0.2s;
+        }
+
+        .auth-btn-google {
+            background: #4285F4;
+            color: white;
+        }
+        .auth-btn-google:hover { background: #357abd; }
+
+        .auth-btn-logout {
+            background: transparent;
+            border: 1px solid var(--alert-red);
+            color: var(--alert-red);
+            margin-top: 8px;
+        }
+        .auth-btn-logout:hover { background: rgba(239, 68, 68, 0.1); }
+
+        .user-info-arc {
+            font-size: 0.9rem;
+            color: var(--accent);
+            font-weight: 600;
+            margin-bottom: 8px;
+            word-break: break-all;
+        }
+        
+        .sync-status {
+            font-size: 0.7rem;
+            color: var(--success);
+            margin-top: 4px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 4px;
+        }
+        /* --- Конец стилей авторизации --- */
 
         .sidebar h3 {
             margin: 0;
@@ -945,13 +1002,28 @@
 <div class="page-shell">
     <!-- Кнопка назад -->
     <div class="back-nav">
-        <a href="https://worklaf.github.io/Worklaf/TestNet%20Hub/Airdrop%20Hunter%20Hub.html" class="back-link">
+        <a href="https://worklaf.github.io/Worklaf/TestNet_Hub/Airdrop_Hunter_Hub.html" class="back-link">
             <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
             Назад к списку
         </a>
     </div>
 
     <aside class="sidebar">
+        <!-- Панель авторизации -->
+        <div id="authPanelArc" class="auth-panel-arc">
+            <div id="arcLoggedOutView">
+                <button onclick="loginGoogle()" class="auth-btn-arc auth-btn-google">
+                    <i class="fab fa-google"></i> Войти через Google
+                </button>
+                <p style="font-size: 0.7rem; color: var(--text-muted); margin: 8px 0 0 0;">Синхронизируйте прогресс с облаком</p>
+            </div>
+            <div id="arcLoggedInView" style="display: none;">
+                <div class="user-info-arc" id="arcUserName">User</div>
+                <div class="sync-status"><i class="fas fa-check-circle"></i> Данные синхронизированы</div>
+                <button onclick="logout()" class="auth-btn-arc auth-btn-logout">Выйти</button>
+            </div>
+        </div>
+
         <div class="sidebar-controls">
             <button class="toggle-badges-btn" id="toggleBadgesBtn" type="button">Скрыть бейджи</button>
             <button class="reset-btn" type="button" onclick="resetAll()">Сбросить прогресс</button>
@@ -1260,7 +1332,31 @@
     </aside>
 </div>
 
-<script>
+<script type="module">
+    // --- Firebase Integration ---
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+    import { getAuth, signInWithPopup, GoogleAuthProvider, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
+    import { getFirestore, doc, setDoc, getDoc, updateDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+
+    // Конфигурация вашего Firebase проекта (убедитесь, что Firestore включен)
+    const firebaseConfig = {
+        apiKey: "AIzaSyBdXGYg2t8DJBrQHCC80-pFerZU9PWmSCk",
+        authDomain: "testnet-hub.firebaseapp.com",
+        projectId: "testnet-hub",
+        storageBucket: "testnet-hub.appspot.com",
+        messagingSenderId: "497813176653",
+        appId: "1:497813176653:web:089188fdd1555d76cd7704"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const auth = getAuth(app);
+    const db = getFirestore(app);
+
+    // Глобальное состояние
+    let currentUser = null;
+    let arcData = {}; // Единый источник данных для UI
+
+    // Ключи LocalStorage
     const STORAGE_KEY = 'arc_tracker_v3';
     const BADGE_VISIBILITY_KEY = 'arc_tracker_badges_hidden';
     const SECTION_COLLAPSE_KEY = 'arc_tracker_sections';
@@ -1269,39 +1365,96 @@
     const PAGE_VERSION_KEY = 'arc_tracker_page_version_v2';
     const LEGEND_COLLAPSE_KEY = 'arc_tracker_legend_collapsed';
     const FAVORITES_KEY = 'arc_tracker_favorites_v1';
-    
-    // Новая переменная для порядка сортировки
     const FAVORITES_ORDER_KEY = 'arc_tracker_favorites_order_v1';
     const PAGE_VERSION = '2026-02-01-v3';
 
+    // --- Функции работы с данными (Синхронизация) ---
+    async function loadData() {
+        if (currentUser) {
+            // Загрузка из Firestore
+            try {
+                const docRef = doc(db, "users", currentUser.uid);
+                const docSnap = await getDoc(docRef);
+                if (docSnap.exists() && docSnap.data().arcGuideStats) {
+                    arcData = docSnap.data().arcGuideStats;
+                } else {
+                    // Если в облаке пусто, загружаем локально и сохраняем в облако для бэкапа
+                    const localData = JSON.parse(localStorage.getItem(STORAGE_KEY)) || {};
+                    if (Object.keys(localData).length > 0) {
+                        await updateDoc(docRef, { arcGuideStats: localData });
+                        arcData = localData;
+                    } else {
+                        arcData = {};
+                    }
+                }
+            } catch (e) {
+                console.error("Ошибка загрузки из облака", e);
+                arcData = JSON.parse(localStorage.getItem(STORAGE_KEY)) || {};
+            }
+        } else {
+            // Загрузка из LocalStorage
+            arcData = JSON.parse(localStorage.getItem(STORAGE_KEY)) || {};
+        }
+        updateUI();
+    }
+
+    async function saveData(data) {
+        arcData = data; // Обновить кэш
+        
+        if (currentUser) {
+            // Сохранение в облако (Firestore)
+            try {
+                const docRef = doc(db, "users", currentUser.uid);
+                // Используем setDoc с merge: true для обновления только нужных полей
+                await setDoc(docRef, { arcGuideStats: data }, { merge: true });
+            } catch (e) {
+                console.error("Ошибка сохранения в облако", e);
+            }
+        } else {
+            // Сохранение локально
+            localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+        }
+    }
+
+    // --- Авторизация ---
+    window.loginGoogle = async () => {
+        try {
+            await signInWithPopup(auth, new GoogleAuthProvider());
+        } catch (e) { 
+            console.error("Ошибка входа", e); 
+            alert("Ошибка входа. Проверьте консоль или настройки Firebase."); 
+        }
+    };
+
+    window.logout = () => {
+        signOut(auth);
+    };
+
+    onAuthStateChanged(auth, async (user) => {
+        currentUser = user;
+        
+        // Обновление UI панели авторизации
+        const loggedOutView = document.getElementById('arcLoggedOutView');
+        const loggedInView = document.getElementById('arcLoggedInView');
+        const userNameEl = document.getElementById('arcUserName');
+
+        if (user) {
+            loggedOutView.style.display = 'none';
+            loggedInView.style.display = 'block';
+            userNameEl.textContent = user.displayName || user.email.split('@')[0];
+        } else {
+            loggedOutView.style.display = 'block';
+            loggedInView.style.display = 'none';
+        }
+
+        await loadData();
+    });
+
+    // --- Оригинальная логика UI (Tracking, Favorites, etc.) ---
+    
     let newLinksSet = new Set();
     let knownLinksSet = new Set();
-    let favoritesSortable = null; // Для инстанса Sortable
-
-    function loadFavorites() {
-        try {
-            const raw = localStorage.getItem(FAVORITES_KEY);
-            if (!raw) return {};
-            const parsed = JSON.parse(raw);
-            return parsed && typeof parsed === 'object' ? parsed : {};
-        } catch (err) {
-            console.warn('Не удалось загрузить избранное', err);
-            return {};
-        }
-    }
-
-    // Загрузка порядка сортировки
-    function loadFavoritesOrder() {
-        try {
-            const raw = localStorage.getItem(FAVORITES_ORDER_KEY);
-            return raw ? JSON.parse(raw) : [];
-        } catch (err) {
-            return [];
-        }
-    }
-
-    let favoritesState = loadFavorites();
-    let favoritesOrder = loadFavoritesOrder();
+    let favoritesSortable = null;
     const favoriteControls = new Map();
     const DYNAMIC_CLASS_SET = new Set(['daily-active', 'visited-once', 'has-new-flag']);
 
@@ -1323,9 +1476,7 @@
         const tooltipRect = tooltipEl.getBoundingClientRect();
 
         let top = rect.top - tooltipRect.height - spacing;
-        if (top < 12) {
-            top = rect.bottom + spacing;
-        }
+        if (top < 12) { top = rect.bottom + spacing; }
 
         let left = rect.left + (rect.width / 2) - (tooltipRect.width / 2);
         const margin = 12;
@@ -1342,62 +1493,43 @@
         const text = target.getAttribute('data-tooltip');
         if (!text) return;
         ensureTooltipElement();
-
         activeTooltipTarget = target;
         tooltipEl.textContent = text;
         tooltipEl.classList.add('visible');
         tooltipEl.style.left = '-9999px';
         tooltipEl.style.top = '-9999px';
-
-        requestAnimationFrame(() => {
-            if (activeTooltipTarget === target) {
-                positionTooltip(target);
-            }
-        });
+        requestAnimationFrame(() => { if (activeTooltipTarget === target) positionTooltip(target); });
     }
 
-    function hideTooltip() {
-        activeTooltipTarget = null;
-        if (tooltipEl) {
-            tooltipEl.classList.remove('visible');
-        }
-    }
+    function hideTooltip() { activeTooltipTarget = null; if (tooltipEl) tooltipEl.classList.remove('visible'); }
 
     function initializeTooltips() {
         document.querySelectorAll('[data-tooltip]').forEach(el => {
             if (el.dataset.tooltipBound === 'true') return;
-
-            el.addEventListener('mouseenter', () => showTooltip(el));
+            el.addEventListener('mouseenter', showTooltip);
             el.addEventListener('mouseleave', hideTooltip);
-            el.addEventListener('focus', () => showTooltip(el));
+            el.addEventListener('focus', showTooltip);
             el.addEventListener('blur', hideTooltip);
-            el.addEventListener('mousemove', () => {
-                if (activeTooltipTarget === el) {
-                    positionTooltip(el);
-                }
-            });
-
+            el.addEventListener('mousemove', () => { if (activeTooltipTarget === el) positionTooltip(el); });
             el.dataset.tooltipBound = 'true';
         });
     }
 
-    document.addEventListener('scroll', () => {
-        if (activeTooltipTarget) {
-            positionTooltip(activeTooltipTarget);
-        }
-    }, true);
+    document.addEventListener('scroll', () => { if (activeTooltipTarget) positionTooltip(activeTooltipTarget); }, true);
+    window.addEventListener('resize', () => { if (activeTooltipTarget) positionTooltip(activeTooltipTarget); });
 
-    window.addEventListener('resize', () => {
-        if (activeTooltipTarget) {
-            positionTooltip(activeTooltipTarget);
-        }
-    });
-
-    document.addEventListener('keydown', event => {
-        if (event.key === 'Escape') {
-            hideTooltip();
-        }
-    });
+    // --- Favorites Logic ---
+    function loadFavorites() {
+        try {
+            const raw = localStorage.getItem(FAVORITES_KEY);
+            return raw ? JSON.parse(raw) : {};
+        } catch (err) { return {}; }
+    }
+    function loadFavoritesOrder() {
+        try { return JSON.parse(localStorage.getItem(FAVORITES_ORDER_KEY)) || []; } catch (err) { return []; }
+    }
+    let favoritesState = loadFavorites();
+    let favoritesOrder = loadFavoritesOrder();
 
     function saveFavorites() {
         localStorage.setItem(FAVORITES_KEY, JSON.stringify(favoritesState));
@@ -1405,9 +1537,7 @@
     }
 
     function getBaseClasses(link) {
-        if (!link) {
-            return ['link-inline'];
-        }
+        if (!link) return ['link-inline'];
         return [...link.classList].filter(cls => !DYNAMIC_CLASS_SET.has(cls));
     }
 
@@ -1432,9 +1562,7 @@
     }
 
     function ensureLinkWrapper(link) {
-        if (link.parentElement && link.parentElement.classList.contains('link-with-favorite')) {
-            return link.parentElement;
-        }
+        if (link.parentElement && link.parentElement.classList.contains('link-with-favorite')) return link.parentElement;
         const wrapper = document.createElement('span');
         wrapper.className = 'link-with-favorite';
         link.parentNode.insertBefore(wrapper, link);
@@ -1489,11 +1617,8 @@
         element.dataset.trackingBound = 'true';
     }
 
-    function bindTrackingHandlersToAll() {
-        document.querySelectorAll('.track-daily, .track-once').forEach(bindTrackingHandler);
-    }
+    function bindTrackingHandlersToAll() { document.querySelectorAll('.track-daily, .track-once').forEach(bindTrackingHandler); }
 
-    // --- Обновленная функция рендера списка избранного с Drag-and-Drop ---
     function renderFavoritesList() {
         const listEl = document.getElementById('favoritesList');
         const emptyEl = document.getElementById('favoritesEmpty');
@@ -1501,16 +1626,11 @@
         if (!listEl || !emptyEl || !countEl) return;
 
         listEl.innerHTML = '';
-        const allIds = Object.keys(favoritesState);
-
-        // Синхронизация порядка с существующими ID
-        // 1. Убираем из Order ID, которых больше нет в State
+        
+        // Синхронизация порядка
         favoritesOrder = favoritesOrder.filter(id => favoritesState[id]);
-        // 2. Добавляем в Order ID, которые есть в State, но нет в Order (в конец)
-        allIds.forEach(id => {
-            if (!favoritesOrder.includes(id)) {
-                favoritesOrder.push(id);
-            }
+        Object.keys(favoritesState).forEach(id => {
+            if (!favoritesOrder.includes(id)) favoritesOrder.push(id);
         });
 
         if (favoritesOrder.length === 0) {
@@ -1526,14 +1646,11 @@
 
         favoritesOrder.forEach(id => {
             const info = favoritesState[id];
-            // Защита от сбоя, если вдруг ID есть в order, но нет в state
             if (!info) return;
-
             const li = document.createElement('li');
             li.className = 'favorites-item';
-            li.dataset.id = id; // Важно для SortableJS
+            li.dataset.id = id;
 
-            // Ручка перетаскивания
             const handle = document.createElement('span');
             handle.className = 'drag-handle';
             handle.innerHTML = '⋮⋮';
@@ -1547,76 +1664,51 @@
             anchor.dataset.id = id;
             anchor.classList.add('favorite-link');
 
-            const control = favoriteControls.get(id);
             let baseClasses;
-
             if (Array.isArray(info.classes) && info.classes.length) {
                 baseClasses = [...info.classes];
             } else {
-                baseClasses = control ? getBaseClasses(control.link) : ['link-inline'];
+                baseClasses = favoriteControls.has(id) ? getBaseClasses(favoriteControls.get(id).link) : ['link-inline'];
                 favoritesState[id].classes = baseClasses;
                 favoritesMutated = true;
             }
-
             baseClasses.forEach(cls => anchor.classList.add(cls));
 
-            if (info.tooltip) {
-                anchor.setAttribute('data-tooltip', info.tooltip);
-            }
+            if (info.tooltip) anchor.setAttribute('data-tooltip', info.tooltip);
 
             const titleSpan = document.createElement('span');
             titleSpan.className = 'favorite-title';
             titleSpan.textContent = info.title;
             anchor.appendChild(titleSpan);
-
             li.appendChild(anchor);
 
-            // Кнопка удаления (крестик)
             const removeBtn = document.createElement('button');
             removeBtn.type = 'button';
             removeBtn.className = 'remove-fav-btn';
             removeBtn.innerHTML = '×';
             removeBtn.title = 'Удалить из избранного';
-            removeBtn.onclick = (e) => {
-                e.stopPropagation();
-                toggleFavorite(id);
-            };
+            removeBtn.onclick = (e) => { e.stopPropagation(); toggleFavorite(id); };
             li.appendChild(removeBtn);
-
             listEl.appendChild(li);
-
             bindTrackingHandler(anchor);
         });
 
-        if (favoritesMutated) {
-            saveFavorites();
-        }
-
+        if (favoritesMutated) saveFavorites();
         countEl.textContent = String(favoritesOrder.length);
+        initSortable();
         initializeTooltips();
         updateNewIndicators();
-        updateUI();
-        
-        // Инициализация Drag-and-Drop
-        initSortable();
     }
 
-    // --- Инициализация SortableJS ---
     function initSortable() {
         const listEl = document.getElementById('favoritesList');
         if (!listEl || typeof Sortable === 'undefined') return;
-
-        // Если уже инициализирован, не трогаем, или можно destroy() и создать заново
-        if (favoritesSortable) {
-            favoritesSortable.destroy();
-        }
-
+        if (favoritesSortable) favoritesSortable.destroy();
         favoritesSortable = new Sortable(listEl, {
             animation: 150,
-            handle: '.drag-handle', // Тянуть только за ручку
+            handle: '.drag-handle',
             ghostClass: 'sortable-ghost',
             onEnd: function (evt) {
-                // Обновляем массив порядка после перетаскивания
                 const newOrder = Array.from(listEl.children).map(li => li.dataset.id);
                 favoritesOrder = newOrder;
                 saveFavorites();
@@ -1627,7 +1719,6 @@
     function attachFavoriteControls() {
         favoriteControls.clear();
         let favoritesUpdated = false;
-
         document.querySelectorAll('a.link-inline[data-id]').forEach(link => {
             const id = link.dataset.id;
             if (!id) return;
@@ -1638,46 +1729,31 @@
                 wrapper.appendChild(button);
             }
             favoriteControls.set(id, { button, link });
-
             if (favoritesState[id]) {
                 const currentInfo = extractLinkInfo(link);
                 const stored = favoritesState[id];
                 const storedKey = classesToKey(stored.classes);
                 const currentKey = classesToKey(currentInfo.classes);
 
-                if (
-                    stored.title !== currentInfo.title ||
-                    stored.url !== currentInfo.url ||
-                    stored.tooltip !== currentInfo.tooltip ||
-                    storedKey !== currentKey
-                ) {
+                if (stored.title !== currentInfo.title || stored.url !== currentInfo.url || storedKey !== currentKey) {
                     favoritesState[id] = currentInfo;
                     favoritesUpdated = true;
                 }
             }
             refreshFavoriteVisual(id);
         });
-
-        if (pruneFavorites()) {
-            favoritesUpdated = true;
-        }
-
-        if (favoritesUpdated) {
-            saveFavorites();
-        }
+        if (pruneFavorites()) favoritesUpdated = true;
+        if (favoritesUpdated) saveFavorites();
         renderFavoritesList();
     }
 
     function toggleFavorite(id) {
         const control = favoriteControls.get(id);
         if (!control) return;
-        
         if (favoritesState[id]) {
-            // Удаление
             delete favoritesState[id];
             favoritesOrder = favoritesOrder.filter(item => item !== id);
         } else {
-            // Добавление
             favoritesState[id] = extractLinkInfo(control.link);
             favoritesOrder.push(id);
         }
@@ -1686,14 +1762,7 @@
         renderFavoritesList();
     }
 
-    function getData() {
-        return JSON.parse(localStorage.getItem(STORAGE_KEY)) || {};
-    }
-
-    function saveData(data) {
-        localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
-    }
-
+    // --- Tracking Logic ---
     function formatDate(isoString) {
         if (!isoString) return '';
         const date = new Date(isoString);
@@ -1706,9 +1775,7 @@
         if (!isoString) return false;
         const date = new Date(isoString);
         const today = new Date();
-        return date.getDate() === today.getDate() &&
-               date.getMonth() === today.getMonth() &&
-               date.getFullYear() === today.getFullYear();
+        return date.getDate() === today.getDate() && date.getMonth() === today.getMonth() && date.getFullYear() === today.getFullYear();
     }
 
     function updateBadge(element, count, time) {
@@ -1722,34 +1789,22 @@
     }
 
     function updateUI() {
-        const data = getData();
-
+        // Используем глобальный arcData
         document.querySelectorAll('.track-daily').forEach(btn => {
             const id = btn.getAttribute('data-id');
-            const record = data[id];
-
+            const record = arcData[id];
             btn.classList.remove('daily-active');
-
             if (record) {
-                if (isToday(record.lastClick)) {
-                    btn.classList.add('daily-active');
-                }
-                if (record.lastClick) {
-                    updateBadge(btn, record.totalClicks || 0, record.lastClick);
-                }
+                if (isToday(record.lastClick)) btn.classList.add('daily-active');
+                if (record.lastClick) updateBadge(btn, record.totalClicks || 0, record.lastClick);
             }
         });
 
         document.querySelectorAll('.track-once').forEach(btn => {
             const id = btn.getAttribute('data-id');
-            const record = data[id];
-
-            if (record && record.visited) {
-                btn.classList.add('visited-once');
-            } else {
-                btn.classList.remove('visited-once');
-            }
-
+            const record = arcData[id];
+            if (record && record.visited) btn.classList.add('visited-once');
+            else btn.classList.remove('visited-once');
             if (btn.classList.contains('track-once-info') && record && record.lastClick) {
                 updateBadge(btn, record.totalClicks || 0, record.lastClick);
             }
@@ -1759,68 +1814,61 @@
     function handleClick(e) {
         const btn = e.currentTarget;
         const id = btn.getAttribute('data-id');
-
         if (!id) return;
+        
+        if (newLinksSet.has(id)) clearNewLink(id);
 
-        if (newLinksSet.has(id)) {
-            clearNewLink(id);
-        }
-
-        const data = getData();
+        // Работаем с глобальным arcData
         const now = new Date().toISOString();
 
-        if (btn.classList.contains('track-daily')) {
-            if (!data[id]) data[id] = { totalClicks: 0, lastClick: null };
-            data[id].totalClicks = (data[id].totalClicks || 0) + 1;
-            data[id].lastClick = now;
-        } else if (btn.classList.contains('track-once')) {
-            if (!data[id]) data[id] = {};
-            data[id].visited = true;
+        if (!arcData[id]) arcData[id] = {};
 
+        if (btn.classList.contains('track-daily')) {
+            arcData[id].totalClicks = (arcData[id].totalClicks || 0) + 1;
+            arcData[id].lastClick = now;
+        } else if (btn.classList.contains('track-once')) {
+            arcData[id].visited = true;
             if (btn.classList.contains('track-once-info')) {
-                data[id].totalClicks = (data[id].totalClicks || 0) + 1;
-                data[id].lastClick = now;
+                arcData[id].totalClicks = (arcData[id].totalClicks || 0) + 1;
+                arcData[id].lastClick = now;
             }
         }
-
-        saveData(data);
-        setTimeout(updateUI, 40);
+        
+        // Сохраняем (через облако или локально)
+        saveData(arcData);
+        
+        // Визуальное обновление
+        setTimeout(() => {
+            updateUI(); 
+            // Обновляем бейдж для только что нажатой кнопки, т.к. updateUI может не сработать мгновенно для текущего таргета
+            if (btn.classList.contains('track-daily')) {
+                updateBadge(btn, arcData[id].totalClicks, arcData[id].lastClick);
+            } else if (btn.classList.contains('track-once-info')) {
+                updateBadge(btn, arcData[id].totalClicks, arcData[id].lastClick);
+            }
+        }, 50);
     }
 
     function resetAll() {
         if (confirm('Сбросить всю статистику?')) {
-            localStorage.removeItem(STORAGE_KEY);
+            arcData = {};
+            saveData({});
             document.querySelectorAll('.click-info').forEach(el => el.remove());
             updateUI();
         }
     }
 
-    function getBadgeHiddenState() {
-        return localStorage.getItem(BADGE_VISIBILITY_KEY) === 'true';
-    }
-
-    function setBadgeHiddenState(hidden) {
-        localStorage.setItem(BADGE_VISIBILITY_KEY, hidden ? 'true' : 'false');
-    }
-
+    function getBadgeHiddenState() { return localStorage.getItem(BADGE_VISIBILITY_KEY) === 'true'; }
+    function setBadgeHiddenState(hidden) { localStorage.setItem(BADGE_VISIBILITY_KEY, hidden ? 'true' : 'false'); }
     function updateBadgeVisibility() {
         const hidden = getBadgeHiddenState();
         document.body.classList.toggle('badges-hidden', hidden);
         const toggleBtn = document.getElementById('toggleBadgesBtn');
-        if (toggleBtn) {
-            toggleBtn.textContent = hidden ? 'Показать бейджи' : 'Скрыть бейджи';
-            toggleBtn.setAttribute('aria-pressed', hidden ? 'true' : 'false');
-        }
+        if (toggleBtn) toggleBtn.textContent = hidden ? 'Показать бейджи' : 'Скрыть бейджи';
     }
 
-    function getSectionCollapseState() {
-        return JSON.parse(localStorage.getItem(SECTION_COLLAPSE_KEY)) || {};
-    }
-
-    function saveSectionCollapseState(state) {
-        localStorage.setItem(SECTION_COLLAPSE_KEY, JSON.stringify(state));
-    }
-
+    function getSectionCollapseState() { return JSON.parse(localStorage.getItem(SECTION_COLLAPSE_KEY)) || {}; }
+    function saveSectionCollapseState(state) { localStorage.setItem(SECTION_COLLAPSE_KEY, JSON.stringify(state)); }
     function applySectionState(section, collapsed) {
         section.classList.toggle('collapsed', collapsed);
         const toggleBtn = section.querySelector('.section-toggle');
@@ -1834,15 +1882,10 @@
     function detectNewLinks() {
         const elements = document.querySelectorAll('[data-id]');
         const currentIds = new Set();
-        elements.forEach(el => {
-            if (el.dataset.id) {
-                currentIds.add(el.dataset.id);
-            }
-        });
+        elements.forEach(el => { if (el.dataset.id) currentIds.add(el.dataset.id); });
 
         const storedKnownRaw = JSON.parse(localStorage.getItem(KNOWN_LINKS_KEY) || '[]');
         const storedNewRaw = JSON.parse(localStorage.getItem(NEW_LINKS_KEY) || '[]');
-
         knownLinksSet = new Set(Array.isArray(storedKnownRaw) ? storedKnownRaw : []);
         newLinksSet = new Set(Array.isArray(storedNewRaw) ? storedNewRaw : []);
 
@@ -1852,74 +1895,60 @@
         if (isFirstRun) {
             knownLinksSet = new Set(currentIds);
             newLinksSet = new Set();
-            localStorage.setItem(KNOWN_LINKS_KEY, JSON.stringify([...knownLinksSet]));
-            localStorage.setItem(NEW_LINKS_KEY, JSON.stringify([]));
-            localStorage.setItem(PAGE_VERSION_KEY, PAGE_VERSION);
-            updateNewIndicators();
-            return;
-        }
-
-        if (storedVersion !== PAGE_VERSION) {
-            knownLinksSet = new Set([...knownLinksSet].filter(id => currentIds.has(id)));
-            newLinksSet = new Set([...newLinksSet].filter(id => currentIds.has(id)));
-        }
-
-        const newlyDetected = [];
-        currentIds.forEach(id => {
-            if (!knownLinksSet.has(id)) {
-                knownLinksSet.add(id);
-                newlyDetected.push(id);
+        } else {
+            if (storedVersion !== PAGE_VERSION) {
+                knownLinksSet = new Set([...knownLinksSet].filter(id => currentIds.has(id)));
+                newLinksSet = new Set([...newLinksSet].filter(id => currentIds.has(id)));
             }
-        });
-
-        newlyDetected.forEach(id => newLinksSet.add(id));
+            const newlyDetected = [];
+            currentIds.forEach(id => {
+                if (!knownLinksSet.has(id)) {
+                    knownLinksSet.add(id);
+                    newlyDetected.push(id);
+                }
+            });
+            newlyDetected.forEach(id => newLinksSet.add(id));
+        }
         newLinksSet = new Set([...newLinksSet].filter(id => currentIds.has(id)));
 
         localStorage.setItem(KNOWN_LINKS_KEY, JSON.stringify([...knownLinksSet]));
         localStorage.setItem(NEW_LINKS_KEY, JSON.stringify([...newLinksSet]));
         localStorage.setItem(PAGE_VERSION_KEY, PAGE_VERSION);
-
         updateNewIndicators();
     }
 
     function updateNewIndicators() {
-        const elements = document.querySelectorAll('[data-id]');
-        elements.forEach(el => {
+        document.querySelectorAll('[data-id]').forEach(el => {
             const id = el.dataset.id;
             if (id && newLinksSet.has(id)) {
-                applyNewFlag(el);
+                el.setAttribute('data-new', 'true');
+                el.classList.add('has-new-flag');
+                if (!el.querySelector('.new-flag')) {
+                    const flag = document.createElement('span');
+                    flag.className = 'new-flag';
+                    flag.innerHTML = '<span class="new-flag-text">New!</span>';
+                    el.appendChild(flag);
+                }
             } else {
-                removeNewFlag(el);
+                el.removeAttribute('data-new');
+                el.classList.remove('has-new-flag');
+                const flag = el.querySelector('.new-flag');
+                if (flag) flag.remove();
             }
         });
         updateSectionBadges();
     }
 
-    function applyNewFlag(element) {
-        element.setAttribute('data-new', 'true');
-        element.classList.add('has-new-flag');
-        if (!element.querySelector('.new-flag')) {
-            const flag = document.createElement('span');
-            flag.className = 'new-flag';
-            flag.innerHTML = '<span class="new-flag-text">New!</span>';
-            element.appendChild(flag);
-        }
-    }
-
-    function removeNewFlag(element) {
-        element.removeAttribute('data-new');
-        element.classList.remove('has-new-flag');
-        const flag = element.querySelector('.new-flag');
-        if (flag) {
-            flag.remove();
-        }
+    function clearNewLink(id) {
+        newLinksSet.delete(id);
+        localStorage.setItem(NEW_LINKS_KEY, JSON.stringify([...newLinksSet]));
+        updateNewIndicators();
     }
 
     function updateSectionBadges() {
         document.querySelectorAll('.collapsible-section').forEach(section => {
             const statusEl = section.querySelector('.section-status');
             if (!statusEl) return;
-
             const newItems = section.querySelectorAll('[data-id][data-new="true"]');
             if (newItems.length > 0) {
                 section.classList.add('has-new');
@@ -1931,68 +1960,15 @@
         });
     }
 
-    function clearNewLink(id) {
-        newLinksSet.delete(id);
-        localStorage.setItem(NEW_LINKS_KEY, JSON.stringify([...newLinksSet]));
-        updateNewIndicators();
-    }
-
     function applyLegendState(collapsed) {
         const legend = document.getElementById('statusLegend');
         const toggle = document.getElementById('legendToggle');
         if (!legend || !toggle) return;
-
         const isMobile = window.matchMedia('(max-width: 768px)').matches;
         const shouldCollapse = isMobile && collapsed;
-
         legend.classList.toggle('legend-collapsed', shouldCollapse);
         toggle.setAttribute('aria-expanded', shouldCollapse ? 'false' : 'true');
         toggle.textContent = shouldCollapse ? 'Показать инструкцию ▸' : 'Скрыть инструкцию ▾';
-    }
-
-    function initializeLegendCollapsing() {
-        const legendContainer = document.getElementById('statusLegend');
-        const legendToggle = document.getElementById('legendToggle');
-        
-        if (!legendContainer || !legendToggle) return;
-
-        let isMobile = window.innerWidth <= 768;
-        let storedState = localStorage.getItem(LEGEND_COLLAPSE_KEY);
-        let isLegendCollapsed = storedState === 'true';
-
-        if (storedState === null && isMobile) {
-            isLegendCollapsed = true;
-        }
-
-        function applyState() {
-            applyLegendState(isLegendCollapsed);
-        }
-
-        legendToggle.addEventListener('click', () => {
-            if (isMobile) {
-                isLegendCollapsed = !isLegendCollapsed;
-                localStorage.setItem(LEGEND_COLLAPSE_KEY, isLegendCollapsed ? 'true' : 'false');
-                applyState();
-            }
-        });
-
-        window.addEventListener('resize', () => {
-            const wasMobile = isMobile;
-            isMobile = window.innerWidth <= 768;
-            if (isMobile && !wasMobile) {
-                storedState = localStorage.getItem(LEGEND_COLLAPSE_KEY);
-                isLegendCollapsed = storedState === 'true';
-                if (storedState === null) {
-                    isLegendCollapsed = true;
-                }
-            }
-            if (!isMobile) {
-                isLegendCollapsed = false;
-            }
-            applyState();
-        });
-
-        applyState();
     }
 
     document.addEventListener('DOMContentLoaded', () => {
@@ -2013,28 +1989,57 @@
             const sectionId = section.getAttribute('data-section-id');
             const collapsed = sectionState[sectionId] === true;
             applySectionState(section, collapsed);
-
             const toggle = section.querySelector('.section-toggle');
             if (toggle) {
                 toggle.addEventListener('click', () => {
                     const currentlyCollapsed = section.classList.contains('collapsed');
                     const newCollapsed = !currentlyCollapsed;
                     applySectionState(section, newCollapsed);
-                    if (newCollapsed) {
-                        sectionState[sectionId] = true;
-                    } else {
-                        delete sectionState[sectionId];
-                    }
+                    if (newCollapsed) sectionState[sectionId] = true;
+                    else delete sectionState[sectionId];
                     saveSectionCollapseState(sectionState);
                 });
             }
         });
 
-        initializeLegendCollapsing();
+        let isMobile = window.innerWidth <= 768;
+        let storedState = localStorage.getItem(LEGEND_COLLAPSE_KEY);
+        let isLegendCollapsed = storedState === 'true';
+        if (storedState === null && isMobile) isLegendCollapsed = true;
+
+        function applyLegend() { applyLegendState(isLegendCollapsed); }
+        
+        const legendToggle = document.getElementById('legendToggle');
+        if (legendToggle) {
+            legendToggle.addEventListener('click', () => {
+                if (window.innerWidth <= 768) {
+                    isLegendCollapsed = !isLegendCollapsed;
+                    localStorage.setItem(LEGEND_COLLAPSE_KEY, isLegendCollapsed ? 'true' : 'false');
+                    applyLegend();
+                }
+            });
+        }
+
+        window.addEventListener('resize', () => {
+            const wasMobile = isMobile;
+            isMobile = window.innerWidth <= 768;
+            if (isMobile && !wasMobile) {
+                storedState = localStorage.getItem(LEGEND_COLLAPSE_KEY);
+                isLegendCollapsed = storedState === 'true' || storedState === null;
+            }
+            if (!isMobile) isLegendCollapsed = false;
+            applyLegend();
+        });
+
+        applyLegend();
         initializeTooltips();
         detectNewLinks();
-        updateUI();
         updateBadgeVisibility();
+        
+        // Примечание: loadData() и updateUI() вызываются внутри onAuthStateChanged
+        // Но если пользователь не авторизован сразу, нужно вызвать принудительно, 
+        // так как onAuthStateChanged может сработать с задержкой или не сработать если already logged out.
+        // onAuthStateChanged в firebase срабатывает сразу для текущего состояния.
     });
 </script>
 
