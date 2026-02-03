@@ -44,6 +44,22 @@
             box-shadow: 0 10px 30px -10px rgba(0, 0, 0, 0.5);
         }
 
+        /* Стиль для выполненного Daily */
+        .glass-card.daily-done {
+            border-color: rgba(16, 185, 129, 0.5);
+            background: rgba(16, 185, 129, 0.1);
+        }
+
+        .daily-check-icon {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            color: #10b981;
+            font-size: 1.2rem;
+            filter: drop-shadow(0 0 5px rgba(16,185,129,0.5));
+            z-index: 10;
+        }
+
         .sidebar-link {
             transition: all 0.2s;
             border-left: 3px solid transparent;
@@ -113,36 +129,20 @@
             animation: slideUp 0.3s ease;
         }
 
-        .modal-large {
-            max-width: 800px;
-        }
+        .modal-large { max-width: 800px; }
+        .modal-sm { max-width: 400px; }
 
         @keyframes slideUp {
             from { transform: translateY(20px); opacity: 0; }
             to { transform: translateY(0); opacity: 1; }
         }
 
-        .favorite-btn {
-            transition: all 0.2s;
-        }
-        
-        .favorite-btn.active {
-            color: #ef4444;
-            transform: scale(1.1);
-        }
+        .favorite-btn { transition: all 0.2s; }
+        .favorite-btn.active { color: #ef4444; transform: scale(1.1); }
+        .favorite-btn:hover { transform: scale(1.1); }
 
-        .favorite-btn:hover {
-            transform: scale(1.1);
-        }
-
-        .edit-btn {
-            opacity: 0;
-            transition: all 0.2s;
-        }
-        
-        .glass-card:hover .edit-btn {
-            opacity: 1;
-        }
+        .edit-btn { opacity: 0; transition: all 0.2s; }
+        .glass-card:hover .edit-btn { opacity: 1; }
 
         .guide-btn {
             background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
@@ -154,15 +154,15 @@
             transform: translateY(-2px) scale(1.05);
             box-shadow: 0 6px 20px -3px rgba(59, 130, 246, 0.6);
         }
-
-        .category-input-group {
-            display: flex;
-            gap: 8px;
+        
+        /* Зеленая кнопка, если выполнено */
+        .guide-btn.done {
+            background: linear-gradient(135deg, #059669 0%, #10b981 100%);
+            box-shadow: 0 4px 15px -3px rgba(16, 185, 129, 0.4);
         }
 
-        .category-select {
-            flex: 1;
-        }
+        .category-input-group { display: flex; gap: 8px; }
+        .category-select { flex: 1; }
 
         .add-category-btn {
             padding: 0 12px;
@@ -187,45 +187,19 @@
             0%, 100% { opacity: 1; }
             50% { opacity: 0.8; }
         }
-        
-        @keyframes pulse {
-            0% { opacity: 1; }
-            50% { opacity: 0.7; }
-            100% { opacity: 1; }
-        }
 
-        .animate-pulse {
-            animation: pulse 0.5s ease-in-out;
+        .user-avatar {
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            object-fit: cover;
+            border: 2px solid var(--accent);
         }
         
         ::-webkit-scrollbar { width: 8px; }
         ::-webkit-scrollbar-track { background: var(--bg-primary); }
         ::-webkit-scrollbar-thumb { background: #334155; border-radius: 4px; }
     </style>
-
-    <!-- Firebase SDK (ваша конфигурация) -->
-    <script type="module">
-      import { initializeApp } from "https://www.gstatic.com/firebasejs/12.8.0/firebase-app.js";
-      import { getAnalytics } from "https://www.gstatic.com/firebasejs/12.8.0/firebase-analytics.js";
-      import { getAuth, signInWithPopup, signOut, TwitterAuthProvider, GoogleAuthProvider } from "https://www.gstatic.com/firebasejs/12.8.0/firebase-auth.js";
-
-      const firebaseConfig = {
-        apiKey: "AIzaSyBdXGYg2t8DJBrQHCC80-pFerZU9PWmSCk",
-        authDomain: "testnet-hub.firebaseapp.com",
-        projectId: "testnet-hub",
-        storageBucket: "testnet-hub.firebasestorage.app",
-        messagingSenderId: "497813176653",
-        appId: "1:497813176653:web:089188fdd1555d76cd7704",
-        measurementId: "G-TKK8VTH555"
-      };
-
-      const app = initializeApp(firebaseConfig);
-      const analytics = getAnalytics(app);
-      const auth = getAuth(app);
-      window.auth = auth; // Делаем доступным в глобальном scope
-      window.GoogleAuthProvider = GoogleAuthProvider;
-      window.TwitterAuthProvider = TwitterAuthProvider;
-    </script>
 </head>
 <body class="antialiased">
 
@@ -259,35 +233,36 @@
                 </div>
 
                 <div class="flex gap-2 items-center">
-                    <!-- Панель входа для всех -->
-                    <div id="authPanel" class="flex gap-2 items-center">
-                        <button id="loginBtn" class="bg-blue-600 hover:bg-blue-500 px-4 py-2 rounded-lg text-sm font-medium transition-colors flex items-center gap-2">
-                            <i class="fab fa-google"></i> Войти с Google
-                        </button>
-                        <button id="loginTwitterBtn" class="bg-sky-600 hover:bg-sky-500 px-4 py-2 rounded-lg text-sm font-medium transition-colors flex items-center gap-2">
-                            <i class="fab fa-twitter"></i> Войти с Twitter
-                        </button>
-                    </div>
-
-                    <!-- Панель админа (появляется после входа) -->
+                    <!-- Админ-панель (скрыта по умолчанию) -->
                     <div id="adminPanel" style="display: none;" class="flex gap-2 items-center">
-                        <span class="admin-badge text-xs px-2 py-1 rounded-lg font-bold text-white mr-2">✓ Синхронизировано</span>
-                        <button onclick="loadExternalData()" class="bg-purple-600 hover:bg-purple-500 px-4 py-2 rounded-lg text-sm font-medium transition-colors" title="Загрузить с облака">
-                            <i class="fas fa-cloud-download-alt"></i> Синхронизировать
+                        <span class="admin-badge text-xs px-2 py-1 rounded-lg font-bold text-white mr-2">ADMIN</span>
+                        <button onclick="migrateToFirestore()" class="bg-purple-600 hover:bg-purple-500 px-4 py-2 rounded-lg text-sm font-medium transition-colors" title="Загрузить локальные данные в облако">
+                            <i class="fas fa-cloud-upload-alt"></i> Sync
                         </button>
-                        <button onclick="exportData()" class="bg-slate-700 hover:bg-slate-600 px-4 py-2 rounded-lg text-sm font-medium transition-colors" title="Сохранить в облако">
-                            <i class="fas fa-cloud-upload-alt"></i> Сохранить
-                        </button>
-                        <button onclick="document.getElementById('importFile').click()" class="bg-slate-700 hover:bg-slate-600 px-4 py-2 rounded-lg text-sm font-medium transition-colors">
-                            <i class="fas fa-upload"></i>
-                        </button>
-                        <input type="file" id="importFile" class="hidden" accept=".json" onchange="importData(this)">
                         <button onclick="openAddModal()" class="bg-blue-600 hover:bg-blue-500 px-4 py-2 rounded-lg text-sm font-medium transition-colors flex items-center gap-2">
                             <i class="fas fa-plus"></i> Добавить
                         </button>
-                        <button onclick="logout()" class="bg-red-600 hover:bg-red-500 px-3 py-2 rounded-lg text-sm font-medium transition-colors">
-                            Выйти
-                        </button>
+                    </div>
+                    
+                    <!-- USER AUTH PANEL -->
+                    <div id="authPanel" class="flex items-center gap-3 ml-2 border-l border-white/10 pl-4">
+                        <!-- Видно, когда не вошел -->
+                        <div id="loggedOutView">
+                            <button onclick="openLoginModal()" class="bg-white text-slate-900 hover:bg-slate-200 px-4 py-2 rounded-lg text-sm font-bold transition-colors flex items-center gap-2">
+                                <i class="fas fa-sign-in-alt"></i> Войти
+                            </button>
+                        </div>
+                        <!-- Видно, когда вошел -->
+                        <div id="loggedInView" class="hidden flex items-center gap-3">
+                            <div class="text-right hidden sm:block">
+                                <div id="userName" class="text-xs font-bold text-white">User</div>
+                                <div class="text-[10px] text-emerald-400">Sync <i class="fas fa-check"></i></div>
+                            </div>
+                            <img id="userAvatar" src="" class="user-avatar" alt="Avatar">
+                            <button onclick="logout()" class="text-slate-400 hover:text-white transition-colors" title="Выйти">
+                                <i class="fas fa-sign-out-alt"></i>
+                            </button>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -353,7 +328,13 @@
             <!-- Info для обычных пользователей -->
             <div id="publicInfo" class="mb-4 p-3 bg-blue-900/20 border border-blue-800/50 rounded-lg text-sm text-blue-300 flex items-center gap-2">
                 <i class="fas fa-info-circle"></i>
-                <span>Нажмите на <strong>название проекта</strong> для подробной информации или на <strong>"Гайд"</strong> для перехода по внешней ссылке.</span>
+                <span>Нажмите на <strong>название проекта</strong> для подробной информации или на <strong>"Гайд"</strong> для выполнения (засчитывается Daily).</span>
+            </div>
+            
+            <!-- Warning для неавторизованных -->
+            <div id="guestWarning" class="hidden mb-4 p-3 bg-yellow-900/20 border border-yellow-700/50 rounded-lg text-sm text-yellow-500 flex items-center gap-2">
+                <i class="fas fa-exclamation-triangle"></i>
+                <span>Вы не вошли в аккаунт. Избранное и выполненные задания сохраняются только в этом браузере.</span>
             </div>
 
             <!-- Projects Grid -->
@@ -370,6 +351,37 @@
                 </button>
             </div>
         </main>
+    </div>
+
+    <!-- Login Modal (NEW) -->
+    <div id="loginModal" class="modal">
+        <div class="modal-content modal-sm p-6 relative">
+            <button onclick="closeLoginModal()" class="absolute top-4 right-4 text-slate-400 hover:text-white"><i class="fas fa-times"></i></button>
+            <h2 class="text-2xl font-bold mb-6 text-center">Вход</h2>
+            
+            <div class="space-y-3">
+                <button onclick="loginGoogle()" class="w-full bg-white text-slate-900 font-bold py-3 rounded-xl flex items-center justify-center gap-3 hover:bg-slate-200 transition">
+                    <i class="fab fa-google text-red-500"></i> Google
+                </button>
+                <button onclick="loginTwitter()" class="w-full bg-[#1DA1F2] text-white font-bold py-3 rounded-xl flex items-center justify-center gap-3 hover:opacity-90 transition">
+                    <i class="fab fa-twitter"></i> Twitter
+                </button>
+
+                <div class="relative py-2">
+                    <div class="absolute inset-0 flex items-center"><div class="w-full border-t border-slate-700"></div></div>
+                    <div class="relative flex justify-center"><span class="bg-[#1e2538] px-2 text-xs text-slate-500">ИЛИ EMAIL</span></div>
+                </div>
+
+                <form onsubmit="handleEmailAuth(event)" class="space-y-3">
+                    <input type="email" id="emailInput" placeholder="Email" required class="w-full bg-slate-800 border border-slate-700 rounded-lg px-4 py-2 text-sm outline-none">
+                    <input type="password" id="passInput" placeholder="Пароль" required class="w-full bg-slate-800 border border-slate-700 rounded-lg px-4 py-2 text-sm outline-none">
+                    <div class="flex gap-2 pt-2">
+                        <button type="button" onclick="handleRegister()" class="flex-1 bg-slate-700 hover:bg-slate-600 py-2 rounded-lg text-sm">Регистрация</button>
+                        <button type="submit" class="flex-1 bg-blue-600 hover:bg-blue-500 py-2 rounded-lg text-sm font-bold">Войти</button>
+                    </div>
+                </form>
+            </div>
+        </div>
     </div>
 
     <!-- Add/Edit Project Modal -->
@@ -392,13 +404,7 @@
 
                     <div>
                         <label class="block text-sm font-medium text-slate-300 mb-2">Категории</label>
-                        
-                        <!-- Существующие категории (чекбоксы) -->
-                        <div id="categoryCheckboxes" class="flex flex-wrap gap-2 mb-3 max-h-32 overflow-y-auto p-2 bg-slate-900/50 rounded-lg border border-slate-700">
-                            <!-- Заполняется JS -->
-                        </div>
-                        
-                        <!-- Добавление новых категорий -->
+                        <div id="categoryCheckboxes" class="flex flex-wrap gap-2 mb-3 max-h-32 overflow-y-auto p-2 bg-slate-900/50 rounded-lg border border-slate-700"></div>
                         <div class="bg-slate-800/50 rounded-lg p-3 border border-slate-700">
                             <div class="flex gap-2 mb-2">
                                 <input type="text" id="newCategoryInput" placeholder="Новая категория..." 
@@ -409,48 +415,16 @@
                                     <i class="fas fa-plus"></i>
                                 </button>
                             </div>
-                            
-                            <!-- Контейнер для временных (новых) категорий -->
-                            <div id="customCategories" class="flex flex-wrap gap-2">
-                                <!-- Сюда добавляются теги новых категорий -->
-                            </div>
-                            
-                            <p class="text-xs text-slate-500 mt-2">
-                                <i class="fas fa-info-circle mr-1"></i>
-                                Нажмите Enter или + чтобы добавить. Можно ввести несколько через запятую (DeFi, Gaming, NFT)
-                            </p>
+                            <div id="customCategories" class="flex flex-wrap gap-2"></div>
                         </div>
                     </div>
 
-                    <div>
-                        <label class="block text-sm font-medium text-slate-300 mb-2">URL Логотипа</label>
-                        <input type="url" id="projImage" placeholder="https://..." class="w-full bg-slate-800 border border-slate-700 rounded-lg px-4 py-2 text-sm focus:border-blue-500 outline-none">
-                    </div>
-
-                    <div>
-                        <label class="block text-sm font-medium text-slate-300 mb-2">Ссылка на гайд (внешняя)</label>
-                        <input type="url" id="projGuideUrl" placeholder="https://..." class="w-full bg-slate-800 border border-slate-700 rounded-lg px-4 py-2 text-sm focus:border-blue-500 outline-none">
-                    </div>
-
-                    <div>
-                        <label class="block text-sm font-medium text-slate-300 mb-2">Ссылка на CryptoRank</label>
-                        <input type="url" id="projCryptoRank" placeholder="https://cryptorank.io/..." class="w-full bg-slate-800 border border-slate-700 rounded-lg px-4 py-2 text-sm focus:border-blue-500 outline-none">
-                    </div>
-
-                    <div>
-                        <label class="block text-sm font-medium text-slate-300 mb-2">Twitter проекта</label>
-                        <input type="url" id="projTwitter" placeholder="https://twitter.com/..." class="w-full bg-slate-800 border border-slate-700 rounded-lg px-4 py-2 text-sm focus:border-blue-500 outline-none">
-                    </div>
-
-                    <div>
-                        <label class="block text-sm font-medium text-slate-300 mb-2">Реферальная ссылка (Website)</label>
-                        <input type="url" id="projRef" placeholder="https://..." class="w-full bg-slate-800 border border-slate-700 rounded-lg px-4 py-2 text-sm focus:border-blue-500 outline-none">
-                    </div>
-
-                    <div>
-                        <label class="block text-sm font-medium text-slate-300 mb-2">Описание</label>
-                        <textarea id="projDesc" rows="3" class="w-full bg-slate-800 border border-slate-700 rounded-lg px-4 py-2 text-sm focus:border-blue-500 outline-none"></textarea>
-                    </div>
+                    <div><label class="block text-sm font-medium text-slate-300 mb-2">URL Логотипа</label><input type="url" id="projImage" placeholder="https://..." class="w-full bg-slate-800 border border-slate-700 rounded-lg px-4 py-2 text-sm focus:border-blue-500 outline-none"></div>
+                    <div><label class="block text-sm font-medium text-slate-300 mb-2">Ссылка на гайд (внешняя)</label><input type="url" id="projGuideUrl" placeholder="https://..." class="w-full bg-slate-800 border border-slate-700 rounded-lg px-4 py-2 text-sm focus:border-blue-500 outline-none"></div>
+                    <div><label class="block text-sm font-medium text-slate-300 mb-2">Ссылка на CryptoRank</label><input type="url" id="projCryptoRank" placeholder="https://cryptorank.io/..." class="w-full bg-slate-800 border border-slate-700 rounded-lg px-4 py-2 text-sm focus:border-blue-500 outline-none"></div>
+                    <div><label class="block text-sm font-medium text-slate-300 mb-2">Twitter проекта</label><input type="url" id="projTwitter" placeholder="https://twitter.com/..." class="w-full bg-slate-800 border border-slate-700 rounded-lg px-4 py-2 text-sm focus:border-blue-500 outline-none"></div>
+                    <div><label class="block text-sm font-medium text-slate-300 mb-2">Реферальная ссылка (Website)</label><input type="url" id="projRef" placeholder="https://..." class="w-full bg-slate-800 border border-slate-700 rounded-lg px-4 py-2 text-sm focus:border-blue-500 outline-none"></div>
+                    <div><label class="block text-sm font-medium text-slate-300 mb-2">Описание</label><textarea id="projDesc" rows="3" class="w-full bg-slate-800 border border-slate-700 rounded-lg px-4 py-2 text-sm focus:border-blue-500 outline-none"></textarea></div>
 
                     <div class="grid grid-cols-2 gap-4">
                         <div>
@@ -468,29 +442,21 @@
                     </div>
 
                     <div class="flex gap-6">
-                        <label class="flex items-center gap-2 text-sm text-slate-300 cursor-pointer">
-                            <input type="checkbox" id="projDaily" class="rounded bg-slate-800 border-slate-700 text-blue-600">
-                            <span>Есть ежедневные квесты</span>
-                        </label>
-                        <label class="flex items-center gap-2 text-sm text-slate-300 cursor-pointer">
-                            <input type="checkbox" id="projPriority" class="rounded bg-slate-800 border-slate-700 text-blue-600">
-                            <span>Высокий приоритет</span>
-                        </label>
+                        <label class="flex items-center gap-2 text-sm text-slate-300 cursor-pointer"><input type="checkbox" id="projDaily" class="rounded bg-slate-800 border-slate-700 text-blue-600"><span>Есть ежедневные квесты</span></label>
+                        <label class="flex items-center gap-2 text-sm text-slate-300 cursor-pointer"><input type="checkbox" id="projPriority" class="rounded bg-slate-800 border-slate-700 text-blue-600"><span>Высокий приоритет</span></label>
                     </div>
                 </div>
 
                 <div class="flex gap-3 pt-4 border-t border-slate-700">
-                    <button type="button" onclick="deleteProject()" id="deleteBtn" class="hidden bg-red-600/20 hover:bg-red-600/30 text-red-400 px-4 py-2 rounded-lg text-sm font-medium transition-colors">
-                        <i class="fas fa-trash"></i> Удалить
-                    </button>
+                    <button type="button" onclick="deleteProject()" id="deleteBtn" class="hidden bg-red-600/20 hover:bg-red-600/30 text-red-400 px-4 py-2 rounded-lg text-sm font-medium transition-colors"><i class="fas fa-trash"></i> Удалить</button>
                     <button type="button" onclick="closeAddModal()" class="flex-1 bg-slate-700 hover:bg-slate-600 py-2.5 rounded-lg text-sm font-medium transition-colors">Отмена</button>
-                    <button type="submit" class="flex-1 bg-blue-600 hover:bg-blue-500 py-2.5 rounded-lg text-sm font-medium transition-colors">Сохранить</button>
+                    <button type="submit" class="flex-1 bg-blue-600 hover:bg-blue-500 py-2.5 rounded-lg text-sm font-medium transition-colors">Сохранить (Global)</button>
                 </div>
             </form>
         </div>
     </div>
 
-    <!-- Detail View Modal (Подробное описание) -->
+    <!-- Detail View Modal -->
     <div id="detailModal" class="modal">
         <div class="modal-content modal-large p-6">
             <div class="flex justify-between items-start mb-6">
@@ -501,64 +467,34 @@
                             <h2 class="text-2xl font-bold cursor-pointer hover:text-blue-400" id="detailName">Название</h2>
                             <span id="detailNewBadge" class="new-badge hidden">NEW</span>
                         </div>
-                        <div class="flex gap-2 mt-1 flex-wrap" id="detailCategory">
-                            <!-- Категории вставляются JS -->
-                        </div>
-                        <!-- ДОБАВЛЕНО: элемент для отображения статуса проекта -->
+                        <div class="flex gap-2 mt-1 flex-wrap" id="detailCategory"></div>
                         <div id="detailStatus" class="mt-2 inline-block"></div>
                     </div>
                 </div>
                 <div class="flex gap-2">
-                    <button id="detailEditBtn" onclick="editCurrentProject()" class="hidden bg-blue-600/20 hover:bg-blue-600/30 text-blue-400 px-3 py-2 rounded-lg text-sm transition-colors">
-                        <i class="fas fa-edit"></i> Редактировать
-                    </button>
-                    <button onclick="closeDetailModal()" class="text-slate-400 hover:text-white">
-                        <i class="fas fa-times text-xl"></i>
-                    </button>
+                    <button id="detailEditBtn" onclick="editCurrentProject()" class="hidden bg-blue-600/20 hover:bg-blue-600/30 text-blue-400 px-3 py-2 rounded-lg text-sm transition-colors"><i class="fas fa-edit"></i> Редактировать</button>
+                    <button onclick="closeDetailModal()" class="text-slate-400 hover:text-white"><i class="fas fa-times text-xl"></i></button>
                 </div>
             </div>
 
             <div class="space-y-4 mb-6">
                 <div class="bg-slate-800/50 p-4 rounded-xl border border-slate-700">
-                    <h3 class="text-sm font-bold text-blue-400 mb-2 uppercase tracking-wider">
-                        <i class="fas fa-book-open mr-2"></i>Пошаговый гайд
-                    </h3>
+                    <h3 class="text-sm font-bold text-blue-400 mb-2 uppercase tracking-wider"><i class="fas fa-book-open mr-2"></i>Пошаговый гайд</h3>
                     <p id="detailDesc" class="text-slate-300 text-sm leading-relaxed whitespace-pre-line"></p>
                 </div>
-
                 <div class="grid grid-cols-2 gap-4 text-sm">
-                    <div class="bg-slate-800/30 p-3 rounded-lg">
-                        <span class="text-slate-500 block text-xs mb-1">Тип активности</span>
-                        <span id="detailDaily" class="text-slate-300 font-medium">Нет</span>
-                    </div>
-                    <div class="bg-slate-800/30 p-3 rounded-lg">
-                        <span class="text-slate-500 block text-xs mb-1">Приоритет</span>
-                        <span id="detailPriority" class="text-slate-300 font-medium">Обычный</span>
-                    </div>
-                    <div class="bg-slate-800/30 p-3 rounded-lg">
-                        <span class="text-slate-500 block text-xs mb-1">Дата добавления</span>
-                        <span id="detailCreated" class="text-slate-300 font-medium">—</span>
-                    </div>
-                    <div class="bg-slate-800/30 p-3 rounded-lg">
-                        <span class="text-slate-500 block text-xs mb-1">Последнее обновление</span>
-                        <span id="detailUpdated" class="text-slate-300 font-medium">—</span>
-                    </div>
+                    <div class="bg-slate-800/30 p-3 rounded-lg"><span class="text-slate-500 block text-xs mb-1">Тип активности</span><span id="detailDaily" class="text-slate-300 font-medium">Нет</span></div>
+                    <div class="bg-slate-800/30 p-3 rounded-lg"><span class="text-slate-500 block text-xs mb-1">Приоритет</span><span id="detailPriority" class="text-slate-300 font-medium">Обычный</span></div>
+                    <div class="bg-slate-800/30 p-3 rounded-lg"><span class="text-slate-500 block text-xs mb-1">Дата добавления</span><span id="detailCreated" class="text-slate-300 font-medium">—</span></div>
+                    <div class="bg-slate-800/30 p-3 rounded-lg"><span class="text-slate-500 block text-xs mb-1">Последнее обновление</span><span id="detailUpdated" class="text-slate-300 font-medium">—</span></div>
                 </div>
             </div>
 
             <div class="flex gap-3 pt-4 border-t border-slate-700">
-                <button onclick="openGuideFromDetail()" class="flex-1 bg-blue-600 hover:bg-blue-500 py-3 rounded-lg text-sm font-medium transition-colors flex items-center justify-center gap-2">
-                    <i class="fas fa-book-open"></i> Открыть гайд
-                </button>
-                <button onclick="openDetailLink('ref')" class="flex-1 bg-blue-600 hover:bg-blue-500 py-3 rounded-lg text-sm font-medium transition-colors flex items-center justify-center gap-2">
-                    <i class="fas fa-globe"></i> Website
-                </button>
-                <button onclick="openDetailLink('twitter')" class="flex-1 bg-sky-600 hover:bg-sky-500 py-3 rounded-lg text-sm font-medium transition-colors flex items-center justify-center gap-2">
-                    <i class="fab fa-twitter"></i> Twitter
-                </button>
-                <button onclick="openDetailLink('cryptorank')" class="flex-1 bg-slate-700 hover:bg-slate-600 py-3 rounded-lg text-sm font-medium transition-colors flex items-center justify-center gap-2">
-                    <i class="fas fa-chart-line"></i> CryptoRank
-                </button>
+                <button onclick="openGuideFromDetail()" id="detailGuideBtn" class="flex-1 bg-blue-600 hover:bg-blue-500 py-3 rounded-lg text-sm font-medium transition-colors flex items-center justify-center gap-2"><i class="fas fa-book-open"></i> Открыть гайд</button>
+                <button onclick="openDetailLink('ref')" class="flex-1 bg-blue-600 hover:bg-blue-500 py-3 rounded-lg text-sm font-medium transition-colors flex items-center justify-center gap-2"><i class="fas fa-globe"></i> Website</button>
+                <button onclick="openDetailLink('twitter')" class="flex-1 bg-sky-600 hover:bg-sky-500 py-3 rounded-lg text-sm font-medium transition-colors flex items-center justify-center gap-2"><i class="fab fa-twitter"></i> Twitter</button>
+                <button onclick="openDetailLink('cryptorank')" class="flex-1 bg-slate-700 hover:bg-slate-600 py-3 rounded-lg text-sm font-medium transition-colors flex items-center justify-center gap-2"><i class="fas fa-chart-line"></i> CryptoRank</button>
             </div>
         </div>
     </div>
@@ -569,1007 +505,621 @@
         <span id="toastMessage">Действие выполнено</span>
     </div>
 
-    <script>
-    // ==========================================
-    // КОНФИГУРАЦИЯ
-    // ==========================================
-    const EXTERNAL_DATA_URL = 'https://raw.githubusercontent.com/Worklaf/Worklaf/main/TestNet_Hub/projects.json';
-    
-    let projects = [];
-    let categories = ['DeFi', 'Gaming', 'Infra', 'L1/L2', 'NFT', 'Social', 'Other'];
-    
-    let currentFilters = {
-        status: 'all',
-        category: null
-    };
-    
-    let editingId = null;
-    let currentDetailId = null;
-    let isAdminMode = false;
-    let localFavorites = [];
-    let selectedCategories = []; // Для формы добавления/редактирования
+    <!-- MAIN APP SCRIPT WITH FIREBASE INTEGRATION -->
+    <script type="module">
+        // --------------------------------------------------------------------------------
+        // 1. FIREBASE SETUP
+        // --------------------------------------------------------------------------------
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+        import { getAuth, signInWithPopup, GoogleAuthProvider, TwitterAuthProvider, signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
+        import { getFirestore, collection, doc, setDoc, getDoc, updateDoc, deleteDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
-    // ==========================================
-    // FIREBASE + GITHUB СИНХРОНИЗАЦИЯ (новый блок)
-    // ==========================================
-    const GITHUB_REPO = "Worklaf/ProjectHubData"; // СВОЙ ПУБЛИЧНЫЙ РЕПО
-    const GITHUB_PERSONAL_TOKEN = "YOUR_TOKEN_HERE"; // 🔐 ВСТАВЬ СВОЙ PERSONAL ACCESS TOKEN СЮДА (НЕ ЗАЛИВАЙ В GITHUB!)
-
-    let currentUser = null;
-
-    // Обработчик входа
-    window.auth.onAuthStateChanged((user) => {
-        if (user) {
-            currentUser = user;
-            document.getElementById('authPanel').style.display = 'none';
-            document.getElementById('adminPanel').style.display = 'flex';
-            document.getElementById('modeIndicator').textContent = 'Синхронизировано';
-            document.getElementById('modeIndicator').classList.remove('text-slate-400');
-            document.getElementById('modeIndicator').classList.add('text-green-400', 'font-bold');
-            showToast('✅ Войдите через Google/Twitter — ваши данные синхронизируются на всех устройствах.');
-            loadExternalData(); // Автоматически загрузить данные из облака
-        } else {
-            currentUser = null;
-            document.getElementById('authPanel').style.display = 'flex';
-            document.getElementById('adminPanel').style.display = 'none';
-            document.getElementById('modeIndicator').textContent = 'Публичный просмотр';
-            document.getElementById('modeIndicator').classList.remove('text-green-400', 'font-bold');
-            loadLocalData(); // Загружаем локальные данные
-        }
-    });
-
-    // Вход через Google
-    document.getElementById('loginBtn').addEventListener('click', () => {
-        const provider = new GoogleAuthProvider();
-        window.auth.signInWithPopup(provider).catch(error => {
-            showToast('Ошибка входа: ' + error.message);
-        });
-    });
-
-    // Вход через Twitter
-    document.getElementById('loginTwitterBtn').addEventListener('click', () => {
-        const provider = new TwitterAuthProvider();
-        window.auth.signInWithPopup(provider).catch(error => {
-            showToast('Ошибка входа: ' + error.message);
-        });
-    });
-
-    // Выход
-    function logout() {
-        window.auth.signOut().then(() => {
-            showToast('Вы вышли из аккаунта.');
-        });
-    }
-
-    // Алерт
-    function showToast(msg) {
-        const toast = document.getElementById('toast');
-        document.getElementById('toastMessage').textContent = msg;
-        toast.classList.remove('translate-y-20', 'opacity-0');
-        setTimeout(() => {
-            toast.classList.add('translate-y-20', 'opacity-0');
-        }, 3000);
-    }
-
-    // ==========================================
-    // ЗАГРУЗКА ИЗ GITHUB (облако)
-    // ==========================================
-    async function loadExternalData() {
-        if (!currentUser) {
-            showToast('Войдите, чтобы загрузить данные');
-            return;
-        }
-
-        showToast('Загрузка из облака…');
-        try {
-            const response = await fetch(`https://api.github.com/repos/${GITHUB_REPO}/contents/projects.json`);
-            if (!response.ok) throw new Error('Файл не найден в репозитории или доступ закрыт.');
-
-            const data = await response.json();
-            const content = atob(data.content); // Декодируем Base64
-            const projectsData = JSON.parse(content);
-
-            projects = projectsData.projects || [];
-            categories = projectsData.categories || categories;
-
-            saveProjects(); // Сохраняем в локальный кэш как резерв
-            renderProjects();
-            updateStats();
-            showToast('✅ Данные успешно загружены из облака!');
-        } catch (error) {
-            console.error('Ошибка загрузки:', error);
-            showToast('❌ Не удалось загрузить проекты. Проверьте GitHub-репозиторий и токен.');
-        }
-    }
-
-    // ==========================================
-    // СОХРАНЕНИЕ В GITHUB (облако)
-    // ==========================================
-    async function exportData() {
-        if (!currentUser) {
-            showToast('Войдите, чтобы сохранить данные');
-            return;
-        }
-
-        const data = {
-            projects: projects,
-            categories: categories,
-            exportDate: new Date().toISOString()
+        // КОНФИГУРАЦИЯ FIREBASE (Оставьте вашу)
+        const firebaseConfig = {
+            apiKey: "AIzaSyBdXGYg2t8DJBrQHCC80-pFerZU9PWmSCk",
+            authDomain: "testnet-hub.firebaseapp.com",
+            projectId: "testnet-hub",
+            storageBucket: "testnet-hub.firebasestorage.app",
+            messagingSenderId: "497813176653",
+            appId: "1:497813176653:web:089188fdd1555d76cd7704"
         };
 
-        const jsonData = JSON.stringify(data, null, 2);
-        const content = btoa(jsonData);
+        const app = initializeApp(firebaseConfig);
+        const auth = getAuth(app);
+        const db = getFirestore(app);
 
-        try {
-            // Получаем существующий файл
-            const response = await fetch(`https://api.github.com/repos/${GITHUB_REPO}/contents/projects.json`, {
-                headers: {
-                    'Authorization': `token ${GITHUB_PERSONAL_TOKEN}`,
-                    'Accept': 'application/vnd.github.v3+json',
-                    'User-Agent': 'TestNet-Hub-App'
-                }
-            });
-
-            let sha = '';
-            if (response.ok) {
-                const existing = await response.json();
-                sha = existing.sha;
-            }
-
-            const payload = {
-                message: `Sync by ${currentUser.displayName || currentUser.email}`,
-                content: content,
-                sha: sha
-            };
-
-            const method = sha ? 'PUT' : 'POST';
-            const res = await fetch(`https://api.github.com/repos/${GITHUB_REPO}/contents/projects.json`, {
-                method,
-                headers: {
-                    'Authorization': `token ${GITHUB_PERSONAL_TOKEN}`,
-                    'Accept': 'application/vnd.github.v3+json',
-                    'User-Agent': 'TestNet-Hub-App'
-                },
-                body: JSON.stringify(payload)
-            });
-
-            if (res.ok) {
-                showToast('✅ Данные сохранены в облако! Теперь они на всех устройствах.');
-            } else {
-                const err = await res.json();
-                throw new Error(err.message || 'Не удалось сохранить');
-            }
-        } catch (error) {
-            console.error('Ошибка сохранения:', error);
-            showToast('❌ Не удалось сохранить: ' + error.message);
-        }
-    }
-
-    // ==========================================
-    // ОСТАЛЬНОЙ КОД (не трогаем — полностью сохранён!)
-    // ==========================================
-    // Инициализация
-    document.addEventListener('DOMContentLoaded', () => {
-        loadData();
-        setupSearchListener();
-        setupAdminUnlock();
+        // --------------------------------------------------------------------------------
+        // 2. STATE VARIABLES
+        // --------------------------------------------------------------------------------
+        let projects = [];
+        let categories = ['DeFi', 'Gaming', 'Infra', 'L1/L2', 'NFT', 'Social', 'Other'];
+        let currentFilters = { status: 'all', category: null };
+        let editingId = null;
+        let currentDetailId = null;
+        let isAdminMode = false;
         
-        document.getElementById('searchInput').addEventListener('input', (e) => {
-            if (!e.target.value.toLowerCase().includes('worklaf')) {
-                applyFilters(e.target.value);
-            }
-        });
-    });
-
-    // ==========================================
-    // МНОЖЕСТВЕННЫЕ КАТЕГОРИИ - ВСПОМОГАТЕЛЬНЫЕ ФУНКЦИИ
-    // ==========================================
-    
-    // Нормализация категорий (обратная совместимость)
-    function normalizeCategories(project) {
-        if (!project.categories) {
-            if (project.category) {
-                project.categories = [project.category];
-                delete project.category;
-            } else {
-                project.categories = ['Other'];
-            }
-        }
-        return project;
-    }
-    
-    // Проверка принадлежности к категории
-    function hasCategory(project, category) {
-        return project.categories && project.categories.includes(category);
-    }
-    
-    // Получение всех уникальных категорий из проектов
-    function getAllCategoriesFromProjects() {
-        const cats = new Set();
-        projects.forEach(p => {
-            if (p.categories && Array.isArray(p.categories)) {
-                p.categories.forEach(c => cats.add(c));
-            }
-        });
-        return Array.from(cats).sort();
-    }
-
-    // ==========================================
-    // АДМИН-РЕЖИМ (5 нажатий на "Сегодня")
-    // ==========================================
-    
-    let adminClickCount = 0;
-    const ADMIN_CLICK_THRESHOLD = 5;
-    
-    function setupAdminUnlock() {
-        const todayBtn = document.getElementById('statToday');
-        if (!todayBtn) return;
+        // Auth State
+        let currentUser = null;
+        let userFavorites = [];
+        let dailyLog = {}; // { projectId: "2024-02-05T..." }
+        let tempCustomCategories = [];
         
-        todayBtn.addEventListener('click', function(e) {
-            if (isAdminMode) return;
-            
-            if (e.target.closest('[onclick*="filterProjects(\'today\')"]') || e.target.id === 'statToday' || e.target.parentElement?.id === 'statToday') {
-                adminClickCount++;
-                
-                this.classList.add('animate-pulse', 'bg-pink-500/30');
-                setTimeout(() => {
-                    this.classList.remove('animate-pulse', 'bg-pink-500/30');
-                }, 300);
-                
-                if (adminClickCount >= ADMIN_CLICK_THRESHOLD) {
-                    activateAdminMode();
-                    showToast('🔓 Админ-режим активирован! (5 нажатий на "Сегодня")');
-                    adminClickCount = 0;
-                } else {
-                    showToast(`Нажатий: ${adminClickCount}/${ADMIN_CLICK_THRESHOLD}`);
-                }
-            }
-        });
+        let adminClickCount = 0;
+        const ADMIN_CLICK_THRESHOLD = 5;
+
+        // --------------------------------------------------------------------------------
+        // 3. AUTH LOGIC & SYNC
+        // --------------------------------------------------------------------------------
         
-        document.querySelectorAll('.sidebar-link').forEach(btn => {
-            btn.addEventListener('click', () => adminClickCount = 0);
-        });
-        document.getElementById('searchInput').addEventListener('input', () => adminClickCount = 0);
-    }
+        // Модалка входа
+        window.openLoginModal = () => document.getElementById('loginModal').classList.add('active');
+        window.closeLoginModal = () => document.getElementById('loginModal').classList.remove('active');
 
-    function activateAdminMode() {
-        isAdminMode = true;
-        document.getElementById('adminPanel').style.display = 'flex';
-        document.getElementById('userPanel').style.display = 'none';
-        document.getElementById('publicInfo').innerHTML = '<i class="fas fa-shield-alt"></i><span>Режим администратора активирован. Вы можете редактировать проекты.</span>';
-        document.getElementById('publicInfo').className = "mb-4 p-3 bg-purple-900/20 border border-purple-800/50 rounded-lg text-sm text-purple-300 flex items-center gap-2";
-        document.getElementById('modeIndicator').textContent = 'Режим редактирования';
-        document.getElementById('modeIndicator').classList.add('text-purple-400', 'font-bold');
-        document.getElementById('detailEditBtn').classList.remove('hidden');
-        
-        loadLocalData();
-        showToast('Админ-режим активирован!');
-        applyFilters();
-    }
-
-    // Проверка секретного слова (резервный способ)
-    function setupSearchListener() {
-        const searchInput = document.getElementById('searchInput');
-        searchInput.addEventListener('keyup', (e) => {
-            if (e.target.value.toLowerCase() === 'worklaf') {
-                activateAdminMode();
-                e.target.value = '';
-            }
-        });
-    }
-
-    // ==========================================
-    // ЗАГРУЗКА ДАННЫХ
-    // ==========================================
-
-    async function loadData() {
-        await loadExternalData();
-        loadLocalDataAndMerge();
-        projects = projects.map(normalizeCategories);
-        applyFilters();
-    }
-
-    async function loadExternalData() {
-        try {
-            showToast('Загрузка данных...');
-            const response = await fetch(EXTERNAL_DATA_URL + '?t=' + Date.now());
-            if (!response.ok) throw new Error('Network response was not ok');
-            
-            const data = await response.json();
-            
-            if (data.projects) {
-                projects = data.projects.map(normalizeCategories);
-            }
-            if (data.categories) {
-                categories = data.categories;
-            }
-            
-            showToast('Данные загружены!');
-        } catch (error) {
-            console.error('Error loading external data:', error);
-            showToast('Ошибка загрузки внешних данных');
-        }
-    }
-
-    function loadLocalDataAndMerge() {
-        const savedProjects = localStorage.getItem('testnet_projects');
-        if (savedProjects) {
-            const localProjects = JSON.parse(savedProjects).map(normalizeCategories);
-            localProjects.forEach(localProj => {
-                const index = projects.findIndex(p => p.id === localProj.id);
-                if (index >= 0) {
-                    projects[index] = localProj;
-                } else {
-                    projects.push(localProj);
-                }
-            });
-        }
-        
-        const savedCategories = localStorage.getItem('testnet_categories');
-        if (savedCategories) {
-            categories = JSON.parse(savedCategories);
-        }
-        
-        const savedFavorites = localStorage.getItem('local_favorites');
-        if (savedFavorites) {
-            localFavorites = JSON.parse(savedFavorites);
-        }
-    }
-
-    function loadLocalData() {
-        loadLocalDataAndMerge();
-    }
-
-    function saveProjects() {
-        if (!isAdminMode) return;
-        localStorage.setItem('testnet_projects', JSON.stringify(projects));
-        localStorage.setItem('testnet_categories', JSON.stringify(categories));
-    }
-
-    // ==========================================
-    // ФИЛЬТРАЦИЯ
-    // ==========================================
-    
-    function isToday(dateString) {
-        if (!dateString) return false;
-        const date = new Date(dateString);
-        const today = new Date();
-        return date.toDateString() === today.toDateString();
-    }
-
-    function getFilteredProjects(search = '') {
-        let filtered = projects.filter(p => {
-            if (currentFilters.status === 'active') return p.status === 'active';
-            if (currentFilters.status === 'ended') return p.status === 'ended';
-            if (currentFilters.status === 'daily') return p.hasDaily && p.status === 'active';
-            if (currentFilters.status === 'favorites') {
-                return isAdminMode ? p.isFavorite : localFavorites.includes(p.id);
-            }
-            if (currentFilters.status === 'today') {
-                return isToday(p.createdAt);
-            }
-            return true;
-        }).filter(p => {
-            if (currentFilters.category) {
-                return hasCategory(p, currentFilters.category);
-            }
-            return true;
-        }).filter(p => {
-            if (!search) return true;
-            return p.name.toLowerCase().includes(search.toLowerCase()) || 
-                   p.description.toLowerCase().includes(search.toLowerCase());
-        });
-        
-        return filtered;
-    }
-
-    function applyFilters(search = '') {
-        const filtered = getFilteredProjects(search);
-        renderCategories(filtered);
-        renderProjects(filtered);
-        updateSidebarActive();
-        updateCounts(filtered);
-        updateStats();
-    }
-
-    function filterProjects(status) {
-        currentFilters.status = status;
-        const searchValue = document.getElementById('searchInput').value;
-        applyFilters(searchValue);
-    }
-
-    function toggleCategory(cat) {
-        if (currentFilters.category === cat) {
-            currentFilters.category = null;
-        } else {
-            currentFilters.category = cat;
-        }
-        const searchValue = document.getElementById('searchInput').value;
-        applyFilters(searchValue);
-    }
-
-    function resetFilters() {
-        currentFilters = { status: 'all', category: null };
-        document.getElementById('searchInput').value = '';
-        applyFilters();
-    }
-
-    function updateSidebarActive() {
-        document.querySelectorAll('.sidebar-link').forEach(btn => {
-            btn.classList.remove('active');
-            if (btn.dataset.filter === currentFilters.status) {
-                btn.classList.add('active');
-            }
-        });
-    }
-
-    // ==========================================
-    // РЕНДЕРИНГ КАТЕГОРИЙ В САЙДБАРЕ
-    // ==========================================
-
-    function renderCategories(filteredProjects) {
-        const container = document.getElementById('categoryFilters');
-        const availableCategories = getAllCategoriesFromProjects();
-        
-        if (availableCategories.length === 0) {
-            container.innerHTML = '<p class="text-xs text-slate-600 px-4">Нет категорий</p>';
-            return;
-        }
-        
-        container.innerHTML = availableCategories.map(cat => {
-            const count = projects.filter(p => hasCategory(p, cat)).length;
-            const isActive = currentFilters.category === cat;
-            return `
-                <button onclick="toggleCategory('${cat}')" 
-                        class="w-full text-left px-4 py-2 rounded-lg text-sm transition-all flex justify-between items-center border-l-2 ${isActive ? 
-                            'bg-blue-600/20 border-blue-500 text-blue-400' : 
-                            'border-transparent text-slate-400 hover:bg-slate-800 hover:text-white'}">
-                    <span>${cat}</span>
-                    <span class="text-xs ${isActive ? 'bg-blue-900/50 text-blue-400' : 'bg-slate-800'} px-2 py-0.5 rounded">${count}</span>
-                </button>
-            `;
-        }).join('');
-    }
-
-    // ==========================================
-    // МОДАЛЬНОЕ ОКНО И ФОРМА (МУЛЬТИКАТЕГОРИИ)
-    // ==========================================
-    let tempCustomCategories = []; // Временное хранилище новых категорий перед сохранением
-    
-    function renderCategoryOptions() {
-        const allCats = new Set([...categories, ...getAllCategoriesFromProjects()]);
-        categories = Array.from(allCats).sort();
-        
-        const container = document.getElementById('categoryCheckboxes');
-        if (!container) return;
-        
-        const selectedCats = editingId ? 
-            (projects.find(p => p.id === editingId)?.categories || []) : [];
-        
-        container.innerHTML = categories.map(cat => {
-            const isChecked = selectedCats.includes(cat) ? 'checked' : '';
-            return `
-                <label class="flex items-center gap-2 px-3 py-2 bg-slate-800 border border-slate-700 rounded-lg cursor-pointer hover:border-blue-500 transition-colors select-none">
-                    <input type="checkbox" value="${cat}" class="category-checkbox rounded bg-slate-700 border-slate-600 text-blue-600 focus:ring-blue-500" ${isChecked}>
-                    <span class="text-sm text-slate-300">${cat}</span>
-                </label>
-            `;
-        }).join('');
-    }
-    
-    function handleCategoryInput(e) {
-        if (e.key === 'Enter') {
+        // Методы входа
+        window.loginGoogle = async () => {
+            try { await signInWithPopup(auth, new GoogleAuthProvider()); closeLoginModal(); showToast('Вход: Google'); } catch(e) { showToast(e.message); }
+        };
+        window.loginTwitter = async () => {
+            try { await signInWithPopup(auth, new TwitterAuthProvider()); closeLoginModal(); showToast('Вход: Twitter'); } catch(e) { showToast(e.message); }
+        };
+        window.handleEmailAuth = async (e) => {
             e.preventDefault();
-            addCustomCategory();
-        }
-    }
-
-    function addCustomCategory() {
-        const input = document.getElementById('newCategoryInput');
-        const value = input.value.trim();
+            const email = document.getElementById('emailInput').value;
+            const pass = document.getElementById('passInput').value;
+            try { await signInWithEmailAndPassword(auth, email, pass); closeLoginModal(); showToast('Вход выполнен'); } catch(e) { showToast(e.message); }
+        };
+        window.handleRegister = async () => {
+            const email = document.getElementById('emailInput').value;
+            const pass = document.getElementById('passInput').value;
+            try { await createUserWithEmailAndPassword(auth, email, pass); closeLoginModal(); showToast('Аккаунт создан!'); } catch(e) { showToast(e.message); }
+        };
         
-        if (!value) return;
-        
-        const newCats = value.split(',').map(c => c.trim()).filter(c => c);
-        
-        newCats.forEach(cat => {
-            if (!tempCustomCategories.includes(cat) && !categories.includes(cat)) {
-                tempCustomCategories.push(cat);
-            }
-            if (categories.includes(cat) && !tempCustomCategories.includes(cat)) {
-                const checkbox = document.querySelector(`.category-checkbox[value="${cat}"]`);
-                if (checkbox) checkbox.checked = true;
-            }
-        });
-        
-        renderTempCategories();
-        input.value = '';
-        input.focus();
-    }
-    
-    function renderTempCategories() {
-        const container = document.getElementById('customCategories');
-        if (!container) return;
-        
-        container.innerHTML = tempCustomCategories.map((cat, index) => `
-            <span class="inline-flex items-center gap-1 px-3 py-1 bg-blue-600/20 border border-blue-500/50 rounded-full text-sm text-blue-300">
-                ${cat}
-                <button type="button" onclick="removeTempCategory(${index})" class="hover:text-red-400 ml-1">
-                    <i class="fas fa-times"></i>
-                </button>
-            </span>
-        `).join('');
-    }
-    
-    function removeTempCategory(index) {
-        tempCustomCategories.splice(index, 1);
-        renderTempCategories();
-    }
-    
-    function toggleNewCategory() {
-        const input = document.getElementById('newCategoryInput');
-        input.classList.toggle('hidden');
-        if (!input.classList.contains('hidden')) {
-            document.getElementById('newCategoryName').focus();
-        }
-    }
-
-    function getSelectedCategories() {
-        const checkboxes = document.querySelectorAll('.category-checkbox:checked');
-        const selected = Array.from(checkboxes).map(cb => cb.value);
-        
-        tempCustomCategories.forEach(cat => {
-            if (!selected.includes(cat)) {
-                selected.push(cat);
+        // Слушаем изменения авторизации
+        onAuthStateChanged(auth, (user) => {
+            if (user) {
+                currentUser = user;
+                document.getElementById('loggedOutView').classList.add('hidden');
+                document.getElementById('loggedInView').classList.remove('hidden');
+                document.getElementById('guestWarning').classList.add('hidden');
+                
+                const avatar = document.getElementById('userAvatar');
+                avatar.src = user.photoURL || `https://ui-avatars.com/api/?name=${user.email || 'User'}&background=random`;
+                document.getElementById('userName').textContent = user.displayName || user.email.split('@')[0];
+                
+                initUserSync(user.uid);
+            } else {
+                currentUser = null;
+                userFavorites = [];
+                dailyLog = {};
+                document.getElementById('loggedOutView').classList.remove('hidden');
+                document.getElementById('loggedInView').classList.add('hidden');
+                document.getElementById('guestWarning').classList.remove('hidden');
+                applyFilters();
             }
         });
-        
-        return selected.length > 0 ? selected : ['Other'];
-    }
 
-    function setSelectedCategories(cats) {
-        tempCustomCategories = [];
-        renderTempCategories();
-        
-        document.querySelectorAll('.category-checkbox').forEach(cb => {
-            cb.checked = cats && cats.includes(cb.value);
-        });
-        
-        if (cats) {
-            cats.forEach(cat => {
-                if (!categories.includes(cat)) {
-                    tempCustomCategories.push(cat);
+        window.logout = () => signOut(auth).then(() => showToast('Вы вышли из системы'));
+
+        // Синхронизация данных пользователя (избранное + daily)
+        function initUserSync(uid) {
+            const userRef = doc(db, "users", uid);
+            onSnapshot(userRef, (docSnap) => {
+                if (docSnap.exists()) {
+                    const data = docSnap.data();
+                    userFavorites = data.favorites || [];
+                    dailyLog = data.dailyLog || {};
+                    applyFilters();
+                } else {
+                    // Создаем профиль если нет
+                    setDoc(userRef, { favorites: [], dailyLog: {} }, { merge: true });
                 }
             });
-            renderTempCategories();
         }
-    }
 
-    function openAddModal() {
-        if (!isAdminMode) {
-            showToast('Требуется доступ администратора');
-            return;
-        }
-        editingId = null;
-        currentDetailId = null;
-        document.getElementById('addProjectForm').reset();
-        document.getElementById('modalTitle').textContent = 'Добавить проект';
-        document.getElementById('deleteBtn').classList.add('hidden');
-        document.getElementById('projLastUpdated').valueAsDate = new Date();
-        document.getElementById('projId').value = '';
-        
-        tempCustomCategories = [];
-        renderTempCategories();
-        renderCategoryOptions();
-        
-        document.getElementById('addModal').classList.add('active');
-    }
+        // --------------------------------------------------------------------------------
+        // 4. DATA LOADING (JSON + FIRESTORE MERGE)
+        // --------------------------------------------------------------------------------
 
-    function closeAddModal() {
-        document.getElementById('addModal').classList.remove('active');
-        editingId = null;
-        tempCustomCategories = [];
-    }
+        const EXTERNAL_DATA_URL = 'https://raw.githubusercontent.com/Worklaf/Worklaf/main/TestNet_Hub/projects.json';
 
-    function editProject(id) {
-        if (!isAdminMode) return;
-        
-        const project = projects.find(p => p.id === id);
-        if (!project) return;
-        
-        editingId = id;
-        document.getElementById('projId').value = id;
-        document.getElementById('projName').value = project.name;
-        document.getElementById('projImage').value = project.image || '';
-        document.getElementById('projGuideUrl').value = project.guideUrl || '';
-        document.getElementById('projCryptoRank').value = project.cryptoRankUrl || '';
-        document.getElementById('projTwitter').value = project.twitterUrl || '';
-        document.getElementById('projRef').value = project.referralLink || '';
-        document.getElementById('projDesc').value = project.description || '';
-        document.getElementById('projStatus').value = project.status || 'active';
-        document.getElementById('projLastUpdated').value = project.lastUpdated || '';
-        document.getElementById('projDaily').checked = project.hasDaily || false;
-        document.getElementById('projPriority').checked = project.priority === 'high';
-        
-        setSelectedCategories(project.categories || []);
-        
-        document.getElementById('modalTitle').textContent = 'Редактировать проект';
-        document.getElementById('deleteBtn').classList.remove('hidden');
-        document.getElementById('addModal').classList.add('active');
-        
-        closeDetailModal();
-    }
-
-    function editCurrentProject() {
-        if (currentDetailId) {
-            editProject(currentDetailId);
-        }
-    }
-
-    function saveProject(e) {
-        e.preventDefault();
-        if (!isAdminMode) {
-            showToast('Нет доступа');
-            return;
-        }
-        
-        const now = new Date().toISOString();
-        const isNew = !editingId;
-        
-        const projectData = {
-            id: editingId || 'proj_' + Date.now(),
-            name: document.getElementById('projName').value,
-            categories: getSelectedCategories(),
-            status: document.getElementById('projStatus').value,
-            description: document.getElementById('projDesc').value,
-            image: document.getElementById('projImage').value || '',
-            guideUrl: document.getElementById('projGuideUrl').value || '',
-            cryptoRankUrl: document.getElementById('projCryptoRank').value,
-            twitterUrl: document.getElementById('projTwitter').value,
-            referralLink: document.getElementById('projRef').value,
-            hasDaily: document.getElementById('projDaily').checked,
-            priority: document.getElementById('projPriority').checked ? 'high' : 'normal',
-            lastUpdated: document.getElementById('projLastUpdated').value || now.split('T')[0],
-            createdAt: editingId ? (projects.find(p => p.id === editingId)?.createdAt || now) : now,
-            isFavorite: projects.find(p => p.id === editingId)?.isFavorite || false
-        };
-
-        tempCustomCategories.forEach(cat => {
-            if (!categories.includes(cat)) {
-                categories.push(cat);
-            }
+        document.addEventListener('DOMContentLoaded', () => {
+            loadData();
+            setupSearchListener();
+            setupAdminUnlock();
         });
 
-        if (editingId) {
-            const idx = projects.findIndex(p => p.id === editingId);
-            if (idx !== -1) projects[idx] = { ...projects[idx], ...projectData };
-        } else {
-            projects.push(projectData);
-        }
+        // 1. Грузим базу с GitHub, затем подписываемся на Firestore для обновлений
+        window.loadData = async function() {
+            try {
+                // Базовая загрузка (для скорости)
+                const response = await fetch(EXTERNAL_DATA_URL);
+                if (response.ok) {
+                    const data = await response.json();
+                    if(data.projects) projects = data.projects.map(normalizeCategories);
+                    if(data.categories) categories = data.categories;
+                }
+            } catch (e) { console.log('JSON load error', e); }
 
-        saveProjects();
-        tempCustomCategories = [];
-        renderCategoryOptions();
-        applyFilters();
-        closeAddModal();
-        showToast(isNew ? 'Проект добавлен!' : 'Проект обновлён!');
-    }
-
-    function deleteProject() {
-        if (!isAdminMode || !editingId) return;
-        if (!confirm('Удалить этот проект?')) return;
-        
-        projects = projects.filter(p => p.id !== editingId);
-        saveProjects();
-        applyFilters();
-        closeAddModal();
-        showToast('Проект удалён');
-    }
-
-    // ==========================================
-    // РЕНДЕРИНГ ПРОЕКТОВ (С ДАТАМИ И МНОЖЕСТВЕННЫМИ КАТЕГОРИЯМИ)
-    // ==========================================
-
-    function formatDate(dateString) {
-        if (!dateString) return '—';
-        const date = new Date(dateString);
-        return date.toLocaleDateString('ru-RU');
-    }
-
-    function renderProjects(filteredProjects) {
-        const grid = document.getElementById('projectsGrid');
-        const empty = document.getElementById('emptyState');
-        
-        if (filteredProjects.length === 0) {
-            grid.innerHTML = '';
-            empty.classList.remove('hidden');
-            return;
-        }
-        
-        empty.classList.add('hidden');
-        
-        const sortValue = document.querySelector('select[onchange="sortProjects(this.value)"]').value;
-        if (sortValue === 'newest') {
-            filteredProjects.sort((a, b) => new Date(b.createdAt || 0) - new Date(a.createdAt || 0));
-        }
-        
-        grid.innerHTML = filteredProjects.map(project => {
-            const isFav = isAdminMode ? project.isFavorite : localFavorites.includes(project.id);
-            const isNew = isToday(project.createdAt);
-            
-            const categoriesHtml = (project.categories || ['Other']).map(cat => 
-                `<span class="bg-slate-800 px-2 py-1 rounded cursor-pointer hover:bg-slate-700 transition-colors" onclick="event.stopPropagation(); toggleCategory('${cat}')">${cat}</span>`
-            ).join('');
-            
-            return `
-            <div class="glass-card rounded-2xl p-4 relative group ${isNew ? 'border-pink-500/30' : ''}">
-                ${isNew ? '<div class="absolute -top-2 -right-2"><span class="new-badge"><i class="fas fa-star mr-1"></i>NEW</span></div>' : ''}
+            // Подписка на обновления базы данных в реальном времени
+            onSnapshot(collection(db, "projects"), (snapshot) => {
+                snapshot.forEach(docSnap => {
+                    const fireProject = docSnap.data();
+                    // Если проект с таким ID уже есть (из JSON), обновляем его. Если нет - добавляем.
+                    const idx = projects.findIndex(p => p.id === fireProject.id);
+                    if (idx !== -1) {
+                        projects[idx] = { ...projects[idx], ...fireProject };
+                    } else {
+                        projects.push(normalizeCategories(fireProject));
+                    }
+                });
                 
-                <div class="flex items-start gap-4">
-                    <div class="shrink-0">
-                        ${project.image ? 
-                            `<img src="${project.image}" alt="${project.name}" class="w-12 h-12 rounded-lg object-cover border border-slate-700">` :
-                            `<div class="w-12 h-12 rounded-lg bg-slate-800 border border-slate-700 flex items-center justify-center text-xl">
-                                ${project.name.charAt(0).toUpperCase()}
-                            </div>`
-                        }
-                    </div>
+                // Проверяем удаленные? (пока просто добавляем/обновляем для простоты)
+                applyFilters();
+            });
+        }
+
+        // --------------------------------------------------------------------------------
+        // 5. DAILY LOGIC & FAVORITES
+        // --------------------------------------------------------------------------------
+
+        // Проверка: выполнено ли сегодня
+        function isDoneToday(id) {
+            if (!dailyLog[id]) return false;
+            return new Date(dailyLog[id]).toDateString() === new Date().toDateString();
+        }
+
+        // Обработка клика по Гайду
+        window.trackGuideClick = async (id, url) => {
+            // 1. Открываем ссылку всегда (если есть)
+            if(url) window.open(url, '_blank');
+            else openDetail(id); // Если ссылки нет, открываем детали
+
+            // 2. Логика трекинга
+            if (!currentUser) return; // Гости не трекаются
+
+            if (!isDoneToday(id)) {
+                // Записываем в базу
+                const userRef = doc(db, "users", currentUser.uid);
+                const updateData = {};
+                updateData[`dailyLog.${id}`] = new Date().toISOString();
+                
+                try {
+                    await updateDoc(userRef, updateData);
+                    showToast('Задание засчитано! ✅');
+                    // Локальное обновление для мгновенной реакции UI
+                    dailyLog[id] = new Date().toISOString();
+                    applyFilters();
+                } catch(e) {
+                    // Если документ еще не создан полностью
+                    await setDoc(userRef, { dailyLog: { [id]: new Date().toISOString() } }, { merge: true });
+                }
+            }
+        };
+
+        window.toggleFavorite = async function(id) {
+            if (!currentUser) { showToast('Войдите, чтобы сохранить'); return; }
+            
+            const idx = userFavorites.indexOf(id);
+            let newFavs = [...userFavorites];
+            if (idx > -1) newFavs.splice(idx, 1); else newFavs.push(id);
+            
+            // Оптимистичное обновление
+            userFavorites = newFavs;
+            applyFilters();
+
+            const userRef = doc(db, "users", currentUser.uid);
+            await setDoc(userRef, { favorites: newFavs }, { merge: true });
+        }
+
+        // --------------------------------------------------------------------------------
+        // 6. FILTERING & RENDERING
+        // --------------------------------------------------------------------------------
+        
+        window.applyFilters = function(search = '') {
+            const filtered = getFilteredProjects(search);
+            renderCategories(filtered);
+            renderProjects(filtered);
+            updateSidebarActive();
+            updateCounts(filtered);
+            updateStats();
+        }
+
+        function getFilteredProjects(search = '') {
+            if(!search) search = document.getElementById('searchInput').value;
+            return projects.filter(p => {
+                if (currentFilters.status === 'active') return p.status === 'active';
+                if (currentFilters.status === 'ended') return p.status === 'ended';
+                if (currentFilters.status === 'daily') return p.hasDaily && p.status === 'active';
+                if (currentFilters.status === 'favorites') return userFavorites.includes(p.id);
+                if (currentFilters.status === 'today') return isToday(p.createdAt);
+                return true;
+            }).filter(p => {
+                if (currentFilters.category) return hasCategory(p, currentFilters.category);
+                return true;
+            }).filter(p => {
+                if (!search) return true;
+                return p.name.toLowerCase().includes(search.toLowerCase()) || 
+                       p.description.toLowerCase().includes(search.toLowerCase());
+            });
+        }
+
+        function renderProjects(filteredProjects) {
+            const grid = document.getElementById('projectsGrid');
+            const empty = document.getElementById('emptyState');
+            
+            if (filteredProjects.length === 0) {
+                grid.innerHTML = '';
+                empty.classList.remove('hidden');
+                return;
+            }
+            empty.classList.add('hidden');
+            
+            const sortEl = document.querySelector('select[onchange="sortProjects(this.value)"]');
+            const sortValue = sortEl ? sortEl.value : 'newest';
+            
+            if (sortValue === 'newest') filteredProjects.sort((a, b) => new Date(b.createdAt || 0) - new Date(a.createdAt || 0));
+
+            grid.innerHTML = filteredProjects.map(project => {
+                const isFav = userFavorites.includes(project.id);
+                const isNew = isToday(project.createdAt);
+                const doneToday = isDoneToday(project.id);
+                
+                const categoriesHtml = (project.categories || ['Other']).map(cat => 
+                    `<span class="bg-slate-800 px-2 py-1 rounded cursor-pointer hover:bg-slate-700 transition-colors" onclick="event.stopPropagation(); toggleCategory('${cat}')">${cat}</span>`
+                ).join('');
+                
+                return `
+                <div class="glass-card rounded-2xl p-4 relative group ${isNew ? 'border-pink-500/30' : ''} ${doneToday ? 'daily-done' : ''}">
+                    ${isNew ? '<div class="absolute -top-2 -right-2"><span class="new-badge"><i class="fas fa-star mr-1"></i>NEW</span></div>' : ''}
+                    ${doneToday ? '<i class="fas fa-check-circle daily-check-icon"></i>' : ''}
                     
-                    <div class="flex-1 min-w-0">
-                        <div class="flex items-start justify-between gap-2">
-                            <div class="flex-1">
-                                <div class="flex items-center gap-2 flex-wrap">
-                                    <h3 class="font-bold text-lg leading-tight mb-1 text-white cursor-pointer hover:text-blue-400 ${isNew ? 'text-pink-400' : ''}" onclick="openDetail('${project.id}')">
-                                        ${isNew ? '<i class="fas fa-star text-pink-400 mr-1"></i>' : ''}${project.name}
-                                    </h3>
-                                    ${isAdminMode ? `
-                                    <button onclick="event.stopPropagation(); editProject('${project.id}')" class="text-slate-500 hover:text-blue-400 text-xs edit-btn" title="Редактировать">
-                                        <i class="fas fa-pencil-alt"></i>
-                                    </button>
-                                    ` : ''}
-                                </div>
-                                <div class="flex flex-wrap gap-2 items-center text-xs text-slate-400 mb-2">
-                                    <div class="flex flex-wrap gap-1">${categoriesHtml}</div>
-                                    <span class="status-${project.status} px-2 py-1 rounded font-medium">
-                                        ${project.status === 'active' ? 'Active' : project.status === 'soon' ? 'Soon' : 'Ended'}
-                                    </span>
-                                    ${project.hasDaily ? '<span class="text-orange-400"><i class="fas fa-fire mr-1"></i>Daily</span>' : ''}
-                                    ${project.priority === 'high' ? '<span class="text-red-400"><i class="fas fa-star mr-1"></i>High</span>' : ''}
-                                </div>
-                                
-                                <div class="flex gap-3 text-xs text-slate-500 mb-2">
-                                    <span title="Дата добавления"><i class="fas fa-plus-circle mr-1"></i>${formatDate(project.createdAt)}</span>
-                                    <span title="Последнее обновление"><i class="fas fa-sync-alt mr-1"></i>${formatDate(project.lastUpdated)}</span>
-                                </div>
-                            </div>
-                            
-                            <div class="flex items-center gap-2">
-                                <button onclick="openGuide('${project.id}')" class="guide-btn text-white px-4 py-2 rounded-lg text-sm font-bold flex items-center gap-2 whitespace-nowrap" title="Открыть гайд">
-                                    <i class="fas fa-book-open"></i>
-                                    <span>Гайд</span>
-                                </button>
-                                
-                                <button onclick="event.stopPropagation(); toggleFavorite('${project.id}')" class="favorite-btn ${isFav ? 'active' : 'text-slate-500'} p-2 hover:text-red-500 transition-colors w-10 h-10 flex items-center justify-center rounded-lg hover:bg-slate-800" title="${isFav ? 'Убрать из избранного' : 'Добавить в избранное'}">
-                                    <i class="fas fa-heart ${isFav ? 'fill-current' : ''} text-lg"></i>
-                                </button>
-                            </div>
+                    <div class="flex items-start gap-4">
+                        <div class="shrink-0">
+                            ${project.image ? 
+                                `<img src="${project.image}" alt="${project.name}" class="w-12 h-12 rounded-lg object-cover border border-slate-700">` :
+                                `<div class="w-12 h-12 rounded-lg bg-slate-800 border border-slate-700 flex items-center justify-center text-xl">${project.name.charAt(0).toUpperCase()}</div>`
+                            }
                         </div>
                         
-                        <p class="text-slate-400 text-sm mt-2 line-clamp-2">${project.description || 'Нет описания'}</p>
+                        <div class="flex-1 min-w-0">
+                            <div class="flex items-start justify-between gap-2">
+                                <div class="flex-1">
+                                    <div class="flex items-center gap-2 flex-wrap">
+                                        <h3 class="font-bold text-lg leading-tight mb-1 text-white cursor-pointer hover:text-blue-400 ${isNew ? 'text-pink-400' : ''}" onclick="openDetail('${project.id}')">
+                                            ${isNew ? '<i class="fas fa-star text-pink-400 mr-1"></i>' : ''}${project.name}
+                                        </h3>
+                                        ${isAdminMode ? `<button onclick="event.stopPropagation(); editProject('${project.id}')" class="text-slate-500 hover:text-blue-400 text-xs edit-btn"><i class="fas fa-pencil-alt"></i></button>` : ''}
+                                    </div>
+                                    <div class="flex flex-wrap gap-2 items-center text-xs text-slate-400 mb-2">
+                                        <div class="flex flex-wrap gap-1">${categoriesHtml}</div>
+                                        <span class="status-${project.status} px-2 py-1 rounded font-medium">${project.status === 'active' ? 'Active' : project.status === 'soon' ? 'Soon' : 'Ended'}</span>
+                                        ${project.hasDaily ? '<span class="text-orange-400"><i class="fas fa-fire mr-1"></i>Daily</span>' : ''}
+                                        ${project.priority === 'high' ? '<span class="text-red-400"><i class="fas fa-star mr-1"></i>High</span>' : ''}
+                                    </div>
+                                </div>
+                                <div class="flex items-center gap-2">
+                                    <button onclick="trackGuideClick('${project.id}', '${project.guideUrl}')" 
+                                            class="guide-btn ${doneToday ? 'done' : ''} text-white px-4 py-2 rounded-lg text-sm font-bold flex items-center gap-2 whitespace-nowrap">
+                                        ${doneToday ? '<i class="fas fa-check"></i>' : '<i class="fas fa-book-open"></i>'}
+                                        <span>${doneToday ? 'Готово' : 'Гайд'}</span>
+                                    </button>
+                                    <button onclick="event.stopPropagation(); toggleFavorite('${project.id}')" class="favorite-btn ${isFav ? 'active' : 'text-slate-500'} p-2 hover:text-red-500 transition-colors w-10 h-10 flex items-center justify-center rounded-lg hover:bg-slate-800">
+                                        <i class="fas fa-heart ${isFav ? 'fill-current' : ''} text-lg"></i>
+                                    </button>
+                                </div>
+                            </div>
+                            <p class="text-slate-400 text-sm mt-2 line-clamp-2">${project.description || 'Нет описания'}</p>
+                        </div>
+                    </div>
+                    <div class="mt-4 pt-3 border-t border-slate-700/50 flex gap-2">
+                        <button onclick="openLink('${project.referralLink || project.cryptoRankUrl}')" class="flex-1 bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-300 py-2 rounded-lg text-sm font-medium transition-colors flex items-center justify-center gap-2"><i class="fas fa-globe"></i> Website</button>
+                        <button onclick="openLink('${project.twitterUrl}')" class="flex-1 bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-300 py-2 rounded-lg text-sm font-medium transition-colors flex items-center justify-center gap-2"><i class="fab fa-twitter"></i> Twitter</button>
+                        <button onclick="openLink('${project.cryptoRankUrl}')" class="flex-1 bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-300 py-2 rounded-lg text-sm font-medium transition-colors flex items-center justify-center gap-2"><i class="fas fa-chart-line"></i> CR</button>
                     </div>
                 </div>
-                
-                <div class="mt-4 pt-3 border-t border-slate-700/50 flex gap-2">
-                    <button onclick="openLink('${project.referralLink || project.cryptoRankUrl}')" 
-                            class="flex-1 bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-300 py-2 rounded-lg text-sm font-medium transition-colors flex items-center justify-center gap-2 ${!project.referralLink && !project.cryptoRankUrl ? 'opacity-50 cursor-not-allowed' : ''}">
-                        <i class="fas fa-globe"></i> Website
-                    </button>
-                    <button onclick="openLink('${project.twitterUrl}')" 
-                            class="flex-1 bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-300 py-2 rounded-lg text-sm font-medium transition-colors flex items-center justify-center gap-2 ${!project.twitterUrl ? 'opacity-50 cursor-not-allowed' : ''}">
-                        <i class="fab fa-twitter"></i> Twitter
-                    </button>
-                    <button onclick="openLink('${project.cryptoRankUrl}')" 
-                            class="flex-1 bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-300 py-2 rounded-lg text-sm font-medium transition-colors flex items-center justify-center gap-2 ${!project.cryptoRankUrl ? 'opacity-50 cursor-not-allowed' : ''}">
-                        <i class="fas fa-chart-line"></i> CR
-                    </button>
-                </div>
-            </div>
-            `;
-        }).join('');
-    }
-
-    // ==========================================
-    // ДЕТАЛЬНЫЙ ПРОСМОТР (ОБНОВЛЁННЫЙ)
-    // ==========================================
-
-    function openDetail(id) {
-        const project = projects.find(p => p.id === id);
-        if (!project) return;
-        
-        currentDetailId = id;
-        
-        document.getElementById('detailName').textContent = project.name;
-        document.getElementById('detailDesc').textContent = project.description || 'Подробное описание пока не добавлено.';
-        
-        const catContainer = document.getElementById('detailCategory');
-        catContainer.innerHTML = (project.categories || ['Other']).map(cat => 
-            `<span class="tag cursor-pointer hover:bg-blue-600/20" onclick="closeDetailModal(); toggleCategory('${cat}')">${cat}</span>`
-        ).join('');
-        
-        const statusEl = document.getElementById('detailStatus');
-        statusEl.textContent = project.status === 'active' ? 'Active' : project.status === 'soon' ? 'Soon' : 'Ended';
-        statusEl.className = `px-2 py-1 rounded-full text-xs font-medium status-${project.status}`;
-        
-        const isNew = isToday(project.createdAt);
-        const newBadge = document.getElementById('detailNewBadge');
-        if (isNew) {
-            newBadge.classList.remove('hidden');
-        } else {
-            newBadge.classList.add('hidden');
+                `;
+            }).join('');
         }
+
+        // --- HELPER FUNCTIONS ---
         
-        document.getElementById('detailImage').src = project.image || '';
-        document.getElementById('detailImage').onerror = function() {
-            this.src = 'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 64 64"%3E%3Crect width="64" height="64" fill="%231e2538"/%3E%3Ctext x="32" y="40" font-family="Arial" font-size="24" fill="%2394a3b8" text-anchor="middle"%3E' + project.name.charAt(0).toUpperCase() + '%3C/text%3E%3C/svg%3E';
+        window.filterProjects = (status) => { currentFilters.status = status; applyFilters(); };
+        window.toggleCategory = (cat) => { currentFilters.category = (currentFilters.category === cat) ? null : cat; applyFilters(); };
+        window.resetFilters = () => { currentFilters = { status: 'all', category: null }; document.getElementById('searchInput').value = ''; applyFilters(); };
+
+        window.sortProjects = (by) => {
+            if (by === 'name') projects.sort((a, b) => a.name.localeCompare(b.name));
+            else if (by === 'priority') projects.sort((a, b) => (b.priority === 'high' ? 1 : 0) - (a.priority === 'high' ? 1 : 0));
+            else if (by === 'updated') projects.sort((a, b) => new Date(b.lastUpdated || 0) - new Date(a.lastUpdated || 0));
+            else if (by === 'newest') projects.sort((a, b) => new Date(b.createdAt || 0) - new Date(a.createdAt || 0));
+            applyFilters();
         };
+
+        window.openGuide = (id) => trackGuideClick(id, projects.find(p => p.id === id)?.guideUrl);
         
-        document.getElementById('detailCreated').textContent = formatDate(project.createdAt);
-        document.getElementById('detailUpdated').textContent = formatDate(project.lastUpdated);
-        document.getElementById('detailDaily').textContent = project.hasDaily ? 'Ежедневные квесты' : 'Обычные задания';
-        document.getElementById('detailPriority').textContent = project.priority === 'high' ? '🔥 Высокий (срочно)' : 'Обычный';
-        
-        const editBtn = document.getElementById('detailEditBtn');
-        if (isAdminMode) {
-            editBtn.classList.remove('hidden');
-        } else {
-            editBtn.classList.add('hidden');
-        }
-        
-        document.getElementById('detailModal').classList.add('active');
-    }
-
-    function openGuide(id) {
-        const project = projects.find(p => p.id === id);
-        if (project && project.guideUrl) {
-            window.open(project.guideUrl, '_blank');
-        } else {
-            openDetail(id);
-        }
-    }
-
-    function openGuideFromDetail() {
-        if (currentDetailId) {
-            openGuide(currentDetailId);
-        }
-    }
-
-    function closeDetailModal() {
-        document.getElementById('detailModal').classList.remove('active');
-        currentDetailId = null;
-    }
-
-    function openDetailLink(type) {
-        const project = projects.find(p => p.id === currentDetailId);
-        if (!project) return;
-        
-        let url = '';
-        if (type === 'ref') url = project.referralLink || project.cryptoRankUrl;
-        else if (type === 'twitter') url = project.twitterUrl;
-        else if (type === 'cryptorank') url = project.cryptoRankUrl;
-        
-        if (url) window.open(url, '_blank');
-    }
-
-    function openLink(url) {
-        if (url) window.open(url, '_blank');
-    }
-
-    function toggleFavorite(id) {
-        if (isAdminMode) {
+        window.openDetail = (id) => {
             const project = projects.find(p => p.id === id);
-            if (project) {
-                project.isFavorite = !project.isFavorite;
-                saveProjects();
-                applyFilters(document.getElementById('searchInput').value);
-                showToast(project.isFavorite ? 'Добавлено в избранное' : 'Убрано из избранного');
-            }
-        } else {
-            const idx = localFavorites.indexOf(id);
-            if (idx > -1) {
-                localFavorites.splice(idx, 1);
-            } else {
-                localFavorites.push(id);
-            }
-            localStorage.setItem('local_favorites', JSON.stringify(localFavorites));
-            applyFilters(document.getElementById('searchInput').value);
-        }
-    }
+            if (!project) return;
+            currentDetailId = id;
+            document.getElementById('detailName').textContent = project.name;
+            document.getElementById('detailDesc').textContent = project.description || 'Описание отсутствует';
+            document.getElementById('detailCategory').innerHTML = (project.categories || ['Other']).map(cat => 
+                `<span class="tag cursor-pointer hover:bg-blue-600/20" onclick="closeDetailModal(); toggleCategory('${cat}')">${cat}</span>`
+            ).join('');
+            
+            const statusEl = document.getElementById('detailStatus');
+            statusEl.textContent = project.status === 'active' ? 'Active' : project.status === 'soon' ? 'Soon' : 'Ended';
+            statusEl.className = `px-2 py-1 rounded-full text-xs font-medium status-${project.status}`;
+            
+            const isNew = isToday(project.createdAt);
+            document.getElementById('detailNewBadge').classList.toggle('hidden', !isNew);
+            
+            const img = document.getElementById('detailImage');
+            img.src = project.image || '';
+            img.onerror = () => { img.src = `data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" width="64" height="64"><rect width="64" height="64" fill="#333"/><text x="32" y="32" fill="white" text-anchor="middle">${project.name[0]}</text></svg>` };
 
-    function sortProjects(by) {
-        if (by === 'name') {
-            projects.sort((a, b) => a.name.localeCompare(b.name));
-        } else if (by === 'priority') {
-            projects.sort((a, b) => (b.priority === 'high' ? 1 : 0) - (a.priority === 'high' ? 1 : 0));
-        } else if (by === 'updated') {
-            projects.sort((a, b) => new Date(b.lastUpdated || 0) - new Date(a.lastUpdated || 0));
-        } else if (by === 'newest') {
-            projects.sort((a, b) => new Date(b.createdAt || 0) - new Date(a.createdAt || 0));
-        }
-        applyFilters(document.getElementById('searchInput').value);
-    }
+            document.getElementById('detailCreated').textContent = formatDate(project.createdAt);
+            document.getElementById('detailUpdated').textContent = formatDate(project.lastUpdated);
+            document.getElementById('detailDaily').textContent = project.hasDaily ? 'Есть' : 'Нет';
+            document.getElementById('detailPriority').textContent = project.priority === 'high' ? 'Высокий' : 'Обычный';
+            
+            // Настраиваем кнопку гайда в модалке тоже как трекер
+            const gBtn = document.getElementById('detailGuideBtn');
+            gBtn.onclick = () => window.trackGuideClick(project.id, project.guideUrl);
+            gBtn.innerHTML = isDoneToday(project.id) ? '<i class="fas fa-check"></i> Выполнено' : '<i class="fas fa-book-open"></i> Открыть гайд';
 
-    function updateStats() {
-        document.getElementById('statActive').textContent = projects.filter(p => p.status === 'active').length;
-        document.getElementById('statToday').textContent = projects.filter(p => isToday(p.createdAt)).length;
-        document.getElementById('statFavorites').textContent = isAdminMode ? 
-            projects.filter(p => p.isFavorite).length : localFavorites.length;
-    }
-
-    function updateCounts(filteredProjects) {
-        document.getElementById('countAll').textContent = projects.length;
-        document.getElementById('countToday').textContent = projects.filter(p => isToday(p.createdAt)).length;
-        document.getElementById('countActive').textContent = projects.filter(p => p.status === 'active').length;
-        document.getElementById('countDaily').textContent = projects.filter(p => p.hasDaily && p.status === 'active').length;
-        document.getElementById('countFavoritesSidebar').textContent = isAdminMode ? 
-            projects.filter(p => p.isFavorite).length : localFavorites.length;
-        document.getElementById('countEnded').textContent = projects.filter(p => p.status === 'ended').length;
-    }
-
-    // Экспорт/Импорт
-    function exportData() {
-        if (!isAdminMode) return;
-        
-        const data = {
-            projects: projects,
-            categories: categories,
-            exportDate: new Date().toISOString()
+            document.getElementById('detailEditBtn').classList.toggle('hidden', !isAdminMode);
+            document.getElementById('detailModal').classList.add('active');
         };
-        const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = `projects.json`;
-        a.click();
-        URL.revokeObjectURL(url);
-        showToast('Файл projects.json скачан!');
-    }
 
-    function importData(input) {
-        if (!isAdminMode) return;
+        window.closeDetailModal = () => { document.getElementById('detailModal').classList.remove('active'); currentDetailId = null; };
+        window.openLink = (url) => { if(url) window.open(url, '_blank'); };
         
-        const file = input.files[0];
-        if (!file) return;
+        window.openDetailLink = (type) => {
+            const project = projects.find(p => p.id === currentDetailId);
+            if(!project) return;
+            let url = '';
+            if (type === 'ref') url = project.referralLink || project.cryptoRankUrl;
+            else if (type === 'twitter') url = project.twitterUrl;
+            else if (type === 'cryptorank') url = project.cryptoRankUrl;
+            if (url) window.open(url, '_blank');
+        };
+
+        window.openGuideFromDetail = () => { if(currentDetailId) window.trackGuideClick(currentDetailId, projects.find(p => p.id === currentDetailId)?.guideUrl); };
+
+        // --- ADMIN FUNCTIONS ---
         
-        const reader = new FileReader();
-        reader.onload = (e) => {
+        function setupAdminUnlock() {
+            const todayBtn = document.getElementById('statToday');
+            if (!todayBtn) return;
+            todayBtn.addEventListener('click', function(e) {
+                if (isAdminMode) return;
+                if (e.target.closest('[onclick*="filterProjects(\'today\')"]') || e.target.id === 'statToday' || e.target.parentElement?.id === 'statToday') {
+                    adminClickCount++;
+                    this.classList.add('animate-pulse', 'bg-pink-500/30');
+                    setTimeout(() => this.classList.remove('animate-pulse', 'bg-pink-500/30'), 300);
+                    if (adminClickCount >= ADMIN_CLICK_THRESHOLD) {
+                        activateAdminMode();
+                        showToast('🔓 Админ-режим активирован!');
+                        adminClickCount = 0;
+                    }
+                }
+            });
+            document.querySelectorAll('.sidebar-link').forEach(btn => btn.addEventListener('click', () => adminClickCount = 0));
+        }
+
+        function activateAdminMode() {
+            isAdminMode = true;
+            document.getElementById('adminPanel').style.display = 'flex';
+            document.getElementById('publicInfo').innerHTML = '<i class="fas fa-shield-alt"></i><span>Режим редактирования (Все изменения летят в базу)</span>';
+            document.getElementById('modeIndicator').textContent = 'Режим редактирования';
+            document.getElementById('modeIndicator').classList.add('text-purple-400', 'font-bold');
+            applyFilters();
+        }
+
+        function setupSearchListener() {
+            const searchInput = document.getElementById('searchInput');
+            searchInput.addEventListener('keyup', (e) => {
+                if (e.target.value.toLowerCase() === 'worklaf') {
+                    activateAdminMode();
+                    e.target.value = '';
+                }
+            });
+        }
+
+        window.openAddModal = () => {
+            if (!isAdminMode) return;
+            editingId = null;
+            document.getElementById('addProjectForm').reset();
+            document.getElementById('modalTitle').textContent = 'Добавить проект';
+            document.getElementById('deleteBtn').classList.add('hidden');
+            document.getElementById('projLastUpdated').valueAsDate = new Date();
+            renderCategoryOptions();
+            document.getElementById('addModal').classList.add('active');
+        };
+
+        window.closeAddModal = () => document.getElementById('addModal').classList.remove('active');
+
+        window.editProject = (id) => {
+            if (!isAdminMode) return;
+            const project = projects.find(p => p.id === id);
+            if (!project) return;
+            editingId = id;
+            document.getElementById('projId').value = id;
+            document.getElementById('projName').value = project.name;
+            document.getElementById('projImage').value = project.image || '';
+            document.getElementById('projGuideUrl').value = project.guideUrl || '';
+            document.getElementById('projCryptoRank').value = project.cryptoRankUrl || '';
+            document.getElementById('projTwitter').value = project.twitterUrl || '';
+            document.getElementById('projRef').value = project.referralLink || '';
+            document.getElementById('projDesc').value = project.description || '';
+            document.getElementById('projStatus').value = project.status || 'active';
+            document.getElementById('projLastUpdated').value = project.lastUpdated || '';
+            document.getElementById('projDaily').checked = project.hasDaily || false;
+            document.getElementById('projPriority').checked = project.priority === 'high';
+            
+            setSelectedCategories(project.categories || []);
+            document.getElementById('modalTitle').textContent = 'Редактировать проект';
+            document.getElementById('deleteBtn').classList.remove('hidden');
+            document.getElementById('addModal').classList.add('active');
+            window.closeDetailModal();
+        };
+
+        window.editCurrentProject = () => { if(currentDetailId) window.editProject(currentDetailId); };
+
+        // ГЛАВНОЕ: СОХРАНЕНИЕ В FIRESTORE
+        window.saveProject = async (e) => {
+            e.preventDefault();
+            if (!isAdminMode) return;
+            
+            const now = new Date().toISOString();
+            const id = editingId || 'proj_' + Date.now();
+            
+            const projectData = {
+                id: id,
+                name: document.getElementById('projName').value,
+                categories: getSelectedCategories(),
+                status: document.getElementById('projStatus').value,
+                description: document.getElementById('projDesc').value,
+                image: document.getElementById('projImage').value || '',
+                guideUrl: document.getElementById('projGuideUrl').value || '',
+                cryptoRankUrl: document.getElementById('projCryptoRank').value,
+                twitterUrl: document.getElementById('projTwitter').value,
+                referralLink: document.getElementById('projRef').value,
+                hasDaily: document.getElementById('projDaily').checked,
+                priority: document.getElementById('projPriority').checked ? 'high' : 'normal',
+                lastUpdated: document.getElementById('projLastUpdated').value || now.split('T')[0],
+                createdAt: editingId ? (projects.find(p => p.id === editingId)?.createdAt || now) : now
+            };
+
             try {
-                const data = JSON.parse(e.target.result);
-                if (data.projects) {
-                    projects = data.projects.map(normalizeCategories);
-                }
-                if (data.categories) {
-                    categories = data.categories;
-                }
-                saveProjects();
-                renderCategoryOptions();
-                applyFilters();
-                showToast('Данные импортированы!');
+                // Сохраняем в Firestore
+                await setDoc(doc(db, "projects", id), projectData, { merge: true });
+                showToast('Сохранено в облако!');
+                window.closeAddModal();
             } catch (err) {
-                showToast('Ошибка импорта файла');
+                console.error(err);
+                showToast('Ошибка сохранения: ' + err.message);
             }
         };
-        reader.readAsText(file);
-        input.value = '';
-    }
+        
+        window.deleteProject = async () => {
+            if(!editingId || !confirm('Удалить проект ИЗ БАЗЫ?')) return;
+            try {
+                await deleteDoc(doc(db, "projects", editingId));
+                // Локально удаляем для быстрого отображения
+                projects = projects.filter(p => p.id !== editingId);
+                applyFilters();
+                window.closeAddModal();
+                showToast('Удалено из облака');
+            } catch (err) {
+                showToast('Ошибка удаления');
+            }
+        };
 
-    // Загрузка локальных избранных при старте
-    const savedLocalFav = localStorage.getItem('local_favorites');
-    if (savedLocalFav) {
-        localFavorites = JSON.parse(savedLocalFav);
-    }
-    
-    // Инициализация
-    renderCategoryOptions();
-</script>
+        // Загрузить текущий локальный JSON в базу (Миграция)
+        window.migrateToFirestore = async () => {
+            if(!confirm('Внимание! Это перезапишет данные в базе текущими данными с экрана. Продолжить?')) return;
+            let count = 0;
+            for(const p of projects) {
+                await setDoc(doc(db, "projects", p.id), p, { merge: true });
+                count++;
+            }
+            showToast(`Загружено ${count} проектов в базу`);
+        };
+
+        // --- UTILS ---
+        function normalizeCategories(project) {
+            if (!project.categories) { project.categories = project.category ? [project.category] : ['Other']; }
+            return project;
+        }
+        function hasCategory(project, category) { return project.categories && project.categories.includes(category); }
+        function getAllCategoriesFromProjects() {
+            const cats = new Set();
+            projects.forEach(p => { if (p.categories) p.categories.forEach(c => cats.add(c)); });
+            return Array.from(cats).sort();
+        }
+        function renderCategoryOptions() {
+            const allCats = new Set([...categories, ...getAllCategoriesFromProjects()]);
+            categories = Array.from(allCats).sort();
+            const container = document.getElementById('categoryCheckboxes');
+            const selectedCats = editingId ? (projects.find(p => p.id === editingId)?.categories || []) : [];
+            container.innerHTML = categories.map(cat => `
+                <label class="flex items-center gap-2 px-3 py-2 bg-slate-800 border border-slate-700 rounded-lg cursor-pointer">
+                    <input type="checkbox" value="${cat}" class="category-checkbox rounded bg-slate-700" ${selectedCats.includes(cat) ? 'checked' : ''}>
+                    <span class="text-sm text-slate-300">${cat}</span>
+                </label>
+            `).join('');
+            tempCustomCategories = [];
+            renderTempCategories();
+        }
+
+        window.addCustomCategory = () => {
+            const val = document.getElementById('newCategoryInput').value.trim();
+            if (!val) return;
+            val.split(',').map(c=>c.trim()).forEach(cat => {
+                if(cat && !tempCustomCategories.includes(cat) && !categories.includes(cat)) tempCustomCategories.push(cat);
+            });
+            renderTempCategories();
+            document.getElementById('newCategoryInput').value = '';
+        };
+
+        function renderTempCategories() {
+            document.getElementById('customCategories').innerHTML = tempCustomCategories.map((c, i) => 
+                `<span class="px-2 py-1 bg-blue-600/20 text-blue-300 text-xs rounded">${c} <i onclick="removeTempCat(${i})" class="fas fa-times cursor-pointer ml-1"></i></span>`
+            ).join('');
+        }
+        
+        window.removeTempCat = (i) => { tempCustomCategories.splice(i, 1); renderTempCategories(); };
+        window.handleCategoryInput = (e) => { if(e.key === 'Enter') window.addCustomCategory(); };
+        function getSelectedCategories() {
+            const selected = Array.from(document.querySelectorAll('.category-checkbox:checked')).map(cb => cb.value);
+            return [...new Set([...selected, ...tempCustomCategories])].length > 0 ? [...new Set([...selected, ...tempCustomCategories])] : ['Other'];
+        }
+        function setSelectedCategories(cats) {
+            tempCustomCategories = [];
+            renderTempCategories();
+            document.querySelectorAll('.category-checkbox').forEach(cb => cb.checked = cats.includes(cb.value));
+            cats.forEach(cat => { if(!categories.includes(cat)) tempCustomCategories.push(cat); });
+            renderTempCategories();
+        }
+        function renderCategories(filtered) {
+            const container = document.getElementById('categoryFilters');
+            const cats = getAllCategoriesFromProjects();
+            if (cats.length === 0) { container.innerHTML = '<p class="text-xs text-slate-600">Нет категорий</p>'; return; }
+            container.innerHTML = cats.map(cat => {
+                const count = projects.filter(p => hasCategory(p, cat)).length;
+                const active = currentFilters.category === cat;
+                return `<button onclick="toggleCategory('${cat}')" class="w-full text-left px-4 py-2 rounded-lg text-sm transition-all flex justify-between items-center border-l-2 ${active ? 'bg-blue-600/20 border-blue-500 text-blue-400' : 'border-transparent text-slate-400 hover:bg-slate-800'}"><span>${cat}</span><span class="text-xs ${active?'bg-blue-900/50 text-blue-400':'bg-slate-800'} px-2 py-0.5 rounded">${count}</span></button>`;
+            }).join('');
+        }
+        function updateSidebarActive() {
+            document.querySelectorAll('.sidebar-link').forEach(btn => {
+                btn.classList.remove('active');
+                if (btn.dataset.filter === currentFilters.status) btn.classList.add('active');
+            });
+        }
+        function updateCounts(filtered) {
+            document.getElementById('countAll').textContent = projects.length;
+            document.getElementById('countToday').textContent = projects.filter(p => isToday(p.createdAt)).length;
+            document.getElementById('countActive').textContent = projects.filter(p => p.status === 'active').length;
+            document.getElementById('countDaily').textContent = projects.filter(p => p.hasDaily && p.status === 'active').length;
+            document.getElementById('countFavoritesSidebar').textContent = userFavorites.length;
+            document.getElementById('countEnded').textContent = projects.filter(p => p.status === 'ended').length;
+        }
+        function updateStats() {
+            document.getElementById('statActive').textContent = projects.filter(p => p.status === 'active').length;
+            document.getElementById('statToday').textContent = projects.filter(p => isToday(p.createdAt)).length;
+            document.getElementById('statFavorites').textContent = userFavorites.length;
+        }
+        function isToday(dateString) { if (!dateString) return false; return new Date(dateString).toDateString() === new Date().toDateString(); }
+        function formatDate(str) { if (!str) return '—'; return new Date(str).toLocaleDateString('ru-RU'); }
+        window.showToast = (msg) => {
+            const t = document.getElementById('toast');
+            document.getElementById('toastMessage').textContent = msg;
+            t.classList.remove('translate-y-20', 'opacity-0');
+            setTimeout(() => t.classList.add('translate-y-20', 'opacity-0'), 3000);
+        };
+    </script>
 </body>
 </html>
