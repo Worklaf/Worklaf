@@ -1572,20 +1572,21 @@
     function saveFavorites() {
     localStorage.setItem(FAVORITES_KEY, JSON.stringify(favoritesState));
     localStorage.setItem(FAVORITES_ORDER_KEY, JSON.stringify(favoritesOrder));
-    
+
     // Синхронизация с облаком если пользователь вошёл
     if (currentUser) {
         try {
             const docRef = doc(db, "users", currentUser.uid);
+
+            // Сохраняем всё содержимое документа с перезаписью favoritesState и favoritesOrder
             setDoc(docRef, { 
-                favoritesState: favoritesState,
-                favoritesOrder: favoritesOrder
-            }, { merge: true });
+                favoritesState: Object.keys(favoritesState).length ? favoritesState : {},
+                favoritesOrder: favoritesOrder.length ? favoritesOrder : []
+            }, { merge: false }); // <-- без merge, чтобы удалить старые ключи
         } catch (e) {
             console.error("Ошибка сохранения избранного в облако", e);
         }
     }
-    // renderFavoritesList() убран - он и так вызывается в toggleFavorite
 }
 
     function getBaseClasses(link) {
