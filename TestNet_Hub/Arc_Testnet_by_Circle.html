@@ -1370,51 +1370,85 @@
 
     // --- Функции работы с данными (Синхронизация) ---
     async function loadData() {
-        if (currentUser) {
-            // Загрузка из Firestore
-            try {
-                const docRef = doc(db, "users", currentUser.uid);
-                const docSnap = await getDoc(docRef);
-                if (docSnap.exists() && docSnap.data().arcGuideStats) {
-                    arcData = docSnap.data().arcGuideStats;
-                } else {
-                    // Если в облаке пусто, загружаем локально и сохраняем в облако для бэкапа
-                    const localData = JSON.parse(localStorage.getItem(STORAGE_KEY)) || {};
-                    if (Object.keys(localData).length > 0) {
-                        await updateDoc(docRef, { arcGuideStats: localData });
-                        arcData = localData;
-                    } else {
-                        arcData = {};
-                    }
+    if (currentUser) {
+        // Загрузка из Firestore
+        try {
+            const docRef = doc(db, "users", currentUser.uid);
+            const docSnap = await getDoc(docRef);
+            
+            if (docSnap.exists()) {
+                const cloudData = docSnap.data();
+                // Загружаем статистику
+                if (cloudData.arcGuideStats) {
+                    arcData = cloudData.arcGuideStats;
                 }
-            } catch (e) {
-                console.error("Ошибка загрузки из облака", e);
-                arcData = JSON.parse(localStorage.getItem(STORAGE_KEY)) || {};
+                // Загружаем избранное
+                if (cloudData.favoritesState) {
+                    favoritesState = cloudData.favoritesState;
+                    saveFavorites(); // Сохраняем локально как бэкап
+                }
+                // Загружаем порядок избранного
+                if (cloudData.favoritesOrder) {
+                    favoritesOrder = cloudData.favoritesOrder;
+                    localStorage.setItem(FAVORITES_ORDER_KEY, JSON.stringify(favoritesOrder));
+                }
+            } else {
+                // Если в облаке пусто, загружаем локально и синхронизируем
+                const localStats = JSON.parse(localStorage.getItem(STORAGE_KEY)) || {};
+                const localFavs = loadFavorites();
+                const localOrder = loadFavoritesOrder();
+                
+                if (Object.keys(localStats).length > 0 || Object.keys(localFavs).length > 0) {
+                    await setDoc(docRef, {
+                        arcGuideStats: localStats,
+                        favoritesState: localFavs,
+                        favoritesOrder: localOrder
+                    });
+                    arcData = localStats;
+                    favoritesState = localFavs;
+                    favoritesOrder = localOrder;
+                } else {
+                    arcData = {};
+                }
             }
-        } else {
-            // Загрузка из LocalStorage
+        } catch (e) {
+            console.error("Ошибка загрузки из облака", e);
+            // При ошибке грузим локально
             arcData = JSON.parse(localStorage.getItem(STORAGE_KEY)) || {};
+            favoritesState = loadFavorites();
+            favoritesOrder = loadFavoritesOrder();
         }
-        updateUI();
+    } else {
+        // Загрузка из LocalStorage
+        arcData = JSON.parse(localStorage.getItem(STORAGE_KEY)) || {};
+        favoritesState = loadFavorites();
+        favoritesOrder = loadFavoritesOrder();
     }
+    
+    // Обновляем UI
+    attachFavoriteControls();
+    updateUI();
+}
 
     async function saveData(data) {
-        arcData = data; // Обновить кэш
-        
-        if (currentUser) {
-            // Сохранение в облако (Firestore)
-            try {
-                const docRef = doc(db, "users", currentUser.uid);
-                // Используем setDoc с merge: true для обновления только нужных полей
-                await setDoc(docRef, { arcGuideStats: data }, { merge: true });
-            } catch (e) {
-                console.error("Ошибка сохранения в облако", e);
-            }
-        } else {
-            // Сохранение локально
-            localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+    arcData = data; 
+    
+    if (currentUser) {
+        try {
+            const docRef = doc(db, "users", currentUser.uid);
+            // Обновляем статистику И избранное одной транзакцией
+            await setDoc(docRef, { 
+                arcGuideStats: data,
+                favoritesState: favoritesState,
+                favoritesOrder: favoritesOrder
+            }, { merge: true });
+        } catch (e) {
+            console.error("Ошибка сохранения в облако", e);
         }
+    } else {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
     }
+}
 
     // --- Авторизация ---
     window.loginGoogle = async () => {
@@ -1532,9 +1566,22 @@
     let favoritesOrder = loadFavoritesOrder();
 
     function saveFavorites() {
-        localStorage.setItem(FAVORITES_KEY, JSON.stringify(favoritesState));
-        localStorage.setItem(FAVORITES_ORDER_KEY, JSON.stringify(favoritesOrder));
+    localStorage.setItem(FAVORITES_KEY, JSON.stringify(favoritesState));
+    localStorage.setItem(FAVORITES_ORDER_KEY, JSON.stringify(favoritesOrder));
+    
+    // Синхронизация с облаком если пользователь вошёл
+    if (currentUser) {
+        try {
+            const docRef = doc(db, "users", currentUser.uid);
+            setDoc(docRef, { 
+                favoritesState: favoritesState,
+                favoritesOrder: favoritesOrder
+            }, { merge: true });
+        } catch (e) {
+            console.error("Ошибка сохранения избранного в облако", e);
+        }
     }
+}
 
     function getBaseClasses(link) {
         if (!link) return ['link-inline'];
