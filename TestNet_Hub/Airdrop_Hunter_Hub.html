@@ -174,20 +174,6 @@
             object-fit: cover;
             border: 2px solid var(--accent);
         }
-
-        /* Стиль для даты последнего клика */
-        .last-click-date {
-            font-size: 0.7rem;
-            padding: 2px 8px;
-            border-radius: 12px;
-            background: rgba(16, 185, 129, 0.2);
-            color: #34d399;
-            white-space: nowrap;
-        }
-        .last-click-date.older {
-            background: rgba(148, 163, 184, 0.2);
-            color: #94a3b8;
-        }
         
         ::-webkit-scrollbar { width: 8px; }
         ::-webkit-scrollbar-track { background: var(--bg-primary); }
@@ -442,16 +428,13 @@
                     <div class="bg-slate-800/30 p-3 rounded-lg"><span class="text-slate-500 block text-xs mb-1">Тип активности</span><span id="detailDaily" class="text-slate-300 font-medium">Нет</span></div>
                     <div class="bg-slate-800/30 p-3 rounded-lg"><span class="text-slate-500 block text-xs mb-1">Приоритет</span><span id="detailPriority" class="text-slate-300 font-medium">Обычный</span></div>
                     <div class="bg-slate-800/30 p-3 rounded-lg"><span class="text-slate-500 block text-xs mb-1">Дата добавления</span><span id="detailCreated" class="text-slate-300 font-medium">—</span></div>
-                    <div class="bg-slate-800/30 p-3 rounded-lg"><span class="text-slate-500 block text-xs mb-1">Последнее обновление</span><span id="detailUpdated" class="text-slate-300 font-medium">—</span></div>
-                    <div class="bg-slate-800/30 p-3 rounded-lg col-span-2">
-                        <span class="text-slate-500 block text-xs mb-1">Последний клик по гайду</span>
-                        <span id="detailLastClick" class="text-slate-300 font-medium">—</span>
-                    </div>
+                    <!-- Добавлено поле последнего выполнения -->
+                    <div class="bg-slate-800/30 p-3 rounded-lg"><span class="text-slate-500 block text-xs mb-1">Последнее выполнение</span><span id="detailLastRun" class="text-slate-300 font-medium">—</span></div>
                 </div>
             </div>
 
             <div class="flex gap-3 pt-4 border-t border-slate-700">
-                <button onclick="openGuideFromDetail()" id="detailGuideBtn" class="flex-1 bg-blue-600 hover:bg-blue-500 py-3 rounded-lg text-sm font-medium transition-colors flex items-center justify-center gap-2"><i class="fas fa-book-open"></i> Гайд</button>
+                <button onclick="openGuideFromDetail()" id="detailGuideBtn" class="flex-1 bg-blue-600 hover:bg-blue-500 py-3 rounded-lg text-sm font-medium transition-colors flex items-center justify-center gap-2"><i class="fas fa-book-open"></i> Открыть гайд</button>
                 <button onclick="openDetailLink('ref')" class="flex-1 bg-blue-600 hover:bg-blue-500 py-3 rounded-lg text-sm font-medium transition-colors flex items-center justify-center gap-2"><i class="fas fa-globe"></i> Website</button>
                 <button onclick="openDetailLink('twitter')" class="flex-1 bg-sky-600 hover:bg-sky-500 py-3 rounded-lg text-sm font-medium transition-colors flex items-center justify-center gap-2"><i class="fab fa-twitter"></i> Twitter</button>
                 <button onclick="openDetailLink('cryptorank')" class="flex-1 bg-slate-700 hover:bg-slate-600 py-3 rounded-lg text-sm font-medium transition-colors flex items-center justify-center gap-2"><i class="fas fa-chart-line"></i> CryptoRank</button>
@@ -494,31 +477,6 @@
         let tempCustomCategories = [];
         let adminClickCount = 0;
         const ADMIN_CLICK_THRESHOLD = 5;
-
-        // Функция для форматирования даты в понятный формат
-        function formatClickDate(dateString) {
-            if (!dateString) return null;
-            
-            const date = new Date(dateString);
-            const today = new Date();
-            const yesterday = new Date(today);
-            yesterday.setDate(yesterday.getDate() - 1);
-            
-            const dateOnly = date.toDateString();
-            const todayOnly = today.toDateString();
-            const yesterdayOnly = yesterday.toDateString();
-            
-            if (dateOnly === todayOnly) {
-                return { text: 'сегодня', class: '' };
-            } else if (dateOnly === yesterdayOnly) {
-                return { text: 'вчера', class: 'older' };
-            } else {
-                // Формат ДД.ММ
-                const day = date.getDate().toString().padStart(2, '0');
-                const month = (date.getMonth() + 1).toString().padStart(2, '0');
-                return { text: `${day}.${month}`, class: 'older' };
-            }
-        }
 
         // AUTH & SYNC
         window.openLoginModal = () => document.getElementById('loginModal').classList.add('active');
@@ -587,22 +545,29 @@
             });
         }
 
+        function isDoneToday(id) {
+            if (!dailyLog[id]) return false;
+            return new Date(dailyLog[id]).toDateString() === new Date().toDateString();
+        }
+
         window.trackGuideClick = async (id, url) => {
             if(url) window.open(url, '_blank');
             else openDetail(id);
 
             if (!currentUser) return;
 
-            const userRef = doc(db, "users", currentUser.uid);
-            const updateData = {};
-            updateData[`dailyLog.${id}`] = new Date().toISOString();
-            try {
-                await updateDoc(userRef, updateData);
-                showToast('Задание засчитано! ✅');
-                dailyLog[id] = new Date().toISOString();
-                applyFilters();
-            } catch(e) {
-                await setDoc(userRef, { dailyLog: { [id]: new Date().toISOString() } }, { merge: true });
+            if (!isDoneToday(id)) {
+                const userRef = doc(db, "users", currentUser.uid);
+                const updateData = {};
+                updateData[`dailyLog.${id}`] = new Date().toISOString();
+                try {
+                    await updateDoc(userRef, updateData);
+                    showToast('Задание засчитано! ✅');
+                    dailyLog[id] = new Date().toISOString();
+                    applyFilters();
+                } catch(e) {
+                    await setDoc(userRef, { dailyLog: { [id]: new Date().toISOString() } }, { merge: true });
+                }
             }
         };
 
@@ -657,19 +622,29 @@
             grid.innerHTML = filteredProjects.map(project => {
                 const isFav = userFavorites.includes(project.id);
                 const isNew = isToday(project.createdAt);
+                const doneToday = isDoneToday(project.id);
                 
-                // Проверяем, был ли клик по гайду
-                const lastClickDate = dailyLog[project.id] ? formatClickDate(dailyLog[project.id]) : null;
-                
-                // Дата для карточки
+                // --- ЛОГИКА ДАТЫ ПОСЛЕДНЕГО ВЫПОЛНЕНИЯ ---
+                let lastRunDate = null;
+                let lastRunStr = '';
+                if (dailyLog[project.id]) {
+                    lastRunDate = new Date(dailyLog[project.id]);
+                    lastRunStr = lastRunDate.toLocaleDateString('ru-RU', {day: '2-digit', month: '2-digit'});
+                }
+
+                // Логика текста кнопки
+                // Если СДЕЛАНО СЕГОДНЯ -> Готово + Дата
+                // Если НЕ сделано сегодня -> Гайд (даже если делали вчера)
+                const buttonText = doneToday ? `Готово ${lastRunStr}` : 'Гайд';
+
                 const categoriesHtml = (project.categories || ['Other']).map(cat => 
                     `<span class="bg-slate-800 px-2 py-1 rounded cursor-pointer hover:bg-slate-700 transition-colors" onclick="event.stopPropagation(); toggleCategory('${cat}')">${cat}</span>`
                 ).join('');
                 
                 return `
-                <div class="glass-card rounded-2xl p-4 relative group ${isNew ? 'border-pink-500/30' : ''} ${lastClickDate ? 'daily-done' : ''}">
+                <div class="glass-card rounded-2xl p-4 relative group ${isNew ? 'border-pink-500/30' : ''} ${doneToday ? 'daily-done' : ''}">
                     ${isNew ? '<div class="absolute -top-2 -right-2"><span class="new-badge"><i class="fas fa-star mr-1"></i>NEW</span></div>' : ''}
-                    ${lastClickDate ? '<i class="fas fa-check-circle daily-check-icon"></i>' : ''}
+                    ${doneToday ? '<i class="fas fa-check-circle daily-check-icon"></i>' : ''}
                     <div class="flex items-start gap-4">
                         <div class="shrink-0">
                             ${project.image ? `<img src="${project.image}" alt="${project.name}" class="w-12 h-12 rounded-lg object-cover border border-slate-700">` : `<div class="w-12 h-12 rounded-lg bg-slate-800 border border-slate-700 flex items-center justify-center text-xl">${project.name.charAt(0).toUpperCase()}</div>`}
@@ -688,15 +663,15 @@
                                         <span class="status-${project.status} px-2 py-1 rounded font-medium">${project.status === 'active' ? 'Active' : project.status === 'soon' ? 'Soon' : 'Ended'}</span>
                                         ${project.hasDaily ? '<span class="text-orange-400"><i class="fas fa-fire mr-1"></i>Daily</span>' : ''}
                                         ${project.priority === 'high' ? '<span class="text-red-400"><i class="fas fa-star mr-1"></i>High</span>' : ''}
+                                        ${lastRunStr ? `<span class="text-slate-500 border border-slate-700/50 px-1.5 py-0.5 rounded" title="Дата последнего выполнения"><i class="fas fa-history mr-1"></i>${lastRunStr}</span>` : ''}
                                     </div>
                                 </div>
                                 <div class="flex items-center gap-2">
                                     <button onclick="trackGuideClick('${project.id}', '${project.guideUrl}')" 
-                                            class="guide-btn ${lastClickDate ? 'done' : ''} text-white px-4 py-2 rounded-lg text-sm font-bold flex items-center gap-2 whitespace-nowrap">
-                                        <i class="fas fa-book-open"></i>
-                                        <span>Гайд</span>
+                                            class="guide-btn ${doneToday ? 'done' : ''} text-white px-4 py-2 rounded-lg text-sm font-bold flex items-center gap-2 whitespace-nowrap">
+                                        ${doneToday ? '<i class="fas fa-check"></i>' : '<i class="fas fa-book-open"></i>'}
+                                        <span>${buttonText}</span>
                                     </button>
-                                    ${lastClickDate ? `<span class="last-click-date ${lastClickDate.class}">${lastClickDate.text}</span>` : ''}
                                     <button onclick="event.stopPropagation(); toggleFavorite('${project.id}')" class="favorite-btn ${isFav ? 'active' : 'text-slate-500'} p-2 hover:text-red-500 transition-colors w-10 h-10 flex items-center justify-center rounded-lg hover:bg-slate-800"><i class="fas fa-heart ${isFav ? 'fill-current' : ''} text-lg"></i></button>
                                 </div>
                             </div>
@@ -740,16 +715,25 @@
             img.src = project.image || '';
             img.onerror = () => { img.src = `data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" width="64" height="64"><rect width="64" height="64" fill="#333"/><text x="32" y="32" fill="white" text-anchor="middle">${project.name[0]}</text></svg>` };
             document.getElementById('detailCreated').textContent = formatDate(project.createdAt);
-            document.getElementById('detailUpdated').textContent = formatDate(project.lastUpdated);
+            document.getElementById('detailUpdated').textContent = formatDate(project.lastUpdated); // Изменено на lastUpdated
             document.getElementById('detailDaily').textContent = project.hasDaily ? 'Есть' : 'Нет';
             document.getElementById('detailPriority').textContent = project.priority === 'high' ? 'Высокий' : 'Обычный';
             
-            // Отображение даты последнего клика в модалке
-            const lastClickInfo = dailyLog[project.id] ? formatClickDate(dailyLog[project.id]) : null;
-            document.getElementById('detailLastClick').innerHTML = lastClickInfo 
-                ? `<span class="last-click-date ${lastClickInfo.class}">${lastClickInfo.text}</span>` 
-                : '—';
-            
+            // ЛОГИКА ДАТЫ В МОДАЛКЕ
+            let lastRunStr = '—';
+            let dateString = '';
+            const doneToday = isDoneToday(project.id);
+            if (dailyLog[project.id]) {
+                const date = new Date(dailyLog[project.id]);
+                dateString = date.toLocaleDateString('ru-RU', {day: '2-digit', month: '2-digit'});
+                lastRunStr = date.toLocaleDateString('ru-RU', {day: '2-digit', month: '2-digit', year: '2-digit', hour: '2-digit', minute: '2-digit'});
+            }
+            document.getElementById('detailLastRun').textContent = lastRunStr;
+
+            const gBtn = document.getElementById('detailGuideBtn');
+            gBtn.onclick = () => window.trackGuideClick(project.id, project.guideUrl);
+            gBtn.innerHTML = doneToday ? `<i class="fas fa-check"></i> Готово ${dateString}` : '<i class="fas fa-book-open"></i> Открыть гайд';
+
             document.getElementById('detailEditBtn').classList.toggle('hidden', !isAdminMode);
             document.getElementById('detailModal').classList.add('active');
         };
