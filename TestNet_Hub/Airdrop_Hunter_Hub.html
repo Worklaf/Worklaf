@@ -478,6 +478,9 @@
         const auth = getAuth(app);
         const db = getFirestore(app);
 
+        // Единый ключ для LocalStorage (как во втором файле)
+        const STORAGE_KEY = 'arc_tracker_v3';
+        
         let projects = [];
         let categories = ['DeFi', 'Gaming', 'Infra', 'L1/L2', 'NFT', 'Social', 'Other'];
         let currentFilters = { status: 'all', category: null };
@@ -486,7 +489,8 @@
         let isAdminMode = false;
         let currentUser = null;
         let userFavorites = [];
-        let dailyLog = {};
+        // Единая структура данных для прогресса
+        let arcData = JSON.parse(localStorage.getItem(STORAGE_KEY)) || {};
         let tempCustomCategories = [];
         let adminClickCount = 0;
         const ADMIN_CLICK_THRESHOLD = 5;
@@ -516,11 +520,11 @@
             }
         }
 
-        // Проверка, был ли клик сегодня
+        // Проверка, был ли клик сегодня (использует arcData)
         function isClickedToday(projectId) {
-            const lastClick = dailyLog[projectId];
-            if (!lastClick) return false;
-            return isToday(lastClick);
+            const record = arcData[projectId];
+            if (!record || !record.lastClick) return false;
+            return isToday(record.lastClick);
         }
 
         // AUTH & SYNC
@@ -544,10 +548,12 @@
             } else {
                 currentUser = null;
                 userFavorites = [];
-                dailyLog = {};
+                arcData = {}; // Очищаем при выходе или используем локальные данные
                 document.getElementById('loggedOutView').classList.remove('hidden');
                 document.getElementById('loggedInView').classList.add('hidden');
                 document.getElementById('guestWarning').classList.remove('hidden');
+                // Загружаем локальные данные если не авторизован
+                arcData = JSON.parse(localStorage.getItem(STORAGE_KEY)) || {};
                 applyFilters();
             }
         });
@@ -558,10 +564,15 @@
                 if (docSnap.exists()) {
                     const data = docSnap.data();
                     userFavorites = data.favorites || [];
-                    dailyLog = data.dailyLog || {};
+                    
+                    // Загружаем единую статистику (arcGuideStats) из облака
+                    if (data.arcGuideStats) {
+                        arcData = data.arcGuideStats;
+                        localStorage.setItem(STORAGE_KEY, JSON.stringify(arcData));
+                    }
                     applyFilters();
                 } else {
-                    setDoc(userRef, { favorites: [], dailyLog: {} }, { merge: true });
+                    setDoc(userRef, { favorites: [], arcGuideStats: {} }, { merge: true });
                 }
             });
         }
@@ -590,23 +601,34 @@
             });
         }
 
+        // ОБНОВЛЕННАЯ ФУНКЦИЯ ОТСЛЕЖИВАНИЯ
         window.trackGuideClick = async (id, url) => {
             if(url) window.open(url, '_blank');
             else openDetail(id);
 
-            if (!currentUser) return;
-
-            const userRef = doc(db, "users", currentUser.uid);
-            const updateData = {};
-            updateData[`dailyLog.${id}`] = new Date().toISOString();
-            try {
-                await updateDoc(userRef, updateData);
-                showToast('Задание засчитано! ✅');
-                dailyLog[id] = new Date().toISOString();
-                applyFilters();
-            } catch(e) {
-                await setDoc(userRef, { dailyLog: { [id]: new Date().toISOString() } }, { merge: true });
+            const now = new Date().toISOString();
+            
+            // Обновляем локальные данные
+            if (!arcData[id]) arcData[id] = {};
+            arcData[id].totalClicks = (arcData[id].totalClicks || 0) + 1;
+            arcData[id].lastClick = now;
+            
+            localStorage.setItem(STORAGE_KEY, JSON.stringify(arcData));
+            showToast('Задание засчитано! ✅');
+            
+            // Синхронизация с облаком
+            if (currentUser) {
+                try {
+                    const userRef = doc(db, "users", currentUser.uid);
+                    // Сохраняем в единое поле для обоих файлов
+                    await setDoc(userRef, { 
+                        favorites: userFavorites,
+                        arcGuideStats: arcData 
+                    }, { merge: true });
+                } catch(e) { console.error('Sync error', e); }
             }
+            
+            applyFilters();
         };
 
         window.toggleFavorite = async function(id) {
@@ -661,11 +683,12 @@
                 const isFav = userFavorites.includes(project.id);
                 const isNew = isToday(project.createdAt);
                 
-                // Проверяем, был ли клик по гайду сегодня (для подсветки)
+                // Проверяем, был ли клик по гайду сегодня (использует arcData)
                 const clickedToday = isClickedToday(project.id);
                 
                 // Дата последнего клика (для отображения)
-                const lastClickDate = dailyLog[project.id] ? formatClickDate(dailyLog[project.id]) : null;
+                const lastClickRecord = arcData[project.id];
+                const lastClickDate = lastClickRecord?.lastClick ? formatClickDate(lastClickRecord.lastClick) : null;
                 
                 const categoriesHtml = (project.categories || ['Other']).map(cat => 
                     `<span class="bg-slate-800 px-2 py-1 rounded cursor-pointer hover:bg-slate-700 transition-colors" onclick="event.stopPropagation(); toggleCategory('${cat}')">${cat}</span>`
@@ -749,8 +772,9 @@
             document.getElementById('detailDaily').textContent = project.hasDaily ? 'Есть' : 'Нет';
             document.getElementById('detailPriority').textContent = project.priority === 'high' ? 'Высокий' : 'Обычный';
             
-            // Отображение даты последнего клика в модалке
-            const lastClickInfo = dailyLog[project.id] ? formatClickDate(dailyLog[project.id]) : null;
+            // Отображение даты последнего клика в модалке (использует arcData)
+            const lastClickRecord = arcData[project.id];
+            const lastClickInfo = lastClickRecord?.lastClick ? formatClickDate(lastClickRecord.lastClick) : null;
             document.getElementById('detailLastClick').innerHTML = lastClickInfo 
                 ? `<span class="last-click-date ${lastClickInfo.class}">${lastClickInfo.text}</span>` 
                 : '—';
@@ -875,7 +899,6 @@
         function normalizeCategories(project) { if (!project.categories) { project.categories = project.category ? [project.category] : ['Other']; } return project; }
         function hasCategory(project, category) { return project.categories && project.categories.includes(category); }
         
-        // Получение категорий с подсчётом для отфильтрованных проектов
         function getCategoriesWithCounts(filteredProjects) {
             const catCounts = {};
             filteredProjects.forEach(p => {
