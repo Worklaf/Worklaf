@@ -857,57 +857,76 @@
 
     // === ЗАГРУЗКА ДАННЫХ ===
     
-    async function loadData() {
+    async function loadAllData() {
+    // Считываем localStorage сырьём, чтобы понять "ключ есть/нет"
+    const localStatsRaw = localStorage.getItem(STORAGE_KEY);
+    const localFavRaw = localStorage.getItem(FAVORITES_KEY);
+    const localOrderRaw = localStorage.getItem(FAVORITES_ORDER_KEY);
+
+    const localStats = JSON.parse(localStatsRaw || '{}');
+    const localFavorites = JSON.parse(localFavRaw || '{}');
+    const localOrder = JSON.parse(localOrderRaw || '[]');
+
+    // Флаги "локальный источник уже существует"
+    const hasLocalFavKey = localFavRaw !== null;
+    const hasLocalOrderKey = localOrderRaw !== null;
+
+    // Сразу применяем локальные данные
+    arcData = localStats;
+    favoritesState = localFavorites;
+    favoritesOrder = localOrder;
+
     if (currentUser) {
         try {
             const docRef = doc(db, "users", currentUser.uid);
             const docSnap = await getDoc(docRef);
-            
+
             if (docSnap.exists()) {
                 const cloudData = docSnap.data();
-                
-                // 👆 ИЗМЕНЕНИЕ: Всегда обновляем избранное из облака
-                // (если оно там есть и не пустое)
-                if (cloudData.favoritesState && Object.keys(cloudData.favoritesState).length > 0) {
-                    favoritesState = cloudData.favoritesState;
+                const cloudFav = (cloudData.favoritesState && Object.keys(cloudData.favoritesState).length > 0)
+                    ? cloudData.favoritesState
+                    : null;
+                const cloudOrder = (Array.isArray(cloudData.favoritesOrder) && cloudData.favoritesOrder.length > 0)
+                    ? cloudData.favoritesOrder
+                    : null;
+
+                // --- ИЗБРАННОЕ: ЛОКАЛЬНОЕ ИМЕЕТ ПРИОРИТЕТ, ЕСЛИ КЛЮЧ УЖЕ ЕСТЬ ---
+                if (!hasLocalFavKey && cloudFav) {
+                    // Первый запуск на новом устройстве: берём из облака
+                    favoritesState = cloudFav;
                     localStorage.setItem(FAVORITES_KEY, JSON.stringify(favoritesState));
+                } else if (hasLocalFavKey) {
+                    // Локальные данные считаем истиной (даже если они пустые)
+                    // и синхронизируем в облако
+                    const sameFav = JSON.stringify(cloudFav || {}) === JSON.stringify(localFavorites);
+                    if (!sameFav) {
+                        await saveToCloud({ favoritesState: localFavorites });
+                    }
                 }
-                
-                if (cloudData.favoritesOrder && Array.isArray(cloudData.favoritesOrder) && cloudData.favoritesOrder.length > 0) {
-                    favoritesOrder = cloudData.favoritesOrder;
+
+                if (!hasLocalOrderKey && cloudOrder) {
+                    favoritesOrder = cloudOrder;
                     localStorage.setItem(FAVORITES_ORDER_KEY, JSON.stringify(favoritesOrder));
+                } else if (hasLocalOrderKey) {
+                    const sameOrder = JSON.stringify(cloudOrder || []) === JSON.stringify(localOrder);
+                    if (!sameOrder) {
+                        await saveToCloud({ favoritesOrder: localOrder });
+                    }
                 }
-                
-                // Статистику можно оставить с приоритетом облака
+
+                // Статистика (оставляем ваш прежний приоритет облака)
                 if (cloudData.arcGuideStats && Object.keys(cloudData.arcGuideStats).length > 0) {
                     arcData = cloudData.arcGuideStats;
                     localStorage.setItem(STORAGE_KEY, JSON.stringify(arcData));
                 }
             }
         } catch (e) {
-            console.error("Ошибка загрузки из облака", e);
-            // При ошибке грузим локально как fallback
-            arcData = JSON.parse(localStorage.getItem(STORAGE_KEY)) || {};
-            favoritesState = loadFavorites();
-            favoritesOrder = loadFavoritesOrder();
+            console.error("Ошибка загрузки из облака:", e);
         }
-    } else {
-        // Без авторизации - только локально
-        arcData = JSON.parse(localStorage.getItem(STORAGE_KEY)) || {};
-        favoritesState = loadFavorites();
-        favoritesOrder = loadFavoritesOrder();
     }
-    
-    attachFavoriteControls();
-    updateUI();
+
+    refreshAllVisuals();
 }
-    window.logout = () => {
-    // Очищаем локальный кэш перед выходом
-    localStorage.removeItem(STORAGE_KEY);
-    localStorage.removeItem(FAVORITES_KEY);
-    localStorage.removeItem(FAVORITES_ORDER_KEY);
-    signOut(auth);
-};
 
     // === СОХРАНЕНИЕ ДАННЫХ ===
     
