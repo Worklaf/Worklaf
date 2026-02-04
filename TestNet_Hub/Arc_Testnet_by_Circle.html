@@ -1863,52 +1863,53 @@
         });
     }
 
-    function handleClick(e) {
-        const btn = e.currentTarget;
-        const id = btn.getAttribute('data-id');
-        if (!id) return;
-        
-        if (newLinksSet.has(id)) clearNewLink(id);
+    // ---------- ЗАМЕНИТЬ в вашем <script type="module"> ----------
+// 1. Ограничение 1 клик / день
+function handleClick(e) {
+    const btn = e.currentTarget;
+    const id = btn.dataset.id;
+    if (!id) return;
+    if (newLinksSet.has(id)) clearNewLink(id);
 
-        // Работаем с глобальным arcData
-        const now = new Date().toISOString();
+    const now = new Date().toISOString();
+    if (!arcData[id]) arcData[id] = {};
 
-        if (!arcData[id]) arcData[id] = {};
+    // если сегодня уже кликали – ничего не делаем
+    if (arcData[id].lastClick && isToday(arcData[id].lastClick)) ​​{
+        updateUI(); // просто обновим визуал
+        return;
+    }
 
-        if (btn.classList.contains('track-daily')) {
-            arcData[id].totalClicks = (arcData[id].totalClicks || 0) + 1;
+    // первый клик за сегодня
+    if (btn.classList.contains('track-daily')) {
+        arcData[id].totalClicks = 1; // всегда 1
+        arcData[id].lastClick = now;
+    } else if (btn.classList.contains('track-once')) {
+        arcData[id].visited = true;
+        if (btn.classList.contains('track-once-info')) {
+            arcData[id].totalClicks = 1;
             arcData[id].lastClick = now;
-        } else if (btn.classList.contains('track-once')) {
-            arcData[id].visited = true;
-            if (btn.classList.contains('track-once-info')) {
-                arcData[id].totalClicks = (arcData[id].totalClicks || 0) + 1;
-                arcData[id].lastClick = now;
-            }
         }
-        
-        // Сохраняем (через облако или локально)
-        saveData(arcData);
-        
-        // Визуальное обновление
-        setTimeout(() => {
-            updateUI(); 
-            // Обновляем бейдж для только что нажатой кнопки, т.к. updateUI может не сработать мгновенно для текущего таргета
-            if (btn.classList.contains('track-daily')) {
-                updateBadge(btn, arcData[id].totalClicks, arcData[id].lastClick);
-            } else if (btn.classList.contains('track-once-info')) {
-                updateBadge(btn, arcData[id].totalClicks, arcData[id].lastClick);
-            }
-        }, 50);
     }
 
-    function resetAll() {
-        if (confirm('Сбросить всю статистику?')) {
-            arcData = {};
-            saveData({});
-            document.querySelectorAll('.click-info').forEach(el => el.remove());
-            updateUI();
-        }
-    }
+    saveData(arcData);
+    setTimeout(() => {
+        updateUI();
+        if (btn.classList.contains('track-daily')) updateBadge(btn, 1, now);
+        else if (btn.classList.contains('track-once-info')) updateBadge(btn, 1, now);
+    }, 50);
+}
+
+// 2. Рабочий сброс
+function resetAll() {
+    if (!confirm('будет удалено всё. Продолжить?')) return;
+    arcData = {}; // полностью очищаем
+    saveData({}); // пишем пустоту
+    document.querySelectorAll('.click-info').forEach(el => el.remove());
+    updateUI();
+}
+// ---------- КОНЕЦ ЗАМЕНЫ ----------
+
 
     function getBadgeHiddenState() { return localStorage.getItem(BADGE_VISIBILITY_KEY) === 'true'; }
     function setBadgeHiddenState(hidden) { localStorage.setItem(BADGE_VISIBILITY_KEY, hidden ? 'true' : 'false'); }
