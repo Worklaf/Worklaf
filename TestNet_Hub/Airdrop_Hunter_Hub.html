@@ -44,32 +44,16 @@
             box-shadow: 0 10px 30px -10px rgba(0, 0, 0, 0.5);
         }
 
-        /* --- НОВЫЕ СТИЛИ ДЛЯ "ЗАВЕРШЕННЫХ" --- */
-        .glass-card.user-completed {
-            opacity: 0.65;
-            border-color: rgba(16, 185, 129, 0.4);
-            background: rgba(16, 185, 129, 0.08);
-        }
-        
-        .glass-card.user-completed:hover {
-            opacity: 0.9;
-            transform: translateY(-2px);
-        }
-
-        .user-completed-icon {
-            position: absolute;
-            top: 10px;
-            right: 10px;
-            color: var(--success);
-            font-size: 1.2rem;
-            filter: drop-shadow(0 0 5px rgba(16, 185, 129, 0.5));
-            z-index: 10;
-        }
-
         /* Стиль для выполненного Daily сегодня */
         .glass-card.daily-done-today {
             border-color: rgba(16, 185, 129, 0.5);
             background: rgba(16, 185, 129, 0.1);
+        }
+        
+        <!-- ИЗМЕНЕНО: Добавлен стиль для карточки завершенной пользователем задачи -->
+        .glass-card.user-completed {
+            opacity: 0.8;
+            border-color: rgba(16, 185, 129, 0.4);
         }
 
         .daily-check-icon {
@@ -153,11 +137,12 @@
         .favorite-btn { transition: all 0.2s; }
         .favorite-btn.active { color: #ef4444; transform: scale(1.1); }
         .favorite-btn:hover { transform: scale(1.1); }
-
-        /* Стиль для кнопки завершения */
-        .complete-btn { transition: all 0.2s; }
-        .complete-btn:hover { transform: scale(1.1); }
         
+        <!-- ИЗМЕНЕНО: Добавлен стиль для кнопки завершения -->
+        .complete-btn { transition: all 0.2s; }
+        .complete-btn.active { color: #10b981; transform: scale(1.1); }
+        .complete-btn:hover { transform: scale(1.1); }
+
         .edit-btn { opacity: 0; transition: all 0.2s; }
         .glass-card:hover .edit-btn { opacity: 1; }
 
@@ -245,9 +230,10 @@
                         <div class="text-2xl font-bold text-red-400" id="statFavorites">0</div>
                         <div class="text-slate-400 text-xs">Избранное</div>
                     </div>
+                    <!-- ИЗМЕНЕНО: Добавлен новый счетчик в заголовок -->
                     <div class="text-center hover:opacity-80 transition-opacity cursor-pointer" onclick="filterProjects('completed')">
-                        <div class="text-2xl font-bold text-emerald-400" id="statCompleted">0</div>
-                        <div class="text-slate-400 text-xs">Готово</div>
+                        <div class="text-2xl font-bold text-green-400" id="statCompleted">0</div>
+                        <div class="text-slate-400 text-xs">Завершено</div>
                     </div>
                 </div>
 
@@ -309,13 +295,13 @@
                         <span><i class="fas fa-heart mr-2 w-5 text-red-400"></i>Избранное</span>
                         <span class="bg-red-900/50 text-red-400 px-2 py-0.5 rounded text-xs" id="countFavoritesSidebar">0</span>
                     </button>
-                    <!-- НОВЫЙ ФИЛЬТР "ЗАВЕРШЕННЫЕ" -->
+                    <!-- ИЗМЕНЕНО: Добавлен новый фильтр в боковую панель -->
                     <button onclick="filterProjects('completed')" class="sidebar-link w-full text-left px-4 py-2 rounded-lg text-sm text-slate-300 flex justify-between items-center" data-filter="completed">
-                        <span><i class="fas fa-check-double mr-2 w-5 text-emerald-400"></i>Завершённые</span>
-                        <span class="bg-emerald-900/50 text-emerald-400 px-2 py-0.5 rounded text-xs" id="countCompletedSidebar">0</span>
+                        <span><i class="fas fa-check-circle mr-2 w-5 text-green-400"></i>Завершено</span>
+                        <span class="bg-green-900/50 text-green-400 px-2 py-0.5 rounded text-xs" id="countCompletedSidebar">0</span>
                     </button>
                     <button onclick="filterProjects('ended')" class="sidebar-link w-full text-left px-4 py-2 rounded-lg text-sm text-slate-300 flex justify-between items-center" data-filter="ended">
-                        <span><i class="fas fa-check-circle mr-2 w-5 text-slate-500"></i>Архив</span>
+                        <span><i class="fas fa-times-circle mr-2 w-5 text-slate-500"></i>Закрытые</span>
                         <span class="bg-slate-700 px-2 py-0.5 rounded text-xs" id="countEnded">0</span>
                     </button>
                 </div>
@@ -424,7 +410,7 @@
                             <select id="projStatus" class="w-full bg-slate-800 border border-slate-700 rounded-lg px-4 py-2 text-sm focus:border-blue-500 outline-none">
                                 <option value="active">🟢 Active</option>
                                 <option value="soon">🟡 Soon</option>
-                                <option value="ended">🔴 Ended</option>
+                                <option value="ended">🔴 Closed</option>
                             </select>
                         </div>
                         <div><label class="block text-sm font-medium text-slate-300 mb-2">Дата обновления</label><input type="date" id="projLastUpdated" class="w-full bg-slate-800 border border-slate-700 rounded-lg px-4 py-2 text-sm focus:border-blue-500 outline-none"></div>
@@ -515,7 +501,6 @@
 
         // Единый ключ для LocalStorage (как во втором файле)
         const STORAGE_KEY = 'arc_tracker_v3';
-        const COMPLETED_KEY = 'arc_completed_v1'; // Новый ключ для статуса завершения
         
         let projects = [];
         let categories = ['DeFi', 'Gaming', 'Infra', 'L1/L2', 'NFT', 'Social', 'Other'];
@@ -525,7 +510,8 @@
         let isAdminMode = false;
         let currentUser = null;
         let userFavorites = [];
-        let userCompleted = []; // Новый массив для статуса завершения
+        // НОВОЕ: Массив для хранения завершенных проектов
+        let userCompleted = []; 
         // Единая структура данных для прогресса
         let arcData = JSON.parse(localStorage.getItem(STORAGE_KEY)) || {};
         let tempCustomCategories = [];
@@ -585,14 +571,14 @@
             } else {
                 currentUser = null;
                 userFavorites = [];
-                userCompleted = []; // Сброс статуса завершения при выходе (если хотите)
-                arcData = {}; 
+                // НОВОЕ: Очищаем завершенные задачи при выходе
+                userCompleted = [];
+                arcData = {}; // Очищаем при выходе или используем локальные данные
                 document.getElementById('loggedOutView').classList.remove('hidden');
                 document.getElementById('loggedInView').classList.add('hidden');
                 document.getElementById('guestWarning').classList.remove('hidden');
                 // Загружаем локальные данные если не авторизован
                 arcData = JSON.parse(localStorage.getItem(STORAGE_KEY)) || {};
-                userCompleted = JSON.parse(localStorage.getItem(COMPLETED_KEY)) || [];
                 applyFilters();
             }
         });
@@ -603,14 +589,9 @@
                 if (docSnap.exists()) {
                     const data = docSnap.data();
                     userFavorites = data.favorites || [];
+                    // НОВОЕ: Загружаем завершенные задачи из Firestore
+                    userCompleted = data.completed || [];
                     
-                    // --- НОВОЕ: Загрузка статуса завершения из облака ---
-                    if (data.completed && Array.isArray(data.completed)) {
-                        userCompleted = data.completed;
-                        localStorage.setItem(COMPLETED_KEY, JSON.stringify(userCompleted));
-                    }
-                    // --------------------------------------------------
-
                     // Загружаем единую статистику (arcGuideStats) из облака
                     if (data.arcGuideStats) {
                         arcData = data.arcGuideStats;
@@ -618,40 +599,11 @@
                     }
                     applyFilters();
                 } else {
+                    // НОВОЕ: Создаем поле 'completed' при первом входе
                     setDoc(userRef, { favorites: [], completed: [], arcGuideStats: {} }, { merge: true });
                 }
             });
         }
-
-        // --- НОВАЯ ФУНКЦИЯ: Переключение статуса завершения ---
-        window.toggleComplete = async function(id) {
-            const idx = userCompleted.indexOf(id);
-            let newCompleted = [...userCompleted];
-            
-            if (idx > -1) {
-                newCompleted.splice(idx, 1);
-                showToast('Задание помечено как незавершённое');
-            } else {
-                newCompleted.push(id);
-                showToast('Задание завершено! ✅');
-            }
-            
-            userCompleted = newCompleted;
-            localStorage.setItem(COMPLETED_KEY, JSON.stringify(userCompleted));
-            applyFilters(); // Перерисовка интерфейса
-            
-            if (currentUser) {
-                try {
-                    const userRef = doc(db, "users", currentUser.uid);
-                    await setDoc(userRef, { 
-                        favorites: userFavorites,
-                        completed: userCompleted,
-                        arcGuideStats: arcData 
-                    }, { merge: true });
-                } catch(e) { console.error('Sync error', e); }
-            }
-        };
-        // --------------------------------------------------
 
         // LOAD DATA
         const EXTERNAL_DATA_URL = 'https://raw.githubusercontent.com/Worklaf/Worklaf/main/TestNet_Hub/projects.json';
@@ -699,7 +651,8 @@
                     // Сохраняем в единое поле для обоих файлов
                     await setDoc(userRef, { 
                         favorites: userFavorites,
-                        completed: userCompleted,
+                        // НОВОЕ: Сохраняем также завершенные задачи
+                        completed: userCompleted, 
                         arcGuideStats: arcData 
                     }, { merge: true });
                 } catch(e) { console.error('Sync error', e); }
@@ -716,8 +669,34 @@
             userFavorites = newFavs;
             applyFilters();
             const userRef = doc(db, "users", currentUser.uid);
-            await setDoc(userRef, { favorites: newFavs }, { merge: true });
-        }
+            await setDoc(userRef, { 
+                favorites: newFavs,
+                // НОВОЕ: Сохраняем также завершенные задачи
+                completed: userCompleted 
+            }, { merge: true });
+        };
+
+        // НОВАЯ ФУНКЦИЯ: Переключение статуса завершенности
+        window.toggleCompleted = async function(id) {
+            if (!currentUser) { showToast('Войдите, чтобы сохранить'); return; }
+            const idx = userCompleted.indexOf(id);
+            let newCompleted = [...userCompleted];
+            if (idx > -1) {
+                newCompleted.splice(idx, 1); // Удаляем из завершенных
+                showToast('Убрано из завершенных');
+            } else {
+                newCompleted.push(id); // Добавляем в завершенные
+                showToast('Отмечено как выполнено! ✅');
+            }
+            userCompleted = newCompleted;
+            applyFilters();
+            // Синхронизация с Firestore
+            const userRef = doc(db, "users", currentUser.uid);
+            await setDoc(userRef, { 
+                favorites: userFavorites,
+                completed: userCompleted // Обновляем поле 'completed'
+            }, { merge: true });
+        };
 
         // RENDERING
         window.applyFilters = function(search = '') {
@@ -736,10 +715,8 @@
                 if (currentFilters.status === 'ended') return p.status === 'ended';
                 if (currentFilters.status === 'daily') return p.hasDaily && p.status === 'active';
                 if (currentFilters.status === 'favorites') return userFavorites.includes(p.id);
-                
-                // --- НОВЫЙ ФИЛЬТР: Завершённые ---
+                // НОВОЕ: Фильтр для личных завершенных задач
                 if (currentFilters.status === 'completed') return userCompleted.includes(p.id);
-                
                 if (currentFilters.status === 'today') return isToday(p.createdAt);
                 return true;
             }).filter(p => {
@@ -762,7 +739,8 @@
 
             grid.innerHTML = filteredProjects.map(project => {
                 const isFav = userFavorites.includes(project.id);
-                const isCompleted = userCompleted.includes(project.id); // Проверка статуса завершения
+                // НОВОЕ: Проверяем, завершил ли пользователь эту задачу
+                const isCompleted = userCompleted.includes(project.id);
                 const isNew = isToday(project.createdAt);
                 
                 // Проверяем, был ли клик по гайду сегодня (использует arcData)
@@ -776,19 +754,11 @@
                     `<span class="bg-slate-800 px-2 py-1 rounded cursor-pointer hover:bg-slate-700 transition-colors" onclick="event.stopPropagation(); toggleCategory('${cat}')">${cat}</span>`
                 ).join('');
                 
-                // --- ЛОГИКА ОТРИСОВКИ ---
-                // Если пользователь завершил активность, добавляем класс user-completed
-                const completedClass = isCompleted ? 'user-completed' : '';
-                // Если завершено сегодня через клик по гайду, это отдельный стиль
-                const dailyDoneClass = clickedToday && !isCompleted ? 'daily-done-today' : '';
-                // Иконка завершения
-                const completedIcon = isCompleted ? '<i class="fas fa-check-circle user-completed-icon"></i>' : '';
-                
                 return `
-                <div class="glass-card rounded-2xl p-4 relative group ${isNew ? 'border-pink-500/30' : ''} ${completedClass} ${dailyDoneClass}">
+                <div class="glass-card rounded-2xl p-4 relative group ${isNew ? 'border-pink-500/30' : ''} ${clickedToday ? 'daily-done-today' : ''} ${isCompleted ? 'user-completed' : ''}">
                     ${isNew ? '<div class="absolute -top-2 -right-2"><span class="new-badge"><i class="fas fa-star mr-1"></i>NEW</span></div>' : ''}
-                    ${completedIcon}
-                    ${clickedToday && !isCompleted ? '<i class="fas fa-check-circle daily-check-icon"></i>' : ''}
+                    ${clickedToday ? '<i class="fas fa-check-circle daily-check-icon"></i>' : ''}
+                    ${isCompleted && !clickedToday ? '<i class="fas fa-check-circle daily-check-icon" style="color: #10b981; opacity: 0.5;"></i>' : ''}
                     <div class="flex items-start gap-4">
                         <div class="shrink-0">
                             ${project.image ? `<img src="${project.image}" alt="${project.name}" class="w-12 h-12 rounded-lg object-cover border border-slate-700">` : `<div class="w-12 h-12 rounded-lg bg-slate-800 border border-slate-700 flex items-center justify-center text-xl">${project.name.charAt(0).toUpperCase()}</div>`}
@@ -804,7 +774,7 @@
                                     </div>
                                     <div class="flex flex-wrap gap-2 items-center text-xs text-slate-400 mb-2">
                                         <div class="flex flex-wrap gap-1">${categoriesHtml}</div>
-                                        <span class="status-${project.status} px-2 py-1 rounded font-medium">${project.status === 'active' ? 'Active' : project.status === 'soon' ? 'Soon' : 'Ended'}</span>
+                                        <span class="status-${project.status} px-2 py-1 rounded font-medium">${project.status === 'active' ? 'Active' : project.status === 'soon' ? 'Soon' : 'Closed'}</span>
                                         ${project.hasDaily ? '<span class="text-orange-400"><i class="fas fa-fire mr-1"></i>Daily</span>' : ''}
                                         ${project.priority === 'high' ? '<span class="text-red-400"><i class="fas fa-star mr-1"></i>High</span>' : ''}
                                     </div>
@@ -816,15 +786,9 @@
                                         <span>Гайд</span>
                                     </button>
                                     ${lastClickDate ? `<span class="last-click-date ${lastClickDate.class}">${lastClickDate.text}</span>` : ''}
-                                    
-                                    <!-- НОВАЯ КНОПКА: ЗАВЕРШИТЬ -->
-                                    <button onclick="event.stopPropagation(); toggleComplete('${project.id}')" 
-                                            class="complete-btn ${isCompleted ? 'text-emerald-500' : 'text-slate-500 hover:text-emerald-500'} p-2 transition-colors w-10 h-10 flex items-center justify-center rounded-lg hover:bg-slate-800" 
-                                            title="Отметить как завершённое">
-                                        <i class="fas ${isCompleted ? 'fa-check-square' : 'fa-square'} text-lg"></i>
-                                    </button>
-
                                     <button onclick="event.stopPropagation(); toggleFavorite('${project.id}')" class="favorite-btn ${isFav ? 'active' : 'text-slate-500'} p-2 hover:text-red-500 transition-colors w-10 h-10 flex items-center justify-center rounded-lg hover:bg-slate-800"><i class="fas fa-heart ${isFav ? 'fill-current' : ''} text-lg"></i></button>
+                                    <!-- ИЗМЕНЕНО: Добавлена новая кнопка завершения -->
+                                    <button onclick="event.stopPropagation(); toggleCompleted('${project.id}')" class="complete-btn ${isCompleted ? 'active' : 'text-slate-500'} p-2 hover:text-green-500 transition-colors w-10 h-10 flex items-center justify-center rounded-lg hover:bg-slate-800" title="Отметить как выполненное"><i class="fas fa-check-circle ${isCompleted ? 'fill-current' : ''} text-lg"></i></button>
                                 </div>
                             </div>
                             <p class="text-slate-400 text-sm mt-2 line-clamp-2">${project.description || 'Нет описания'}</p>
@@ -859,7 +823,7 @@
             document.getElementById('detailDesc').textContent = project.description || 'Описание отсутствует';
             document.getElementById('detailCategory').innerHTML = (project.categories || ['Other']).map(cat => `<span class="tag cursor-pointer hover:bg-blue-600/20" onclick="closeDetailModal(); toggleCategory('${cat}')">${cat}</span>`).join('');
             const statusEl = document.getElementById('detailStatus');
-            statusEl.textContent = project.status === 'active' ? 'Active' : project.status === 'soon' ? 'Soon' : 'Ended';
+            statusEl.textContent = project.status === 'active' ? 'Active' : project.status === 'soon' ? 'Soon' : 'Closed';
             statusEl.className = `px-2 py-1 rounded-full text-xs font-medium status-${project.status}`;
             const isNew = isToday(project.createdAt);
             document.getElementById('detailNewBadge').classList.toggle('hidden', !isNew);
@@ -974,7 +938,7 @@
                 description: document.getElementById('projDesc').value,
                 image: document.getElementById('projImage').value || '',
                 guideUrl: document.getElementById('projGuideUrl').value || '',
-                cryptoRankUrl: document.getElementById('projCryptoRank').value,
+                cryptoRankUrl: document.getElementById('projCryptoRankUrl').value,
                 twitterUrl: document.getElementById('projTwitter').value,
                 referralLink: document.getElementById('projRef').value,
                 hasDaily: document.getElementById('projDaily').checked,
@@ -1046,7 +1010,7 @@
             document.getElementById('countActive').textContent = filtered.filter(p => p.status === 'active').length;
             document.getElementById('countDaily').textContent = filtered.filter(p => p.hasDaily && p.status === 'active').length;
             document.getElementById('countFavoritesSidebar').textContent = filtered.filter(p => userFavorites.includes(p.id)).length;
-            // --- НОВЫЙ СЧЕТЧИК ---
+            // НОВОЕ: Обновление счетчика завершенных в сайдбаре
             document.getElementById('countCompletedSidebar').textContent = filtered.filter(p => userCompleted.includes(p.id)).length;
             document.getElementById('countEnded').textContent = filtered.filter(p => p.status === 'ended').length;
         }
@@ -1055,12 +1019,13 @@
             document.getElementById('statActive').textContent = filtered.filter(p => p.status === 'active').length;
             document.getElementById('statToday').textContent = filtered.filter(p => isToday(p.createdAt)).length;
             document.getElementById('statFavorites').textContent = filtered.filter(p => userFavorites.includes(p.id)).length;
-            // --- НОВАЯ СТАТИСТИКА ---
-            document.getElementById('statCompleted').textContent = userCompleted.length;
+            // НОВОЕ: Обновление счетчика завершенных в заголовке
+            document.getElementById('statCompleted').textContent = filtered.filter(p => userCompleted.includes(p.id)).length;
         }
         
         function isToday(dateString) { if (!dateString) return false; return new Date(dateString).toDateString() === new Date().toDateString(); }
         function formatDate(str) { if (!str) return '—'; return new Date(str).toLocaleDateString('ru-RU'); }
+        function getAllCategoriesFromProjects() { const cats = new Set(); projects.forEach(p => { if(p.categories) p.categories.forEach(c => cats.add(c)); }); return Array.from(cats); }
         window.showToast = (msg) => { const t = document.getElementById('toast'); document.getElementById('toastMessage').textContent = msg; t.classList.remove('translate-y-20', 'opacity-0'); setTimeout(() => t.classList.add('translate-y-20', 'opacity-0'), 3000); };
     </script>
 </body>
