@@ -1332,11 +1332,13 @@
     </aside>
 </div>
 
-<<script type="module">
+<script type="module">
+    // --- Firebase Integration ---
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
     import { getAuth, signInWithPopup, GoogleAuthProvider, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
-    import { getFirestore, doc, setDoc, getDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+    import { getFirestore, doc, setDoc, getDoc, updateDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
+    // Конфигурация вашего Firebase проекта
     const firebaseConfig = {
         apiKey: "AIzaSyBdXGYg2t8DJBrQHCC80-pFerZU9PWmSCk",
         authDomain: "testnet-hub.firebaseapp.com",
@@ -1350,103 +1352,133 @@
     const auth = getAuth(app);
     const db = getFirestore(app);
 
+    // Глобальное состояние
     let currentUser = null;
     let arcData = {}; // Статистика кликов
-    let favorites = []; // Избранное: МАССИВ ID (как в основном хабе)
+    
+    // Полная структура избранного (объект с данными) как было в оригинале
+    let favoritesState = {}; 
+    let favoritesOrder = []; 
 
+    // Ключи LocalStorage
     const STORAGE_KEY = 'arc_tracker_v3';
-    const FAVORITES_KEY = 'arc_tracker_favorites_v1'; // Ключ локального хранилища
     const BADGE_VISIBILITY_KEY = 'arc_tracker_badges_hidden';
     const SECTION_COLLAPSE_KEY = 'arc_tracker_sections';
     const KNOWN_LINKS_KEY = 'arc_tracker_known_links_v2';
     const NEW_LINKS_KEY = 'arc_tracker_new_links_v2';
     const PAGE_VERSION_KEY = 'arc_tracker_page_version_v2';
-    const FAVORITES_ORDER_KEY = 'arc_tracker_favorites_order_v1'; // Для локального порядка
+    const LEGEND_COLLAPSE_KEY = 'arc_tracker_legend_collapsed';
+    // Ключи для полного формата избранного (как было)
+    const FAVORITES_KEY = 'arc_tracker_favorites_v1';
+    const FAVORITES_ORDER_KEY = 'arc_tracker_favorites_order_v1';
     const PAGE_VERSION = '2026-02-01-v3';
 
-    let favoritesOrder = JSON.parse(localStorage.getItem(FAVORITES_ORDER_KEY)) || [];
-    let newLinksSet = new Set();
-    let knownLinksSet = new Set();
-    let favoritesSortable = null;
-    let tooltipEl = null;
-    let activeTooltipTarget = null;
-    const DYNAMIC_CLASS_SET = new Set(['daily-active', 'visited-once', 'has-new-flag']);
-
-    // --- АВТОРИЗАЦИЯ ---
-    window.loginGoogle = async () => {
-        try {
-            await signInWithPopup(auth, new GoogleAuthProvider());
-        } catch (e) { console.error("Login error", e); }
-    };
-
-    window.logout = () => {
-        signOut(auth);
-    };
-
-    // --- ЗАГРУЗКА ДАННЫХ ---
+    // --- Функции работы с данными (Синхронизация) ---
+    
     async function loadData() {
-        // 1. Статистика
-        arcData = JSON.parse(localStorage.getItem(STORAGE_KEY)) || {};
-        // 2. Избранное (массив)
-        favorites = JSON.parse(localStorage.getItem(FAVORITES_KEY)) || [];
-
+        // 1. Загрузка статистики (arcData) - приоритет облаку, потом локально
+        let localStats = JSON.parse(localStorage.getItem(STORAGE_KEY)) || {};
+        
         if (currentUser) {
             try {
                 const docRef = doc(db, "users", currentUser.uid);
                 const docSnap = await getDoc(docRef);
                 
                 if (docSnap.exists()) {
-                    const cloud = docSnap.data();
-                    // Загружаем статистику
-                    if (cloud.arcGuideStats) {
-                        arcData = cloud.arcGuideStats;
+                    const cloudData = docSnap.data();
+                    
+                    // Загружаем статистику из облака
+                    if (cloudData.arcGuideStats) {
+                        arcData = cloudData.arcGuideStats;
                         localStorage.setItem(STORAGE_KEY, JSON.stringify(arcData));
+                    } else if (Object.keys(localStats).length > 0) {
+                        arcData = localStats;
+                        // Синхронизируем пустой объект в облако если есть локальные данные
+                        await setDoc(docRef, { arcGuideStats: localStats }, { merge: true });
                     }
-                    // ЗАГРУЖАЕМ ИЗБРАННОЕ (ожидаем МАССИВ ID, как в Хабе)
-                    if (cloud.favorites && Array.isArray(cloud.favorites)) {
-                        favorites = cloud.favorites;
-                        localStorage.setItem(FAVORITES_KEY, JSON.stringify(favorites));
+                    
+                    // Загружаем избранное
+                    // ХРАНИМ ЛОКАЛЬНО В ПОЛНОМ ФОРМАТЕ (Объекты с названиями и ссылками)
+                    if (cloudData.favoritesState && Object.keys(cloudData.favoritesState).length > 0) {
+                        favoritesState = cloudData.favoritesState;
+                    } else {
+                        favoritesState = loadFavorites(); // Грузим локально
                     }
-                    // Порядок (опционально)
-                    if (cloud.favoritesOrder && Array.isArray(cloud.favoritesOrder) && !favoritesOrder.length) {
-                         favoritesOrder = cloud.favoritesOrder;
+                    
+                    if (cloudData.favoritesOrder && Array.isArray(cloudData.favoritesOrder)) {
+                        favoritesOrder = cloudData.favoritesOrder;
+                    } else {
+                        favoritesOrder = loadFavoritesOrder();
+                    }
+                    
+                    // ВАЖНО: Обновляем облако локальными данными, чтобы не потерять
+                    if (Object.keys(localStats).length > 0 || Object.keys(favoritesState).length > 0) {
+                        await setDoc(docRef, { 
+                            arcGuideStats: arcData,
+                            favoritesState: favoritesState,
+                            favoritesOrder: favoritesOrder
+                        }, { merge: true });
+                    }
+                } else {
+                    // Документа нет, создаем из локальных данных
+                    if (Object.keys(localStats).length > 0 || Object.keys(favoritesState).length > 0) {
+                        await setDoc(docRef, { 
+                            arcGuideStats: localStats,
+                            favoritesState: favoritesState,
+                            favoritesOrder: favoritesOrder
+                        });
+                        arcData = localStats;
+                    } else {
+                        arcData = {};
+                        favoritesState = {};
+                        favoritesOrder = [];
                     }
                 }
-            } catch (e) { console.error("Load error", e); }
+            } catch (e) { 
+                console.error("Ошибка загрузки из облака", e);
+                arcData = localStats;
+                favoritesState = loadFavorites();
+                favoritesOrder = loadFavoritesOrder();
+            }
+        } else {
+            // Оффлайн режим - грузим всё локально
+            arcData = localStats;
+            favoritesState = loadFavorites();
+            favoritesOrder = loadFavoritesOrder();
         }
+        
+        attachFavoriteControls();
         updateUI();
     }
 
     async function saveData(data) {
-        arcData = data;
+        arcData = data; 
+        
         if (currentUser) {
             try {
                 const docRef = doc(db, "users", currentUser.uid);
-                await setDoc(docRef, { arcGuideStats: data }, { merge: true });
-            } catch (e) { console.error("Save stats error", e); }
+                // Сохраняем ПОЛНЫЙ формат избранного (объекты) + статистику
+                await setDoc(docRef, { 
+                    arcGuideStats: data,
+                    favoritesState: favoritesState,
+                    favoritesOrder: favoritesOrder
+                }, { merge: true });
+            } catch (e) { console.error("Ошибка сохранения в облако", e); }
         } else {
             localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
         }
     }
 
-    async function saveFavorites() {
-        localStorage.setItem(FAVORITES_KEY, JSON.stringify(favorites));
-        localStorage.setItem(FAVORITES_ORDER_KEY, JSON.stringify(favoritesOrder));
-        
-        if (currentUser) {
-            try {
-                const docRef = doc(db, "users", currentUser.uid);
-                // СОХРАНЯЕМ МАССИВ ID в ключ 'favorites' (совместимость с Хабом)
-                await setDoc(docRef, { 
-                    favorites: favorites,
-                    favoritesOrder: favoritesOrder 
-                }, { merge: true });
-            } catch (e) { console.error("Save favs error", e); }
-        }
-    }
+    // --- Авторизация ---
+    window.loginGoogle = async () => {
+        try { await signInWithPopup(auth, new GoogleAuthProvider()); } 
+        catch (e) { console.error("Ошибка входа", e); }
+    };
+    window.logout = () => { signOut(auth); };
 
     onAuthStateChanged(auth, async (user) => {
         currentUser = user;
+        
         const loggedOutView = document.getElementById('arcLoggedOutView');
         const loggedInView = document.getElementById('arcLoggedInView');
         const userNameEl = document.getElementById('arcUserName');
@@ -1462,224 +1494,19 @@
         await loadData();
     });
 
-    // --- ЛОГИКА ИЗБРАННОГО ---
-    function toggleFavorite(id) {
-        if (favorites.includes(id)) {
-            favorites = favorites.filter(favId => favId !== id);
-        } else {
-            favorites.push(id);
-        }
-        saveFavorites();
-        refreshFavoriteVisuals();
-        renderFavoritesList();
-    }
-
-    function refreshFavoriteVisuals() {
-        document.querySelectorAll('.favorite-toggle').forEach(btn => {
-            const id = btn.dataset.id;
-            const isFav = favorites.includes(id);
-            btn.classList.toggle('is-favorite', isFav);
-            btn.textContent = isFav ? '★' : '☆';
-        });
-    }
-
-    function getLinkTitle(id) {
-        const link = document.querySelector(`a[data-id="${id}"]`);
-        if (!link) return 'Unknown';
-        const clone = link.cloneNode(true);
-        clone.querySelectorAll('.click-info, .new-flag').forEach(el => el.remove());
-        return clone.textContent.trim();
-    }
-
-    function getLinkHref(id) {
-        const link = document.querySelector(`a[data-id="${id}"]`);
-        return link ? link.href : '#';
-    }
-
-    function renderFavoritesList() {
-        const listEl = document.getElementById('favoritesList');
-        const emptyEl = document.getElementById('favoritesEmpty');
-        const countEl = document.getElementById('favoritesCount');
-        
-        // Удаляем из списка то, чего нет на странице
-        favorites = favorites.filter(id => document.querySelector(`a[data-id="${id}"]`));
-        
-        if (favorites.length === 0) {
-            emptyEl.style.display = 'block';
-            listEl.style.display = 'none';
-            countEl.textContent = '0';
-            return;
-        }
-        
-        emptyEl.style.display = 'none';
-        listEl.style.display = 'flex';
-        listEl.innerHTML = '';
-
-        favorites.forEach(id => {
-            if (!document.querySelector(`a[data-id="${id}"]`)) return;
-            
-            const li = document.createElement('li');
-            li.className = 'favorites-item';
-            li.dataset.id = id;
-
-            const handle = document.createElement('span');
-            handle.className = 'drag-handle';
-            handle.innerHTML = '⋮⋮';
-            handle.title = 'Перетащить';
-            li.appendChild(handle);
-
-            const anchor = document.createElement('a');
-            anchor.href = getLinkHref(id);
-            anchor.target = '_blank';
-            anchor.rel = 'noopener';
-            anchor.dataset.id = id;
-            anchor.classList.add('favorite-link');
-            anchor.classList.add('link-inline');
-
-            const titleSpan = document.createElement('span');
-            titleSpan.className = 'favorite-title';
-            titleSpan.textContent = getLinkTitle(id);
-            anchor.appendChild(titleSpan);
-            li.appendChild(anchor);
-
-            const removeBtn = document.createElement('button');
-            removeBtn.type = 'button';
-            removeBtn.className = 'remove-fav-btn';
-            removeBtn.innerHTML = '×';
-            removeBtn.title = 'Удалить из избранного';
-            removeBtn.onclick = (e) => { e.stopPropagation(); toggleFavorite(id); };
-            li.appendChild(removeBtn);
-            listEl.appendChild(li);
-
-            bindTrackingHandler(anchor);
-        });
-        
-        countEl.textContent = String(favorites.length);
-        initSortable();
-        refreshFavoriteVisuals();
-        initializeTooltips();
-    }
-
-    function initSortable() {
-        const listEl = document.getElementById('favoritesList');
-        if (!listEl || typeof Sortable === 'undefined') return;
-        if (favoritesSortable) favoritesSortable.destroy();
-        
-        favoritesSortable = new Sortable(listEl, {
-            animation: 150,
-            handle: '.drag-handle',
-            ghostClass: 'sortable-ghost',
-            onEnd: function (evt) {
-                const newOrder = Array.from(listEl.children).map(li => li.dataset.id);
-                favorites = newOrder;
-                saveFavorites();
-            }
-        });
-    }
-
-    function attachFavoriteControls() {
-        document.querySelectorAll('a.link-inline[data-id]').forEach(link => {
-            const id = link.dataset.id;
-            if (!id) return;
-            const wrapper = ensureLinkWrapper(link);
-            let button = wrapper.querySelector('.favorite-toggle');
-            if (!button) {
-                button = document.createElement('button');
-                button.type = 'button';
-                button.className = 'favorite-toggle';
-                button.setAttribute('aria-label', 'В избранное');
-                button.dataset.id = id;
-                button.addEventListener('click', (e) => {
-                    e.preventDefault();
-                    e.stopPropagation();
-                    toggleFavorite(id);
-                });
-                wrapper.appendChild(button);
-            }
-        });
-        refreshFavoriteVisuals();
-    }
-
-    function ensureLinkWrapper(link) {
-        if (link.parentElement && link.parentElement.classList.contains('link-with-favorite')) return link.parentElement;
-        const wrapper = document.createElement('span');
-        wrapper.className = 'link-with-favorite';
-        link.parentNode.insertBefore(wrapper, link);
-        wrapper.appendChild(link);
-        return wrapper;
-    }
-
-    // --- TRACKING LOGIC ---
-    function bindTrackingHandler(element) {
-        if (!element || element.dataset.trackingBound === 'true') return;
-        if (!(element.classList.contains('track-daily') || element.classList.contains('track-once'))) return;
-        element.addEventListener('click', handleClick);
-        element.dataset.trackingBound = 'true';
-    }
-    function bindTrackingHandlersToAll() { document.querySelectorAll('.track-daily, .track-once').forEach(bindTrackingHandler); }
-
-    function formatDate(isoString) { if (!isoString) return ''; const date = new Date(isoString); return `${String(date.getDate()).padStart(2, '0')}.${String(date.getMonth() + 1).padStart(2, '0')}`; }
-    function isToday(isoString) { if (!isoString) return false; const date = new Date(isoString); const today = new Date(); return date.getDate() === today.getDate() && date.getMonth() === today.getMonth() && date.getFullYear() === today.getFullYear(); }
+    // --- Оригинальная логика UI (Tracking, Favorites, etc.) ---
     
-    function updateUI() {
-        document.querySelectorAll('.track-daily').forEach(btn => {
-            const id = btn.getAttribute('data-id');
-            const record = arcData[id];
-            btn.classList.remove('daily-active');
-            if (record) {
-                if (isToday(record.lastClick)) btn.classList.add('daily-active');
-                if (record.lastClick) {
-                    let badge = btn.querySelector('.click-info');
-                    if (!badge) { badge = document.createElement('span'); badge.className = 'click-info'; btn.appendChild(badge); }
-                    badge.textContent = `${record.totalClicks || 0}р • ${formatDate(record.lastClick)}`;
-                }
-            }
-        });
-        document.querySelectorAll('.track-once').forEach(btn => {
-            const id = btn.getAttribute('data-id');
-            const record = arcData[id];
-            if (record && record.visited) btn.classList.add('visited-once');
-            else btn.classList.remove('visited-once');
-        });
-    }
+    let newLinksSet = new Set();
+    let knownLinksSet = new Set();
+    let favoritesSortable = null;
+    const favoriteControls = new Map();
+    const DYNAMIC_CLASS_SET = new Set(['daily-active', 'visited-once', 'has-new-flag']);
+    let tooltipEl = null;
+    let activeTooltipTarget = null;
 
-    function handleClick(e) {
-        const btn = e.currentTarget;
-        const id = btn.getAttribute('data-id');
-        if (!id) return;
-        if (newLinksSet.has(id)) clearNewLink(id);
-        const now = new Date().toISOString();
-        if (!arcData[id]) arcData[id] = {};
-
-        if (btn.classList.contains('track-daily')) {
-            if (arcData[id].lastClick && isToday(arcData[id].lastClick)) return;
-            arcData[id].totalClicks = (arcData[id].totalClicks || 0) + 1;
-            arcData[id].lastClick = now;
-        } else if (btn.classList.contains('track-once')) {
-            arcData[id].visited = true;
-            if (btn.classList.contains('track-once-info')) { arcData[id].totalClicks = (arcData[id].totalClicks || 0) + 1; arcData[id].lastClick = now; }
-        }
-        saveData(arcData);
-        setTimeout(() => { updateUI(); }, 50);
-    }
-
-    window.resetAll = function() {
-        if (confirm('Сбросить всю статистику?')) {
-            arcData = {};
-            saveData({});
-            document.querySelectorAll('.click-info').forEach(el => el.remove());
-            document.querySelectorAll('.link-inline').forEach(link => { link.classList.remove('daily-active'); link.classList.remove('visited-once'); });
-            updateUI();
-        }
-    }
-
-    // --- TOOLTIPS & HELPERS ---
+    // Tooltip логика (без изменений)
     function ensureTooltipElement() {
-        if (!tooltipEl) {
-            tooltipEl = document.createElement('div');
-            tooltipEl.className = 'floating-tooltip';
-            document.body.appendChild(tooltipEl);
-        }
+        if (!tooltipEl) { tooltipEl = document.createElement('div'); tooltipEl.className = 'floating-tooltip'; document.body.appendChild(tooltipEl); }
     }
     function positionTooltip(target) {
         if (!tooltipEl || !activeTooltipTarget) return;
@@ -1720,7 +1547,377 @@
     document.addEventListener('scroll', () => { if (activeTooltipTarget) positionTooltip(activeTooltipTarget); }, true);
     window.addEventListener('resize', () => { if (activeTooltipTarget) positionTooltip(activeTooltipTarget); });
 
-    // --- SECTIONS LOGIC ---
+    // Favorites Logic (ОРИГИНАЛЬНАЯ - С ОБЪЕКТАМИ)
+    function loadFavorites() {
+        try {
+            const raw = localStorage.getItem(FAVORITES_KEY);
+            return raw ? JSON.parse(raw) : {};
+        } catch (err) { return {}; }
+    }
+    function loadFavoritesOrder() {
+        try { return JSON.parse(localStorage.getItem(FAVORITES_ORDER_KEY)) || []; } catch (err) { return []; }
+    }
+
+    function saveFavorites() {
+        localStorage.setItem(FAVORITES_KEY, JSON.stringify(favoritesState));
+        localStorage.setItem(FAVORITES_ORDER_KEY, JSON.stringify(favoritesOrder));
+        
+        if (currentUser) {
+            try {
+                const docRef = doc(db, "users", currentUser.uid);
+                setDoc(docRef, { 
+                    favoritesState: favoritesState,
+                    favoritesOrder: favoritesOrder
+                }, { merge: true }); 
+            } catch (e) { console.error("Error saving favorites", e); }
+        }
+    }
+
+    function getBaseClasses(link) {
+        if (!link) return ['link-inline'];
+        return [...link.classList].filter(cls => !DYNAMIC_CLASS_SET.has(cls));
+    }
+
+    function classesToKey(classes) {
+        return Array.isArray(classes) ? [...classes].sort().join('|') : '';
+    }
+
+    function getLinkTitle(link) {
+        const clone = link.cloneNode(true);
+        clone.querySelectorAll('.click-info, .new-flag').forEach(el => el.remove());
+        return clone.textContent.trim();
+    }
+
+    function extractLinkInfo(link) {
+        return {
+            id: link.dataset.id,
+            title: getLinkTitle(link),
+            url: link.href,
+            tooltip: link.getAttribute('data-tooltip') || '',
+            classes: getBaseClasses(link)
+        };
+    }
+
+    function ensureLinkWrapper(link) {
+        if (link.parentElement && link.parentElement.classList.contains('link-with-favorite')) return link.parentElement;
+        const wrapper = document.createElement('span');
+        wrapper.className = 'link-with-favorite';
+        link.parentNode.insertBefore(wrapper, link);
+        wrapper.appendChild(link);
+        return wrapper;
+    }
+
+    function createFavoriteToggle(id) {
+        const button = document.createElement('button');
+        button.type = 'button';
+        button.className = 'favorite-toggle';
+        button.setAttribute('aria-pressed', 'false');
+        button.setAttribute('aria-label', 'Добавить в избранное');
+        button.title = 'Добавить в избранное';
+        button.textContent = '☆';
+        button.addEventListener('click', (event) => {
+            event.preventDefault();
+            event.stopPropagation();
+            toggleFavorite(id);
+        });
+        return button;
+    }
+
+    function refreshFavoriteVisual(id) {
+        const control = favoriteControls.get(id);
+        if (!control) return;
+        const button = control.button;
+        const isFav = Boolean(favoritesState[id]);
+        button.classList.toggle('is-favorite', isFav);
+        button.textContent = isFav ? '★' : '☆';
+        button.setAttribute('aria-pressed', isFav ? 'true' : 'false');
+        button.setAttribute('aria-label', isFav ? 'Убрать из избранного' : 'Добавить в избранное');
+        button.title = isFav ? 'Убрать из избранного' : 'Добавить в избранное';
+    }
+
+    function pruneFavorites() {
+        let changed = false;
+        Object.keys(favoritesState).forEach(id => {
+            if (!favoriteControls.has(id)) {
+                delete favoritesState[id];
+                favoritesOrder = favoritesOrder.filter(item => item !== id);
+                changed = true;
+            }
+        });
+        return changed;
+    }
+
+    function bindTrackingHandler(element) {
+        if (!element || element.dataset.trackingBound === 'true') return;
+        if (!(element.classList.contains('track-daily') || element.classList.contains('track-once'))) return;
+        element.addEventListener('click', handleClick);
+        element.dataset.trackingBound = 'true';
+    }
+
+    function bindTrackingHandlersToAll() { document.querySelectorAll('.track-daily, .track-once').forEach(bindTrackingHandler); }
+
+    function renderFavoritesList() {
+        const listEl = document.getElementById('favoritesList');
+        const emptyEl = document.getElementById('favoritesEmpty');
+        const countEl = document.getElementById('favoritesCount');
+        if (!listEl || !emptyEl || !countEl) return;
+
+        listEl.innerHTML = '';
+        
+        // Синхронизация порядка
+        favoritesOrder = favoritesOrder.filter(id => favoritesState[id]);
+        Object.keys(favoritesState).forEach(id => {
+            if (!favoritesOrder.includes(id)) favoritesOrder.push(id);
+        });
+
+        if (favoritesOrder.length === 0) {
+            emptyEl.style.display = 'block';
+            listEl.style.display = 'none';
+            countEl.textContent = '0';
+            return;
+        }
+
+        emptyEl.style.display = 'none';
+        listEl.style.display = 'flex';
+        let favoritesMutated = false;
+
+        favoritesOrder.forEach(id => {
+            const info = favoritesState[id];
+            if (!info) return;
+            
+            const linkEl = document.querySelector(`a[data-id="${id}"]`);
+            const liveInfo = linkEl ? extractLinkInfo(linkEl) : info;
+            
+            // Если данные в DOM изменились (например, добавили класс активности), обновляем stored
+            if (linkEl) {
+                const storedKey = classesToKey(info.classes);
+                const currentKey = classesToKey(liveInfo.classes);
+                if (info.title !== liveInfo.title || info.url !== liveInfo.url || storedKey !== currentKey) {
+                    favoritesState[id] = liveInfo;
+                    favoritesMutated = true;
+                }
+            }
+
+            const li = document.createElement('li');
+            li.className = 'favorites-item';
+            li.dataset.id = id;
+
+            const handle = document.createElement('span');
+            handle.className = 'drag-handle';
+            handle.innerHTML = '⋮⋮';
+            handle.title = 'Перетащить';
+            li.appendChild(handle);
+
+            const anchor = document.createElement('a');
+            anchor.href = liveInfo.url;
+            anchor.target = '_blank';
+            anchor.rel = 'noopener';
+            anchor.dataset.id = id;
+            anchor.classList.add('favorite-link');
+            liveInfo.classes.forEach(cls => anchor.classList.add(cls));
+            if (liveInfo.tooltip) anchor.setAttribute('data-tooltip', liveInfo.tooltip);
+
+            // Восстанавливаем визуальное состояние из arcData
+            const record = arcData[id];
+            if (record) {
+                if (record.visited) anchor.classList.add('visited-once');
+                if (isToday(record.lastClick)) anchor.classList.add('daily-active');
+                if (record.totalClicks > 0 || record.lastClick) {
+                    const badge = document.createElement('span');
+                    badge.className = 'click-info';
+                    badge.textContent = `${record.totalClicks || 0}р • ${formatDate(record.lastClick)}`;
+                    anchor.appendChild(badge);
+                }
+            }
+
+            const titleSpan = document.createElement('span');
+            titleSpan.className = 'favorite-title';
+            titleSpan.textContent = liveInfo.title;
+            anchor.appendChild(titleSpan);
+            li.appendChild(anchor);
+
+            const removeBtn = document.createElement('button');
+            removeBtn.type = 'button';
+            removeBtn.className = 'remove-fav-btn';
+            removeBtn.innerHTML = '×';
+            removeBtn.title = 'Удалить из избранного';
+            removeBtn.onclick = (e) => { e.stopPropagation(); toggleFavorite(id); };
+            li.appendChild(removeBtn);
+            listEl.appendChild(li);
+            bindTrackingHandler(anchor);
+        });
+
+        if (favoritesMutated) saveFavorites();
+        countEl.textContent = String(favoritesOrder.length);
+        initSortable();
+        initializeTooltips();
+        updateNewIndicators();
+    }
+
+    function initSortable() {
+        const listEl = document.getElementById('favoritesList');
+        if (!listEl || typeof Sortable === 'undefined') return;
+        if (favoritesSortable) favoritesSortable.destroy();
+        favoritesSortable = new Sortable(listEl, {
+            animation: 150,
+            handle: '.drag-handle',
+            ghostClass: 'sortable-ghost',
+            onEnd: function (evt) {
+                const newOrder = Array.from(listEl.children).map(li => li.dataset.id);
+                favoritesOrder = newOrder;
+                saveFavorites();
+            }
+        });
+    }
+
+    function attachFavoriteControls() {
+        favoriteControls.clear();
+        let favoritesUpdated = false;
+        document.querySelectorAll('a.link-inline[data-id]').forEach(link => {
+            const id = link.dataset.id;
+            if (!id) return;
+            const wrapper = ensureLinkWrapper(link);
+            let button = wrapper.querySelector('.favorite-toggle');
+            if (!button) {
+                button = createFavoriteToggle(id);
+                wrapper.appendChild(button);
+            }
+            favoriteControls.set(id, { button, link });
+            if (favoritesState[id]) {
+                const currentInfo = extractLinkInfo(link);
+                const stored = favoritesState[id];
+                const storedKey = classesToKey(stored.classes);
+                const currentKey = classesToKey(currentInfo.classes);
+
+                if (stored.title !== currentInfo.title || stored.url !== currentInfo.url || storedKey !== currentKey) {
+                    favoritesState[id] = currentInfo;
+                    favoritesUpdated = true;
+                }
+            }
+            refreshFavoriteVisual(id);
+        });
+        if (pruneFavorites()) favoritesUpdated = true;
+        if (favoritesUpdated) saveFavorites();
+        renderFavoritesList();
+    }
+
+    function toggleFavorite(id) {
+        const control = favoriteControls.get(id);
+        if (!control) return;
+        if (favoritesState[id]) {
+            delete favoritesState[id];
+            favoritesOrder = favoritesOrder.filter(item => item !== id);
+        } else {
+            favoritesState[id] = extractLinkInfo(control.link);
+            favoritesOrder.push(id);
+        }
+        saveFavorites();
+        refreshFavoriteVisual(id);
+        renderFavoritesList();
+    }
+
+    // --- Tracking Logic ---
+    function formatDate(isoString) {
+        if (!isoString) return '';
+        const date = new Date(isoString);
+        const day = String(date.getDate()).padStart(2, '0');
+        const month = String(date.getMonth() + 1).padStart(2, '0');
+        return `${day}.${month}`;
+    }
+
+    function isToday(isoString) {
+        if (!isoString) return false;
+        const date = new Date(isoString);
+        const today = new Date();
+        return date.getDate() === today.getDate() && date.getMonth() === today.getMonth() && date.getFullYear() === today.getFullYear();
+    }
+
+    function updateBadge(element, count, time) {
+        let badge = element.querySelector('.click-info');
+        if (!badge) {
+            badge = document.createElement('span');
+            badge.className = 'click-info';
+            element.appendChild(badge);
+        }
+        badge.textContent = `${count}р • ${formatDate(time)}`;
+    }
+
+    function updateUI() {
+        document.querySelectorAll('.track-daily').forEach(btn => {
+            const id = btn.getAttribute('data-id');
+            const record = arcData[id];
+            btn.classList.remove('daily-active');
+            if (record) {
+                if (isToday(record.lastClick)) btn.classList.add('daily-active');
+                if (record.lastClick) updateBadge(btn, record.totalClicks || 0, record.lastClick);
+            }
+        });
+
+        document.querySelectorAll('.track-once').forEach(btn => {
+            const id = btn.getAttribute('data-id');
+            const record = arcData[id];
+            if (record && record.visited) btn.classList.add('visited-once');
+            else btn.classList.remove('visited-once');
+            if (btn.classList.contains('track-once-info') && record && record.lastClick) {
+                updateBadge(btn, record.totalClicks || 0, record.lastClick);
+            }
+        });
+        
+        // Также обновляем избранный список если он открыт
+        if (document.getElementById('favoritesList').style.display !== 'none') {
+            renderFavoritesList();
+        }
+    }
+
+    function handleClick(e) {
+        const btn = e.currentTarget;
+        const id = btn.getAttribute('data-id');
+        if (!id) return;
+        
+        if (newLinksSet.has(id)) clearNewLink(id);
+
+        const now = new Date().toISOString();
+
+        if (!arcData[id]) arcData[id] = {};
+
+        if (btn.classList.contains('track-daily')) {
+            if (arcData[id].lastClick && isToday(arcData[id].lastClick)) return;
+            arcData[id].totalClicks = (arcData[id].totalClicks || 0) + 1;
+            arcData[id].lastClick = now;
+        } else if (btn.classList.contains('track-once')) {
+            arcData[id].visited = true;
+            if (btn.classList.contains('track-once-info')) {
+                arcData[id].totalClicks = (arcData[id].totalClicks || 0) + 1;
+                arcData[id].lastClick = now;
+            }
+        }
+        
+        saveData(arcData);
+        
+        setTimeout(() => {
+            updateUI();
+            // Обновляем бейдж сразу после клика
+            if (btn.classList.contains('track-daily')) {
+                updateBadge(btn, arcData[id].totalClicks, arcData[id].lastClick);
+            } else if (btn.classList.contains('track-once-info')) {
+                updateBadge(btn, arcData[id].totalClicks, arcData[id].lastClick);
+            }
+        }, 50);
+    }
+
+    window.resetAll = function() {
+        if (confirm('Сбросить всю статистику?')) {
+            arcData = {};
+            saveData({});
+            document.querySelectorAll('.click-info').forEach(el => el.remove());
+            document.querySelectorAll('.link-inline').forEach(link => {
+                link.classList.remove('daily-active');
+                link.classList.remove('visited-once');
+            });
+            updateUI();
+        }
+    }
+
     function getBadgeHiddenState() { return localStorage.getItem(BADGE_VISIBILITY_KEY) === 'true'; }
     function setBadgeHiddenState(hidden) { localStorage.setItem(BADGE_VISIBILITY_KEY, hidden ? 'true' : 'false'); }
     function updateBadgeVisibility() {
@@ -1729,6 +1926,7 @@
         const toggleBtn = document.getElementById('toggleBadgesBtn');
         if (toggleBtn) toggleBtn.textContent = hidden ? 'Показать бейджи' : 'Скрыть бейджи';
     }
+
     function getSectionCollapseState() { return JSON.parse(localStorage.getItem(SECTION_COLLAPSE_KEY)) || {}; }
     function saveSectionCollapseState(state) { localStorage.setItem(SECTION_COLLAPSE_KEY, JSON.stringify(state)); }
     function applySectionState(section, collapsed) {
@@ -1737,32 +1935,42 @@
         if (toggleBtn) {
             toggleBtn.textContent = collapsed ? '▸' : '▾';
             toggleBtn.setAttribute('aria-expanded', collapsed ? 'false' : 'true');
+            toggleBtn.setAttribute('aria-label', collapsed ? 'Развернуть раздел' : 'Свернуть раздел');
         }
     }
 
-    // --- NEW LINKS DETECTION ---
     function detectNewLinks() {
         const elements = document.querySelectorAll('[data-id]');
         const currentIds = new Set();
         elements.forEach(el => { if (el.dataset.id) currentIds.add(el.dataset.id); });
+
         const storedKnownRaw = JSON.parse(localStorage.getItem(KNOWN_LINKS_KEY) || '[]');
         const storedNewRaw = JSON.parse(localStorage.getItem(NEW_LINKS_KEY) || '[]');
         knownLinksSet = new Set(Array.isArray(storedKnownRaw) ? storedKnownRaw : []);
         newLinksSet = new Set(Array.isArray(storedNewRaw) ? storedNewRaw : []);
+
         const storedVersion = localStorage.getItem(PAGE_VERSION_KEY);
         const isFirstRun = !storedVersion && knownLinksSet.size === 0;
 
-        if (isFirstRun) { knownLinksSet = new Set(currentIds); newLinksSet = new Set(); } 
-        else {
+        if (isFirstRun) {
+            knownLinksSet = new Set(currentIds);
+            newLinksSet = new Set();
+        } else {
             if (storedVersion !== PAGE_VERSION) {
                 knownLinksSet = new Set([...knownLinksSet].filter(id => currentIds.has(id)));
                 newLinksSet = new Set([...newLinksSet].filter(id => currentIds.has(id)));
             }
             const newlyDetected = [];
-            currentIds.forEach(id => { if (!knownLinksSet.has(id)) { knownLinksSet.add(id); newlyDetected.push(id); } });
+            currentIds.forEach(id => {
+                if (!knownLinksSet.has(id)) {
+                    knownLinksSet.add(id);
+                    newlyDetected.push(id);
+                }
+            });
             newlyDetected.forEach(id => newLinksSet.add(id));
         }
         newLinksSet = new Set([...newLinksSet].filter(id => currentIds.has(id)));
+
         localStorage.setItem(KNOWN_LINKS_KEY, JSON.stringify([...knownLinksSet]));
         localStorage.setItem(NEW_LINKS_KEY, JSON.stringify([...newLinksSet]));
         localStorage.setItem(PAGE_VERSION_KEY, PAGE_VERSION);
@@ -1773,7 +1981,8 @@
         document.querySelectorAll('[data-id]').forEach(el => {
             const id = el.dataset.id;
             if (id && newLinksSet.has(id)) {
-                el.setAttribute('data-new', 'true'); el.classList.add('has-new-flag');
+                el.setAttribute('data-new', 'true');
+                el.classList.add('has-new-flag');
                 if (!el.querySelector('.new-flag')) {
                     const flag = document.createElement('span');
                     flag.className = 'new-flag';
@@ -1781,29 +1990,59 @@
                     el.appendChild(flag);
                 }
             } else {
-                el.removeAttribute('data-new'); el.classList.remove('has-new-flag');
-                const flag = el.querySelector('.new-flag'); if (flag) flag.remove();
+                el.removeAttribute('data-new');
+                el.classList.remove('has-new-flag');
+                const flag = el.querySelector('.new-flag');
+                if (flag) flag.remove();
             }
         });
         updateSectionBadges();
     }
-    function clearNewLink(id) { newLinksSet.delete(id); localStorage.setItem(NEW_LINKS_KEY, JSON.stringify([...newLinksSet])); updateNewIndicators(); }
+
+    function clearNewLink(id) {
+        newLinksSet.delete(id);
+        localStorage.setItem(NEW_LINKS_KEY, JSON.stringify([...newLinksSet]));
+        updateNewIndicators();
+    }
+
     function updateSectionBadges() {
         document.querySelectorAll('.collapsible-section').forEach(section => {
             const statusEl = section.querySelector('.section-status');
             if (!statusEl) return;
             const newItems = section.querySelectorAll('[data-id][data-new="true"]');
-            if (newItems.length > 0) { section.classList.add('has-new'); statusEl.innerHTML = `<span class="status-dot">${newItems.length}</span><span class="status-text">New!</span>`; }
-            else { section.classList.remove('has-new'); statusEl.innerHTML = ''; }
+            if (newItems.length > 0) {
+                section.classList.add('has-new');
+                statusEl.innerHTML = `<span class="status-dot">${newItems.length}</span><span class="status-text">New!</span>`;
+            } else {
+                section.classList.remove('has-new');
+                statusEl.innerHTML = '';
+            }
         });
     }
 
-    // --- INITIALIZATION ---
+    function applyLegendState(collapsed) {
+        const legend = document.getElementById('statusLegend');
+        const toggle = document.getElementById('legendToggle');
+        if (!legend || !toggle) return;
+        const isMobile = window.matchMedia('(max-width: 768px)').matches;
+        const shouldCollapse = isMobile && collapsed;
+        legend.classList.toggle('legend-collapsed', shouldCollapse);
+        toggle.setAttribute('aria-expanded', shouldCollapse ? 'false' : 'true');
+        toggle.textContent = shouldCollapse ? 'Показать инструкцию ▸' : 'Скрыть инструкцию ▾';
+    }
+
     document.addEventListener('DOMContentLoaded', () => {
         attachFavoriteControls();
         bindTrackingHandlersToAll();
+
         const toggleBadgesBtn = document.getElementById('toggleBadgesBtn');
-        if (toggleBadgesBtn) toggleBadgesBtn.addEventListener('click', () => { const hidden = !getBadgeHiddenState(); setBadgeHiddenState(hidden); updateBadgeVisibility(); });
+        if (toggleBadgesBtn) {
+            toggleBadgesBtn.addEventListener('click', () => {
+                const hidden = !getBadgeHiddenState();
+                setBadgeHiddenState(hidden);
+                updateBadgeVisibility();
+            });
+        }
 
         const sectionState = getSectionCollapseState();
         document.querySelectorAll('.collapsible-section').forEach(section => {
@@ -1816,28 +2055,47 @@
                     const currentlyCollapsed = section.classList.contains('collapsed');
                     const newCollapsed = !currentlyCollapsed;
                     applySectionState(section, newCollapsed);
-                    if (newCollapsed) sectionState[sectionId] = true; else delete sectionState[sectionId];
+                    if (newCollapsed) sectionState[sectionId] = true;
+                    else delete sectionState[sectionId];
                     saveSectionCollapseState(sectionState);
                 });
             }
         });
+
+        let isMobile = window.innerWidth <= 768;
+        let storedState = localStorage.getItem(LEGEND_COLLAPSE_KEY);
+        let isLegendCollapsed = storedState === 'true';
+        if (storedState === null && isMobile) isLegendCollapsed = true;
+
+        function applyLegend() { applyLegendState(isLegendCollapsed); }
         
-        // Legend Toggle Logic
         const legendToggle = document.getElementById('legendToggle');
         if (legendToggle) {
-             legendToggle.addEventListener('click', () => {
-                 const legend = document.getElementById('statusLegend');
-                 legend.classList.toggle('legend-collapsed');
-             });
+            legendToggle.addEventListener('click', () => {
+                if (window.innerWidth <= 768) {
+                    isLegendCollapsed = !isLegendCollapsed;
+                    localStorage.setItem(LEGEND_COLLAPSE_KEY, isLegendCollapsed ? 'true' : 'false');
+                    applyLegend();
+                }
+            });
         }
 
-        applyLegendState(false); 
+        window.addEventListener('resize', () => {
+            const wasMobile = isMobile;
+            isMobile = window.innerWidth <= 768;
+            if (isMobile && !wasMobile) {
+                storedState = localStorage.getItem(LEGEND_COLLAPSE_KEY);
+                isLegendCollapsed = storedState === 'true' || storedState === null;
+            }
+            if (!isMobile) isLegendCollapsed = false;
+            applyLegend();
+        });
+
+        applyLegend();
         initializeTooltips();
         detectNewLinks();
         updateBadgeVisibility();
     });
-    
-    function applyLegendState(collapsed) { /* Empty as logic is inline now */ }
 </script>
 
 </body>
