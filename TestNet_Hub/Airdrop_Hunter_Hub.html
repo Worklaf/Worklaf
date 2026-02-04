@@ -19,6 +19,7 @@
             --danger: #ef4444;
             --text-primary: #f1f5f9;
             --text-secondary: #94a3b8;
+            --uniswap-pink: #ff007a;
         }
 
         body {
@@ -66,7 +67,6 @@
             z-index: 10;
         }
 
-        /* Стиль для выполненного Daily сегодня */
         .glass-card.daily-done-today {
             border-color: rgba(16, 185, 129, 0.5);
             background: rgba(16, 185, 129, 0.1);
@@ -144,6 +144,48 @@
         }
         .modal-large { max-width: 800px; }
         .modal-sm { max-width: 400px; }
+        
+        /* --- STYLES FOR SWAP MODAL --- */
+        .swap-modal-content {
+            background: #1e1e1e; /* Dark theme for swap */
+            border: 1px solid #333;
+            max-width: 400px;
+        }
+        .swap-token-row {
+            background: #2a2a2a;
+            border: 1px solid #444;
+            border-radius: 12px;
+            padding: 12px;
+        }
+        .swap-token-row:focus-within {
+            border-color: #ff007a;
+        }
+        .swap-arrow-btn {
+            background: #2a2a2a;
+            border: 1px solid #444;
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: -16px auto;
+            position: relative;
+            z-index: 10;
+            color: #ff007a;
+            cursor: pointer;
+        }
+        .swap-arrow-btn:hover { background: #333; }
+        .uniswap-btn {
+            background: linear-gradient(90deg, #ff007a 0%, #ff007a 100%); /* Uniswap color */
+            box-shadow: 0 4px 15px -3px rgba(255, 0, 122, 0.4);
+            transition: all 0.3s ease;
+        }
+        .uniswap-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px -3px rgba(255, 0, 122, 0.6);
+        }
+        /* --------------------- */
 
         @keyframes slideUp {
             from { transform: translateY(20px); opacity: 0; }
@@ -154,7 +196,6 @@
         .favorite-btn.active { color: #ef4444; transform: scale(1.1); }
         .favorite-btn:hover { transform: scale(1.1); }
 
-        /* Стиль для кнопки завершения */
         .complete-btn { transition: all 0.2s; }
         .complete-btn:hover { transform: scale(1.1); }
         
@@ -197,7 +238,6 @@
             border: 2px solid var(--accent);
         }
 
-        /* Стиль для даты последнего клика */
         .last-click-date {
             font-size: 0.7rem;
             padding: 2px 8px;
@@ -252,6 +292,11 @@
                 </div>
 
                 <div class="flex gap-2 items-center">
+                    <!-- NEW SWAP BUTTON -->
+                    <button onclick="openSwapModal()" class="bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-300 px-4 py-2 rounded-lg text-sm font-medium transition-colors flex items-center gap-2">
+                        <i class="fas fa-exchange-alt text-pink-500"></i> Swap
+                    </button>
+
                     <div id="adminPanel" style="display: none;" class="flex gap-2 items-center">
                         <span class="admin-badge text-xs px-2 py-1 rounded-lg font-bold text-white mr-2">ADMIN</span>
                         <button onclick="migrateToFirestore()" class="bg-purple-600 hover:bg-purple-500 px-4 py-2 rounded-lg text-sm font-medium transition-colors" title="Загрузить данные в базу">
@@ -309,7 +354,6 @@
                         <span><i class="fas fa-heart mr-2 w-5 text-red-400"></i>Избранное</span>
                         <span class="bg-red-900/50 text-red-400 px-2 py-0.5 rounded text-xs" id="countFavoritesSidebar">0</span>
                     </button>
-                    <!-- НОВЫЙ ФИЛЬТР "ЗАВЕРШЕННЫЕ" -->
                     <button onclick="filterProjects('completed')" class="sidebar-link w-full text-left px-4 py-2 rounded-lg text-sm text-slate-300 flex justify-between items-center" data-filter="completed">
                         <span><i class="fas fa-check-double mr-2 w-5 text-emerald-400"></i>Завершённые</span>
                         <span class="bg-emerald-900/50 text-emerald-400 px-2 py-0.5 rounded text-xs" id="countCompletedSidebar">0</span>
@@ -490,6 +534,63 @@
         </div>
     </div>
 
+    <!-- SWAP MODAL -->
+    <div id="swapModal" class="modal">
+        <div class="modal-content swap-modal-content p-0 overflow-hidden">
+            <div class="bg-[#1e1e1e] p-4 border-b border-[#333] flex justify-between items-center">
+                <h3 class="font-bold text-white flex items-center gap-2"><i class="fas fa-exchange-alt text-pink-500"></i> Swap</h3>
+                <button onclick="closeSwapModal()" class="text-gray-400 hover:text-white"><i class="fas fa-times"></i></button>
+            </div>
+            
+            <div class="p-6">
+                <!-- Pay Input -->
+                <div class="swap-token-row mb-1 relative">
+                    <div class="flex justify-between text-xs text-gray-400 mb-1">
+                        <span>Pay</span>
+                        <span>Balance: <span id="swapBalance">--</span></span>
+                    </div>
+                    <div class="flex justify-between items-center">
+                        <input type="number" id="swapPayInput" placeholder="0.0" class="bg-transparent text-2xl text-white outline-none w-2/3 font-semibold" oninput="calculateSwap()">
+                        <div class="flex items-center gap-2 bg-[#1e1e1e] px-3 py-1.5 rounded-full border border-[#444]">
+                            <div class="w-5 h-5 rounded-full bg-blue-500 flex items-center justify-center text-xs">Ξ</div>
+                            <span class="text-sm font-bold text-white">ETH</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Arrow -->
+                <div class="swap-arrow-btn" onclick="swapDirection()">
+                    <i class="fas fa-arrow-down text-sm"></i>
+                </div>
+
+                <!-- Receive Input -->
+                <div class="swap-token-row mt-1 relative">
+                    <div class="flex justify-between text-xs text-gray-400 mb-1">
+                        <span>Receive</span>
+                        <span>Est. Rate: <span id="swapRate" class="text-pink-500">Loading...</span></span>
+                    </div>
+                    <div class="flex justify-between items-center">
+                        <input type="number" id="swapReceiveInput" placeholder="0.0" class="bg-transparent text-2xl text-white outline-none w-2/3 font-semibold" oninput="calculateSwapReverse()">
+                        <div class="flex items-center gap-2 bg-[#1e1e1e] px-3 py-1.5 rounded-full border border-[#444]">
+                            <div class="w-5 h-5 rounded-full bg-gray-400 flex items-center justify-center text-[10px] text-black font-bold">$</div>
+                            <span class="text-sm font-bold text-white">USDC</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="mt-6 space-y-3">
+                    <button onclick="openUniswap()" class="uniswap-btn w-full text-white py-3.5 rounded-xl font-bold text-sm flex items-center justify-center gap-2">
+                        <i class="fas fa-external-link-alt"></i> Swap on Uniswap (Sepolia)
+                    </button>
+                    <p class="text-[11px] text-gray-500 text-center">
+                        Calculations are approximate. Uses Binance ETH price API.<br>
+                        Ensure you are on Sepolia network.
+                    </p>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <div id="toast" class="fixed bottom-4 right-4 bg-slate-800 border border-slate-700 text-white px-6 py-3 rounded-xl shadow-2xl transform translate-y-20 opacity-0 transition-all duration-300 z-50 flex items-center gap-3">
         <i class="fas fa-check-circle text-emerald-400"></i>
         <span id="toastMessage">Действие выполнено</span>
@@ -532,6 +633,10 @@
         let adminClickCount = 0;
         const ADMIN_CLICK_THRESHOLD = 5;
 
+        // --- SWAP VARIABLES ---
+        let ethPrice = 0;
+        let isEthToUsdc = true;
+
         // Функция для форматирования даты в понятный формат
         function formatClickDate(dateString) {
             if (!dateString) return null;
@@ -550,14 +655,12 @@
             } else if (dateOnly === yesterdayOnly) {
                 return { text: 'вчера', class: 'older' };
             } else {
-                // Формат ДД.ММ
                 const day = date.getDate().toString().padStart(2, '0');
                 const month = (date.getMonth() + 1).toString().padStart(2, '0');
                 return { text: `${day}.${month}`, class: 'older' };
             }
         }
 
-        // Проверка, был ли клик сегодня (использует arcData)
         function isClickedToday(projectId) {
             const record = arcData[projectId];
             if (!record || !record.lastClick) return false;
@@ -585,12 +688,11 @@
             } else {
                 currentUser = null;
                 userFavorites = [];
-                userCompleted = []; // Сброс статуса завершения при выходе (если хотите)
+                userCompleted = [];
                 arcData = {}; 
                 document.getElementById('loggedOutView').classList.remove('hidden');
                 document.getElementById('loggedInView').classList.add('hidden');
                 document.getElementById('guestWarning').classList.remove('hidden');
-                // Загружаем локальные данные если не авторизован
                 arcData = JSON.parse(localStorage.getItem(STORAGE_KEY)) || {};
                 userCompleted = JSON.parse(localStorage.getItem(COMPLETED_KEY)) || [];
                 applyFilters();
@@ -603,15 +705,10 @@
                 if (docSnap.exists()) {
                     const data = docSnap.data();
                     userFavorites = data.favorites || [];
-                    
-                    // --- НОВОЕ: Загрузка статуса завершения из облака ---
                     if (data.completed && Array.isArray(data.completed)) {
                         userCompleted = data.completed;
                         localStorage.setItem(COMPLETED_KEY, JSON.stringify(userCompleted));
                     }
-                    // --------------------------------------------------
-
-                    // Загружаем единую статистику (arcGuideStats) из облака
                     if (data.arcGuideStats) {
                         arcData = data.arcGuideStats;
                         localStorage.setItem(STORAGE_KEY, JSON.stringify(arcData));
@@ -623,7 +720,6 @@
             });
         }
 
-        // --- НОВАЯ ФУНКЦИЯ: Переключение статуса завершения ---
         window.toggleComplete = async function(id) {
             const idx = userCompleted.indexOf(id);
             let newCompleted = [...userCompleted];
@@ -638,7 +734,7 @@
             
             userCompleted = newCompleted;
             localStorage.setItem(COMPLETED_KEY, JSON.stringify(userCompleted));
-            applyFilters(); // Перерисовка интерфейса
+            applyFilters();
             
             if (currentUser) {
                 try {
@@ -651,7 +747,6 @@
                 } catch(e) { console.error('Sync error', e); }
             }
         };
-        // --------------------------------------------------
 
         // LOAD DATA
         const EXTERNAL_DATA_URL = 'https://raw.githubusercontent.com/Worklaf/Worklaf/main/TestNet_Hub/projects.json';
@@ -677,14 +772,12 @@
             });
         }
 
-        // ОБНОВЛЕННАЯ ФУНКЦИЯ ОТСЛЕЖИВАНИЯ
         window.trackGuideClick = async (id, url) => {
             if(url) window.open(url, '_blank');
             else openDetail(id);
 
             const now = new Date().toISOString();
             
-            // Обновляем локальные данные
             if (!arcData[id]) arcData[id] = {};
             arcData[id].totalClicks = (arcData[id].totalClicks || 0) + 1;
             arcData[id].lastClick = now;
@@ -692,11 +785,9 @@
             localStorage.setItem(STORAGE_KEY, JSON.stringify(arcData));
             showToast('Задание засчитано! ✅');
             
-            // Синхронизация с облаком
             if (currentUser) {
                 try {
                     const userRef = doc(db, "users", currentUser.uid);
-                    // Сохраняем в единое поле для обоих файлов
                     await setDoc(userRef, { 
                         favorites: userFavorites,
                         completed: userCompleted,
@@ -719,7 +810,6 @@
             await setDoc(userRef, { favorites: newFavs }, { merge: true });
         }
 
-        // RENDERING
         window.applyFilters = function(search = '') {
             const filtered = getFilteredProjects(search);
             renderCategories(filtered);
@@ -736,10 +826,7 @@
                 if (currentFilters.status === 'ended') return p.status === 'ended';
                 if (currentFilters.status === 'daily') return p.hasDaily && p.status === 'active';
                 if (currentFilters.status === 'favorites') return userFavorites.includes(p.id);
-                
-                // --- НОВЫЙ ФИЛЬТР: Завершённые ---
                 if (currentFilters.status === 'completed') return userCompleted.includes(p.id);
-                
                 if (currentFilters.status === 'today') return isToday(p.createdAt);
                 return true;
             }).filter(p => {
@@ -762,13 +849,9 @@
 
             grid.innerHTML = filteredProjects.map(project => {
                 const isFav = userFavorites.includes(project.id);
-                const isCompleted = userCompleted.includes(project.id); // Проверка статуса завершения
+                const isCompleted = userCompleted.includes(project.id);
                 const isNew = isToday(project.createdAt);
-                
-                // Проверяем, был ли клик по гайду сегодня (использует arcData)
                 const clickedToday = isClickedToday(project.id);
-                
-                // Дата последнего клика (для отображения)
                 const lastClickRecord = arcData[project.id];
                 const lastClickDate = lastClickRecord?.lastClick ? formatClickDate(lastClickRecord.lastClick) : null;
                 
@@ -776,12 +859,8 @@
                     `<span class="bg-slate-800 px-2 py-1 rounded cursor-pointer hover:bg-slate-700 transition-colors" onclick="event.stopPropagation(); toggleCategory('${cat}')">${cat}</span>`
                 ).join('');
                 
-                // --- ЛОГИКА ОТРИСОВКИ ---
-                // Если пользователь завершил активность, добавляем класс user-completed
                 const completedClass = isCompleted ? 'user-completed' : '';
-                // Если завершено сегодня через клик по гайду, это отдельный стиль
                 const dailyDoneClass = clickedToday && !isCompleted ? 'daily-done-today' : '';
-                // Иконка завершения
                 const completedIcon = isCompleted ? '<i class="fas fa-check-circle user-completed-icon"></i>' : '';
                 
                 return `
@@ -816,14 +895,11 @@
                                         <span>Гайд</span>
                                     </button>
                                     ${lastClickDate ? `<span class="last-click-date ${lastClickDate.class}">${lastClickDate.text}</span>` : ''}
-                                    
-                                    <!-- НОВАЯ КНОПКА: ЗАВЕРШИТЬ -->
                                     <button onclick="event.stopPropagation(); toggleComplete('${project.id}')" 
                                             class="complete-btn ${isCompleted ? 'text-emerald-500' : 'text-slate-500 hover:text-emerald-500'} p-2 transition-colors w-10 h-10 flex items-center justify-center rounded-lg hover:bg-slate-800" 
                                             title="Отметить как завершённое">
                                         <i class="fas ${isCompleted ? 'fa-check-square' : 'fa-square'} text-lg"></i>
                                     </button>
-
                                     <button onclick="event.stopPropagation(); toggleFavorite('${project.id}')" class="favorite-btn ${isFav ? 'active' : 'text-slate-500'} p-2 hover:text-red-500 transition-colors w-10 h-10 flex items-center justify-center rounded-lg hover:bg-slate-800"><i class="fas fa-heart ${isFav ? 'fill-current' : ''} text-lg"></i></button>
                                 </div>
                             </div>
@@ -871,7 +947,6 @@
             document.getElementById('detailDaily').textContent = project.hasDaily ? 'Есть' : 'Нет';
             document.getElementById('detailPriority').textContent = project.priority === 'high' ? 'Высокий' : 'Обычный';
             
-            // Отображение даты последнего клика в модалке (использует arcData)
             const lastClickRecord = arcData[project.id];
             const lastClickInfo = lastClickRecord?.lastClick ? formatClickDate(lastClickRecord.lastClick) : null;
             document.getElementById('detailLastClick').innerHTML = lastClickInfo 
@@ -1046,7 +1121,6 @@
             document.getElementById('countActive').textContent = filtered.filter(p => p.status === 'active').length;
             document.getElementById('countDaily').textContent = filtered.filter(p => p.hasDaily && p.status === 'active').length;
             document.getElementById('countFavoritesSidebar').textContent = filtered.filter(p => userFavorites.includes(p.id)).length;
-            // --- НОВЫЙ СЧЕТЧИК ---
             document.getElementById('countCompletedSidebar').textContent = filtered.filter(p => userCompleted.includes(p.id)).length;
             document.getElementById('countEnded').textContent = filtered.filter(p => p.status === 'ended').length;
         }
@@ -1055,13 +1129,92 @@
             document.getElementById('statActive').textContent = filtered.filter(p => p.status === 'active').length;
             document.getElementById('statToday').textContent = filtered.filter(p => isToday(p.createdAt)).length;
             document.getElementById('statFavorites').textContent = filtered.filter(p => userFavorites.includes(p.id)).length;
-            // --- НОВАЯ СТАТИСТИКА ---
             document.getElementById('statCompleted').textContent = userCompleted.length;
         }
         
         function isToday(dateString) { if (!dateString) return false; return new Date(dateString).toDateString() === new Date().toDateString(); }
         function formatDate(str) { if (!str) return '—'; return new Date(str).toLocaleDateString('ru-RU'); }
         window.showToast = (msg) => { const t = document.getElementById('toast'); document.getElementById('toastMessage').textContent = msg; t.classList.remove('translate-y-20', 'opacity-0'); setTimeout(() => t.classList.add('translate-y-20', 'opacity-0'), 3000); };
+
+        // --- SWAP LOGIC ---
+        window.openSwapModal = async () => {
+            document.getElementById('swapModal').classList.add('active');
+            await fetchEthPrice();
+        };
+        window.closeSwapModal = () => document.getElementById('swapModal').classList.remove('active');
+
+        async function fetchEthPrice() {
+            try {
+                // Using Binance public API for ETH price
+                const response = await fetch('https://api.binance.com/api/v3/ticker/price?symbol=ETHUSDT');
+                const data = await response.json();
+                ethPrice = parseFloat(data.price);
+                
+                const rateEl = document.getElementById('swapRate');
+                rateEl.textContent = `1 ETH ≈ ${ethPrice.toFixed(2)} USDC`;
+                calculateSwap(); // Recalculate if input exists
+            } catch (e) {
+                console.error('Error fetching price', e);
+                document.getElementById('swapRate').textContent = 'Price unavailable';
+            }
+        }
+
+        function calculateSwap() {
+            if (ethPrice === 0) return;
+            const payInput = document.getElementById('swapPayInput').value;
+            const receiveInput = document.getElementById('swapReceiveInput');
+            
+            if (payInput) {
+                receiveInput.value = (payInput * ethPrice).toFixed(2);
+            } else {
+                receiveInput.value = '';
+            }
+        }
+
+        function calculateSwapReverse() {
+            if (ethPrice === 0) return;
+            const receiveInput = document.getElementById('swapReceiveInput').value;
+            const payInput = document.getElementById('swapPayInput');
+            
+            if (receiveInput) {
+                payInput.value = (receiveInput / ethPrice).toFixed(6);
+            } else {
+                payInput.value = '';
+            }
+        }
+
+        function swapDirection() {
+            // Visual swap only for this simple calculator, 
+            // deep link logic handles actual token selection
+            isEthToUsdc = !isEthToUsdc;
+            
+            // Swap input values
+            const payVal = document.getElementById('swapPayInput').value;
+            const recVal = document.getElementById('swapReceiveInput').value;
+            
+            document.getElementById('swapPayInput').value = recVal;
+            document.getElementById('swapReceiveInput').value = payVal;
+            
+            // Recalculate to ensure numbers match direction
+            if (document.getElementById('swapPayInput').value) calculateSwap();
+            else if (document.getElementById('swapReceiveInput').value) calculateSwapReverse();
+        }
+
+        window.openUniswap = () => {
+            const amount = document.getElementById('swapPayInput').value;
+            // Uniswap Deep Link
+            // Chain: sepolia
+            // Input: ETH (Native)
+            // Output: USDC (Common Testnet address)
+            // Note: Exact address depends on Uniswap's deployed testnet tokens. 
+            // We use a generic link which opens the swap interface with params.
+            
+            let url = `https://app.uniswap.org/swap?chain=sepolia`;
+            if (amount) {
+                url += `&inputCurrency=ETH&exactAmount=${amount}`;
+            }
+            window.open(url, '_blank');
+        };
     </script>
 </body>
 </html>
