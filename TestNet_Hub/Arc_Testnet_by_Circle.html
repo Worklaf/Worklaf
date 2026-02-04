@@ -853,80 +853,99 @@
     const LEGEND_COLLAPSE_KEY = 'arc_tracker_legend_collapsed';
     const FAVORITES_KEY = 'arc_tracker_favorites_v1';
     const FAVORITES_ORDER_KEY = 'arc_tracker_favorites_order_v1';
+    const FAVORITES_TIMESTAMP_KEY = 'arc_tracker_favorites_timestamp_v1'; // 👈 НОВЫЙ КЛЮЧ ДЛЯ ВРЕМЕНИ
     const PAGE_VERSION = '2026-02-01-v3';
 
     // === ЗАГРУЗКА ДАННЫХ ===
     
     async function loadAllData() {
-    // Считываем localStorage сырьём, чтобы понять "ключ есть/нет"
-    const localStatsRaw = localStorage.getItem(STORAGE_KEY);
-    const localFavRaw = localStorage.getItem(FAVORITES_KEY);
-    const localOrderRaw = localStorage.getItem(FAVORITES_ORDER_KEY);
+        // Считываем локальные данные
+        const localStatsRaw = localStorage.getItem(STORAGE_KEY);
+        const localFavRaw = localStorage.getItem(FAVORITES_KEY);
+        const localOrderRaw = localStorage.getItem(FAVORITES_ORDER_KEY);
+        const localTimestampRaw = localStorage.getItem(FAVORITES_TIMESTAMP_KEY);
 
-    const localStats = JSON.parse(localStatsRaw || '{}');
-    const localFavorites = JSON.parse(localFavRaw || '{}');
-    const localOrder = JSON.parse(localOrderRaw || '[]');
+        const localStats = JSON.parse(localStatsRaw || '{}');
+        const localFavorites = JSON.parse(localFavRaw || '{}');
+        const localOrder = JSON.parse(localOrderRaw || '[]');
+        const localTimestamp = parseInt(localTimestampRaw || '0', 10);
 
-    // Флаги "локальный источник уже существует"
-    const hasLocalFavKey = localFavRaw !== null;
-    const hasLocalOrderKey = localOrderRaw !== null;
+        // Сразу применяем локальные данные (по умолчанию)
+        arcData = localStats;
+        favoritesState = localFavorites;
+        favoritesOrder = localOrder;
 
-    // Сразу применяем локальные данные
-    arcData = localStats;
-    favoritesState = localFavorites;
-    favoritesOrder = localOrder;
+        if (currentUser) {
+            try {
+                const docRef = doc(db, "users", currentUser.uid);
+                const docSnap = await getDoc(docRef);
 
-    if (currentUser) {
-        try {
-            const docRef = doc(db, "users", currentUser.uid);
-            const docSnap = await getDoc(docRef);
-
-            if (docSnap.exists()) {
-                const cloudData = docSnap.data();
-                const cloudFav = (cloudData.favoritesState && Object.keys(cloudData.favoritesState).length > 0)
-                    ? cloudData.favoritesState
-                    : null;
-                const cloudOrder = (Array.isArray(cloudData.favoritesOrder) && cloudData.favoritesOrder.length > 0)
-                    ? cloudData.favoritesOrder
-                    : null;
-
-                // --- ИЗБРАННОЕ: ЛОКАЛЬНОЕ ИМЕЕТ ПРИОРИТЕТ, ЕСЛИ КЛЮЧ УЖЕ ЕСТЬ ---
-                if (!hasLocalFavKey && cloudFav) {
-                    // Первый запуск на новом устройстве: берём из облака
-                    favoritesState = cloudFav;
-                    localStorage.setItem(FAVORITES_KEY, JSON.stringify(favoritesState));
-                } else if (hasLocalFavKey) {
-                    // Локальные данные считаем истиной (даже если они пустые)
-                    // и синхронизируем в облако
-                    const sameFav = JSON.stringify(cloudFav || {}) === JSON.stringify(localFavorites);
-                    if (!sameFav) {
-                        await saveToCloud({ favoritesState: localFavorites });
+                if (docSnap.exists()) {
+                    const cloudData = docSnap.data();
+                    
+                    // 👇 ИЗБРАННОЕ: СИНХРОНИЗАЦИЯ ПО ВРЕМЕНИ
+                    
+                    // Получаем облачные данные
+                    const cloudFavorites = cloudData.favoritesState || {};
+                    const cloudOrder = cloudData.favoritesOrder || [];
+                    const cloudTimestamp = parseInt(cloudData.favoritesTimestamp || '0', 10);
+                    
+                    // Проверяем, есть ли вообще данные в избранном
+                    const localHasFavorites = Object.keys(localFavorites).length > 0 || localOrder.length > 0;
+                    const cloudHasFavorites = Object.keys(cloudFavorites).length > 0 || cloudOrder.length > 0;
+                    
+                    if (cloudHasFavorites) {
+                        // Сравниваем по времени
+                        if (cloudTimestamp > localTimestamp) {
+                            // 👉 ОБЛАКО НОВЕЕ → загружаем из облака в локальное хранилище
+                            console.log('📥 Загружаем избранное из облака (данные новее)');
+                            favoritesState = cloudFavorites;
+                            favoritesOrder = cloudOrder;
+                            
+                            // Сохраняем в localStorage с облачным временем
+                            localStorage.setItem(FAVORITES_KEY, JSON.stringify(favoritesState));
+                            localStorage.setItem(FAVORITES_ORDER_KEY, JSON.stringify(favoritesOrder));
+                            localStorage.setItem(FAVORITES_TIMESTAMP_KEY, String(cloudTimestamp));
+                        } else {
+                            // 👉 ЛОКАЛЬНОЕ НОВЕЕ → записываем локальное в облако
+                            console.log('📤 Записываем избранное в облако (локальные данные новее)');
+                            await saveToCloud({
+                                favoritesState: localFavorites,
+                                favoritesOrder: localOrder,
+                                favoritesTimestamp: localTimestamp
+                            });
+                        }
+                    } else if (localHasFavorites) {
+                        // В облаке пусто, но есть локальные → заливаем в облако
+                        console.log('📤 Записываем избранное в облако (облако пустое)');
+                        await saveToCloud({
+                            favoritesState: localFavorites,
+                            favoritesOrder: localOrder,
+                            favoritesTimestamp: localTimestamp
+                        });
                     }
-                }
-
-                if (!hasLocalOrderKey && cloudOrder) {
-                    favoritesOrder = cloudOrder;
-                    localStorage.setItem(FAVORITES_ORDER_KEY, JSON.stringify(favoritesOrder));
-                } else if (hasLocalOrderKey) {
-                    const sameOrder = JSON.stringify(cloudOrder || []) === JSON.stringify(localOrder);
-                    if (!sameOrder) {
-                        await saveToCloud({ favoritesOrder: localOrder });
+                    
+                    // Статистика (оставляем как было - приоритет облака)
+                    if (cloudData.arcGuideStats && Object.keys(cloudData.arcGuideStats).length > 0) {
+                        arcData = cloudData.arcGuideStats;
+                        localStorage.setItem(STORAGE_KEY, JSON.stringify(arcData));
                     }
+                } else if (Object.keys(localFavorites).length > 0 || localOrder.length > 0) {
+                    // Документ в облаке не существует, но есть локальные данные → создаём
+                    console.log('📤 Создаём документ в облаке с локальными данными');
+                    await saveToCloud({
+                        favoritesState: localFavorites,
+                        favoritesOrder: localOrder,
+                        favoritesTimestamp: localTimestamp
+                    });
                 }
-
-                // Статистика (оставляем ваш прежний приоритет облака)
-                if (cloudData.arcGuideStats && Object.keys(cloudData.arcGuideStats).length > 0) {
-                    arcData = cloudData.arcGuideStats;
-                    localStorage.setItem(STORAGE_KEY, JSON.stringify(arcData));
-                }
+            } catch (e) {
+                console.error("Ошибка загрузки из облака:", e);
             }
-        } catch (e) {
-            console.error("Ошибка загрузки из облака:", e);
         }
-    }
 
-    refreshAllVisuals();
-}
+        refreshAllVisuals();
+    }
 
     // === СОХРАНЕНИЕ ДАННЫХ ===
     
@@ -949,15 +968,20 @@
     }
 
     async function saveFavorites() {
+        // Генерируем НОВЫЙ timestamp
+        const newTimestamp = Date.now();
+        
         // Сохраняем локально
         localStorage.setItem(FAVORITES_KEY, JSON.stringify(favoritesState));
         localStorage.setItem(FAVORITES_ORDER_KEY, JSON.stringify(favoritesOrder));
+        localStorage.setItem(FAVORITES_TIMESTAMP_KEY, String(newTimestamp));
         
-        // Сохраняем в облако
+        // Сохраняем в облако С НОВЫМ ВРЕМЕНЕМ
         if (currentUser) {
             await saveToCloud({
                 favoritesState: favoritesState,
-                favoritesOrder: favoritesOrder
+                favoritesOrder: favoritesOrder,
+                favoritesTimestamp: newTimestamp
             });
         }
     }
