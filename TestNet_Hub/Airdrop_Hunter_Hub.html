@@ -255,6 +255,7 @@
         ::-webkit-scrollbar-track { background: var(--bg-primary); }
         ::-webkit-scrollbar-thumb { background: #334155; border-radius: 4px; }
     </style>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/ethers/6.7.0/ethers.umd.min.js"></script>
 </head>
 <body class="antialiased">
 
@@ -366,6 +367,13 @@
                 <h3 class="font-semibold mb-3 mt-6 text-slate-300 text-sm">Категории</h3>
                 <div class="space-y-1" id="categoryFilters"></div>
             </div>
+            <div class="mt-6 border-t border-slate-700 pt-4">
+    <h3 class="font-semibold mb-3 text-slate-300 text-sm">Инструменты Unichain</h3>
+    <button onclick="openPoolModal()" class="w-full bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-300 py-2 rounded-lg text-sm font-medium transition-colors flex items-center justify-center gap-2 group">
+        <i class="fas fa-search-dollar text-blue-400 group-hover:text-white transition-colors"></i> 
+        <span>Проверить Пул</span>
+    </button>
+</div>
         </aside>
 
         <main class="flex-1">
@@ -1215,6 +1223,124 @@
             }
             window.open(url, '_blank');
         };
+            // --- UNICHAIN POOL CHECKER LOGIC ---
+    
+    // Делаем функции глобальными, чтобы кнопки их видели
+    window.openPoolModal = () => document.getElementById('poolModal').classList.add('active');
+    window.closePoolModal = () => {
+        document.getElementById('poolModal').classList.remove('active');
+        document.getElementById('poolStatusResult').classList.add('hidden');
+    };
+
+    window.checkUnichainPool = async () => {
+        const btn = document.getElementById('btnCheckPool');
+        const resultDiv = document.getElementById('poolStatusResult');
+        const originalText = btn.innerHTML;
+        
+        // Анимация загрузки
+        btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Проверяем...';
+        btn.disabled = true;
+        resultDiv.classList.add('hidden');
+
+        try {
+            // Настройки Unichain Sepolia
+            const provider = new ethers.JsonRpcProvider("https://sepolia.unichain.org");
+            const factoryAddress = "0x1F98431c8aD98523631AE4a59f267346ea31F984";
+            
+            // Ваш USDC и стандартный WETH
+            const USDC_ADDRESS = "0x1c7d4b196cb0c7b01d743fbc6116a902379c7238";
+            const WETH_ADDRESS = "0x4200000000000000000000000000000000000006";
+
+            const factoryAbi = ["function getPool(address tokenA, address tokenB, uint24 fee) external view returns (address pool)"];
+            const factory = new ethers.Contract(factoryAddress, factoryAbi, provider);
+
+            // Проверяем Fee 3000 (0.3%)
+            const poolAddress = await factory.getPool(USDC_ADDRESS, WETH_ADDRESS, 3000);
+
+            resultDiv.classList.remove('hidden');
+            
+            if (poolAddress === "0x0000000000000000000000000000000000000000") {
+                // Пул не найден
+                resultDiv.innerHTML = `
+                    <div class="bg-red-900/20 border border-red-500/50 rounded-xl p-4 text-center">
+                        <div class="text-3xl mb-2">❌</div>
+                        <h3 class="font-bold text-red-400 mb-1">Пул не существует</h3>
+                        <p class="text-xs text-slate-400 mb-3">Для пары USDC/WETH (0.3%) пул еще не создан.</p>
+                        <div class="bg-slate-900 p-2 rounded text-xs text-left mb-2">
+                            <span class="text-slate-500">Менеджер позиций:</span><br>
+                            <span class="font-mono text-yellow-500 break-all">0xC36442b4a4522E871399CD717aBDD847Ab11FE88</span>
+                        </div>
+                        <p class="text-[10px] text-slate-500">Используйте createAndInitializePoolIfNecessary</p>
+                    </div>
+                `;
+            } else {
+                // Пул найден
+                resultDiv.innerHTML = `
+                    <div class="bg-emerald-900/20 border border-emerald-500/50 rounded-xl p-4 text-center">
+                        <div class="text-3xl mb-2">✅</div>
+                        <h3 class="font-bold text-emerald-400 mb-1">Пул найден!</h3>
+                        <p class="text-xs text-slate-400 mb-3">Адрес контракта пула:</p>
+                        <div class="bg-slate-900 p-2 rounded text-xs font-mono text-emerald-300 break-all border border-emerald-900 mb-3 cursor-pointer hover:bg-slate-800 transition" onclick="navigator.clipboard.writeText('${poolAddress}'); showToast('Скопировано!')">
+                            ${poolAddress} <i class="fas fa-copy ml-1 opacity-50"></i>
+                        </div>
+                        <a href="https://sepolia.uniscan.xyz/address/${poolAddress}" target="_blank" class="block w-full bg-emerald-600/20 hover:bg-emerald-600/30 text-emerald-400 py-2 rounded-lg text-xs font-bold transition">
+                            Посмотреть на Uniscan <i class="fas fa-external-link-alt ml-1"></i>
+                        </a>
+                    </div>
+                `;
+            }
+
+        } catch (error) {
+            console.error(error);
+            resultDiv.classList.remove('hidden');
+            resultDiv.innerHTML = `
+                <div class="bg-red-900/20 border border-red-500 rounded-lg p-3 text-red-400 text-sm">
+                    Ошибка запроса. Проверьте консоль.
+                </div>
+            `;
+        } finally {
+            btn.innerHTML = originalText;
+            btn.disabled = false;
+        }
+    };
     </script>
+    <!-- Unichain Pool Checker Modal -->
+<div id="poolModal" class="modal">
+    <div class="modal-content modal-sm p-6 relative">
+        <button onclick="closePoolModal()" class="absolute top-4 right-4 text-slate-400 hover:text-white"><i class="fas fa-times"></i></button>
+        <h2 class="text-xl font-bold mb-4 flex items-center gap-2">
+            <i class="fas fa-search-dollar text-blue-500"></i> Проверка Пула
+        </h2>
+        
+        <div class="space-y-4">
+            <div class="bg-slate-800/50 p-4 rounded-xl border border-slate-700 text-sm">
+                <div class="flex justify-between mb-2">
+                    <span class="text-slate-400">Token A (USDC)</span>
+                    <span class="text-blue-400 font-mono text-xs">Ваш токен</span>
+                </div>
+                <div class="bg-slate-900 p-2 rounded text-xs font-mono text-slate-300 break-all mb-3 border border-slate-700">
+                    0x1c7d4b196cb0c7b01d743fbc6116a902379c7238
+                </div>
+                
+                <div class="flex justify-between mb-2">
+                    <span class="text-slate-400">Token B (WETH)</span>
+                    <span class="text-pink-400 font-mono text-xs">Unichain Sepolia</span>
+                </div>
+                <div class="bg-slate-900 p-2 rounded text-xs font-mono text-slate-300 break-all border border-slate-700">
+                    0x4200000000000000000000000000000000000006
+                </div>
+            </div>
+
+            <button onclick="checkUnichainPool()" id="btnCheckPool" class="w-full bg-gradient-to-r from-blue-600 to-purple-600 hover:opacity-90 py-3 rounded-xl font-bold transition-all shadow-lg shadow-blue-900/20 flex justify-center items-center gap-2">
+                <i class="fas fa-bolt"></i> Проверить наличие пула
+            </button>
+
+            <!-- Результат -->
+            <div id="poolStatusResult" class="hidden">
+                <!-- Сюда JS вставит результат -->
+            </div>
+        </div>
+    </div>
+</div>
 </body>
 </html>
