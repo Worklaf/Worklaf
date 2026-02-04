@@ -1399,22 +1399,22 @@
                     
                     // Загружаем избранное
                     // ХРАНИМ ЛОКАЛЬНО В ПОЛНОМ ФОРМАТЕ (Объекты с названиями и ссылками)
-                    if (cloudData.favoritesState && Object.keys(cloudData.favoritesState).length > 0) {
-                        favoritesState = cloudData.favoritesState;
-                    } else {
+                    // Только если в облаке нет данных об избранном, загружаем локально
+                    if (!cloudData.favoritesState || Object.keys(cloudData.favoritesState).length === 0) {
                         favoritesState = loadFavorites(); // Грузим локально
-                    }
-                    
-                    if (cloudData.favoritesOrder && Array.isArray(cloudData.favoritesOrder)) {
-                        favoritesOrder = cloudData.favoritesOrder;
                     } else {
-                        favoritesOrder = loadFavoritesOrder();
+                        favoritesState = cloudData.favoritesState;
                     }
                     
-                    // ВАЖНО: Обновляем облако локальными данными, чтобы не потерять
-                    if (Object.keys(localStats).length > 0 || Object.keys(favoritesState).length > 0) {
+                    if (!cloudData.favoritesOrder || cloudData.favoritesOrder.length === 0) {
+                        favoritesOrder = loadFavoritesOrder();
+                    } else {
+                        favoritesOrder = cloudData.favoritesOrder;
+                    }
+                    
+                    // Обновляем облако текущими данными
+                    if (Object.keys(favoritesState).length > 0) {
                         await setDoc(docRef, { 
-                            arcGuideStats: arcData,
                             favoritesState: favoritesState,
                             favoritesOrder: favoritesOrder
                         }, { merge: true });
