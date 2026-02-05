@@ -274,6 +274,16 @@
         ::-webkit-scrollbar-track { background: rgba(255, 255, 255, 0.02); }
         ::-webkit-scrollbar-thumb { background: #334155; border-radius: 3px; }
     </style>
+    <!-- Дополнительные стили для кнопки статистики -->
+<style>
+    .stats-btn { 
+        background: linear-gradient(135deg, rgba(139, 92, 246, 0.2), rgba(59, 130, 246, 0.1));
+        border: 1px solid rgba(139, 92, 246, 0.3);
+    }
+    .stats-btn:hover { 
+        background: linear-gradient(135deg, rgba(139, 92, 246, 0.3), rgba(59, 130, 246, 0.2));
+    }
+</style>
 </head>
 <body class="antialiased">
 
@@ -312,14 +322,22 @@
 
                 <div class="flex gap-2 items-center">
                     <div id="adminPanel" style="display: none;" class="flex gap-2 items-center">
-                        <span class="admin-badge text-xs px-2 py-1 rounded-lg font-bold text-white mr-2">ADMIN</span>
-                        <button onclick="migrateToFirestore()" class="bg-purple-600 hover:bg-purple-500 px-4 py-2 rounded-lg text-sm font-medium transition-colors" title="Загрузить данные в базу">
-                            <i class="fas fa-cloud-upload-alt"></i> Sync
-                        </button>
-                        <button onclick="openAddModal()" class="bg-blue-600 hover:bg-blue-500 px-4 py-2 rounded-lg text-sm font-medium transition-colors flex items-center gap-2">
-                            <i class="fas fa-plus"></i> Добавить
-                        </button>
-                    </div>
+    <span class="admin-badge text-xs px-2 py-1 rounded-lg font-bold text-white mr-2">ADMIN</span>
+    
+    <!-- Новая кнопка статистики -->
+    <button onclick="openStats()" class="stats-btn text-purple-400 hover:text-purple-300 px-4 py-2 rounded-lg text-sm font-medium transition-colors flex items-center gap-2" title="Статистика">
+        <i class="fas fa-chart-pie"></i>
+        <span class="hidden sm:inline">Статистика</span>
+    </button>
+    
+    <button onclick="migrateToFirestore()" class="bg-purple-600 hover:bg-purple-500 px-4 py-2 rounded-lg text-sm font-medium transition-colors" title="Загрузить данные в базу">
+        <i class="fas fa-cloud-upload-alt"></i>
+    </button>
+    <button onclick="openAddModal()" class="bg-blue-600 hover:bg-blue-500 px-4 py-2 rounded-lg text-sm font-medium transition-colors flex items-center gap-2">
+        <i class="fas fa-plus"></i>
+        <span class="hidden sm:inline">Добавить</span>
+    </button>
+</div>
                     
                     <div id="authPanel" class="flex items-center gap-3 ml-2 border-l border-white/10 pl-4">
                         <div id="loggedOutView">
@@ -675,28 +693,59 @@
         window.handleRegister = async () => { const email = document.getElementById('emailInput').value; const pass = document.getElementById('passInput').value; try { await createUserWithEmailAndPassword(auth, email, pass); closeLoginModal(); showToast('Аккаунт создан!'); } catch(e) { showToast(e.message); } };
         window.logout = () => signOut(auth).then(() => showToast('Вы вышли из системы'));
 
-        onAuthStateChanged(auth, (user) => {
-            if (user) {
-                currentUser = user;
-                document.getElementById('loggedOutView').classList.add('hidden');
-                document.getElementById('loggedInView').classList.remove('hidden');
-                document.getElementById('guestWarning').classList.add('hidden');
-                document.getElementById('userAvatar').src = user.photoURL || `https://ui-avatars.com/api/?name=${user.email || 'User'}&background=random`;
-                document.getElementById('userName').textContent = user.displayName || user.email.split('@')[0];
-                initUserSync(user.uid);
+        onAuthStateChanged(auth, async (user) => {
+    const now = new Date().toISOString();
+    
+    if (user) {
+        currentUser = user;
+        
+        // Записываем визит пользователя
+        try {
+            const userRef = doc(db, "users", user.uid);
+            const userSnap = await getDoc(userRef);
+            
+            const userData = {
+                email: user.email,
+                displayName: user.displayName,
+                photoURL: user.photoURL,
+                lastLogin: now,
+            };
+            
+            if (userSnap.exists()) {
+                // Обновляем только lastLogin, сохраняем другие данные
+                await updateDoc(userRef, {
+                    lastLogin: now,
+                    email: user.email,
+                    displayName: user.displayName,
+                    photoURL: user.photoURL
+                });
             } else {
-                currentUser = null;
-                userFavorites = [];
-                userCompleted = [];
-                arcData = {}; 
-                document.getElementById('loggedOutView').classList.remove('hidden');
-                document.getElementById('loggedInView').classList.add('hidden');
-                document.getElementById('guestWarning').classList.remove('hidden');
-                arcData = JSON.parse(localStorage.getItem(STORAGE_KEY)) || {};
-                userCompleted = JSON.parse(localStorage.getItem(COMPLETED_KEY)) || [];
-                applyFilters();
+                // Первый вход - записываем firstLogin
+                userData.firstLogin = now;
+                await setDoc(userRef, userData);
             }
-        });
+        } catch (e) {
+            console.error('Ошибка записи визита:', e);
+        }
+
+        document.getElementById('loggedOutView').classList.add('hidden');
+        document.getElementById('loggedInView').classList.remove('hidden');
+        document.getElementById('guestWarning').classList.add('hidden');
+        document.getElementById('userAvatar').src = user.photoURL || `https://ui-avatars.com/api/?name=${user.email || 'User'}&background=random`;
+        document.getElementById('userName').textContent = user.displayName || user.email.split('@')[0];
+        initUserSync(user.uid);
+    } else {
+        currentUser = null;
+        userFavorites = [];
+        userCompleted = [];
+        document.getElementById('loggedOutView').classList.remove('hidden');
+        document.getElementById('loggedInView').classList.add('hidden');
+        document.getElementById('guestWarning').classList.remove('hidden');
+        arcData = JSON.parse(localStorage.getItem(STORAGE_KEY)) || {};
+        userCompleted = JSON.parse(localStorage.getItem(COMPLETED_KEY)) || [];
+        applyFilters();
+    }
+});
 
         function initUserSync(uid) {
             const userRef = doc(db, "users", uid);
@@ -1289,6 +1338,21 @@
             projects.forEach(p => { if(p.categories) p.categories.forEach(c => cats.add(c)); });
             return Array.from(cats);
         }
+        // === СТАТИСТИКА ===
+window.openStats = function() {
+    if (!currentUser) {
+        showToast('Войдите для просмотра статистики');
+        return;
+    }
+    
+    // Проверка на админа
+    if (currentUser.uid !== "SAkz4mdW9reDaIsvqigCNZhEKJR2") {
+        showToast('Нет доступа к статистике');
+        return;
+    }
+    
+    window.open('stats.html', '_blank');
+};
     </script>
 </body>
 </html>
