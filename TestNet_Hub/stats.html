@@ -179,10 +179,32 @@
                     <div class="glass-card rounded-2xl p-5 mb-6">
                         <h3 class="font-semibold text-lg mb-4 flex items-center gap-2">
                             <i class="fas fa-star text-yellow-400"></i>
-                            Топ проектов
+                            Топ проектов по кликам
                         </h3>
                         <div id="topProjects" class="grid grid-cols-2 md:grid-cols-3 gap-3">
                             <!-- Заполнится JS -->
+                        </div>
+                    </div>
+                    
+                    <!-- Notification Stats -->
+                    <div class="glass-card rounded-2xl p-5 mb-6">
+                        <h3 class="font-semibold text-lg mb-4 flex items-center gap-2">
+                            <i class="fas fa-bell text-pink-400"></i>
+                            Статистика уведомлений
+                        </h3>
+                        <div class="grid grid-cols-3 gap-4">
+                            <div class="text-center p-3 bg-slate-800/50 rounded-lg">
+                                <div class="text-2xl font-bold text-blue-400" id="totalNotifications">0</div>
+                                <div class="text-xs text-slate-500">Всего отправлено</div>
+                            </div>
+                            <div class="text-center p-3 bg-slate-800/50 rounded-lg">
+                                <div class="text-2xl font-bold text-green-400" id="viewedNotifications">0</div>
+                                <div class="text-xs text-slate-500">Просмотрено</div>
+                            </div>
+                            <div class="text-center p-3 bg-slate-800/50 rounded-lg">
+                                <div class="text-2xl font-bold text-purple-400" id="viewRate">0%</div>
+                                <div class="text-xs text-slate-500">Процент просмотра</div>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -317,9 +339,11 @@
                                 <th class="pb-3">Первый вход</th>
                                 <th class="pb-3">Последний вход</th>
                                 <th class="pb-3 text-center">Кликов</th>
-                                <th class="pb-3 text-center">Проектов</th>
+                                <th class="pb-3 text-center">Гайдов</th>
+                                <th class="pb-3 text-center">🌐</th>
                                 <th class="pb-3 text-center">❤️</th>
                                 <th class="pb-3 text-center">🔔</th>
+                                <th class="pb-3">Любимый проект</th>
                             </tr>
                         </thead>
                         <tbody id="usersTableBody">
@@ -351,7 +375,7 @@
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
         import { getAuth, signInWithPopup, GoogleAuthProvider, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
-        import { getFirestore, collection, doc, getDocs, query, orderBy, limit, getDoc, addDoc, where, or, and, writeBatch, serverTimestamp, increment } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+        import { getFirestore, collection, doc, getDocs, query, orderBy, limit, getDoc, addDoc, setDoc, where, or, and, writeBatch, serverTimestamp, increment, deleteDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
         const firebaseConfig = {
             apiKey: "AIzaSyBdXGYg2t8DJBrQHCC80-pFerZU9PWmSCk",
@@ -372,6 +396,7 @@
         let filteredUsers = [];
         let selectedUserIds = new Set();
         let projectStats = {};
+        let notificationStats = { total: 0, viewed: 0 };
 
         // Проверка доступа
         onAuthStateChanged(auth, async (user) => {
@@ -417,6 +442,7 @@
             await Promise.all([
                 loadUsers(),
                 loadProjectStats(),
+                loadNotificationStats(),
                 loadBroadcastHistory()
             ]);
             updateSelectedCount();
@@ -436,6 +462,23 @@
                     if (userId === ALLOWED_ADMIN_ID) continue;
 
                     const isOnline = userData.lastLogin && new Date(userData.lastLogin) >= thirtyMinAgo;
+                    
+                    // Обработка статистики проектов
+                    const arcGuideStats = userData.arcGuideStats || {};
+                    const projectClicks = {};
+                    let totalClicks = 0;
+                    let topProject = null;
+                    let topProjectClicks = 0;
+
+                    Object.entries(arcGuideStats).forEach(([projectId, stats]) => {
+                        const clicks = stats.totalClicks || 0;
+                        projectClicks[projectId] = clicks;
+                        totalClicks += clicks;
+                        if (clicks > topProjectClicks) {
+                            topProjectClicks = clicks;
+                            topProject = projectId;
+                        }
+                    });
 
                     allUsers.push({
                         id: userId,
@@ -444,9 +487,13 @@
                         photoURL: userData.photoURL || null,
                         firstLogin: userData.firstLogin ? new Date(userData.firstLogin) : null,
                         lastLogin: userData.lastLogin ? new Date(userData.lastLogin) : null,
-                        totalClicks: userData.arcGuideStats ? 
-                            Object.values(userData.arcGuideStats).reduce((sum, p) => sum + (p.totalClicks || 0), 0) : 0,
+                        totalClicks: totalClicks,
+                        projectClicks: projectClicks,
+                        topProject: topProject,
+                        topProjectClicks: topProjectClicks,
                         completedCount: userData.completed ? userData.completed.length : 0,
+                        guideClicks: userData.guideClicks || 0,
+                        websiteClicks: userData.websiteClicks || 0,
                         favoritesCount: userData.favorites ? userData.favorites.length : 0,
                         unreadNotifications: userData.unreadNotifications || 0,
                         isOnline: isOnline
@@ -494,6 +541,34 @@
             }
         }
 
+        // Загрузка статистики уведомлений
+        async function loadNotificationStats() {
+            try {
+                const notificationsSnapshot = await getDocs(collection(db, "notifications"));
+                let total = 0;
+                let viewed = 0;
+
+                notificationsSnapshot.docs.forEach(doc => {
+                    total++;
+                    const data = doc.data();
+                    if (data.viewedAt || data.read) {
+                        viewed++;
+                    }
+                });
+
+                notificationStats = { total, viewed };
+                
+                document.getElementById('totalNotifications').textContent = total;
+                document.getElementById('viewedNotifications').textContent = viewed;
+                
+                const viewRate = total > 0 ? Math.round((viewed / total) * 100) : 0;
+                document.getElementById('viewRate').textContent = viewRate + '%';
+                
+            } catch (e) {
+                console.error('Ошибка загрузки уведомлений:', e);
+            }
+        }
+
         // Загрузка истории рассылок
         async function loadBroadcastHistory() {
             try {
@@ -530,8 +605,16 @@
                                     <span class="text-xs text-slate-500">${date.toLocaleString('ru-RU')}</span>
                                 </div>
                                 <p class="text-sm text-slate-300 line-clamp-2">${data.message}</p>
-                                <p class="text-xs text-slate-500 mt-1">Отправлено: ${data.recipientCount || 0} пользователям</p>
+                                <div class="flex flex-wrap gap-3 mt-2">
+                                    <span class="text-xs text-slate-500">📤 ${data.recipientCount || 0} отправлено</span>
+                                    <span class="text-xs text-blue-400">👁️ ${data.viewCount || 0} просмотров</span>
+                                    <span class="text-xs text-green-400">📖 ${data.guideClickCount || 0} кликов на гайд</span>
+                                    <span class="text-xs text-purple-400">🌐 ${data.websiteClickCount || 0} на сайт</span>
+                                </div>
                             </div>
+                            <button onclick="deleteBroadcast('${doc.id}')" class="text-xs text-red-400 hover:text-red-300 px-2 py-1 rounded hover:bg-red-600/20 transition-colors">
+                                <i class="fas fa-trash"></i>
+                            </button>
                         </div>
                     `;
                 }).join('');
@@ -540,6 +623,19 @@
                 console.error('Ошибка истории:', e);
             }
         }
+
+        // Удаление рассылки
+        window.deleteBroadcast = async function(broadcastId) {
+            if (!confirm('Удалить эту рассылку?')) return;
+            
+            try {
+                await deleteDoc(doc(db, "broadcasts", broadcastId));
+                loadBroadcastHistory();
+            } catch (e) {
+                console.error('Ошибка удаления:', e);
+                alert('Ошибка удаления: ' + e.message);
+            }
+        };
 
         // Рендер топ проектов
         function renderTopProjects() {
@@ -569,7 +665,7 @@
                             <span class="text-lg">${medals[index]}</span>
                             <span class="text-xs text-slate-500">${project.users.size} чел.</span>
                         </div>
-                        <div class="text-sm font-medium truncate">${project.id}</div>
+                        <div class="text-sm font-medium truncate" title="${project.id}">${project.id}</div>
                         <div class="mt-2">
                             <div class="flex justify-between text-xs text-slate-400 mb-1">
                                 <span>${project.clicks} кликов</span>
@@ -592,7 +688,6 @@
 
             const newToday = allUsers.filter(u => u.lastLogin && u.lastLogin >= todayStart).length;
             const activeWeek = allUsers.filter(u => u.lastLogin && u.lastLogin >= weekStart).length;
-            const onlineNow = allUsers.filter(u => u.isOnline).length;
 
             animateValue('totalUsers', 0, allUsers.length, 1000);
             animateValue('newToday', 0, newToday, 500);
@@ -604,6 +699,7 @@
 
         function animateValue(id, start, end, duration) {
             const obj = document.getElementById(id);
+            if (!obj) return;
             const range = end - start;
             const startTime = performance.now();
 
@@ -686,12 +782,16 @@
             const tbody = document.getElementById('usersTableBody');
 
             if (filteredUsers.length === 0) {
-                tbody.innerHTML = '<tr><td colspan="8" class="py-8 text-center text-slate-500">Нет пользователей</td></tr>';
+                tbody.innerHTML = '<tr><td colspan="10" class="py-8 text-center text-slate-500">Нет пользователей</td></tr>';
                 return;
             }
 
-            tbody.innerHTML = filteredUsers.map((user, index) => {
+            tbody.innerHTML = filteredUsers.map((user) => {
                 const isSelected = selectedUserIds.has(user.id);
+                const topProjectDisplay = user.topProject 
+                    ? `${user.topProject} (${user.topProjectClicks})` 
+                    : '—';
+                
                 return `
                     <tr class="user-row border-b border-slate-800/50 transition-colors ${isSelected ? 'bg-blue-900/20' : ''}">
                         <td class="py-3 pl-2">
@@ -700,7 +800,7 @@
                         </td>
                         <td class="py-3">
                             <div class="flex items-center gap-3">
-                                <img src="${user.photoURL || `https://ui-avatars.com/api/?name=${encodeURIComponent(user.displayDisplayName)}&background=3b82f6&color=fff`}" class="w-8 h-8 rounded-full" alt="">
+                                <img src="${user.photoURL || `https://ui-avatars.com/api/?name=${encodeURIComponent(user.displayName)}&background=3b82f6&color=fff`}" class="w-8 h-8 rounded-full" alt="">
                                 <div>
                                     <div class="font-medium text-sm flex items-center gap-2">
                                         ${user.displayName}
@@ -720,15 +820,21 @@
                             <span class="px-2 py-1 bg-blue-600/20 text-blue-400 rounded text-sm font-medium">${user.totalClicks}</span>
                         </td>
                         <td class="py-3 text-center">
-                            <span class="px-2 py-1 bg-green-600/20 text-green-400 rounded text-sm font-medium">${user.completedCount}</span>
+                            <span class="px-2 py-1 bg-green-600/20 text-green-400 rounded text-sm font-medium">${user.guideClicks}</span>
                         </td>
                         <td class="py-3 text-center">
-                            <span class="px-2 py-1 bg-red-600/20 text-red-400 rounded text-sm font-medium">${user.favoritesCount}</span>
+                            <span class="px-2 py-1 bg-purple-600/20 text-purple-400 rounded text-sm font-medium">${user.websiteClicks}</span>
+                        </td>
+                        <td class="py-3 text-center">
+                            <span class="px-2 py-1 bg-green-600/20 text-green-400 rounded text-sm font-medium">${user.completedCount}</span>
                         </td>
                         <td class="py-3 text-center">
                             <span class="px-2 py-1 ${user.unreadNotifications > 0 ? 'bg-yellow-600/20 text-yellow-400' : 'bg-slate-700 text-slate-500'} rounded text-sm font-medium">
                                 ${user.unreadNotifications}
                             </span>
+                        </td>
+                        <td class="py-3 text-sm text-slate-300 max-w-[150px] truncate" title="${user.topProject || ''}">
+                            ${topProjectDisplay}
                         </td>
                     </tr>
                 `;
@@ -805,7 +911,6 @@
             const target = document.querySelector('input[name="broadcastTarget"]:checked').value;
             
             let count = 0;
-            let names = [];
             
             switch (target) {
                 case 'all':
@@ -816,9 +921,6 @@
                     break;
                 case 'selected':
                     count = selectedUserIds.size;
-                    const selected = allUsers.filter(u => selectedUserIds.has(u.id)).slice(0, 3);
-                    names = selected.map(u => u.displayName);
-                    if (selectedUserIds.size > 3) names.push(`... +${selectedUserIds.size - 3}`);
                     break;
             }
             
@@ -855,7 +957,7 @@
             renderUsersTable();
         };
 
-        // Отправка рассылки
+        // Отправка рассылки с расширенной статистикой
         window.sendBroadcast = async function() {
             const message = document.getElementById('broadcastMessage').value.trim();
             const type = document.getElementById('broadcastType').value;
@@ -897,12 +999,15 @@
             try {
                 const batch = writeBatch(db);
 
-                // Создаём запись о рассылке
+                // Создаём запись о рассылке с начальными счётчиками
                 const broadcastRef = await addDoc(collection(db, "broadcasts"), {
                     message: message,
                     type: type,
                     createdAt: serverTimestamp(),
                     recipientCount: recipientIds.length,
+                    viewCount: 0,
+                    guideClickCount: 0,
+                    websiteClickCount: 0,
                     status: 'sent'
                 });
 
@@ -917,6 +1022,9 @@
                         message: message,
                         type: type,
                         read: false,
+                        viewedAt: null,
+                        guideClickedAt: null,
+                        websiteClickedAt: null,
                         createdAt: serverTimestamp()
                     });
 
@@ -935,6 +1043,7 @@
                 
                 // Обновляем историю
                 loadBroadcastHistory();
+                loadNotificationStats();
                 
             } catch (e) {
                 console.error('Ошибка отправки:', e);
@@ -995,6 +1104,11 @@
             const diff = now - date;
             return diff < 30 * 60 * 1000;
         }
+
+        // Обновить статистику
+        window.loadStats = async function() {
+            await loadAllData();
+        };
     </script>
 </body>
 </html>
