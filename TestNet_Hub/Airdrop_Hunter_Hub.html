@@ -470,12 +470,12 @@
                         </select>
                     </div>
 
-                    <select onchange="sortProjects(this.value)" class="bg-slate-800/50 border border-slate-700 rounded-xl px-4 text-sm focus:border-blue-500 outline-none cursor-pointer">
-                        <option value="newest">Сначала новые</option>
-                        <option value="priority">По приоритету</option>
-                        <option value="name">По названию</option>
-                        <option value="updated">По обновлению</option>
-                    </select>
+                    <select onchange="sortProjects(this.value)" id="sortSelect" class="bg-slate-800/50 border border-slate-700 rounded-xl px-4 text-sm focus:border-blue-500 outline-none cursor-pointer">
+    <option value="newest">Сначала новые</option>
+    <option value="priority">По приоритету</option>
+    <option value="name">По названию</option>
+    <option value="updated">По обновлению</option>
+</select>
                 </div>
             </div>
 
@@ -700,9 +700,17 @@
         let currentFilteredList = [];
 
         document.addEventListener('DOMContentLoaded', () => {
-            const select = document.getElementById('itemsPerPageSelect');
-            if(select) select.value = itemsPerPage;
-        });
+    const select = document.getElementById('itemsPerPageSelect');
+    if(select) select.value = itemsPerPage;
+    
+    // Восстанавливаем сортировку из localStorage или ставим "newest"
+    const savedSort = localStorage.getItem('sortProjects') || 'newest';
+    const sortSelect = document.getElementById('sortSelect');
+    if (sortSelect) {
+        sortSelect.value = savedSort;
+    }
+    sortProjects(savedSort);
+});
 
         function formatClickDate(dateString) {
             if (!dateString) return null;
@@ -1327,12 +1335,15 @@ function initNotificationsListener(uid) {
             applyFilters(); 
         };
         window.sortProjects = (by) => {
-            if (by === 'name') projects.sort((a, b) => a.name.localeCompare(b.name));
-            else if (by === 'priority') projects.sort((a, b) => (b.priority === 'high' ? 1 : 0) - (a.priority === 'high' ? 1 : 0));
-            else if (by === 'updated') projects.sort((a, b) => new Date(b.lastUpdated || 0) - new Date(a.lastUpdated || 0));
-            else if (by === 'newest') projects.sort((a, b) => new Date(b.createdAt || 0) - new Date(a.createdAt || 0));
-            applyFilters();
-        };
+    // Сохраняем сортировку в localStorage
+    localStorage.setItem('sortProjects', by);
+    
+    if (by === 'name') projects.sort((a, b) => a.name.localeCompare(b.name));
+    else if (by === 'priority') projects.sort((a, b) => (b.priority === 'high' ? 1 : 0) - (a.priority === 'high' ? 1 : 0));
+    else if (by === 'updated') projects.sort((a, b) => new Date(b.lastUpdated || 0) - new Date(a.lastUpdated || 0));
+    else if (by === 'newest') projects.sort((a, b) => new Date(b.createdAt || 0) - new Date(a.createdAt || 0));
+    applyFilters();
+};
 
         window.openDetail = (id) => {
             const project = projects.find(p => p.id === id);
