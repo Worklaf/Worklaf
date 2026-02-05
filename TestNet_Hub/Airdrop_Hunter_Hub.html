@@ -1009,15 +1009,26 @@
             const select = document.getElementById('itemsPerPageSelect');
             if(select) select.value = itemsPerPage;
             // ДОБАВЛЯЕМ ОБРАБОТЧИК ДЛЯ ВВОДА ССЫЛКИ
-            const promptInput = document.getElementById('promptInput');
-            if(promptInput) {
-                promptInput.addEventListener('keydown', function(e) {
-                    if (e.key === 'Enter') {
-                        e.preventDefault(); // Предотвращаем перенос строки
-                        window.confirmLinkInsert(); // Сохраняем и закрываем
+                    // Обработчик для окна вставки ссылки/картинки
+        const promptInput = document.getElementById('promptInput');
+        if(promptInput) {
+            promptInput.addEventListener('keydown', function(e) {
+                if (e.key === 'Enter') {
+                    e.preventDefault();
+                    window.confirmLinkInsert();
+                }
+            });
+            
+            // Обработка Ctrl+V (или Cmd+V на Mac)
+            promptInput.addEventListener('paste', function(e) {
+                setTimeout(function() {
+                    // После вставки ждём 100мс и автоматически сохраняем
+                    if (promptInput.value.trim()) {
+                        window.confirmLinkInsert();
                     }
-                });
-            }
+                }, 100);
+            });
+        }
             const savedSort = localStorage.getItem('sortProjects') || 'newest';
             const sortSelect = document.getElementById('sortSelect');
             if (sortSelect) {
@@ -1607,58 +1618,49 @@
             
             document.getElementById('detailCreated').innerHTML = 'Добавлено: <span class="text-slate-300">' + formatDate(project.createdAt) + '</span>';
             
-                               // Render Activities
-                    const actsContainer = document.getElementById('detailActivitiesList');
-                    if (project.activities && project.activities.length > 0) {
-                        // Генерируем отдельные блоки для каждой активности
-                        actsContainer.innerHTML = project.activities.map(function(act) {
-                            const isActCompleted = userCompleted.includes(project.id + '_' + act.id);
-                            const isActEnded = act.status === 'ended';
-                            const actDate = act.date ? formatDateForDisplay(act.date) : '';
-                            const actCats = act.categories ? act.categories.map(c => '<span class="text-xs bg-slate-700 px-1.5 py-0.5 rounded text-slate-300">' + c + '</span>').join('') : '';
-                            const actDesc = parseRichContent(act.description);
-                            
-                            // Структура: Блок -> Шапка + Контейнер_тела (скрыт)
-                            // Внутри контейнера_тела само тело
-                            return '<div class="activity-block ' + (isActEnded ? 'activity-ended' : '') + '">' +
-                                '<div class="activity-header" onclick="toggleActivityDetail(\'' + act.id + '\')">' +
-                                '<div class="flex items-center gap-3">' +
-                                '<i id="icon-' + act.id + '" class="fas fa-chevron-down text-slate-400 transition-transform" style="transition: transform 0.3s;"></i>' +
-                                '<div>' +
-                                '<div class="font-bold text-white flex items-center gap-2">' + act.title + 
-                                (isActEnded ? '<span class="text-[10px] bg-red-900/50 text-red-300 px-1.5 py-0.5 rounded uppercase">Ended</span>' : '') +
-                                '</div>' +
-                                '<div class="flex items-center gap-2 mt-1 text-xs text-slate-400">' + 
-                                (actDate ? '<span class="text-blue-400"><i class="far fa-calendar-alt mr-1"></i>' + actDate + '</span>' : '') +
-                                '<span class="flex items-center gap-1">' + actCats + '</span>' +
-                                '</div></div></div>' +
-                                '<div class="flex items-center gap-2 shrink-0">';
-                            
-                            // Кнопки действий
-                            if (!isActEnded) {
-                                actsContainer.innerHTML += 
-                                    '<button onclick="event.stopPropagation(); trackGuideClick(\'' + project.id + '\', \'\');" class="text-blue-400 hover:text-blue-300 text-xs" title="Засчитать клик"><i class="fas fa-check"></i> Клик</button>' +
-                                    '<button onclick="event.stopPropagation(); toggleComplete(\'' + project.id + '\', \'' + act.id + '\')" class="' + (isActCompleted ? 'text-emerald-500' : 'text-slate-500 hover:text-emerald-400') + ' transition-colors" title="Завершить"><i class="fas ' + (isActCompleted ? 'fa-check-circle' : 'fa-circle') + ' text-lg"></i></button>';
-                            }
-                            
-                            if (isAdminMode && !isActEnded) {
-                                actsContainer.innerHTML += '<button onclick="event.stopPropagation(); endActivity(\'' + project.id + '\', \'' + act.id + '\')" class="text-slate-500 hover:text-red-400 text-xs ml-2" title="Завершить фазу"><i class="fas fa-ban"></i> End</button>';
-                            }
-
-                            actsContainer.innerHTML += '</div></div>' + // Закрыли шапку
-                                '<div id="body-' + act.id + '" class="activity-body-container">' +
-                                '<div class="activity-body rich-content text-slate-300 text-sm">' + actDesc + '</div>' +
-                                '</div></div>'; // Закрыли блок
-                        }).join('');
-                        
-                        // Инициализация стилей для аккордеона (берем из CSS)
-                        document.querySelectorAll('.activity-body-container').forEach(el => {
-                            el.style.maxHeight = '0';
-                            el.style.overflow = 'hidden';
-                        });
-                    } else {
-                        actsContainer.innerHTML = '<p class="text-slate-500 text-sm italic">Активности не добавлены.</p>';
+                                           // Render Activities
+            const actsContainer = document.getElementById('detailActivitiesList');
+            if (project.activities && project.activities.length > 0) {
+                actsContainer.innerHTML = project.activities.map(function(act) {
+                    const isActCompleted = userCompleted.includes(project.id + '_' + act.id);
+                    const isActEnded = act.status === 'ended';
+                    const actDate = act.date ? formatDateForDisplay(act.date) : '';
+                    const actCats = act.categories ? act.categories.map(c => '<span class="text-xs bg-slate-700 px-1.5 py-0.5 rounded text-slate-300">' + c + '</span>').join('') : '';
+                    const actDesc = parseRichContent(act.description);
+                    
+                    // Кнопки действий (собираем заранее)
+                    let actionsHtml = '';
+                    if (!isActEnded) {
+                        actionsHtml += '<button onclick="event.stopPropagation(); trackGuideClick(\'' + project.id + '\', \'\');" class="text-blue-400 hover:text-blue-300 text-xs px-2 py-1 rounded hover:bg-slate-800" title="Засчитать клик"><i class="fas fa-check mr-1"></i>Клик</button>';
+                        actionsHtml += '<button onclick="event.stopPropagation(); toggleComplete(\'' + project.id + '\', \'' + act.id + '\')" class="' + (isActCompleted ? 'text-emerald-500' : 'text-slate-500 hover:text-emerald-400') + ' transition-colors p-2" title="Завершить"><i class="fas ' + (isActCompleted ? 'fa-check-circle' : 'fa-circle') + ' text-lg"></i></button>';
                     }
+                    if (isAdminMode && !isActEnded) {
+                        actionsHtml += '<button onclick="event.stopPropagation(); endActivity(\'' + project.id + '\', \'' + act.id + '\')" class="text-slate-500 hover:text-red-400 text-xs ml-2 px-2 py-1 rounded hover:bg-slate-800" title="Завершить фазу"><i class="fas fa-ban mr-1"></i>End</button>';
+                    }
+                    
+                    // Собираем полный блок активности
+                    return '<div class="activity-block ' + (isActEnded ? 'activity-ended' : '') + '">' +
+                        '<div class="activity-header" onclick="toggleActivityDetail(\'' + act.id + '\')">' +
+                        '<div class="flex items-center gap-3 flex-1">' +
+                        '<i id="icon-' + act.id + '" class="fas fa-chevron-down text-slate-400 transition-transform"></i>' +
+                        '<div class="flex-1">' +
+                        '<div class="font-bold text-white flex items-center gap-2 flex-wrap">' + act.title + 
+                        (isActEnded ? ' <span class="text-[10px] bg-red-900/50 text-red-300 px-1.5 py-0.5 rounded uppercase">Ended</span>' : '') +
+                        '</div>' +
+                        '<div class="flex items-center gap-2 mt-1 text-xs text-slate-400 flex-wrap">' + 
+                        (actDate ? '<span class="text-blue-400"><i class="far fa-calendar-alt mr-1"></i>' + actDate + '</span>' : '') +
+                        (actCats ? '<span class="flex items-center gap-1">' + actCats + '</span>' : '') +
+                        '</div></div></div>' +
+                        '<div class="flex items-center gap-2 shrink-0">' + actionsHtml + '</div>' +
+                        '</div>' +
+                        '<div id="body-' + act.id + '" class="activity-body-container">' +
+                        '<div class="activity-body rich-content text-slate-300 text-sm">' + actDesc + '</div>' +
+                        '</div>' +
+                        '</div>';
+                }).join(''); // Важно: join('') создаёт одну строку из всех блоков
+            } else {
+                actsContainer.innerHTML = '<p class="text-slate-500 text-sm italic text-center py-4">Активности не добавлены.</p>';
+            }
 
             document.getElementById('detailEditBtn').classList.toggle('hidden', !isAdminMode);
             updateDetailFavoriteIcon();
@@ -1888,7 +1890,7 @@
             pendingLinkInsert = null;
         };
 
-                window.confirmLinkInsert = function() {
+                   window.confirmLinkInsert = function() {
             const textarea = document.getElementById('actRichDesc');
             const url = document.getElementById('promptInput').value.trim();
             
@@ -1911,18 +1913,8 @@
                 textarea.focus(); 
                 textarea.selectionStart = textarea.selectionEnd = start + insertion.length;
                 showToast(type === 'img' ? 'Картинка добавлена' : 'Ссылка добавлена');
-            } else {
-                // Резерв для старого редактора
-                const txt = document.getElementById('projRichDesc');
-                if (txt && pendingLinkInsert) {
-                    const txtVal = txt.value;
-                    const ins = '[' + pendingLinkInsert.text + '](' + url + ')';
-                    txt.value = txtVal.substring(0, pendingLinkInsert.start) + ins + txtVal.substring(pendingLinkInsert.end);
-                } else {
-                    showToast('Ошибка вставки');
-                }
             }
-            closePromptModal();
+            closePromptModal(); // Закрываем окно после вставки
         };
 
         // --- Main Editor Toolbar (reused logic) ---
