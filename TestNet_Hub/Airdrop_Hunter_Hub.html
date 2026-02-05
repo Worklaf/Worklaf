@@ -742,30 +742,32 @@
 
         // === СИСТЕМА УВЕДОМЛЕНИЙ ===
 
-        // Инициализация подписки на уведомления
-        function initNotificationsListener(uid) {
-            if (notificationsUnsubscribe) {
-                notificationsUnsubscribe();
-            }
+// Инициализация подписки на уведомления
+function initNotificationsListener(uid) {
+    if (notificationsUnsubscribe) {
+        notificationsUnsubscribe();
+    }
 
-            const notifQuery = query(
-                collection(db, "notifications"),
-                where("userId", "==", uid),
-                orderBy("createdAt", "desc")
-            );
+    // Попроще запрос - без orderBy, сортируем локально
+    const notifQuery = query(
+        collection(db, "notifications"),
+        where("userId", "==", uid)
+    );
 
-            notificationsUnsubscribe = onSnapshot(notifQuery, (snapshot) => {
-                notifications = snapshot.docs.map(doc => ({
-                    id: doc.id,
-                    ...doc.data(),
-                    createdAt: doc.data().createdAt?.toDate() || new Date()
-                }));
+    notificationsUnsubscribe = onSnapshot(notifQuery, (snapshot) => {
+        // Сортируем локально
+        notifications = snapshot.docs
+            .map(doc => ({
+                id: doc.id,
+                ...doc.data(),
+                createdAt: doc.data().createdAt?.toDate() || new Date()
+            }))
+            .sort((a, b) => b.createdAt - a.createdAt);
 
-                // Считаем непрочитанные
-                unreadNotificationsCount = notifications.filter(n => !n.read).length;
-                updateNotificationBadge();
-            });
-        }
+        unreadNotificationsCount = notifications.filter(n => !n.read).length;
+        updateNotificationBadge();
+    });
+}
 
         // Обновление бейджа уведомлений
         function updateNotificationBadge() {
