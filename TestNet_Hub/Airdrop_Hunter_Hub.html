@@ -289,6 +289,11 @@
 
     <!-- Header -->
     <header class="sticky top-0 z-50 glass-card border-b border-white/10">
+        <!-- Добавь иконку колокольчика в header -->
+<a href="#" onclick="showNotifications(); return false;" class="relative p-2 text-slate-400 hover:text-white transition-colors">
+    <i class="fas fa-bell text-xl"></i>
+    <span id="notificationBadge" class="absolute -top-1 -right-1 w-5 h-5 bg-red-500 rounded-full text-xs flex items-center justify-center hidden">0</span>
+</a>
         <div class="max-w-7xl mx-auto px-4 py-4">
             <div class="flex flex-col md:flex-row justify-between items-center gap-4">
                 <div class="flex items-center gap-3">
@@ -1353,6 +1358,110 @@ window.openStats = function() {
     
     window.open('stats.html', '_blank');
 };
+        // Добавь в imports Firebase:
+import { getFirestore, collection, query, where, onSnapshot, updateDoc, doc, increment } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+
+// Где-то в начале скрипта после инициализации:
+const db = getFirestore(app);
+
+// Подписка на уведомления
+let notifications = [];
+let unreadCount = 0;
+
+if (user) {
+    // Слушаем уведомления пользователя
+    const notifQuery = query(
+        collection(db, "notifications"),
+        where("userId", "==", user.uid),
+        where("read", "==", false)
+    );
+
+    onSnapshot(notifQuery, (snapshot) => {
+        notifications = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+        unreadCount = notifications.length;
+        updateNotificationBadge();
+    });
+}
+
+// Обновление бейджа
+function updateNotificationBadge() {
+    const badge = document.getElementById('notificationBadge');
+    if (badge) {
+        badge.textContent = unreadCount;
+        badge.style.display = unreadCount > 0 ? 'flex' : 'none';
+    }
+}
+
+// Показать уведомления
+function showNotifications() {
+    const modal = document.createElement('div');
+    modal.className = 'fixed inset-0 bg-black/50 flex items-center justify-center z-50';
+    modal.onclick = (e) => { if (e.target === modal) modal.remove(); };
+    
+    modal.innerHTML = `
+        <div class="glass-card rounded-2xl p-6 max-w-md w-full mx-4 max-h-[80vh] overflow-y-auto">
+            <div class="flex items-center justify-between mb-4">
+                <h3 class="text-lg font-bold">🔔 Уведомления</h3>
+                <button onclick="this.closest('.fixed').remove()" class="text-slate-400 hover:text-white">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <div id="notificationsList" class="space-y-3">
+                ${notifications.length === 0 ? '<p class="text-slate-500 text-center py-4">Нет уведомлений</p>' : ''}
+            </div>
+        </div>
+    `;
+    
+    document.body.appendChild(modal);
+    
+    // Рендер уведомлений с кликабельными ссылками
+    const list = document.getElementById('notificationsList');
+    list.innerHTML = notifications.map(n => {
+        // Парсим ссылки
+        const message = n.message.replace(
+            /(https?:\/\/[^\s]+)/g, 
+            '<a href="$1" target="_blank" class="text-blue-400 hover:underline">$1</a>'
+        );
+        
+        return `
+            <div class="p-3 bg-slate-800/50 rounded-lg" data-id="${n.id}">
+                <div class="text-sm text-slate-300">${message}</div>
+                <div class="flex justify-between mt-2">
+                    <span class="text-xs text-slate-500">${formatNotifTime(n.createdAt)}</span>
+                    <button onclick="markAsRead('${n.id}')" class="text-xs text-blue-400 hover:text-blue-300">
+                        Прочитано
+                    </button>
+                </div>
+            </div>
+        `;
+    }).join('');
+}
+
+// Пометить прочитанным
+window.markAsRead = async function(notifId) {
+    try {
+        await updateDoc(doc(db, "notifications", notifId), { read: true });
+        notifications = notifications.filter(n => n.id !== notifId);
+        unreadCount--;
+        updateNotificationBadge();
+        showNotifications(); // Обновить список
+    } catch (e) {
+        console.error('Ошибка:', e);
+    }
+};
+
+// Формат времени
+function formatNotifTime(timestamp) {
+    if (!timestamp) return '';
+    const date = timestamp.toDate ? timestamp.toDate() : new Date(timestamp);
+    const now = new Date();
+    const diff = now - date;
+    
+    if (diff < 60000) return 'только что';
+    if (diff < 3600000) return `${Math.floor(diff/60000)} мин назад`;
+    if (diff < 86400000) return `${Math.floor(diff/3600000)} ч назад`;
+    return date.toLocaleDateString('ru-RU');
+}
     </script>
 </body>
 </html>
