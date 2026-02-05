@@ -8,7 +8,7 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
-.custom-modal { max-width: 900px; /* любое значение */ width: 100%; }
+.custom-modal { max-width: 950px; /* любое значение */ width: 100%; }
         :root {
             --bg-primary: #0b0f19;
             --bg-secondary: #151b2b;
@@ -1837,8 +1837,17 @@
             }
         };
         
-                // Overriding for current modal focus
-        window.confirmLinkInsert = function() { 
+                       // Функция закрытия окна вставки ссылки (ее не было!)
+        window.closePromptModal = function() {
+            const modal = document.getElementById('promptModal');
+            modal.classList.remove('active');
+            document.getElementById('promptInput').value = ''; // Очистка поля
+            pendingLinkInsert = null;
+        };
+
+        // Основная функция подтверждения вставки ссылки
+        window.confirmLinkInsert = function() {
+            const textarea = document.getElementById('actRichDesc'); // Ищем редактор активностей
             const url = document.getElementById('promptInput').value.trim();
             
             if (!url) { 
@@ -1846,19 +1855,18 @@
                 return; 
             }
             
-            // Пытаемся вставить в активный редактор (активности), если он есть
-            const textarea = document.getElementById('actRichDesc');
-            
             if (pendingLinkInsert && textarea) {
                 const text = textarea.value;
                 const { start, end, text: selectedText } = pendingLinkInsert;
+                // Вставка форматированной ссылки [текст](урл)
                 const insertion = '[' + selectedText + '](' + url + ')';
+                
                 textarea.value = text.substring(0, start) + insertion + text.substring(end);
                 textarea.focus(); 
                 textarea.selectionStart = textarea.selectionEnd = start + insertion.length;
                 showToast('Ссылка добавлена');
             } else {
-                // Если активный редактор не найден, пробуем старый (проекта)
+                // Резервный вариант (если редактор активностей не найден)
                 const txt = document.getElementById('projRichDesc');
                 if (txt && pendingLinkInsert) {
                     const txtVal = txt.value;
@@ -1866,11 +1874,11 @@
                     txt.value = txtVal.substring(0, pendingLinkInsert.start) + ins + txtVal.substring(pendingLinkInsert.end);
                     showToast('Ссылка добавлена');
                 } else {
-                    showToast('Неизвестная ошибка вставки');
+                    showToast('Ошибка вставки');
                 }
             }
             
-            // В любом случае закрываем окно после успешной вставки
+            // Обязательно закрываем окно после успешной вставки
             closePromptModal();
         };
 
