@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <title>Admin - Проекты</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        body { background: #0b0f19; color: #f1f5f9; font-family: 'Inter', sans-serif; }
+    </style>
+</head>
+<body class="p-8">
+    <div class="max-w-6xl mx-auto">
+        <div class="flex justify-between mb-8">
+            <h1 class="text-2xl font-bold"><i class="fas fa-plus-circle text-blue-500"></i> Управление Проектами</h1>
+            <div>
+                <a href="Airdrop_Hunter_Hub.html" class="text-blue-400 mr-4 hover:underline">Вернуться на сайт</a>
+                <a href="admin-reviews.html" class="text-purple-400 hover:underline">Отзывы (Admin)</a>
+            </div>
+        </div>
+
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+            <!-- Form -->
+            <div class="lg:col-span-1 bg-[#1e2538] p-6 rounded-xl border border-slate-700 h-fit">
+                <h2 class="font-bold mb-4 text-lg">Добавить/Изменить</h2>
+                <input type="hidden" id="projId">
+                <div class="space-y-3">
+                    <input type="text" id="pName" placeholder="Название проекта" class="w-full bg-slate-800 border border-slate-700 rounded p-2 text-sm">
+                    <input type="text" id="pCats" placeholder="Категории (через запятую)" class="w-full bg-slate-800 border border-slate-700 rounded p-2 text-sm">
+                    <textarea id="pDesc" placeholder="Описание" class="w-full bg-slate-800 border border-slate-700 rounded p-2 text-sm h-24"></textarea>
+                    <input type="text" id="pImg" placeholder="URL Картинки" class="w-full bg-slate-800 border border-slate-700 rounded p-2 text-sm">
+                    <input type="text" id="pTwitter" placeholder="Twitter URL" class="w-full bg-slate-800 border border-slate-700 rounded p-2 text-sm">
+                    <input type="text" id="pLink" placeholder="Сайт / Рефералка" class="w-full bg-slate-800 border border-slate-700 rounded p-2 text-sm">
+                    <select id="pStatus" class="w-full bg-slate-800 border border-slate-700 rounded p-2 text-sm">
+                        <option value="active">Active</option>
+                        <option value="ended">Ended</option>
+                    </select>
+                    <button onclick="saveProject()" class="w-full bg-blue-600 hover:bg-blue-500 py-2 rounded font-bold">Сохранить</button>
+                </div>
+            </div>
+
+            <!-- List -->
+            <div class="lg:col-span-2">
+                <div id="projectList" class="grid grid-cols-1 gap-4">
+                    <!-- Projects load here -->
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+        import { getAuth, signInWithPopup, GoogleAuthProvider, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
+        import { getFirestore, collection, doc, setDoc, onSnapshot, deleteDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+
+        const firebaseConfig = {
+            apiKey: "AIzaSyBdXGYg2t8DJBrQHCC80-pFerZU9PWmSCk",
+            authDomain: "testnet-hub.firebaseapp.com",
+            projectId: "testnet-hub",
+            storageBucket: "testnet-hub.firebasestorage.app",
+            messagingSenderId: "497813176653",
+            appId: "1:497813176653:web:089188fdd1555d76cd7704"
+        };
+        const app = initializeApp(firebaseConfig);
+        const auth = getAuth(app);
+        const db = getFirestore(app);
+
+        onAuthStateChanged(auth, async user => {
+            if(user && user.uid === "SAkz4mdW9reDaIsvqigCNZhEKJR2") {
+                loadProjects();
+            } else {
+                await signInWithPopup(auth, new GoogleAuthProvider());
+            }
+        });
+
+        function loadProjects() {
+            onSnapshot(collection(db, "projects"), snap => {
+                const list = document.getElementById('projectList');
+                list.innerHTML = '';
+                snap.docs.forEach(d => {
+                    const p = {id: d.id, ...d.data()};
+                    list.innerHTML += `
+                        <div class="bg-[#1e2538] p-4 rounded border border-slate-700 flex justify-between items-center">
+                            <div class="flex items-center gap-3">
+                                <img src="${p.image || ''}" class="w-10 h-10 rounded object-cover bg-slate-800">
+                                <div>
+                                    <div class="font-bold">${p.name}</div>
+                                    <div class="text-xs text-slate-500">${p.status}</div>
+                                </div>
+                            </div>
+                            <div class="flex gap-2">
+                                <button onclick="edit('${p.id}', '${p.name}', '${p.categories || []}', '${p.description || ''}', '${p.image || ''}', '${p.twitterUrl || ''}', '${p.referralLink || ''}', '${p.status}')" class="text-blue-400 hover:text-blue-300"><i class="fas fa-edit"></i></button>
+                                <button onclick="remove('${p.id}')" class="text-red-400 hover:text-red-300"><i class="fas fa-trash"></i></button>
+                            </div>
+                        </div>
+                    `;
+                });
+            });
+        }
+
+        window.edit = (id, name, cats, desc, img, tw, link, status) => {
+            document.getElementById('projId').value = id;
+            document.getElementById('pName').value = name;
+            document.getElementById('pCats').value = cats;
+            document.getElementById('pDesc').value = desc;
+            document.getElementById('pImg').value = img;
+            document.getElementById('pTwitter').value = tw;
+            document.getElementById('pLink').value = link;
+            document.getElementById('pStatus').value = status;
+        };
+
+        window.remove = async (id) => {
+            if(confirm('Удалить?')) await deleteDoc(doc(db, "projects", id));
+        };
+
+        window.saveProject = async () => {
+            const id = document.getElementById('projId').value || 'proj_' + Date.now();
+            const name = document.getElementById('pName').value;
+            const cats = document.getElementById('pCats').value.split(',').map(s => s.trim()).filter(s => s);
+            
+            await setDoc(doc(db, "projects", id), {
+                id: id,
+                name: name,
+                categories: cats.length ? cats : ['Other'],
+                description: document.getElementById('pDesc').value,
+                image: document.getElementById('pImg').value,
+                twitterUrl: document.getElementById('pTwitter').value,
+                referralLink: document.getElementById('pLink').value,
+                status: document.getElementById('pStatus').value,
+                createdAt: new Date().toISOString()
+            }, { merge: true });
+            
+            alert('Сохранено!');
+        };
+    </script>
+</body>
+</html>
