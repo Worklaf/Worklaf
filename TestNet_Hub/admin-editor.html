@@ -1,0 +1,203 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Editor | TestNet Hub</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+        body { font-family: 'Inter', sans-serif; background: #0b0f19; color: #f1f5f9; }
+        .editor-container { max-width: 900px; margin: 40px auto; padding: 20px; background: #1e2538; border-radius: 16px; border: 1px solid rgba(255,255,255,0.1); }
+        .form-input { width: 100%; background: #151b2b; border: 1px solid #334155; padding: 10px; border-radius: 8px; color: white; margin-bottom: 15px; }
+        .form-label { display: block; margin-bottom: 5px; color: #94a3b8; font-size: 0.9rem; }
+        .btn { padding: 10px 20px; border-radius: 8px; font-weight: 600; transition: 0.2s; }
+        .btn-primary { background: #2563eb; color: white; }
+        .btn-primary:hover { background: #1d4ed8; }
+        .activity-item { background: #2d3748; padding: 15px; border-radius: 8px; margin-bottom: 10px; display: flex; justify-content: space-between; align-items: center; }
+    </style>
+</head>
+<body>
+
+<div class="editor-container">
+    <div class="flex justify-between items-center mb-6 border-b border-gray-700 pb-4">
+        <h1 class="text-2xl font-bold" id="pageTitle">Добавить проект</h1>
+        <button onclick="window.close()" class="text-gray-400 hover:text-white">Закрыть</button>
+    </div>
+
+    <form id="projectForm" onsubmit="saveProject(event)">
+        <input type="hidden" id="projId">
+        
+        <div class="grid grid-cols-2 gap-4">
+            <div>
+                <label class="form-label">Название проекта</label>
+                <input type="text" id="projName" required class="form-input" placeholder="Например: Berachain">
+            </div>
+            <div>
+                <label class="form-label">Статус</label>
+                <select id="projStatus" class="form-input">
+                    <option value="active">🟢 Active</option>
+                    <option value="soon">🟡 Soon</option>
+                    <option value="ended">🔴 Ended</option>
+                </select>
+            </div>
+        </div>
+
+        <div>
+            <label class="form-label">URL логотипа</label>
+            <input type="url" id="projImage" class="form-input" placeholder="https://...">
+        </div>
+
+        <div>
+            <label class="form-label">Описание</label>
+            <textarea id="projDesc" rows="3" class="form-input" placeholder="Краткое описание..."></textarea>
+        </div>
+        
+        <div class="grid grid-cols-2 gap-4">
+            <div><label class="form-label">Twitter URL</label><input type="url" id="projTwitter" class="form-input"></div>
+            <div><label class="form-label">CryptoRank URL</label><input type="url" id="projCryptoRank" class="form-input"></div>
+        </div>
+
+        <div class="border-t border-gray-700 pt-6 mt-6">
+            <div class="flex justify-between items-center mb-4">
+                <h3 class="text-xl font-bold">Активности</h3>
+                <button type="button" onclick="addActivity()" class="bg-green-600 hover:bg-green-500 text-white px-3 py-1 rounded text-sm">+ Добавить активность</button>
+            </div>
+            <div id="activitiesList">
+                <!-- Сюда добавляются активности через JS -->
+            </div>
+        </div>
+
+        <div class="flex justify-end gap-3 mt-8 pt-4 border-t border-gray-700">
+            <button type="button" onclick="window.close()" class="px-4 py-2 text-gray-400 hover:text-white">Отмена</button>
+            <button type="submit" class="btn btn-primary">Сохранить проект</button>
+        </div>
+    </form>
+</div>
+
+<script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+    import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
+    import { getFirestore, doc, getDoc, setDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+
+    const firebaseConfig = {
+        apiKey: "AIzaSyBdXGYg2t8DJBrQHCC80-pFerZU9PWmSCk",
+        authDomain: "testnet-hub.firebaseapp.com",
+        projectId: "testnet-hub",
+        storageBucket: "testnet-hub.firebasestorage.app",
+        messagingSenderId: "497813176653",
+        appId: "1:497813176653:web:089188fdd1555d76cd7704"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const auth = getAuth(app);
+    const db = getFirestore(app);
+    const ADMIN_ID = "SAkz4mdW9reDaIsvqigCNZhEKJR2";
+
+    let currentActivities = [];
+
+    // Проверка прав доступа
+    onAuthStateChanged(auth, (user) => {
+        if (!user || user.uid !== ADMIN_ID) {
+            document.body.innerHTML = '<div style="text-align:center; padding:50px;"><h1>Доступ запрещен</h1><p>Вы должны быть администратором.</p></div>';
+        } else {
+            loadData();
+        }
+    });
+
+    async function loadData() {
+        const urlParams = new URLSearchParams(window.location.search);
+        const editId = urlParams.get('edit');
+
+        if (editId) {
+            document.getElementById('pageTitle').textContent = 'Редактировать проект';
+            const docRef = doc(db, "projects", editId);
+            const docSnap = await getDoc(docRef);
+
+            if (docSnap.exists()) {
+                const data = docSnap.data();
+                document.getElementById('projId').value = editId;
+                document.getElementById('projName').value = data.name;
+                document.getElementById('projStatus').value = data.status;
+                document.getElementById('projImage').value = data.image || '';
+                document.getElementById('projDesc').value = data.description || '';
+                document.getElementById('projTwitter').value = data.twitterUrl || '';
+                document.getElementById('projCryptoRank').value = data.cryptoRankUrl || '';
+                
+                currentActivities = data.activities || [];
+                renderActivities();
+            }
+        }
+    }
+
+    window.addActivity = function() {
+        const title = prompt("Название активности:");
+        if (title) {
+            const desc = prompt("Описание (можно Markdown):");
+            currentActivities.push({
+                id: 'act_' + Date.now(),
+                title: title,
+                description: desc || '',
+                status: 'active',
+                date: new Date().toISOString()
+            });
+            renderActivities();
+        }
+    };
+
+    window.removeActivity = function(id) {
+        currentActivities = currentActivities.filter(a => a.id !== id);
+        renderActivities();
+    };
+
+    function renderActivities() {
+        const list = document.getElementById('activitiesList');
+        list.innerHTML = currentActivities.map(act => `
+            <div class="activity-item">
+                <div>
+                    <div class="font-bold">${act.title}</div>
+                    <div class="text-sm text-gray-400">${act.description.substring(0, 50)}...</div>
+                </div>
+                <button onclick="removeActivity('${act.id}')" class="text-red-500 hover:text-red-400">
+                    <i class="fas fa-trash"></i>
+                </button>
+            </div>
+        `).join('');
+    }
+
+    window.saveProject = async function(e) {
+        e.preventDefault();
+        
+        const name = document.getElementById('projName').value;
+        // Генерируем ID если это новый проект
+        const id = document.getElementById('projId').value || 'proj_' + name.toLowerCase().replace(/[^a-z0-9]/g, '_') + '_' + Date.now();
+        
+        const projectData = {
+            id: id,
+            name: name,
+            status: document.getElementById('projStatus').value,
+            image: document.getElementById('projImage').value,
+            description: document.getElementById('projDesc').value,
+            twitterUrl: document.getElementById('projTwitter').value,
+            cryptoRankUrl: document.getElementById('projCryptoRank').value,
+            activities: currentActivities,
+            lastUpdated: new Date().toISOString(),
+            createdAt: document.getElementById('projId').value ? undefined : new Date().toISOString() // Не меняем дату создания при редактировании
+        };
+
+        // Удаляем undefined поля
+        if (!projectData.createdAt) delete projectData.createdAt;
+
+        try {
+            await setDoc(doc(db, "projects", id), projectData, { merge: true });
+            alert("Проект успешно сохранен!");
+            window.close(); // Закрыть вкладку или можно сделать redirect
+        } catch (err) {
+            alert("Ошибка: " + err.message);
+            console.error(err);
+        }
+    };
+</script>
+</body>
+</html>
