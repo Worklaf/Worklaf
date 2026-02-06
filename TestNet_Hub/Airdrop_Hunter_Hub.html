@@ -921,8 +921,8 @@
                     <button onclick="openGuideFromDetail()" class="guide-btn-small text-white rounded-lg text-sm font-medium transition-colors flex items-center justify-center gap-2">
                         <i class="fas fa-book-open"></i> Гайд
                     </button>
-                    <button onclick="openDetailLink('ref')" class="flex-1 bg-emerald-600 hover:bg-emerald-500 py-3 rounded-lg text-sm font-medium transition-colors flex items-center justify-center gap-2 min-w-[140px]">
-                        <i class="fas fa-rocket"></i> Начать активность
+                    '<button onclick="trackActivityStartAndOpen(\'' + project.id + '\', \'' + (project.referralLink || project.cryptoRankUrl || '') + '\')" class="flex-1 bg-emerald-600 hover:bg-emerald-500 py-3 rounded-lg text-sm font-medium transition-colors flex items-center justify-center gap-2 min-w-[140px]">' +
+    '<i class="fas fa-rocket"></i> Начать активность' +
                     </button>
                     <button onclick="openDetailLink('twitter')" class="flex-1 bg-sky-600 hover:bg-sky-500 py-3 rounded-lg text-sm font-medium transition-colors flex items-center justify-center gap-2 min-w-[120px]">
                         <i class="fab fa-twitter"></i> Twitter
@@ -1176,7 +1176,10 @@
         };
 
         window.closeNotificationsModal = function() { document.getElementById('notificationsModal').classList.remove('active'); };
-
+window.trackActivityStartAndOpen = async function(projectId, url) {
+    await window.trackActivityStart(projectId, 'general'); // 'general' для кнопки из футера
+    if (url) window.open(url, '_blank');
+};
         window.markNotificationAsRead = async function(notifId) {
             try {
                 await updateDoc(doc(db, "notifications", notifId), { read: true });
@@ -1243,26 +1246,33 @@
         });
 
         function initUserSync(uid) {
-            const userRef = doc(db, "users", uid);
-            onSnapshot(userRef, function(docSnap) {
-                if (docSnap.exists()) {
-                    const data = docSnap.data();
-                    userFavorites = data.favorites || [];
-                    if (data.completed && Array.isArray(data.completed)) {
-                        userCompleted = data.completed;
-                        localStorage.setItem(COMPLETED_KEY, JSON.stringify(userCompleted));
-                    }
-                    if (data.arcGuideStats) {
-                        arcData = data.arcGuideStats;
-                        localStorage.setItem(STORAGE_KEY, JSON.stringify(arcData));
-                    }
-                    applyFilters();
-                } else {
-                    setDoc(userRef, { favorites: [], completed: [], arcGuideStats: {} }, { merge: true });
-                }
-            });
+    const userRef = doc(db, "users", uid);
+    onSnapshot(userRef, function(docSnap) {
+        if (docSnap.exists()) {
+            const data = docSnap.data();
+            userFavorites = data.favorites || [];
+            if (data.completed && Array.isArray(data.completed)) {
+                userCompleted = data.completed;
+                localStorage.setItem(COMPLETED_KEY, JSON.stringify(userCompleted));
+            }
+            // Загружаем новую структуру кликов
+            if (data.arcGuideStats) {
+                arcData = data.arcGuideStats;
+                localStorage.setItem(STORAGE_KEY, JSON.stringify(arcData));
+            }
+            applyFilters();
+        } else {
+            setDoc(userRef, { 
+                favorites: [], 
+                completed: [], 
+                arcGuideStats: {},
+                guideClicks: 0,        // <-- НОВОЕ: общий счётчик гайдов
+                activityClicks: 0,      // <-- НОВОЕ: общий счётчик активностей
+                firstLogin: new Date().toISOString()
+            }, { merge: true });
         }
-
+    });
+}
         window.toggleComplete = async function(uid, aid) {
             // uid = project ID, aid = activity ID
             const uniqueId = uid + '_' + aid;
@@ -1321,23 +1331,75 @@
             return project;
         }
 
-        window.trackGuideClick = async function(id, url) {
-            if(url) window.open(url, '_blank');
-            else openDetail(id);
-            const now = new Date().toISOString();
-            if (!arcData[id]) arcData[id] = {};
-            arcData[id].totalClicks = (arcData[id].totalClicks || 0) + 1;
-            arcData[id].lastClick = now;
-            localStorage.setItem(STORAGE_KEY, JSON.stringify(arcData));
-            showToast('Задание засчитано! ✅');
-            if (currentUser) {
-                try {
-                    const userRef = doc(db, "users", currentUser.uid);
-                    await setDoc(userRef, { favorites: userFavorites, completed: userCompleted, arcGuideStats: arcData }, { merge: true });
-                } catch(e) { console.error('Sync error', e); }
-            }
-            applyFilters();
-        };
+        // === НОВЫЕ ФУНКЦИИ ДЛЯ ПОДСЧЁТА КЛИКОВ ===
+
+// Клик по кнопке "Гайд" (в карточке проекта или детальном виде)
+window.trackGuideClick = async function(id, url) {
+    if(url) window.open(url, '_blank');
+    else openDetail(id);
+    
+    const now = new Date().toISOString();
+    
+    // Увеличиваем счётчик кликов по "Гайд"
+    if (!arcData[id]) arcData[id] = {};
+    arcData[id].guideClicks = (arcData[id].guideClicks || 0) + 1;  // <-- НОВОЕ ПОЛЕ
+    arcData[id].lastGuideClick = now;  // <-- Время последнего клика по гайду
+    
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(arcData));
+    showToast('Гайд открыт! ✅');
+    
+    if (currentUser) {
+        try {
+            const userRef = doc(db, "users", currentUser.uid);
+            // Используем increment для атомарного увеличения
+            await updateDoc(userRef, {
+                [`arcGuideStats.${id}.guideClicks`]: increment(1),
+                [`arcGuideStats.${id}.lastGuideClick`]: now,
+                lastLogin: now
+            });
+        } catch(e) { 
+            console.error('Sync error', e); 
+        }
+    }
+    applyFilters();
+};
+
+// Клик по кнопке "Начать активность" (в детальном виде проекта)
+window.trackActivityStart = async function(projectId, activityId) {
+    const now = new Date().toISOString();
+    
+    // Увеличиваем счётчик кликов по "Начать активность"
+    if (!arcData[projectId]) arcData[projectId] = {};
+    if (!arcData[projectId].activityClicks) arcData[projectId].activityClicks = {};
+    
+    arcData[projectId].activityClicks[activityId || 'general'] = (arcData[projectId].activityClicks[activityId || 'general'] || 0) + 1;
+    arcData[projectId].lastActivityClick = now;
+    arcData[projectId].totalActivityClicks = (arcData[projectId].totalActivityClicks || 0) + 1; // Общий счётчик
+    
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(arcData));
+    showToast('Активность начата! 🚀');
+    
+    if (currentUser) {
+        try {
+            const userRef = doc(db, "users", currentUser.uid);
+            await updateDoc(userRef, {
+                [`arcGuideStats.${projectId}.activityClicks.${activityId || 'general'}`]: increment(1),
+                [`arcGuideStats.${projectId}.totalActivityClicks`]: increment(1),
+                [`arcGuideStats.${projectId}.lastActivityClick`]: now,
+                lastLogin: now
+            });
+        } catch(e) { 
+            console.error('Sync error', e); 
+        }
+    }
+};
+
+// Для обратной совместимости - старый метод (можно удалить позже)
+window.trackOldGuideClick = async function(id, url) {
+    // Эта функция оставлена для совместимости со старыми данными
+    // Перенаправляем на новую логику
+    await window.trackGuideClick(id, url);
+};
 
         window.toggleFavorite = async function(id) {
             if (!currentUser) { showToast('Войдите, чтобы сохранить'); return; }
@@ -1683,7 +1745,8 @@ if (project.activities && project.activities.length > 0) {
         // Кнопки действий
         let actionsHtml = '';
         if (!isActEnded) {
-            actionsHtml += '<button onclick="event.stopPropagation(); trackGuideClick(\'' + project.id + '\', \'\');" class="text-blue-400 hover:text-blue-300 text-xs px-2 py-1 rounded hover:bg-slate-800" title="Засчитать клик"><i class="fas fa-check mr-1"></i>Клик</button>';
+            actionsHtml += '<button onclick="event.stopPropagation(); trackGuideClick(\'' + project.id + '\', \'\');" class="text-blue-400 hover:text-blue-300 text-xs px-2 py-1 rounded hover:bg-slate-800" title="Открыть гайд"><i class="fas fa-book mr-1"></i>Гайд</button>';
+actionsHtml += '<button onclick="event.stopPropagation(); trackActivityStart(\'' + project.id + '\', \'' + act.id + '\');" class="text-purple-400 hover:text-purple-300 text-xs px-2 py-1 rounded hover:bg-slate-800" title="Начать активность"><i class="fas fa-play mr-1"></i>Старт</button>';
             actionsHtml += '<button onclick="event.stopPropagation(); toggleComplete(\'' + project.id + '\', \'' + act.id + '\')" class="' + (isActCompleted ? 'text-emerald-500' : 'text-slate-500 hover:text-emerald-400') + ' transition-colors p-2" title="Завершить"><i class="fas ' + (isActCompleted ? 'fa-check-circle' : 'fa-circle') + ' text-lg"></i></button>';
         }
         
