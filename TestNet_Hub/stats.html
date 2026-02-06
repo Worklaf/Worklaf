@@ -324,7 +324,7 @@
                         <select id="sortUsers" onchange="sortUsersList()" class="bg-slate-800 border border-slate-700 rounded-lg px-3 py-1.5 text-sm outline-none">
                             <option value="lastLogin">По последнему входу</option>
                             <option value="firstLogin">По первому входу</option>
-                            <option value="clicks">По кликам</option>
+                            <option value="clicks">По кликам (внутри активности)</option>
                             <option value="name">По имени</option>
                         </select>
                     </div>
@@ -340,11 +340,11 @@
                                 <th class="pb-3">Пользователь</th>
                                 <th class="pb-3">Первый вход</th>
                                 <th class="pb-3">Последний вход</th>
-                                <th class="pb-3 text-center">Кликов</th>
-                                <th class="pb-3 text-center">Гайдов</th>
-                                <th class="pb-3 text-center">Активностей</th> <!-- ИЗМЕНЕНО -->
-                                <th class="pb-3 text-center">❤️</th>
-                                <th class="pb-3 text-center">🔔</th>
+                                <th class="pb-3 text-center">Кликов (Старт Гайда)</th>
+                                <th class="pb-3 text-center">Кликов (Внутри Активности)</th>
+                                <th class="pb-3 text-center">Завершенные (Прогресс)</th>
+                                <th class="pb-3 text-center">Избранное ❤️</th>
+                                <th class="pb-3 text-center">Непрочитанные 🔔</th>
                                 <th class="pb-3">Любимый проект</th>
                             </tr>
                         </thead>
@@ -416,6 +416,7 @@
             }
 
             document.getElementById('adminContent').classList.remove('hidden');
+            console.log("Starting loadAllData..."); // Отладка
             await loadAllData();
         });
 
@@ -441,14 +442,24 @@
         };
 
         async function loadProjectsData() {
+            console.log("Fetching projects data..."); // Отладка
             try {
                 const projectsSnapshot = await getDocs(collection(db, "projects"));
+                console.log("Projects snapshot docs length:", projectsSnapshot.docs.length); // Отладка
                 projectsSnapshot.docs.forEach(docSnap => {
-                    allProjectsMap.set(docSnap.id, docSnap.data());
+                    const projectData = docSnap.data();
+                    // Пытаемся получить общее количество активностей:
+                    // Либо из поля totalActivitiesCount, либо из длины массива activities
+                    const totalActivities = projectData.totalActivitiesCount || (projectData.activities ? projectData.activities.length : 0);
+
+                    allProjectsMap.set(docSnap.id, {
+                        ...projectData,
+                        totalActivitiesCount: totalActivities
+                    });
                 });
-                console.log("Проекты загружены:", allProjectsMap.size);
+                console.log("Projects loaded. allProjectsMap size:", allProjectsMap.size); // Отладка
             } catch (e) {
-                console.error("Ошибка загрузки данных проектов:", e);
+                console.error("Ошибка загрузки данных проектов:", e); // Отладка
             }
         }
 
@@ -464,8 +475,11 @@
         }
 
         async function loadUsers() {
+            console.log("Fetching users data..."); // Отладка
             try {
                 const usersSnapshot = await getDocs(collection(db, "users"));
+                console.log("Users snapshot docs length:", usersSnapshot.docs.length); // Отладка
+
                 allUsers = [];
                 const now = new Date();
                 const thirtyMinAgo = new Date(now.getTime() - 30 * 60 * 1000);
@@ -473,11 +487,8 @@
                 for (const docSnap of usersSnapshot.docs) {
                     const userData = docSnap.data();
                     const userId = docSnap.id;
-                   
+                    // console.log('Processing user:', userId, userData); // Отладка - можно включить для детализации
 
-                    // Исправлено: Возвращено создание Date объектов напрямую из userData.lastLogin/firstLogin,
-                    // как было в "рабочем" коде. Это предотвращает ошибку .toDate()
-                    // если данные не являются Firebase Timestamp.
                     const lastLoginDate = userData.lastLogin ? new Date(userData.lastLogin) : null;
                     const firstLoginDate = userData.firstLogin ? new Date(userData.firstLogin) : null;
 
@@ -485,7 +496,7 @@
                     
                     const arcGuideStats = userData.arcGuideStats || {};
                     const projectClicks = {};
-                    let totalClicks = 0; // Сумма кликов по всем гайдам
+                    let totalClicks = 0; // Сумма кликов по всем гайдам (внутри активностей)
                     let topProject = null;
                     let topProjectClicks = 0;
 
@@ -506,16 +517,13 @@
                         photoURL: userData.photoURL || null,
                         firstLogin: firstLoginDate,
                         lastLogin: lastLoginDate,
-                        totalClicks: totalClicks, // Сумма кликов по всем гайдам из arcGuideStats
+                        totalClicks: totalClicks, // Сумма кликов по всем гайдам/активностям из arcGuideStats
                         projectClicks: projectClicks,
                         topProject: topProject,
                         topProjectClicks: topProjectClicks,
-                        completedCount: userData.completed ? userData.completed.length : 0, 
-                        // Исправлено: Возвращен `guideClicks` как в "рабочем" коде
-                        guideClicks: userData.guideClicks || 0,
-                        websiteClicks: userData.websiteClicks || 0, // Это поле теперь не используется для колонки "Активностей", но может остаться для других целей
+                        completedCount: userData.completed ? userData.completed.length : 0, // Общее количество завершенных активностей
+                        guideClicks: userData.guideClicks || 0, // Клики по гайдам (старт)
                         favoritesCount: userData.favorites ? userData.favorites.length : 0,
-                        // Исправлено: Возвращено `unreadNotifications` как прямое поле из "рабочего" кода
                         unreadNotifications: userData.unreadNotifications || 0,
                         isOnline: isOnline
                     });
@@ -526,13 +534,15 @@
 
                 const onlineCount = allUsers.filter(u => u.isOnline).length;
                 document.getElementById('onlineNow').textContent = onlineCount;
+                
+                console.log("All users array length after processing:", allUsers.length); // Отладка
 
                 renderStats();
                 renderUsersTable();
                 updateLastUpdateTime();
 
             } catch (e) {
-                console.error('Ошибка загрузки пользователей:', e);
+                console.error('Ошибка загрузки пользователей:', e); // Отладка
             }
         }
 
@@ -556,7 +566,7 @@
 
                 renderTopProjects();
             } catch (e) {
-                console.error('Ошибка загрузки проектов:', e);
+                console.error('Ошибка загрузки проектов для статистики:', e);
             }
         }
 
@@ -569,8 +579,6 @@
                 notificationsSnapshot.docs.forEach(doc => {
                     total++;
                     const data = doc.data();
-                    // Здесь `.toDate()` остается, так как для коллекции `notifications`
-                    // timestamps, скорее всего, являются Firebase Timestamp объектами.
                     if ((data.viewedAt && data.viewedAt.toDate()) || data.read) {
                         viewed++;
                     }
@@ -604,8 +612,6 @@
 
                 container.innerHTML = historySnapshot.docs.map(doc => {
                     const data = doc.data();
-                    // Здесь `.toDate()` остается, так как для коллекции `broadcasts`
-                    // timestamps, скорее всего, являются Firebase Timestamp объектами.
                     const date = data.createdAt ? new Date(data.createdAt.toDate()) : new Date(); 
                     const typeColors = {
                         info: 'bg-blue-600/20 text-blue-400',
@@ -805,70 +811,89 @@
 
         window.renderUsersTable = function() {
             const tbody = document.getElementById('usersTableBody');
+            console.log("renderUsersTable called. filteredUsers length:", filteredUsers.length); // Отладка
+            console.log("allProjectsMap size:", allProjectsMap.size); // Отладка
 
             if (filteredUsers.length === 0) {
                 tbody.innerHTML = '<tr><td colspan="10" class="py-8 text-center text-slate-500">Нет пользователей</td></tr>';
                 return;
             }
 
-            tbody.innerHTML = filteredUsers.map((user) => {
-                const isSelected = selectedUserIds.has(user.id);
-                
-                const topProjectData = user.topProject ? allProjectsMap.get(user.topProject) : null;
-                const topProjectName = topProjectData ? topProjectData.name : '—';
-                const topProjectImage = (topProjectData && topProjectData.image) ? topProjectData.image : `https://ui-avatars.com/api/?name=${encodeURIComponent(topProjectName.charAt(0))}&background=333&color=fff`;
+            try {
+                tbody.innerHTML = filteredUsers.map((user) => {
+                    const isSelected = selectedUserIds.has(user.id);
+                    
+                    const topProjectData = user.topProject ? allProjectsMap.get(user.topProject) : null;
+                    const topProjectName = topProjectData ? topProjectData.name : '—';
+                    // Улучшена обработка генерации аватара, если имя проекта отсутствует или является дефисом
+                    const avatarText = (topProjectName === '—' || topProjectName.length === 0) ? '?' : topProjectName.charAt(0);
+                    const topProjectImage = (topProjectData && topProjectData.image) ? topProjectData.image : `https://ui-avatars.com/api/?name=${encodeURIComponent(avatarText)}&background=333&color=fff`;
 
-                const topProjectDisplay = user.topProject 
-                    ? `<div class="flex items-center gap-2"><img src="${topProjectImage}" class="w-5 h-5 rounded-full object-cover" title="${topProjectName}"> ${topProjectName} (${user.topProjectClicks})</div>`
-                    : '—';
-                
-                return `
-                    <tr class="user-row border-b border-slate-800/50 transition-colors ${isSelected ? 'bg-blue-900/20' : ''}">
-                        <td class="py-3 pl-2">
-                            <input type="checkbox" ${isSelected ? 'checked' : ''} 
-                                onchange="toggleUserSelect('${user.id}')" class="w-4 h-4 rounded">
-                        </td>
-                        <td class="py-3">
-                            <div class="flex items-center gap-3">
-                                <img src="${user.photoURL || `https://ui-avatars.com/api/?name=${encodeURIComponent(user.displayName)}&background=3b82f6&color=fff`}" class="w-8 h-8 rounded-full" alt="">
-                                <div>
-                                    <div class="font-medium text-sm flex items-center gap-2">
-                                        ${user.displayName}
-                                        ${user.isOnline ? '<span class="w-2 h-2 bg-emerald-400 rounded-full"></span>' : ''}
+                    const topProjectDisplay = user.topProject 
+                        ? `<div class="flex items-center gap-2"><img src="${topProjectImage}" class="w-5 h-5 rounded-full object-cover" title="${topProjectName}"> ${topProjectName} (${user.topProjectClicks})</div>`
+                        : '—';
+                    
+                    // Логика для Завершенных (Прогресс)
+                    let completedProgressDisplay = user.completedCount.toString(); // По умолчанию, просто число завершенных
+                    if (user.completedCount > 0 && user.topProject && allProjectsMap.has(user.topProject)) {
+                        const projectDetails = allProjectsMap.get(user.topProject);
+                        const totalActivitiesInTopProject = projectDetails.totalActivitiesCount || 0;
+                        if (totalActivitiesInTopProject > 0) {
+                            completedProgressDisplay = `${user.completedCount}/${totalActivitiesInTopProject}`;
+                        }
+                    }
+
+                    return `
+                        <tr class="user-row border-b border-slate-800/50 transition-colors ${isSelected ? 'bg-blue-900/20' : ''}">
+                            <td class="py-3 pl-2">
+                                <input type="checkbox" ${isSelected ? 'checked' : ''} 
+                                    onchange="toggleUserSelect('${user.id}')" class="w-4 h-4 rounded">
+                            </td>
+                            <td class="py-3">
+                                <div class="flex items-center gap-3">
+                                    <img src="${user.photoURL || `https://ui-avatars.com/api/?name=${encodeURIComponent(user.displayName)}&background=3b82f6&color=fff`}" class="w-8 h-8 rounded-full" alt="">
+                                    <div>
+                                        <div class="font-medium text-sm flex items-center gap-2">
+                                            ${user.displayName}
+                                            ${user.isOnline ? '<span class="w-2 h-2 bg-emerald-400 rounded-full"></span>' : ''}
+                                        </div>
+                                        <div class="text-xs text-slate-500 truncate max-w-[150px]">${user.email}</div>
                                     </div>
-                                    <div class="text-xs text-slate-500 truncate max-w-[150px]">${user.email}</div>
                                 </div>
-                            </div>
-                        </td>
-                        <td class="py-3 text-sm text-slate-300">${formatDateTime(user.firstLogin)}</td>
-                        <td class="py-3 text-sm">
-                            <span class="${isRecent(user.lastLogin) ? 'text-emerald-400' : 'text-slate-300'}">
-                                ${formatDateTime(user.lastLogin)}
-                            </span>
-                        </td>
-                        <td class="py-3 text-center">
-                            <span class="px-2 py-1 bg-blue-600/20 text-blue-400 rounded text-sm font-medium">${user.totalClicks}</span>
-                        </td>
-                        <td class="py-3 text-center">
-                            <span class="px-2 py-1 bg-green-600/20 text-green-400 rounded text-sm font-medium">${user.guideClicks}</span>
-                        </td>
-                        <td class="py-3 text-center">
-                            <span class="px-2 py-1 bg-purple-600/20 text-purple-400 rounded text-sm font-medium">${user.totalClicks}</span> <!-- ИЗМЕНЕНО: теперь Активностей = totalClicks (бывший 🌐) -->
-                        </td>
-                        <td class="py-3 text-center">
-                            <span class="px-2 py-1 bg-red-600/20 text-red-400 rounded text-sm font-medium">${user.favoritesCount}</span>
-                        </td>
-                        <td class="py-3 text-center">
-                            <span class="px-2 py-1 ${user.unreadNotifications > 0 ? 'bg-yellow-600/20 text-yellow-400' : 'bg-slate-700 text-slate-500'} rounded text-sm font-medium">
-                                ${user.unreadNotifications}
-                            </span>
-                        </td>
-                        <td class="py-3 text-sm text-slate-300 max-w-[200px] truncate">
-                            ${topProjectDisplay}
-                        </td>
-                    </tr>
-                `;
-            }).join('');
+                            </td>
+                            <td class="py-3 text-sm text-slate-300">${formatDateTime(user.firstLogin)}</td>
+                            <td class="py-3 text-sm">
+                                <span class="${isRecent(user.lastLogin) ? 'text-emerald-400' : 'text-slate-300'}">
+                                    ${formatDateTime(user.lastLogin)}
+                                </span>
+                            </td>
+                            <td class="py-3 text-center">
+                                <span class="px-2 py-1 bg-blue-600/20 text-blue-400 rounded text-sm font-medium">${user.guideClicks}</span>
+                            </td>
+                            <td class="py-3 text-center">
+                                <span class="px-2 py-1 bg-purple-600/20 text-purple-400 rounded text-sm font-medium">${user.totalClicks}</span>
+                            </td>
+                            <td class="py-3 text-center">
+                                <span class="px-2 py-1 bg-teal-600/20 text-teal-400 rounded text-sm font-medium">${completedProgressDisplay}</span>
+                            </td>
+                            <td class="py-3 text-center">
+                                <span class="px-2 py-1 bg-red-600/20 text-red-400 rounded text-sm font-medium">${user.favoritesCount}</span>
+                            </td>
+                            <td class="py-3 text-center">
+                                <span class="px-2 py-1 ${user.unreadNotifications > 0 ? 'bg-yellow-600/20 text-yellow-400' : 'bg-slate-700 text-slate-500'} rounded text-sm font-medium">
+                                    ${user.unreadNotifications}
+                                </span>
+                            </td>
+                            <td class="py-3 text-sm text-slate-300 max-w-[200px] truncate">
+                                ${topProjectDisplay}
+                            </td>
+                        </tr>
+                    `;
+                }).join('');
+            } catch (e) {
+                console.error("Error rendering user table row:", e); // Отладочное сообщение об ошибке рендеринга
+                tbody.innerHTML = `<tr><td colspan="10" class="py-8 text-center text-red-500">Ошибка при отображении пользователей: ${e.message}</td></tr>`;
+            }
         };
 
         window.toggleUserSelect = function(userId) {
@@ -976,7 +1001,7 @@
                 switch (sortBy) {
                     case 'lastLogin': return (b.lastLogin || 0) - (a.lastLogin || 0);
                     case 'firstLogin': return (b.firstLogin || 0) - (a.firstLogin || 0);
-                    case 'clicks': return b.totalClicks - a.totalClicks;
+                    case 'clicks': return b.totalClicks - a.totalClicks; // Сортируем по Кликам (Внутри Активности)
                     case 'name': return a.displayName.localeCompare(b.displayName);
                     default: return 0;
                 }
