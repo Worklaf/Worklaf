@@ -91,6 +91,7 @@
         <header class="mb-8">
             <div class="flex items-center justify-between">
                 <div class="flex items-center gap-4">
+                    <!-- Убедитесь, что Airdrop_Hunter_Hub.html - это правильное имя вашего главного файла -->
                     <a href="Airdrop_Hunter_Hub.html" class="back-btn px-4 py-2 rounded-lg text-blue-400 hover:text-white transition-colors flex items-center gap-2">
                         <i class="fas fa-arrow-left"></i>
                         <span class="hidden sm:inline">Назад</span>
@@ -118,6 +119,7 @@
             <div class="text-6xl mb-4">🚫</div>
             <h2 class="text-2xl font-bold mb-4">Доступ запрещён</h2>
             <p class="text-slate-400">У вас нет прав для просмотра этой страницы</p>
+            <!-- Убедитесь, что Airdrop_Hunter_Hub.html - это правильное имя вашего главного файла -->
             <a href="Airdrop_Hunter_Hub.html" class="inline-block mt-6 bg-blue-600 hover:bg-blue-500 px-6 py-3 rounded-lg text-sm font-medium transition-colors">
                 Вернуться на главную
             </a>
@@ -397,6 +399,8 @@
         let selectedUserIds = new Set();
         let projectStats = {};
         let notificationStats = { total: 0, viewed: 0 };
+        // NEW: Map для хранения всех проектов по их ID
+        let allProjectsMap = new Map(); // projectId -> project object
 
         // Проверка доступа
         onAuthStateChanged(auth, async (user) => {
@@ -437,8 +441,23 @@
             }
         };
 
+        // NEW: Загрузка всех проектов в allProjectsMap
+        async function loadProjectsData() {
+            try {
+                const projectsSnapshot = await getDocs(collection(db, "projects"));
+                projectsSnapshot.docs.forEach(docSnap => {
+                    allProjectsMap.set(docSnap.id, docSnap.data());
+                });
+                console.log("Проекты загружены:", allProjectsMap.size);
+            } catch (e) {
+                console.error("Ошибка загрузки данных проектов:", e);
+            }
+        }
+
         // Загрузка всех данных
         async function loadAllData() {
+            // NEW: Сначала загружаем проекты, так как данные пользователей и статистика проектов зависят от них
+            await loadProjectsData(); 
             await Promise.all([
                 loadUsers(),
                 loadProjectStats(),
@@ -459,9 +478,13 @@
                 for (const docSnap of usersSnapshot.docs) {
                     const userData = docSnap.data();
                     const userId = docSnap.id;
-                    if (userId === ALLOWED_ADMIN_ID) continue;
+                    if (userId === ALLOWED_ADMIN_ID) continue; // Пропускаем самого админа
 
-                    const isOnline = userData.lastLogin && new Date(userData.lastLogin) >= thirtyMinAgo;
+                    // Fix: lastLogin и firstLogin - это Firebase Timestamp, нужно конвертировать в JS Date
+                    const lastLoginDate = userData.lastLogin ? userData.lastLogin.toDate() : null;
+                    const firstLoginDate = userData.firstLogin ? userData.firstLogin.toDate() : null;
+
+                    const isOnline = lastLoginDate && lastLoginDate >= thirtyMinAgo;
                     
                     // Обработка статистики проектов
                     const arcGuideStats = userData.arcGuideStats || {};
@@ -485,15 +508,14 @@
                         email: userData.email || '—',
                         displayName: userData.displayName || 'Аноним',
                         photoURL: userData.photoURL || null,
-                        firstLogin: userData.firstLogin ? new Date(userData.firstLogin) : null,
-                        lastLogin: userData.lastLogin ? new Date(userData.lastLogin) : null,
+                        firstLogin: firstLoginDate,
+                        lastLogin: lastLoginDate,
                         totalClicks: totalClicks,
                         projectClicks: projectClicks,
                         topProject: topProject,
                         topProjectClicks: topProjectClicks,
-                        completedCount: userData.completed ? userData.completed.length : 0,
-                        guideClicks: userData.guideClicks || 0,
-                        websiteClicks: userData.websiteClicks || 0,
+                        completedCount: userData.completed ? userData.completed.length : 0, // Это будет колонка "Гайдов"
+                        websiteClicks: 0, // На данный момент не отслеживается в user data
                         favoritesCount: userData.favorites ? userData.favorites.length : 0,
                         unreadNotifications: userData.unreadNotifications || 0,
                         isOnline: isOnline
@@ -512,7 +534,7 @@
                 updateLastUpdateTime();
 
             } catch (e) {
-                console.error('Ошибка загрузки:', e);
+                console.error('Ошибка загрузки пользователей:', e);
             }
         }
 
@@ -551,7 +573,8 @@
                 notificationsSnapshot.docs.forEach(doc => {
                     total++;
                     const data = doc.data();
-                    if (data.viewedAt || data.read) {
+                    // Fix: createdAt, viewedAt - это Firebase Timestamp, нужно конвертировать в JS Date
+                    if ((data.viewedAt && data.viewedAt.toDate()) || data.read) {
                         viewed++;
                     }
                 });
@@ -585,7 +608,8 @@
 
                 container.innerHTML = historySnapshot.docs.map(doc => {
                     const data = doc.data();
-                    const date = data.createdAt ? new Date(data.createdAt.seconds * 1000) : new Date();
+                    // Fix: createdAt - это Firebase Timestamp, нужно конвертировать в JS Date
+                    const date = data.createdAt ? new Date(data.createdAt.toDate()) : new Date();
                     const typeColors = {
                         info: 'bg-blue-600/20 text-blue-400',
                         success: 'bg-green-600/20 text-green-400',
@@ -654,21 +678,29 @@
 
             const maxClicks = sorted[0]?.clicks || 1;
 
-            container.innerHTML = sorted.map((project, index) => {
-                const percent = (project.clicks / maxClicks) * 100;
+            container.innerHTML = sorted.map((projectStat, index) => {
+                const project = allProjectsMap.get(projectStat.id); // Получаем полные данные проекта
+                const percent = (projectStat.clicks / maxClicks) * 100;
                 const colors = ['bg-yellow-500', 'bg-slate-400', 'bg-orange-500', 'bg-blue-500', 'bg-purple-500', 'bg-green-500'];
                 const medals = ['🥇', '🥈', '🥉', '4️⃣', '5️⃣', '6️⃣'];
 
+                const projectName = project ? project.name : 'Неизвестный проект';
+                const projectImage = (project && project.image) ? project.image : `https://ui-avatars.com/api/?name=${encodeURIComponent(projectName.charAt(0))}&background=random&color=fff`;
+
+
                 return `
-                    <div class="bg-slate-800/50 rounded-lg p-3">
-                        <div class="flex items-center justify-between mb-2">
+                    <div class="bg-slate-800/50 rounded-lg p-3 flex flex-col justify-between items-start">
+                        <div class="flex items-center justify-between w-full mb-2">
                             <span class="text-lg">${medals[index]}</span>
-                            <span class="text-xs text-slate-500">${project.users.size} чел.</span>
+                            <span class="text-xs text-slate-500">${projectStat.users.size} чел.</span>
                         </div>
-                        <div class="text-sm font-medium truncate" title="${project.id}">${project.id}</div>
-                        <div class="mt-2">
+                        <div class="flex items-center gap-2 mb-2 w-full">
+                            <img src="${projectImage}" alt="${projectName}" class="w-8 h-8 rounded-full object-cover">
+                            <div class="text-sm font-medium truncate flex-1" title="${projectName}">${projectName}</div>
+                        </div>
+                        <div class="w-full">
                             <div class="flex justify-between text-xs text-slate-400 mb-1">
-                                <span>${project.clicks} кликов</span>
+                                <span>${projectStat.clicks} кликов</span>
                                 <span>${Math.round(percent)}%</span>
                             </div>
                             <div class="h-1.5 bg-slate-700 rounded-full overflow-hidden">
@@ -686,7 +718,7 @@
             const weekStart = new Date(todayStart);
             weekStart.setDate(weekStart.getDate() - 7);
 
-            const newToday = allUsers.filter(u => u.lastLogin && u.lastLogin >= todayStart).length;
+            const newToday = allUsers.filter(u => u.firstLogin && u.firstLogin >= todayStart).length; // corrected to firstLogin
             const activeWeek = allUsers.filter(u => u.lastLogin && u.lastLogin >= weekStart).length;
 
             animateValue('totalUsers', 0, allUsers.length, 1000);
@@ -788,8 +820,15 @@
 
             tbody.innerHTML = filteredUsers.map((user) => {
                 const isSelected = selectedUserIds.has(user.id);
+                
+                // NEW: Получаем данные любимого проекта
+                const topProjectData = user.topProject ? allProjectsMap.get(user.topProject) : null;
+                const topProjectName = topProjectData ? topProjectData.name : '—';
+                // Дефолтный аватар, если нет картинки проекта
+                const topProjectImage = (topProjectData && topProjectData.image) ? topProjectData.image : `https://ui-avatars.com/api/?name=${encodeURIComponent(topProjectName.charAt(0))}&background=333&color=fff`;
+
                 const topProjectDisplay = user.topProject 
-                    ? `${user.topProject} (${user.topProjectClicks})` 
+                    ? `<div class="flex items-center gap-2"><img src="${topProjectImage}" class="w-5 h-5 rounded-full object-cover" title="${topProjectName}"> ${topProjectName} (${user.topProjectClicks})</div>`
                     : '—';
                 
                 return `
@@ -820,20 +859,20 @@
                             <span class="px-2 py-1 bg-blue-600/20 text-blue-400 rounded text-sm font-medium">${user.totalClicks}</span>
                         </td>
                         <td class="py-3 text-center">
-                            <span class="px-2 py-1 bg-green-600/20 text-green-400 rounded text-sm font-medium">${user.guideClicks}</span>
+                            <span class="px-2 py-1 bg-green-600/20 text-green-400 rounded text-sm font-medium">${user.completedCount}</span>
                         </td>
                         <td class="py-3 text-center">
                             <span class="px-2 py-1 bg-purple-600/20 text-purple-400 rounded text-sm font-medium">${user.websiteClicks}</span>
                         </td>
                         <td class="py-3 text-center">
-                            <span class="px-2 py-1 bg-green-600/20 text-green-400 rounded text-sm font-medium">${user.completedCount}</span>
+                            <span class="px-2 py-1 bg-red-600/20 text-red-400 rounded text-sm font-medium">${user.favoritesCount}</span>
                         </td>
                         <td class="py-3 text-center">
                             <span class="px-2 py-1 ${user.unreadNotifications > 0 ? 'bg-yellow-600/20 text-yellow-400' : 'bg-slate-700 text-slate-500'} rounded text-sm font-medium">
                                 ${user.unreadNotifications}
                             </span>
                         </td>
-                        <td class="py-3 text-sm text-slate-300 max-w-[150px] truncate" title="${user.topProject || ''}">
+                        <td class="py-3 text-sm text-slate-300 max-w-[200px] truncate">
                             ${topProjectDisplay}
                         </td>
                     </tr>
@@ -1000,7 +1039,8 @@
                 const batch = writeBatch(db);
 
                 // Создаём запись о рассылке с начальными счётчиками
-                const broadcastRef = await addDoc(collection(db, "broadcasts"), {
+                const broadcastRef = doc(collection(db, "broadcasts")); // Генерируем ID здесь
+                batch.set(broadcastRef, {
                     message: message,
                     type: type,
                     createdAt: serverTimestamp(),
@@ -1015,10 +1055,10 @@
                 const notificationsRef = collection(db, "notifications");
                 
                 recipientIds.forEach(userId => {
-                    const notifRef = doc(notificationsRef);
+                    const notifRef = doc(notificationsRef); // Генерируем ID здесь
                     batch.set(notifRef, {
                         userId: userId,
-                        broadcastId: broadcastRef.id,
+                        broadcastId: broadcastRef.id, // Используем ID рассылки
                         message: message,
                         type: type,
                         read: false,
