@@ -91,6 +91,7 @@
         <header class="mb-8">
             <div class="flex items-center justify-between">
                 <div class="flex items-center gap-4">
+                    <!-- Убедитесь, что Airdrop_Hunter_Hub.html - это правильное имя вашего главного файла -->
                     <a href="Airdrop_Hunter_Hub.html" class="back-btn px-4 py-2 rounded-lg text-blue-400 hover:text-white transition-colors flex items-center gap-2">
                         <i class="fas fa-arrow-left"></i>
                         <span class="hidden sm:inline">Назад</span>
@@ -118,6 +119,7 @@
             <div class="text-6xl mb-4">🚫</div>
             <h2 class="text-2xl font-bold mb-4">Доступ запрещён</h2>
             <p class="text-slate-400">У вас нет прав для просмотра этой страницы</p>
+            <!-- Убедитесь, что Airdrop_Hunter_Hub.html - это правильное имя вашего главного файла -->
             <a href="Airdrop_Hunter_Hub.html" class="inline-block mt-6 bg-blue-600 hover:bg-blue-500 px-6 py-3 rounded-lg text-sm font-medium transition-colors">
                 Вернуться на главную
             </a>
@@ -322,8 +324,7 @@
                         <select id="sortUsers" onchange="sortUsersList()" class="bg-slate-800 border border-slate-700 rounded-lg px-3 py-1.5 text-sm outline-none">
                             <option value="lastLogin">По последнему входу</option>
                             <option value="firstLogin">По первому входу</option>
-                            <option value="activityClicks">По кликам "Начать активность"</option>
-                            <option value="guideClicks">По кликам "Гайд"</option>
+                            <option value="clicks">По кликам</option>
                             <option value="name">По имени</option>
                         </select>
                     </div>
@@ -339,11 +340,11 @@
                                 <th class="pb-3">Пользователь</th>
                                 <th class="pb-3">Первый вход</th>
                                 <th class="pb-3">Последний вход</th>
-                                <th class="pb-3 text-center" title="Клики по кнопке 'Гайд'">Кликов (Гайд) <i class="fas fa-book text-xs"></i></th>
-<th class="pb-3 text-center" title="Клики по кнопке 'Начать активность'">Кликов (Начать активность) <i class="fas fa-play text-xs"></i></th>
-                                <th class="pb-3 text-center">Завершенные (Прогресс)</th>
-                                <th class="pb-3 text-center">Избранное ❤️</th>
-                                <th class="pb-3 text-center">Непрочитанные 🔔</th>
+                                <th class="pb-3 text-center">Кликов</th>
+                                <th class="pb-3 text-center">Гайдов</th>
+                                <th class="pb-3 text-center">Активностей</th> <!-- ИЗМЕНЕНО -->
+                                <th class="pb-3 text-center">❤️</th>
+                                <th class="pb-3 text-center">🔔</th>
                                 <th class="pb-3">Любимый проект</th>
                             </tr>
                         </thead>
@@ -398,7 +399,7 @@
         let selectedUserIds = new Set();
         let projectStats = {};
         let notificationStats = { total: 0, viewed: 0 };
-        let allProjectsMap = new Map();
+        let allProjectsMap = new Map(); // projectId -> project object
 
         // Проверка доступа
         onAuthStateChanged(auth, async (user) => {
@@ -443,14 +444,9 @@
             try {
                 const projectsSnapshot = await getDocs(collection(db, "projects"));
                 projectsSnapshot.docs.forEach(docSnap => {
-                    const projectData = docSnap.data();
-                    const totalActivities = projectData.totalActivitiesCount || (projectData.activities ? projectData.activities.length : 0);
-
-                    allProjectsMap.set(docSnap.id, {
-                        ...projectData,
-                        totalActivitiesCount: totalActivities
-                    });
+                    allProjectsMap.set(docSnap.id, docSnap.data());
                 });
+                console.log("Проекты загружены:", allProjectsMap.size);
             } catch (e) {
                 console.error("Ошибка загрузки данных проектов:", e);
             }
@@ -470,7 +466,6 @@
         async function loadUsers() {
             try {
                 const usersSnapshot = await getDocs(collection(db, "users"));
-                
                 allUsers = [];
                 const now = new Date();
                 const thirtyMinAgo = new Date(now.getTime() - 30 * 60 * 1000);
@@ -478,57 +473,32 @@
                 for (const docSnap of usersSnapshot.docs) {
                     const userData = docSnap.data();
                     const userId = docSnap.id;
+                   
 
+                    // Исправлено: Возвращено создание Date объектов напрямую из userData.lastLogin/firstLogin,
+                    // как было в "рабочем" коде. Это предотвращает ошибку .toDate()
+                    // если данные не являются Firebase Timestamp.
                     const lastLoginDate = userData.lastLogin ? new Date(userData.lastLogin) : null;
                     const firstLoginDate = userData.firstLogin ? new Date(userData.firstLogin) : null;
 
                     const isOnline = lastLoginDate && lastLoginDate >= thirtyMinAgo;
+                    
+                    const arcGuideStats = userData.arcGuideStats || {};
+                    const projectClicks = {};
+                    let totalClicks = 0; // Сумма кликов по всем гайдам
+                    let topProject = null;
+                    let topProjectClicks = 0;
 
-// === ИСПРАВЛЕННАЯ ЛОГИКА ПОДСЧЁТА КЛИКОВ ===
+                    Object.entries(arcGuideStats).forEach(([projectId, stats]) => {
+                        const clicks = stats.totalClicks || 0;
+                        projectClicks[projectId] = clicks;
+                        totalClicks += clicks;
+                        if (clicks > topProjectClicks) {
+                            topProjectClicks = clicks;
+                            topProject = projectId;
+                        }
+                    });
 
-const arcGuideStats = userData.arcGuideStats || {};
-
-// 1. Клики по кнопке "Гайд" — суммируем guideClicks по всем проектам
-let guideClicks = 0;
-Object.entries(arcGuideStats).forEach(([projectId, stats]) => {
-    if (stats.guideClicks) {
-        guideClicks += stats.guideClicks;
-    }
-});
-// + проверяем старое поле для обратной совместимости
-guideClicks += userData.guideClicks || 0;
-
-// 2. Клики по кнопке "Начать активность" — суммируем activityClicks
-let activityClicks = 0;
-Object.entries(arcGuideStats).forEach(([projectId, stats]) => {
-    if (stats.activityClicks) {
-        // activityClicks может быть объектом {activityId: count} или числом
-        if (typeof stats.activityClicks === 'object') {
-            Object.values(stats.activityClicks).forEach(count => {
-                activityClicks += typeof count === 'number' ? count : 0;
-            });
-        } else if (typeof stats.activityClicks === 'number') {
-            activityClicks += stats.activityClicks;
-        }
-    }
-    // + totalActivityClicks если есть
-    if (stats.totalActivityClicks) {
-        activityClicks += stats.totalActivityClicks;
-    }
-});
-// + проверяем старое поле
-activityClicks += userData.activityClicks || 0;
-
-// Для топа проектов используем общую активность
-let topProject = null;
-let topProjectClicks = 0;
-Object.entries(arcGuideStats).forEach(([projectId, stats]) => {
-    const totalProjectClicks = (stats.guideClicks || 0) + (stats.totalActivityClicks || 0);
-    if (totalProjectClicks > topProjectClicks) {
-        topProjectClicks = totalProjectClicks;
-        topProject = projectId;
-    }
-});
                     allUsers.push({
                         id: userId,
                         email: userData.email || '—',
@@ -536,17 +506,18 @@ Object.entries(arcGuideStats).forEach(([projectId, stats]) => {
                         photoURL: userData.photoURL || null,
                         firstLogin: firstLoginDate,
                         lastLogin: lastLoginDate,
-                        guideClicks: guideClicks,                           // Клики по "Гайд"
-                        activityClicks: totalActivityClicks,                // Клики по "Начать активность"
+                        totalClicks: totalClicks, // Сумма кликов по всем гайдам из arcGuideStats
+                        projectClicks: projectClicks,
                         topProject: topProject,
                         topProjectClicks: topProjectClicks,
-                        completedCount: userData.completed ? userData.completed.length : 0,
+                        completedCount: userData.completed ? userData.completed.length : 0, 
+                        // Исправлено: Возвращен `guideClicks` как в "рабочем" коде
+                        guideClicks: userData.guideClicks || 0,
+                        websiteClicks: userData.websiteClicks || 0, // Это поле теперь не используется для колонки "Активностей", но может остаться для других целей
                         favoritesCount: userData.favorites ? userData.favorites.length : 0,
+                        // Исправлено: Возвращено `unreadNotifications` как прямое поле из "рабочего" кода
                         unreadNotifications: userData.unreadNotifications || 0,
-                        isOnline: isOnline,
-                        // Для сортировки и отладки
-                        rawActivityClicks: userData.activityClicks,
-                        rawArcGuideStats: arcGuideStats
+                        isOnline: isOnline
                     });
                 }
 
@@ -572,7 +543,6 @@ Object.entries(arcGuideStats).forEach(([projectId, stats]) => {
 
                 for (const docSnap of usersSnapshot.docs) {
                     const userData = docSnap.data();
-                    // Используем arcGuideStats для статистики проектов
                     if (userData.arcGuideStats) {
                         Object.entries(userData.arcGuideStats).forEach(([projectId, stats]) => {
                             if (!projectStats[projectId]) {
@@ -586,7 +556,7 @@ Object.entries(arcGuideStats).forEach(([projectId, stats]) => {
 
                 renderTopProjects();
             } catch (e) {
-                console.error('Ошибка загрузки проектов для статистики:', e);
+                console.error('Ошибка загрузки проектов:', e);
             }
         }
 
@@ -599,6 +569,8 @@ Object.entries(arcGuideStats).forEach(([projectId, stats]) => {
                 notificationsSnapshot.docs.forEach(doc => {
                     total++;
                     const data = doc.data();
+                    // Здесь `.toDate()` остается, так как для коллекции `notifications`
+                    // timestamps, скорее всего, являются Firebase Timestamp объектами.
                     if ((data.viewedAt && data.viewedAt.toDate()) || data.read) {
                         viewed++;
                     }
@@ -632,6 +604,8 @@ Object.entries(arcGuideStats).forEach(([projectId, stats]) => {
 
                 container.innerHTML = historySnapshot.docs.map(doc => {
                     const data = doc.data();
+                    // Здесь `.toDate()` остается, так как для коллекции `broadcasts`
+                    // timestamps, скорее всего, являются Firebase Timestamp объектами.
                     const date = data.createdAt ? new Date(data.createdAt.toDate()) : new Date(); 
                     const typeColors = {
                         info: 'bg-blue-600/20 text-blue-400',
@@ -804,10 +778,7 @@ Object.entries(arcGuideStats).forEach(([projectId, stats]) => {
 
         function renderTopUsers() {
             const container = document.getElementById('topUsers');
-            // Сортируем по общей активности (guideClicks + activityClicks)
-            const top5 = [...allUsers]
-                .sort((a, b) => (b.guideClicks + b.activityClicks) - (a.guideClicks + a.activityClicks))
-                .slice(0, 5);
+            const top5 = [...allUsers].sort((a, b) => b.totalClicks - a.totalClicks).slice(0, 5);
 
             if (top5.length === 0) {
                 container.innerHTML = '<p class="text-slate-500 text-sm">Нет данных</p>';
@@ -825,8 +796,8 @@ Object.entries(arcGuideStats).forEach(([projectId, stats]) => {
                         <div class="text-xs text-slate-500">${formatDateShort(user.lastLogin)}</div>
                     </div>
                     <div class="text-right">
-                        <div class="text-lg font-bold text-blue-400">${user.guideClicks + user.activityClicks}</div>
-                        <div class="text-xs text-slate-500">всего кликов</div>
+                        <div class="text-lg font-bold text-blue-400">${user.totalClicks}</div>
+                        <div class="text-xs text-slate-500">кликов</div>
                     </div>
                 </div>
             `).join('');
@@ -840,80 +811,64 @@ Object.entries(arcGuideStats).forEach(([projectId, stats]) => {
                 return;
             }
 
-            try {
-                tbody.innerHTML = filteredUsers.map((user) => {
-                    const isSelected = selectedUserIds.has(user.id);
-                    
-                    const topProjectData = user.topProject ? allProjectsMap.get(user.topProject) : null;
-                    const topProjectName = topProjectData ? topProjectData.name : '—';
-                    const avatarText = (topProjectName === '—' || topProjectName.length === 0) ? '?' : topProjectName.charAt(0);
-                    const topProjectImage = (topProjectData && topProjectData.image) ? topProjectData.image : `https://ui-avatars.com/api/?name=${encodeURIComponent(avatarText)}&background=333&color=fff`;
+            tbody.innerHTML = filteredUsers.map((user) => {
+                const isSelected = selectedUserIds.has(user.id);
+                
+                const topProjectData = user.topProject ? allProjectsMap.get(user.topProject) : null;
+                const topProjectName = topProjectData ? topProjectData.name : '—';
+                const topProjectImage = (topProjectData && topProjectData.image) ? topProjectData.image : `https://ui-avatars.com/api/?name=${encodeURIComponent(topProjectName.charAt(0))}&background=333&color=fff`;
 
-                    const topProjectDisplay = user.topProject 
-                        ? `<div class="flex items-center gap-2"><img src="${topProjectImage}" class="w-5 h-5 rounded-full object-cover" title="${topProjectName}"> ${topProjectName} (${user.topProjectClicks})</div>`
-                        : '—';
-                    
-                    // Логика для Завершенных (Прогресс)
-                    let completedProgressDisplay = user.completedCount.toString();
-                    if (user.completedCount > 0 && user.topProject && allProjectsMap.has(user.topProject)) {
-                        const projectDetails = allProjectsMap.get(user.topProject);
-                        const totalActivitiesInTopProject = projectDetails.totalActivitiesCount || 0;
-                        if (totalActivitiesInTopProject > 0) {
-                            completedProgressDisplay = `${user.completedCount}/${totalActivitiesInTopProject}`;
-                        }
-                    }
-
-                    return `
-                        <tr class="user-row border-b border-slate-800/50 transition-colors ${isSelected ? 'bg-blue-900/20' : ''}">
-                            <td class="py-3 pl-2">
-                                <input type="checkbox" ${isSelected ? 'checked' : ''} 
-                                    onchange="toggleUserSelect('${user.id}')" class="w-4 h-4 rounded">
-                            </td>
-                            <td class="py-3">
-                                <div class="flex items-center gap-3">
-                                    <img src="${user.photoURL || `https://ui-avatars.com/api/?name=${encodeURIComponent(user.displayName)}&background=3b82f6&color=fff`}" class="w-8 h-8 rounded-full" alt="">
-                                    <div>
-                                        <div class="font-medium text-sm flex items-center gap-2">
-                                            ${user.displayName}
-                                            ${user.isOnline ? '<span class="w-2 h-2 bg-emerald-400 rounded-full" title="Онлайн"></span>' : ''}
-                                        </div>
-                                        <div class="text-xs text-slate-500 truncate max-w-[150px]">${user.email}</div>
+                const topProjectDisplay = user.topProject 
+                    ? `<div class="flex items-center gap-2"><img src="${topProjectImage}" class="w-5 h-5 rounded-full object-cover" title="${topProjectName}"> ${topProjectName} (${user.topProjectClicks})</div>`
+                    : '—';
+                
+                return `
+                    <tr class="user-row border-b border-slate-800/50 transition-colors ${isSelected ? 'bg-blue-900/20' : ''}">
+                        <td class="py-3 pl-2">
+                            <input type="checkbox" ${isSelected ? 'checked' : ''} 
+                                onchange="toggleUserSelect('${user.id}')" class="w-4 h-4 rounded">
+                        </td>
+                        <td class="py-3">
+                            <div class="flex items-center gap-3">
+                                <img src="${user.photoURL || `https://ui-avatars.com/api/?name=${encodeURIComponent(user.displayName)}&background=3b82f6&color=fff`}" class="w-8 h-8 rounded-full" alt="">
+                                <div>
+                                    <div class="font-medium text-sm flex items-center gap-2">
+                                        ${user.displayName}
+                                        ${user.isOnline ? '<span class="w-2 h-2 bg-emerald-400 rounded-full"></span>' : ''}
                                     </div>
+                                    <div class="text-xs text-slate-500 truncate max-w-[150px]">${user.email}</div>
                                 </div>
-                            </td>
-                            <td class="py-3 text-sm text-slate-300">${formatDateTime(user.firstLogin)}</td>
-                            <td class="py-3 text-sm">
-                                <span class="${isRecent(user.lastLogin) ? 'text-emerald-400' : 'text-slate-300'}">
-                                    ${formatDateTime(user.lastLogin)}
-                                </span>
-                            </td>
-                            <td class="py-3 text-center">
-                                <span class="px-2 py-1 bg-blue-600/20 text-blue-400 rounded text-sm font-medium" title="Клики по кнопке 'Гайд'">${user.guideClicks}</span>
-                            </td>
-                            <td class="py-3 text-center">
-                                <span class="px-2 py-1 bg-purple-600/20 text-purple-400 rounded text-sm font-medium" title="Клики по кнопке 'Начать активность'">${user.activityClicks}</span>
-                            </td>
-                            <td class="py-3 text-center">
-                                <span class="px-2 py-1 bg-teal-600/20 text-teal-400 rounded text-sm font-medium">${completedProgressDisplay}</span>
-                            </td>
-                            <td class="py-3 text-center">
-                                <span class="px-2 py-1 bg-red-600/20 text-red-400 rounded text-sm font-medium">${user.favoritesCount}</span>
-                            </td>
-                            <td class="py-3 text-center">
-                                <span class="px-2 py-1 ${user.unreadNotifications > 0 ? 'bg-yellow-600/20 text-yellow-400' : 'bg-slate-700 text-slate-500'} rounded text-sm font-medium">
-                                    ${user.unreadNotifications}
-                                </span>
-                            </td>
-                            <td class="py-3 text-sm text-slate-300 max-w-[200px] truncate">
-                                ${topProjectDisplay}
-                            </td>
-                        </tr>
-                    `;
-                }).join('');
-            } catch (e) {
-                console.error("Error rendering user table row:", e);
-                tbody.innerHTML = `<tr><td colspan="10" class="py-8 text-center text-red-500">Ошибка при отображении пользователей: ${e.message}</td></tr>`;
-            }
+                            </div>
+                        </td>
+                        <td class="py-3 text-sm text-slate-300">${formatDateTime(user.firstLogin)}</td>
+                        <td class="py-3 text-sm">
+                            <span class="${isRecent(user.lastLogin) ? 'text-emerald-400' : 'text-slate-300'}">
+                                ${formatDateTime(user.lastLogin)}
+                            </span>
+                        </td>
+                        <td class="py-3 text-center">
+                            <span class="px-2 py-1 bg-blue-600/20 text-blue-400 rounded text-sm font-medium">${user.totalClicks}</span>
+                        </td>
+                        <td class="py-3 text-center">
+                            <span class="px-2 py-1 bg-green-600/20 text-green-400 rounded text-sm font-medium">${user.guideClicks}</span>
+                        </td>
+                        <td class="py-3 text-center">
+                            <span class="px-2 py-1 bg-purple-600/20 text-purple-400 rounded text-sm font-medium">${user.totalClicks}</span> <!-- ИЗМЕНЕНО: теперь Активностей = totalClicks (бывший 🌐) -->
+                        </td>
+                        <td class="py-3 text-center">
+                            <span class="px-2 py-1 bg-red-600/20 text-red-400 rounded text-sm font-medium">${user.favoritesCount}</span>
+                        </td>
+                        <td class="py-3 text-center">
+                            <span class="px-2 py-1 ${user.unreadNotifications > 0 ? 'bg-yellow-600/20 text-yellow-400' : 'bg-slate-700 text-slate-500'} rounded text-sm font-medium">
+                                ${user.unreadNotifications}
+                            </span>
+                        </td>
+                        <td class="py-3 text-sm text-slate-300 max-w-[200px] truncate">
+                            ${topProjectDisplay}
+                        </td>
+                    </tr>
+                `;
+            }).join('');
         };
 
         window.toggleUserSelect = function(userId) {
@@ -1021,8 +976,7 @@ Object.entries(arcGuideStats).forEach(([projectId, stats]) => {
                 switch (sortBy) {
                     case 'lastLogin': return (b.lastLogin || 0) - (a.lastLogin || 0);
                     case 'firstLogin': return (b.firstLogin || 0) - (a.firstLogin || 0);
-                    case 'activityClicks': return b.activityClicks - a.activityClicks;
-                    case 'guideClicks': return b.guideClicks - a.guideClicks;
+                    case 'clicks': return b.totalClicks - a.totalClicks;
                     case 'name': return a.displayName.localeCompare(b.displayName);
                     default: return 0;
                 }
