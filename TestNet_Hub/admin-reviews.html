@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <title>Admin - Отзывы</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        body { background: #0b0f19; color: #f1f5f9; font-family: 'Inter', sans-serif; }
+    </style>
+</head>
+<body class="p-8">
+    <div class="max-w-4xl mx-auto">
+        <div class="flex justify-between mb-8">
+            <h1 class="text-2xl font-bold"><i class="fas fa-comments text-purple-500"></i> Управление Отзывами</h1>
+            <div>
+                <a href="Airdrop_Hunter_Hub.html" class="text-blue-400 mr-4 hover:underline">Вернуться на сайт</a>
+                <a href="admin-projects.html" class="text-slate-400 hover:underline">Проекты</a>
+            </div>
+        </div>
+
+        <div id="reviewsList" class="space-y-4">
+            <!-- Reviews load here -->
+        </div>
+    </div>
+
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+        import { getAuth, signInWithPopup, GoogleAuthProvider, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
+        import { getFirestore, collection, query, orderBy, onSnapshot, updateDoc, doc, getDocs } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+
+        const firebaseConfig = {
+            apiKey: "AIzaSyBdXGYg2t8DJBrQHCC80-pFerZU9PWmSCk",
+            authDomain: "testnet-hub.firebaseapp.com",
+            projectId: "testnet-hub",
+            storageBucket: "testnet-hub.firebasestorage.app",
+            messagingSenderId: "497813176653",
+            appId: "1:497813176653:web:089188fdd1555d76cd7704"
+        };
+        const app = initializeApp(firebaseConfig);
+        const auth = getAuth(app);
+        const db = getFirestore(app);
+
+        onAuthStateChanged(auth, async user => {
+            if(user && user.uid === "SAkz4mdW9reDaIsvqigCNZhEKJR2") {
+                loadReviews();
+            } else {
+                await signInWithPopup(auth, new GoogleAuthProvider());
+            }
+        });
+
+        function loadReviews() {
+            const q = query(collection(db, "reviews"), orderBy("date", "desc"));
+            onSnapshot(q, snap => {
+                const list = document.getElementById('reviewsList');
+                list.innerHTML = '';
+                if(snap.empty) {
+                    list.innerHTML = '<div class="text-center text-slate-500">Отзывов пока нет</div>';
+                    return;
+                }
+                
+                snap.docs.forEach(d => {
+                    const r = d.data();
+                    list.innerHTML += `
+                        <div class="bg-[#1e2538] p-5 rounded-xl border border-slate-700">
+                            <div class="flex justify-between mb-2">
+                                <div class="font-bold text-blue-400">${r.projectName} <span class="text-slate-500 font-normal">| ${r.userName}</span></div>
+                                <div class="text-xs text-slate-500">${r.date ? new Date(r.date).toLocaleString() : ''}</div>
+                            </div>
+                            <div class="text-slate-300 mb-3">${r.text}</div>
+                            
+                            ${r.reply ? `
+                                <div class="bg-slate-900/50 p-3 rounded border-l-2 border-emerald-500">
+                                    <div class="text-xs text-emerald-400 font-bold mb-1">Ваш ответ:</div>
+                                    <div class="text-sm text-slate-300">${r.reply}</div>
+                                </div>
+                            ` : `
+                                <div class="mt-3 flex gap-2">
+                                    <input type="text" id="reply-${d.id}" placeholder="Написать ответ..." class="flex-1 bg-slate-800 border border-slate-600 rounded px-3 text-sm py-2">
+                                    <button onclick="reply('${d.id}')" class="bg-blue-600 hover:bg-blue-500 px-4 py-2 rounded text-sm font-bold">Ответить</button>
+                                </div>
+                            `}
+                        </div>
+                    `;
+                });
+            });
+        }
+
+        window.reply = async (reviewId) => {
+            const text = document.getElementById(`reply-${reviewId}`).value;
+            if(!text) return;
+            
+            await updateDoc(doc(db, "reviews", reviewId), {
+                reply: text,
+                replyDate: new Date().toISOString()
+            });
+            alert('Ответ отправлен!');
+        };
+    </script>
+</body>
+</html>
