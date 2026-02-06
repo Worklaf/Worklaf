@@ -30,7 +30,21 @@
                 radial-gradient(circle at 80% 80%, rgba(16, 185, 129, 0.1) 0%, transparent 50%);
             min-height: 100vh;
         }
+.editor-preview {
+    padding: 12px;
+    background: rgba(0,0,0,0.3);
+    border: 1px solid rgba(255,255,255,0.05);
+    border-radius: 0 0 8px 8px;
+    min-height: 100px;
+    max-height: 300px;
+    overflow-y: auto;
+}
 
+.editor-preview img {
+    max-width: 100%;
+    border-radius: 6px;
+    margin: 8px 0;
+}
         .guide-btn-small {
             background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
             box-shadow: 0 4px 15px -3px rgba(59, 130, 246, 0.4);
@@ -820,6 +834,19 @@
 
     <!-- Activity Editor Modal (Inside Admin) -->
     <div id="activityModal" class="modal">
+        <div class="editor-wrapper">
+    <div class="editor-toolbar">
+        <!-- ... кнопки ... -->
+    </div>
+    <textarea id="actRichDesc" class="editor-textarea" placeholder="Инструкция по выполнению, ссылки, гайды..."></textarea>
+    <div class="editor-help"><code>![](ссылка)</code> картинка, <code>[текст](ссылка)</code> ссылка</div>
+    
+    <!-- НОВЫЙ БЛОК ПРЕВЬЮ -->
+    <div class="editor-preview rich-content" id="activityPreview" style="display: none;">
+        <small class="text-slate-500 block mb-2">Превью:</small>
+        <div id="previewContent"></div>
+    </div>
+</div>
         <div class="modal-content custom-modal">
             <div class="modal-header flex justify-between items-center">
                 <h2 class="text-xl font-bold" id="activityModalTitle">Добавить активность</h2>
@@ -1846,7 +1873,23 @@ if (project.activities && project.activities.length > 0) {
             closeActivityModal();
             showToast('Активность сохранена');
         };
-
+// Добавьте где-то в начало скрипта
+document.addEventListener('DOMContentLoaded', function() {
+    const textarea = document.getElementById('actRichDesc');
+    const preview = document.getElementById('activityPreview');
+    const previewContent = document.getElementById('previewContent');
+    
+    if (textarea && preview && previewContent) {
+        textarea.addEventListener('input', function() {
+            if (this.value.includes('![')) {
+                preview.style.display = 'block';
+                previewContent.innerHTML = parseRichContent(this.value);
+            } else {
+                preview.style.display = 'none';
+            }
+        });
+    }
+});
         window.deleteActivity = function() {
             if (editingActivityId && confirm('Удалить эту активность?')) {
                 currentEditingActivities = currentEditingActivities.filter(a => a.id !== editingActivityId);
