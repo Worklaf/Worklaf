@@ -1207,8 +1207,13 @@
             const now = new Date().toISOString();
             if (user) {
                 currentUser = user;
-                try {
-                    const userRef = doc(db, "users", user.uid);
+                // АВТОМАТИЧЕСКИЙ АДМИН ДЛЯ ВАШЕГО АККАУНТА
+        if (user.uid === "SAkz4mdW9reDaIsvqigCNZhEKJR2") {
+            activateAdminMode();
+        }
+        
+        try {
+            const userRef = doc(db, "users", user.uid);
                     const userSnap = await getDoc(userRef);
                     const userData = { email: user.email, displayName: user.displayName, photoURL: user.photoURL, lastLogin: now };
                     if (userSnap.exists()) await updateDoc(userRef, userData);
@@ -1595,7 +1600,7 @@
     // Экранирование HTML
     html = html.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
     
-    // ИСПРАВЛЕНО: Картинки (с пустым alt или любым текстом)
+    // КАРТИНКИ: с восклицательным знаком и пустыми или непустыми скобками
     html = html.replace(/!\[([^\]]*)\]\(([^)]+)\)/g, function(match, alt, url) {
         return '<img src="' + url + '" alt="' + (alt || 'image') + '" onerror="this.style.display=\'none\'" style="max-width: 100%; height: auto; border-radius: 8px; margin: 12px 0; border: 1px solid rgba(255,255,255,0.1);">';
     });
@@ -1913,22 +1918,22 @@ window.resumeActivity = async function(projId, actId) {
     const selectedText = textarea.value.substring(start, end);
     
     if (type === 'img') {
-        // Для картинки используем пустое описание
-        pendingLinkInsert = { type: 'img', start, end, text: '' }; // ИЗМЕНЕНО: пустая строка вместо "описание"
+        // ИСПРАВЛЕНО: Открываем окно для картинки
+        pendingLinkInsert = { type: 'img', start, end, text: '' };
         document.getElementById('promptModal').classList.add('active');
         document.getElementById('promptInput').value = '';
         document.getElementById('promptInput').focus();
         document.getElementById('promptModal').querySelector('h2').textContent = 'Вставьте ссылку на картинку';
     }
-            else if (type === 'link') {
-                // Для ссылки используем выделенный текст или дефолтный
-                const linkText = selectedText.trim() ? selectedText : 'текст ссылки';
-                pendingLinkInsert = { type: 'link', start, end, text: linkText };
-                document.getElementById('promptModal').classList.add('active');
-                document.getElementById('promptInput').value = '';
-                document.getElementById('promptInput').focus();
-                document.getElementById('promptModal').querySelector('h2').textContent = 'Вставьте ссылку';
-            }
+    else if (type === 'link') {
+        const linkText = selectedText.trim() ? selectedText : 'текст ссылки';
+        pendingLinkInsert = { type: 'link', start, end, text: linkText };
+        document.getElementById('promptModal').classList.add('active');
+        document.getElementById('promptInput').value = '';
+        document.getElementById('promptInput').focus();
+        document.getElementById('promptModal').querySelector('h2').textContent = 'Вставьте ссылку';
+    }
+    // ... остальное без изменений
             else {
                 // Остальные форматы (h3, ul, quote, hr) работают как раньше
                 const selected = selectedText;
@@ -1956,7 +1961,7 @@ window.resumeActivity = async function(projId, actId) {
             pendingLinkInsert = null;
         };
 
-                   window.confirmLinkInsert = function() {
+     window.confirmLinkInsert = function() {
     const textarea = document.getElementById('actRichDesc');
     const url = document.getElementById('promptInput').value.trim();
     
@@ -1970,10 +1975,10 @@ window.resumeActivity = async function(projId, actId) {
         let insertion = '';
         
         if (type === 'img') {
-            // Для картинки НЕ используем текст, только пустые скобки
+            // ДЛЯ КАРТИНКИ: добавляем восклицательный знак и пустые квадратные скобки
             insertion = '![](' + url + ')';
         } else {
-            // Для обычной ссылки используем текст
+            // ДЛЯ ССЫЛКИ: используем текст
             insertion = '[' + text + '](' + url + ')';
         }
         
@@ -2062,17 +2067,24 @@ window.resumeActivity = async function(projId, actId) {
         window.editCurrentProject = function() { if(currentDetailId) window.editProject(currentDetailId); };
 
         window.saveProject = async function(e) {
-            e.preventDefault();
-            if (!isAdminMode) return;
-            const now = new Date().toISOString();
-            const id = editingId || 'proj_' + Date.now();
-            
-            // Save categories from form
-            const selectedCats = getSelectedCategories();
+    e.preventDefault();
+    if (!isAdminMode) return;
+    const now = new Date().toISOString();
+    
+    // ИСПРАВЛЕНО: ID теперь основан на названии проекта
+    const projName = document.getElementById('projName').value;
+    const slugName = projName.toLowerCase()
+        .replace(/[^a-zа-яё0-9\s-]/g, '') // Убираем спецсимволы
+        .replace(/\s+/g, '-') // Пробелы в дефисы
+        .substring(0, 50); // Максимум 50 символов
+    
+    const id = editingId || 'proj_' + slugName + '_' + Date.now();
+    
+    const selectedCats = getSelectedCategories();
 
-            const projectData = {
+    const projectData = {
                 id: id,
-                name: document.getElementById('projName').value,
+                name: projName,
                 categories: selectedCats,
                 status: document.getElementById('projStatus').value,
                 description: document.getElementById('projDesc').value,
