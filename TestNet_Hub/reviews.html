@@ -744,42 +744,49 @@
         };
 
         window.sendFeedback = async () => {
-            if (!currentUser || !currentFeedbackProject) return;
-            
-            const type = document.getElementById('feedbackType').value;
-            const text = document.getElementById('feedbackText').value.trim();
-            
-            if (!text) {
-                showToast('Введите сообщение');
-                return;
-            }
-            
-            try {
-                await setDoc(doc(collection(db, "feedback")), {
-                    projectId: currentFeedbackProject,
-                    projectName: projects.find(p => p.id === currentFeedbackProject)?.name || 'Unknown',
-                    userId: currentUser.uid,
-                    userName: currentUser.displayName || currentUser.email,
-                    userEmail: currentUser.email,
-                    type: type,
-                    text: text,
-                    createdAt: serverTimestamp(),
-                    read: false
-                });
-                
-                // Increment unread count for admin
-                await updateDoc(doc(db, "adminStats", "feedback"), {
-                    unreadCount: increment(1)
-                });
-                
-                showToast('Отзыв отправлен администратору!');
-                closeFeedbackModal();
-                
-            } catch (e) {
-                showToast('Ошибка: ' + e.message);
-            }
-        };
-
+    if (!currentUser || !currentFeedbackProject) return;
+    
+    const type = document.getElementById('feedbackType').value;
+    const text = document.getElementById('feedbackText').value.trim();
+    
+    if (!text) {
+        showToast('Введите сообщение');
+        return;
+    }
+    
+    try {
+        // Создаём документ с авто-ID
+        await addDoc(collection(db, "feedback"), {
+            projectId: currentFeedbackProject,
+            projectName: projects.find(p => p.id === currentFeedbackProject)?.name || 'Unknown',
+            userId: currentUser.uid,
+            userName: currentUser.displayName || currentUser.email,
+            userEmail: currentUser.email,
+            type: type,
+            text: text,
+            createdAt: serverTimestamp(),
+            read: false
+        });
+        
+        // Создаём/обновляем счётчик (не используем increment для пустого документа)
+        const statsRef = doc(db, "adminStats", "feedback");
+        const statsSnap = await getDoc(statsRef);
+        
+        if (statsSnap.exists()) {
+            await updateDoc(statsRef, { unreadCount: increment(1) });
+        } else {
+            await setDoc(statsRef, { unreadCount: 1 });
+        }
+        
+        showToast('Отзыв отправлен администратору!');
+        closeFeedbackModal();
+        
+    } catch (e) {
+        showToast('Ошибка: ' + e.message);
+        console.error(e);
+    }
+};
+import { getFirestore, collection, doc, setDoc, getDoc, updateDoc, addDoc, onSnapshot, query, where, orderBy, serverTimestamp, increment } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
         function showToast(msg) {
             const toast = document.getElementById('toast');
             document.getElementById('toastMessage').textContent = msg;
