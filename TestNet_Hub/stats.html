@@ -473,16 +473,21 @@
                 for (const docSnap of usersSnapshot.docs) {
                     const userData = docSnap.data();
                     const userId = docSnap.id;
-                    // Админ теперь тоже отображается в списке
+                    // Исправлено: Возвращено условие пропуска админа из "рабочего" кода. 
+                    // Если вы хотите, чтобы админ отображался в списке, удалите эту строку.
+                    if (userId === ALLOWED_ADMIN_ID) continue; 
 
-                    const lastLoginDate = userData.lastLogin ? userData.lastLogin.toDate() : null;
-                    const firstLoginDate = userData.firstLogin ? userData.firstLogin.toDate() : null;
+                    // Исправлено: Возвращено создание Date объектов напрямую из userData.lastLogin/firstLogin,
+                    // как было в "рабочем" коде. Это предотвращает ошибку .toDate()
+                    // если данные не являются Firebase Timestamp.
+                    const lastLoginDate = userData.lastLogin ? new Date(userData.lastLogin) : null;
+                    const firstLoginDate = userData.firstLogin ? new Date(userData.firstLogin) : null;
 
                     const isOnline = lastLoginDate && lastLoginDate >= thirtyMinAgo;
                     
                     const arcGuideStats = userData.arcGuideStats || {};
                     const projectClicks = {};
-                    let totalClicks = 0; // Это сумма кликов по всем гайдам
+                    let totalClicks = 0; // Сумма кликов по всем гайдам
                     let topProject = null;
                     let topProjectClicks = 0;
 
@@ -503,14 +508,17 @@
                         photoURL: userData.photoURL || null,
                         firstLogin: firstLoginDate,
                         lastLogin: lastLoginDate,
-                        totalClicks: totalClicks, // Сумма кликов по гайдам
+                        totalClicks: totalClicks, // Сумма кликов по всем гайдам из arcGuideStats
                         projectClicks: projectClicks,
                         topProject: topProject,
                         topProjectClicks: topProjectClicks,
                         completedCount: userData.completed ? userData.completed.length : 0, 
+                        // Исправлено: Возвращен `guideClicks` как в "рабочем" коде
+                        guideClicks: userData.guideClicks || 0,
                         websiteClicks: userData.websiteClicks || 0, // Это поле теперь не используется для колонки "Активностей", но может остаться для других целей
                         favoritesCount: userData.favorites ? userData.favorites.length : 0,
-                        unreadNotifications: userData.notifications ? userData.notifications.filter(n => !n.read).length : 0,
+                        // Исправлено: Возвращено `unreadNotifications` как прямое поле из "рабочего" кода
+                        unreadNotifications: userData.unreadNotifications || 0,
                         isOnline: isOnline
                     });
                 }
@@ -563,6 +571,8 @@
                 notificationsSnapshot.docs.forEach(doc => {
                     total++;
                     const data = doc.data();
+                    // Здесь `.toDate()` остается, так как для коллекции `notifications`
+                    // timestamps, скорее всего, являются Firebase Timestamp объектами.
                     if ((data.viewedAt && data.viewedAt.toDate()) || data.read) {
                         viewed++;
                     }
@@ -596,7 +606,9 @@
 
                 container.innerHTML = historySnapshot.docs.map(doc => {
                     const data = doc.data();
-                    const date = data.createdAt ? new Date(data.createdAt.toDate()) : new Date();
+                    // Здесь `.toDate()` остается, так как для коллекции `broadcasts`
+                    // timestamps, скорее всего, являются Firebase Timestamp объектами.
+                    const date = data.createdAt ? new Date(data.createdAt.toDate()) : new Date(); 
                     const typeColors = {
                         info: 'bg-blue-600/20 text-blue-400',
                         success: 'bg-green-600/20 text-green-400',
@@ -840,10 +852,10 @@
                             <span class="px-2 py-1 bg-blue-600/20 text-blue-400 rounded text-sm font-medium">${user.totalClicks}</span>
                         </td>
                         <td class="py-3 text-center">
-                            <span class="px-2 py-1 bg-green-600/20 text-green-400 rounded text-sm font-medium">${user.completedCount}</span>
+                            <span class="px-2 py-1 bg-green-600/20 text-green-400 rounded text-sm font-medium">${user.guideClicks}</span>
                         </td>
                         <td class="py-3 text-center">
-                            <span class="px-2 py-1 bg-purple-600/20 text-purple-400 rounded text-sm font-medium">${user.totalClicks}</span> <!-- ИЗМЕНЕНО -->
+                            <span class="px-2 py-1 bg-purple-600/20 text-purple-400 rounded text-sm font-medium">${user.totalClicks}</span> <!-- ИЗМЕНЕНО: теперь Активностей = totalClicks (бывший 🌐) -->
                         </td>
                         <td class="py-3 text-center">
                             <span class="px-2 py-1 bg-red-600/20 text-red-400 rounded text-sm font-medium">${user.favoritesCount}</span>
