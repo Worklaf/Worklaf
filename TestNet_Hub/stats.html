@@ -342,7 +342,7 @@
                                 <th class="pb-3">Последний вход</th>
                                 <th class="pb-3 text-center">Кликов</th>
                                 <th class="pb-3 text-center">Гайдов</th>
-                                <th class="pb-3 text-center">🌐</th>
+                                <th class="pb-3 text-center">Активностей</th> <!-- ИЗМЕНЕНО -->
                                 <th class="pb-3 text-center">❤️</th>
                                 <th class="pb-3 text-center">🔔</th>
                                 <th class="pb-3">Любимый проект</th>
@@ -399,7 +399,6 @@
         let selectedUserIds = new Set();
         let projectStats = {};
         let notificationStats = { total: 0, viewed: 0 };
-        // NEW: Map для хранения всех проектов по их ID
         let allProjectsMap = new Map(); // projectId -> project object
 
         // Проверка доступа
@@ -441,7 +440,6 @@
             }
         };
 
-        // NEW: Загрузка всех проектов в allProjectsMap
         async function loadProjectsData() {
             try {
                 const projectsSnapshot = await getDocs(collection(db, "projects"));
@@ -454,9 +452,7 @@
             }
         }
 
-        // Загрузка всех данных
         async function loadAllData() {
-            // NEW: Сначала загружаем проекты, так как данные пользователей и статистика проектов зависят от них
             await loadProjectsData(); 
             await Promise.all([
                 loadUsers(),
@@ -467,7 +463,6 @@
             updateSelectedCount();
         }
 
-        // Загрузка пользователей
         async function loadUsers() {
             try {
                 const usersSnapshot = await getDocs(collection(db, "users"));
@@ -478,18 +473,16 @@
                 for (const docSnap of usersSnapshot.docs) {
                     const userData = docSnap.data();
                     const userId = docSnap.id;
-                    if (userId === ALLOWED_ADMIN_ID) continue; // Пропускаем самого админа
+                    // Админ теперь тоже отображается в списке
 
-                    // Fix: lastLogin и firstLogin - это Firebase Timestamp, нужно конвертировать в JS Date
                     const lastLoginDate = userData.lastLogin ? userData.lastLogin.toDate() : null;
                     const firstLoginDate = userData.firstLogin ? userData.firstLogin.toDate() : null;
 
                     const isOnline = lastLoginDate && lastLoginDate >= thirtyMinAgo;
                     
-                    // Обработка статистики проектов
                     const arcGuideStats = userData.arcGuideStats || {};
                     const projectClicks = {};
-                    let totalClicks = 0;
+                    let totalClicks = 0; // Это сумма кликов по всем гайдам
                     let topProject = null;
                     let topProjectClicks = 0;
 
@@ -510,14 +503,14 @@
                         photoURL: userData.photoURL || null,
                         firstLogin: firstLoginDate,
                         lastLogin: lastLoginDate,
-                        totalClicks: totalClicks,
+                        totalClicks: totalClicks, // Сумма кликов по гайдам
                         projectClicks: projectClicks,
                         topProject: topProject,
                         topProjectClicks: topProjectClicks,
-                        completedCount: userData.completed ? userData.completed.length : 0, // Это будет колонка "Гайдов"
-                        websiteClicks: 0, // На данный момент не отслеживается в user data
+                        completedCount: userData.completed ? userData.completed.length : 0, 
+                        websiteClicks: userData.websiteClicks || 0, // Это поле теперь не используется для колонки "Активностей", но может остаться для других целей
                         favoritesCount: userData.favorites ? userData.favorites.length : 0,
-                        unreadNotifications: userData.unreadNotifications || 0,
+                        unreadNotifications: userData.notifications ? userData.notifications.filter(n => !n.read).length : 0,
                         isOnline: isOnline
                     });
                 }
@@ -525,7 +518,6 @@
                 allUsers.sort((a, b) => (b.lastLogin || 0) - (a.lastLogin || 0));
                 filteredUsers = [...allUsers];
 
-                // Обновляем счётчики
                 const onlineCount = allUsers.filter(u => u.isOnline).length;
                 document.getElementById('onlineNow').textContent = onlineCount;
 
@@ -538,7 +530,6 @@
             }
         }
 
-        // Загрузка статистики проектов
         async function loadProjectStats() {
             try {
                 const usersSnapshot = await getDocs(collection(db, "users"));
@@ -563,7 +554,6 @@
             }
         }
 
-        // Загрузка статистики уведомлений
         async function loadNotificationStats() {
             try {
                 const notificationsSnapshot = await getDocs(collection(db, "notifications"));
@@ -573,7 +563,6 @@
                 notificationsSnapshot.docs.forEach(doc => {
                     total++;
                     const data = doc.data();
-                    // Fix: createdAt, viewedAt - это Firebase Timestamp, нужно конвертировать в JS Date
                     if ((data.viewedAt && data.viewedAt.toDate()) || data.read) {
                         viewed++;
                     }
@@ -592,7 +581,6 @@
             }
         }
 
-        // Загрузка истории рассылок
         async function loadBroadcastHistory() {
             try {
                 const historySnapshot = await getDocs(
@@ -608,7 +596,6 @@
 
                 container.innerHTML = historySnapshot.docs.map(doc => {
                     const data = doc.data();
-                    // Fix: createdAt - это Firebase Timestamp, нужно конвертировать в JS Date
                     const date = data.createdAt ? new Date(data.createdAt.toDate()) : new Date();
                     const typeColors = {
                         info: 'bg-blue-600/20 text-blue-400',
@@ -648,7 +635,6 @@
             }
         }
 
-        // Удаление рассылки
         window.deleteBroadcast = async function(broadcastId) {
             if (!confirm('Удалить эту рассылку?')) return;
             
@@ -661,11 +647,9 @@
             }
         };
 
-        // Рендер топ проектов
         function renderTopProjects() {
             const container = document.getElementById('topProjects');
             
-            // Преобразуем в массив и сортируем
             const sorted = Object.entries(projectStats)
                 .map(([id, stats]) => ({ id, ...stats }))
                 .sort((a, b) => b.clicks - a.clicks)
@@ -679,7 +663,7 @@
             const maxClicks = sorted[0]?.clicks || 1;
 
             container.innerHTML = sorted.map((projectStat, index) => {
-                const project = allProjectsMap.get(projectStat.id); // Получаем полные данные проекта
+                const project = allProjectsMap.get(projectStat.id); 
                 const percent = (projectStat.clicks / maxClicks) * 100;
                 const colors = ['bg-yellow-500', 'bg-slate-400', 'bg-orange-500', 'bg-blue-500', 'bg-purple-500', 'bg-green-500'];
                 const medals = ['🥇', '🥈', '🥉', '4️⃣', '5️⃣', '6️⃣'];
@@ -718,7 +702,7 @@
             const weekStart = new Date(todayStart);
             weekStart.setDate(weekStart.getDate() - 7);
 
-            const newToday = allUsers.filter(u => u.firstLogin && u.firstLogin >= todayStart).length; // corrected to firstLogin
+            const newToday = allUsers.filter(u => u.firstLogin && u.firstLogin >= todayStart).length; 
             const activeWeek = allUsers.filter(u => u.lastLogin && u.lastLogin >= weekStart).length;
 
             animateValue('totalUsers', 0, allUsers.length, 1000);
@@ -809,7 +793,6 @@
             `).join('');
         }
 
-        // Таблица пользователей с выбором
         window.renderUsersTable = function() {
             const tbody = document.getElementById('usersTableBody');
 
@@ -821,10 +804,8 @@
             tbody.innerHTML = filteredUsers.map((user) => {
                 const isSelected = selectedUserIds.has(user.id);
                 
-                // NEW: Получаем данные любимого проекта
                 const topProjectData = user.topProject ? allProjectsMap.get(user.topProject) : null;
                 const topProjectName = topProjectData ? topProjectData.name : '—';
-                // Дефолтный аватар, если нет картинки проекта
                 const topProjectImage = (topProjectData && topProjectData.image) ? topProjectData.image : `https://ui-avatars.com/api/?name=${encodeURIComponent(topProjectName.charAt(0))}&background=333&color=fff`;
 
                 const topProjectDisplay = user.topProject 
@@ -862,7 +843,7 @@
                             <span class="px-2 py-1 bg-green-600/20 text-green-400 rounded text-sm font-medium">${user.completedCount}</span>
                         </td>
                         <td class="py-3 text-center">
-                            <span class="px-2 py-1 bg-purple-600/20 text-purple-400 rounded text-sm font-medium">${user.websiteClicks}</span>
+                            <span class="px-2 py-1 bg-purple-600/20 text-purple-400 rounded text-sm font-medium">${user.totalClicks}</span> <!-- ИЗМЕНЕНО -->
                         </td>
                         <td class="py-3 text-center">
                             <span class="px-2 py-1 bg-red-600/20 text-red-400 rounded text-sm font-medium">${user.favoritesCount}</span>
@@ -880,7 +861,6 @@
             }).join('');
         };
 
-        // Выбор пользователей
         window.toggleUserSelect = function(userId) {
             if (selectedUserIds.has(userId)) {
                 selectedUserIds.delete(userId);
@@ -888,7 +868,6 @@
                 selectedUserIds.add(userId);
             }
             
-            // Переключаем на "выбранные" если что-то выбрано
             if (selectedUserIds.size > 0) {
                 document.querySelector('input[name="broadcastTarget"][value="selected"]').checked = true;
                 toggleSelectedUsers();
@@ -972,7 +951,6 @@
             }
         };
 
-        // Фильтрация и сортировка
         window.filterUsers = function() {
             const search = document.getElementById('searchUser').value.toLowerCase();
             filteredUsers = allUsers.filter(u => 
@@ -996,7 +974,6 @@
             renderUsersTable();
         };
 
-        // Отправка рассылки с расширенной статистикой
         window.sendBroadcast = async function() {
             const message = document.getElementById('broadcastMessage').value.trim();
             const type = document.getElementById('broadcastType').value;
@@ -1038,8 +1015,7 @@
             try {
                 const batch = writeBatch(db);
 
-                // Создаём запись о рассылке с начальными счётчиками
-                const broadcastRef = doc(collection(db, "broadcasts")); // Генерируем ID здесь
+                const broadcastRef = doc(collection(db, "broadcasts")); 
                 batch.set(broadcastRef, {
                     message: message,
                     type: type,
@@ -1051,14 +1027,13 @@
                     status: 'sent'
                 });
 
-                // Создаём уведомления для каждого пользователя
                 const notificationsRef = collection(db, "notifications");
                 
                 recipientIds.forEach(userId => {
-                    const notifRef = doc(notificationsRef); // Генерируем ID здесь
+                    const notifRef = doc(notificationsRef); 
                     batch.set(notifRef, {
                         userId: userId,
-                        broadcastId: broadcastRef.id, // Используем ID рассылки
+                        broadcastId: broadcastRef.id, 
                         message: message,
                         type: type,
                         read: false,
@@ -1068,7 +1043,6 @@
                         createdAt: serverTimestamp()
                     });
 
-                    // Увеличиваем счётчик непрочитанных
                     const userRef = doc(db, "users", userId);
                     batch.update(userRef, {
                         unreadNotifications: increment(1)
@@ -1081,7 +1055,6 @@
                 document.getElementById('broadcastMessage').value = '';
                 document.getElementById('msgLength').textContent = '0/500';
                 
-                // Обновляем историю
                 loadBroadcastHistory();
                 loadNotificationStats();
                 
@@ -1105,7 +1078,6 @@
             }, 5000);
         }
 
-        // Счётчик символов
         document.getElementById('broadcastMessage').addEventListener('input', function(e) {
             document.getElementById('msgLength').textContent = `${this.value.length}/500`;
         });
@@ -1145,7 +1117,6 @@
             return diff < 30 * 60 * 1000;
         }
 
-        // Обновить статистику
         window.loadStats = async function() {
             await loadAllData();
         };
