@@ -1327,13 +1327,6 @@
             const now = new Date().toISOString();
             if (!arcData[id]) arcData[id] = {};
             arcData[id].totalClicks = (arcData[id].totalClicks || 0) + 1;
-            // 🔹 Увеличиваем глобальный счётчик кликов на кнопку "Гайд"
-if (currentUser) {
-    const userRef = doc(db, "users", currentUser.uid);
-    await updateDoc(userRef, {
-        guideClicks: increment(1)
-    });
-}
             arcData[id].lastClick = now;
             localStorage.setItem(STORAGE_KEY, JSON.stringify(arcData));
             showToast('Задание засчитано! ✅');
@@ -1748,26 +1741,15 @@ if (project.activities && project.activities.length > 0) {
 
         window.closeDetailModal = function() { document.getElementById('detailModal').classList.remove('active'); currentDetailId = null; };
         window.openLink = function(url) { if(url) window.open(url, '_blank'); };
-       window.openDetailLink = async function(type) {
-
-    // 🔹 Фиксируем клик "Начать активность"
-    if (currentUser && type === 'ref') {
-        const userRef = doc(db, "users", currentUser.uid);
-        await updateDoc(userRef, {
-            activityClicks: increment(1)
-        });
-    }
-
-    const project = projects.find(p => p.id === currentDetailId);
-    if(!project) return;
-
-    let url = '';
-    if (type === 'ref') url = project.referralLink || project.cryptoRankUrl;
-    else if (type === 'twitter') url = project.twitterUrl;
-    else if (type === 'cryptorank') url = project.cryptoRankUrl;
-
-    if (url) window.open(url, '_blank');
-};
+        window.openDetailLink = function(type) {
+            const project = projects.find(function(p) { return p.id === currentDetailId; });
+            if(!project) return;
+            let url = '';
+            if (type === 'ref') url = project.referralLink || project.cryptoRankUrl;
+            else if (type === 'twitter') url = project.twitterUrl;
+            else if (type === 'cryptorank') url = project.cryptoRankUrl;
+            if (url) window.open(url, '_blank');
+        };
         window.openGuideFromDetail = function() { 
             if(currentDetailId) {
                 const project = projects.find(function(p) { return p.id === currentDetailId; });
