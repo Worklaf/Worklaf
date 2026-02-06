@@ -343,11 +343,22 @@
             line-height: 1.7;
         }
         .rich-content img {
-            max-width: 100%;
-            border-radius: 8px;
-            margin: 12px 0;
-            border: 1px solid rgba(255,255,255,0.1);
-        }
+    max-width: 100%;
+    height: auto;
+    border-radius: 8px;
+    margin: 12px 0;
+    border: 1px solid rgba(255,255,255,0.1);
+    display: block; /* Картинка занимает всю ширину блока */
+    cursor: pointer; /* Курсор-указатель при наведении */
+    transition: transform 0.2s ease;
+}
+.rich-content img:hover {
+    transform: scale(1.02); /* Небольшое увеличение при наведении */
+}
+
+.rich-content img[style*="display: none"] {
+    display: none !important; /* Скрываем сломанные картинки */
+}
         .rich-content a {
             color: #60a5fa;
             text-decoration: none;
@@ -1578,25 +1589,47 @@
         };
 
         function parseRichContent(text) {
-            if (!text) return '';
-            let html = text;
-            html = html.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
-            html = html.replace(/!\[([^\]]*)\]\(([^)]+)\)/g, '<img src="$2" alt="$1" onerror="this.style.display=\'none\'">');
-            html = html.replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2" target="_blank">$1</a>');
-            html = html.replace(/^### (.+)$/gm, '<h3>$1</h3>');
-            html = html.replace(/^&gt; (.+)$/gm, '<blockquote>$1</blockquote>');
-            html = html.replace(/^---$/gm, '<hr>');
-            html = html.replace(/^- (.+)$/gm, '<li>$1</li>');
-            html = html.replace(/(<li>.*<\/li>)+/g, '<ul>$&</ul>');
-            const lines = html.split('\n');
-            let result = '';
-            for (let i = 0; i < lines.length; i++) {
-                const line = lines[i];
-                if (line.trim() && !line.match(/^(<h3|<ul|<li|<blockquote|<img|<hr|<p)/)) result += '<p>' + line + '</p>';
-                else result += line;
-            }
-            return result;
+    if (!text) return '';
+    let html = text;
+    
+    // Экранирование HTML
+    html = html.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+    
+    // ИСПРАВЛЕНО: Картинки (с пустым alt или любым текстом)
+    html = html.replace(/!\[([^\]]*)\]\(([^)]+)\)/g, function(match, alt, url) {
+        return '<img src="' + url + '" alt="' + (alt || 'image') + '" onerror="this.style.display=\'none\'" style="max-width: 100%; height: auto; border-radius: 8px; margin: 12px 0; border: 1px solid rgba(255,255,255,0.1);">';
+    });
+    
+    // Обычные ссылки
+    html = html.replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2" target="_blank">$1</a>');
+    
+    // Заголовки
+    html = html.replace(/^### (.+)$/gm, '<h3>$1</h3>');
+    
+    // Цитаты
+    html = html.replace(/^&gt; (.+)$/gm, '<blockquote>$1</blockquote>');
+    
+    // Горизонтальная линия
+    html = html.replace(/^---$/gm, '<hr>');
+    
+    // Списки
+    html = html.replace(/^- (.+)$/gm, '<li>$1</li>');
+    html = html.replace(/(<li>.*<\/li>)+/g, '<ul>$&</ul>');
+    
+    // Параграфы
+    const lines = html.split('\n');
+    let result = '';
+    for (let i = 0; i < lines.length; i++) {
+        const line = lines[i].trim();
+        if (line && !line.match(/^(<h3|<ul|<li|<blockquote|<img|<hr|<p)/)) {
+            result += '<p>' + line + '</p>';
+        } else {
+            result += line;
         }
+    }
+    
+    return result;
+}
 
         // --- Detail View ---
         window.openDetail = function(id) {
@@ -1874,19 +1907,19 @@ window.resumeActivity = async function(projId, actId) {
     }
 };
                 window.insertActivityFormat = function(type) {
-            const textarea = document.getElementById('actRichDesc');
-            const start = textarea.selectionStart;
-            const end = textarea.selectionEnd;
-            const selectedText = textarea.value.substring(start, end);
-            
-            if (type === 'img') {
-                // Для картинки сразу открываем окно, используем плейсхолдер "описание"
-                pendingLinkInsert = { type: 'img', start, end, text: 'описание' };
-                document.getElementById('promptModal').classList.add('active');
-                document.getElementById('promptInput').value = '';
-                document.getElementById('promptInput').focus();
-                document.getElementById('promptModal').querySelector('h2').textContent = 'Вставьте ссылку на картинку';
-            } 
+    const textarea = document.getElementById('actRichDesc');
+    const start = textarea.selectionStart;
+    const end = textarea.selectionEnd;
+    const selectedText = textarea.value.substring(start, end);
+    
+    if (type === 'img') {
+        // Для картинки используем пустое описание
+        pendingLinkInsert = { type: 'img', start, end, text: '' }; // ИЗМЕНЕНО: пустая строка вместо "описание"
+        document.getElementById('promptModal').classList.add('active');
+        document.getElementById('promptInput').value = '';
+        document.getElementById('promptInput').focus();
+        document.getElementById('promptModal').querySelector('h2').textContent = 'Вставьте ссылку на картинку';
+    }
             else if (type === 'link') {
                 // Для ссылки используем выделенный текст или дефолтный
                 const linkText = selectedText.trim() ? selectedText : 'текст ссылки';
@@ -1924,31 +1957,33 @@ window.resumeActivity = async function(projId, actId) {
         };
 
                    window.confirmLinkInsert = function() {
-            const textarea = document.getElementById('actRichDesc');
-            const url = document.getElementById('promptInput').value.trim();
-            
-            if (!url) { 
-                showToast('Введите ссылку'); 
-                return; 
-            }
-            
-            if (pendingLinkInsert && textarea) {
-                const { start, end, type, text } = pendingLinkInsert;
-                let insertion = '';
-                
-                if (type === 'img') {
-                    insertion = '![' + text + '](' + url + ')';
-                } else {
-                    insertion = '[' + text + '](' + url + ')';
-                }
-                
-                textarea.value = textarea.value.substring(0, start) + insertion + textarea.value.substring(end);
-                textarea.focus(); 
-                textarea.selectionStart = textarea.selectionEnd = start + insertion.length;
-                showToast(type === 'img' ? 'Картинка добавлена' : 'Ссылка добавлена');
-            }
-            closePromptModal(); // Закрываем окно после вставки
-        };
+    const textarea = document.getElementById('actRichDesc');
+    const url = document.getElementById('promptInput').value.trim();
+    
+    if (!url) { 
+        showToast('Введите ссылку'); 
+        return; 
+    }
+    
+    if (pendingLinkInsert && textarea) {
+        const { start, end, type, text } = pendingLinkInsert;
+        let insertion = '';
+        
+        if (type === 'img') {
+            // Для картинки НЕ используем текст, только пустые скобки
+            insertion = '![](' + url + ')';
+        } else {
+            // Для обычной ссылки используем текст
+            insertion = '[' + text + '](' + url + ')';
+        }
+        
+        textarea.value = textarea.value.substring(0, start) + insertion + textarea.value.substring(end);
+        textarea.focus(); 
+        textarea.selectionStart = textarea.selectionEnd = start + insertion.length;
+        showToast(type === 'img' ? 'Картинка добавлена' : 'Ссылка добавлена');
+    }
+    closePromptModal();
+};
 
         // --- Main Editor Toolbar (reused logic) ---
         window.insertFormat = function(type) {
