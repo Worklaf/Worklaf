@@ -340,7 +340,7 @@
                                 <th class="pb-3">Первый вход</th>
                                 <th class="pb-3">Последний вход</th>
                                 <th class="pb-3 text-center" title="Клики по кнопке 'Гайд'">Кликов (Гайд) <i class="fas fa-book text-xs"></i></th>
-                                <th class="pb-3 text-center" title="Клики по кнопке 'Начать активность'">Кликов (Начать активность) <i class="fas fa-play text-xs"></i></th>
+<th class="pb-3 text-center" title="Клики по кнопке 'Начать активность'">Кликов (Начать активность) <i class="fas fa-play text-xs"></i></th>
                                 <th class="pb-3 text-center">Завершенные (Прогресс)</th>
                                 <th class="pb-3 text-center">Избранное ❤️</th>
                                 <th class="pb-3 text-center">Непрочитанные 🔔</th>
@@ -483,54 +483,52 @@
                     const firstLoginDate = userData.firstLogin ? new Date(userData.firstLogin) : null;
 
                     const isOnline = lastLoginDate && lastLoginDate >= thirtyMinAgo;
-                    
-                    // === ИСПРАВЛЕННАЯ ЛОГИКА ПОДСЧЁТА КЛИКОВ ===
-                    
-                    // 1. Клики по кнопке "Гайд" (guideClicks) - просто берём из поля guideClicks
-                    // Это поле должно увеличиваться при каждом клике на кнопку "Гайд"
-                    const guideClicks = userData.guideClicks || 0;
-                    
-                    // 2. Клики по кнопке "Начать активность" (activityClicks)
-                    // Ищем в activityClicks поле с projectId или общее поле 'total' или суммируем все клики
-                    let activityClicks = 0;
-                    
-                    if (userData.activityClicks) {
-                        // Если activityClicks - это объект с projectId как ключами
-                        if (typeof userData.activityClicks === 'object') {
-                            // Исключаем служебные поля и суммируем только числовые значения
-                            activityClicks = Object.entries(userData.activityClicks)
-                                .filter(([key, value]) => key !== 'lastUpdated' && typeof value === 'number')
-                                .reduce((sum, [, value]) => sum + value, 0);
-                        } else if (typeof userData.activityClicks === 'number') {
-                            // Если activityClicks - просто число
-                            activityClicks = userData.activityClicks;
-                        }
-                    }
-                    
-                    // Также проверяем старое поле arcGuideStats для обратной совместимости
-                    // Если там есть totalClicks, это могут быть клики по активностям
-                    let legacyActivityClicks = 0;
-                    const arcGuideStats = userData.arcGuideStats || {};
-                    Object.entries(arcGuideStats).forEach(([projectId, stats]) => {
-                        if (stats.totalClicks) {
-                            legacyActivityClicks += stats.totalClicks;
-                        }
-                    });
-                    
-                    // Используем максимум из нового и старого способа подсчёта
-                    const totalActivityClicks = Math.max(activityClicks, legacyActivityClicks);
-                    
-                    // Для топа проектов используем arcGuideStats
-                    let topProject = null;
-                    let topProjectClicks = 0;
-                    Object.entries(arcGuideStats).forEach(([projectId, stats]) => {
-                        const clicks = stats.totalClicks || 0;
-                        if (clicks > topProjectClicks) {
-                            topProjectClicks = clicks;
-                            topProject = projectId;
-                        }
-                    });
 
+// === ИСПРАВЛЕННАЯ ЛОГИКА ПОДСЧЁТА КЛИКОВ ===
+
+const arcGuideStats = userData.arcGuideStats || {};
+
+// 1. Клики по кнопке "Гайд" — суммируем guideClicks по всем проектам
+let guideClicks = 0;
+Object.entries(arcGuideStats).forEach(([projectId, stats]) => {
+    if (stats.guideClicks) {
+        guideClicks += stats.guideClicks;
+    }
+});
+// + проверяем старое поле для обратной совместимости
+guideClicks += userData.guideClicks || 0;
+
+// 2. Клики по кнопке "Начать активность" — суммируем activityClicks
+let activityClicks = 0;
+Object.entries(arcGuideStats).forEach(([projectId, stats]) => {
+    if (stats.activityClicks) {
+        // activityClicks может быть объектом {activityId: count} или числом
+        if (typeof stats.activityClicks === 'object') {
+            Object.values(stats.activityClicks).forEach(count => {
+                activityClicks += typeof count === 'number' ? count : 0;
+            });
+        } else if (typeof stats.activityClicks === 'number') {
+            activityClicks += stats.activityClicks;
+        }
+    }
+    // + totalActivityClicks если есть
+    if (stats.totalActivityClicks) {
+        activityClicks += stats.totalActivityClicks;
+    }
+});
+// + проверяем старое поле
+activityClicks += userData.activityClicks || 0;
+
+// Для топа проектов используем общую активность
+let topProject = null;
+let topProjectClicks = 0;
+Object.entries(arcGuideStats).forEach(([projectId, stats]) => {
+    const totalProjectClicks = (stats.guideClicks || 0) + (stats.totalActivityClicks || 0);
+    if (totalProjectClicks > topProjectClicks) {
+        topProjectClicks = totalProjectClicks;
+        topProject = projectId;
+    }
+});
                     allUsers.push({
                         id: userId,
                         email: userData.email || '—',
