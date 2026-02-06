@@ -1,0 +1,794 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TestNet Hub | Отзывы и рейтинги</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+
+        :root {
+            --bg-primary: #0b0f19;
+            --bg-secondary: #151b2b;
+            --bg-card: #1e2538;
+            --accent: #3b82f6;
+            --success: #10b981;
+            --warning: #f59e0b;
+            --danger: #ef4444;
+            --text-primary: #f1f5f9;
+            --text-secondary: #94a3b8;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            background-image: 
+                radial-gradient(circle at 20% 50%, rgba(59, 130, 246, 0.15) 0%, transparent 50%),
+                radial-gradient(circle at 80% 80%, rgba(16, 185, 129, 0.1) 0%, transparent 50%);
+            min-height: 100vh;
+        }
+
+        .glass-card {
+            background: rgba(30, 37, 56, 0.6);
+            backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            transition: all 0.3s ease;
+        }
+
+        .glass-card:hover {
+            transform: translateY(-2px);
+            border-color: var(--accent);
+        }
+
+        .star-rating {
+            display: flex;
+            gap: 4px;
+            font-size: 1.5rem;
+        }
+
+        .star {
+            cursor: pointer;
+            color: #475569;
+            transition: all 0.2s;
+            position: relative;
+        }
+
+        .star:hover,
+        .star.active {
+            color: #fbbf24;
+        }
+
+        .star.half::before {
+            content: '\f5c0';
+            position: absolute;
+            left: 0;
+            width: 50%;
+            overflow: hidden;
+            color: #fbbf24;
+        }
+
+        .star-rating-input .star {
+            font-size: 2rem;
+        }
+
+        .star-rating-input .star:hover {
+            transform: scale(1.1);
+        }
+
+        .rating-bar {
+            height: 8px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 4px;
+            overflow: hidden;
+        }
+
+        .rating-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #fbbf24, #f59e0b);
+            border-radius: 4px;
+            transition: width 0.5s ease;
+        }
+
+        .back-btn {
+            background: linear-gradient(135deg, rgba(59, 130, 246, 0.2), rgba(139, 92, 246, 0.1));
+            border: 1px solid rgba(59, 130, 246, 0.3);
+        }
+
+        .back-btn:hover {
+            background: linear-gradient(135deg, rgba(59, 130, 246, 0.3), rgba(139, 92, 246, 0.2));
+        }
+
+        .modal {
+            display: none;
+            position: fixed;
+            inset: 0;
+            background: rgba(0, 0, 0, 0.8);
+            backdrop-filter: blur(8px);
+            z-index: 100;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+
+        .modal.active { display: flex; }
+
+        .modal-content {
+            background: var(--bg-card);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 16px;
+            max-width: 600px;
+            width: 100%;
+            max-height: 90vh;
+            display: flex;
+            flex-direction: column;
+            animation: slideUp 0.3s ease;
+        }
+
+        @keyframes slideUp {
+            from { transform: translateY(20px); opacity: 0; }
+            to { transform: translateY(0); opacity: 1; }
+        }
+
+        .modal-header {
+            padding: 20px 24px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .modal-body {
+            padding: 20px 24px;
+            overflow-y: auto;
+            flex: 1;
+        }
+
+        .modal-footer {
+            padding: 16px 24px;
+            border-top: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .review-item {
+            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+            padding: 16px 0;
+        }
+
+        .review-item:last-child {
+            border-bottom: none;
+        }
+
+        .sort-btn {
+            padding: 8px 16px;
+            border-radius: 8px;
+            background: rgba(30, 37, 56, 0.6);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            color: #94a3b8;
+            font-size: 0.875rem;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .sort-btn:hover,
+        .sort-btn.active {
+            background: rgba(59, 130, 246, 0.2);
+            border-color: #3b82f6;
+            color: white;
+        }
+
+        ::-webkit-scrollbar { width: 6px; }
+        ::-webkit-scrollbar-track { background: rgba(255, 255, 255, 0.02); }
+        ::-webkit-scrollbar-thumb { background: #334155; border-radius: 3px; }
+
+        .toast {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            background: var(--bg-card);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            padding: 16px 24px;
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            transform: translateX(150%);
+            transition: transform 0.3s ease;
+            z-index: 200;
+        }
+
+        .toast.show {
+            transform: translateX(0);
+        }
+
+        .rating-number {
+            font-size: 3rem;
+            font-weight: 700;
+            background: linear-gradient(135deg, #fbbf24, #f59e0b);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .feedback-btn {
+            background: linear-gradient(135deg, rgba(16, 185, 129, 0.2), rgba(5, 150, 105, 0.1));
+            border: 1px solid rgba(16, 185, 129, 0.3);
+            color: #34d399;
+        }
+
+        .feedback-btn:hover {
+            background: linear-gradient(135deg, rgba(16, 185, 129, 0.3), rgba(5, 150, 105, 0.2));
+        }
+
+        .admin-badge {
+            background: linear-gradient(135deg, #3b82f6, #8b5cf6);
+        }
+    </style>
+</head>
+<body class="antialiased">
+    <div class="max-w-7xl mx-auto px-4 py-6">
+        <!-- Header -->
+        <header class="mb-8">
+            <div class="flex items-center justify-between flex-wrap gap-4">
+                <div class="flex items-center gap-4">
+                    <a href="Airdrop_Hunter_Hub.html" class="back-btn px-4 py-2 rounded-lg text-blue-400 hover:text-white transition-colors flex items-center gap-2">
+                        <i class="fas fa-arrow-left"></i>
+                        <span class="hidden sm:inline">Назад</span>
+                    </a>
+                    <div>
+                        <h1 class="text-2xl font-bold flex items-center gap-3">
+                            <i class="fas fa-star text-yellow-400"></i>
+                            Отзывы и рейтинги
+                        </h1>
+                        <p class="text-slate-400 text-sm mt-1">Оцените проекты и оставьте отзывы</p>
+                    </div>
+                </div>
+                
+                <div class="flex items-center gap-3">
+                    <div id="userPanel" class="hidden flex items-center gap-3">
+                        <img id="userAvatar" src="" class="w-10 h-10 rounded-full border-2 border-blue-500">
+                        <div class="text-right hidden sm:block">
+                            <div id="userName" class="text-sm font-bold">User</div>
+                            <button onclick="logout()" class="text-xs text-slate-400 hover:text-white">Выйти</button>
+                        </div>
+                    </div>
+                    <button id="loginBtn" onclick="openLoginModal()" class="bg-blue-600 hover:bg-blue-500 px-4 py-2 rounded-lg text-sm font-medium transition-colors">
+                        <i class="fas fa-sign-in-alt mr-2"></i>Войти
+                    </button>
+                    
+                    <!-- Admin link (only for admin) -->
+                    <a id="adminLink" href="reviews-admin.html" class="hidden stats-btn text-purple-400 hover:text-purple-300 px-4 py-2 rounded-lg text-sm font-medium transition-colors flex items-center gap-2">
+                        <i class="fas fa-shield-alt"></i>
+                        <span class="hidden sm:inline">Админ</span>
+                    </a>
+                </div>
+            </div>
+        </header>
+
+        <!-- Sort controls -->
+        <div class="mb-6 flex flex-wrap gap-3 items-center justify-between">
+            <div class="flex gap-2 flex-wrap">
+                <button onclick="sortProjects('rating')" class="sort-btn active" data-sort="rating">
+                    <i class="fas fa-star mr-2"></i>По рейтингу
+                </button>
+                <button onclick="sortProjects('reviews')" class="sort-btn" data-sort="reviews">
+                    <i class="fas fa-comments mr-2"></i>По отзывам
+                </button>
+                <button onclick="sortProjects('name')" class="sort-btn" data-sort="name">
+                    <i class="fas fa-font mr-2"></i>По названию
+                </button>
+                <button onclick="sortProjects('newest')" class="sort-btn" data-sort="newest">
+                    <i class="fas fa-clock mr-2"></i>Сначала новые
+                </button>
+            </div>
+            
+            <div class="text-sm text-slate-400">
+                <span id="totalProjects">0</span> проектов
+            </div>
+        </div>
+
+        <!-- Projects Grid -->
+        <div id="projectsGrid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            <!-- Projects will be rendered here -->
+        </div>
+
+        <!-- Empty state -->
+        <div id="emptyState" class="hidden text-center py-20">
+            <div class="text-6xl mb-4">⭐</div>
+            <h3 class="text-xl font-semibold text-slate-300 mb-2">Нет проектов</h3>
+            <p class="text-slate-500">Пока нет проектов для оценки</p>
+        </div>
+    </div>
+
+    <!-- Rating Modal -->
+    <div id="ratingModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header flex justify-between items-center">
+                <div class="flex items-center gap-3">
+                    <img id="ratingProjectImage" src="" class="w-12 h-12 rounded-lg object-cover">
+                    <div>
+                        <h3 class="text-lg font-bold" id="ratingProjectName">Проект</h3>
+                        <p class="text-sm text-slate-400">Ваша оценка</p>
+                    </div>
+                </div>
+                <button onclick="closeRatingModal()" class="text-slate-400 hover:text-white">
+                    <i class="fas fa-times text-xl"></i>
+                </button>
+            </div>
+            <div class="modal-body text-center">
+                <div class="star-rating-input flex justify-center gap-2 mb-6" id="starInput">
+                    <!-- Stars will be rendered here -->
+                </div>
+                <p class="text-slate-400 text-sm mb-4">Нажмите на звезду для оценки. Половина звезды = 0.5</p>
+                <div id="ratingValue" class="text-2xl font-bold text-yellow-400 mb-4">0.0</div>
+            </div>
+            <div class="modal-footer flex gap-3">
+                <button onclick="closeRatingModal()" class="flex-1 bg-slate-700 hover:bg-slate-600 py-3 rounded-lg text-sm font-medium transition-colors">Отмена</button>
+                <button onclick="saveRating()" class="flex-1 bg-yellow-600 hover:bg-yellow-500 py-3 rounded-lg text-sm font-medium transition-colors">
+                    <i class="fas fa-save mr-2"></i>Сохранить
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Feedback Modal -->
+    <div id="feedbackModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header flex justify-between items-center">
+                <div class="flex items-center gap-3">
+                    <img id="feedbackProjectImage" src="" class="w-12 h-12 rounded-lg object-cover">
+                    <div>
+                        <h3 class="text-lg font-bold" id="feedbackProjectName">Проект</h3>
+                        <p class="text-sm text-slate-400">Обратная связь для администратора</p>
+                    </div>
+                </div>
+                <button onclick="closeFeedbackModal()" class="text-slate-400 hover:text-white">
+                    <i class="fas fa-times text-xl"></i>
+                </button>
+            </div>
+            <div class="modal-body">
+                <div class="mb-4">
+                    <label class="block text-sm font-medium text-slate-300 mb-2">Тип сообщения</label>
+                    <select id="feedbackType" class="w-full bg-slate-800 border border-slate-700 rounded-lg px-4 py-2 text-sm focus:border-blue-500 outline-none">
+                        <option value="suggestion">💡 Предложение</option>
+                        <option value="bug">🐛 Ошибка/баг</option>
+                        <option value="review">📝 Отзыв о проекте</option>
+                        <option value="question">❓ Вопрос</option>
+                        <option value="other">📌 Другое</option>
+                    </select>
+                </div>
+                <div class="mb-4">
+                    <label class="block text-sm font-medium text-slate-300 mb-2">Ваше сообщение</label>
+                    <textarea id="feedbackText" rows="5" 
+                        class="w-full bg-slate-800 border border-slate-700 rounded-lg px-4 py-3 text-sm focus:border-blue-500 outline-none resize-none"
+                        placeholder="Опишите ваше предложение, найденную ошибку или отзыв о проекте..."></textarea>
+                </div>
+                <div class="text-xs text-slate-500">
+                    <i class="fas fa-info-circle mr-1"></i>
+                    Это сообщение будет отправлено только администратору
+                </div>
+            </div>
+            <div class="modal-footer flex gap-3">
+                <button onclick="closeFeedbackModal()" class="flex-1 bg-slate-700 hover:bg-slate-600 py-3 rounded-lg text-sm font-medium transition-colors">Отмена</button>
+                <button onclick="sendFeedback()" class="flex-1 bg-emerald-600 hover:bg-emerald-500 py-3 rounded-lg text-sm font-medium transition-colors">
+                    <i class="fas fa-paper-plane mr-2"></i>Отправить
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Login Modal -->
+    <div id="loginModal" class="modal">
+        <div class="modal-content modal-sm">
+            <div class="modal-header flex justify-between items-center">
+                <h3 class="text-lg font-bold">Вход</h3>
+                <button onclick="closeLoginModal()" class="text-slate-400 hover:text-white">
+                    <i class="fas fa-times text-xl"></i>
+                </button>
+            </div>
+            <div class="modal-body">
+                <button onclick="loginGoogle()" class="w-full bg-white text-slate-900 font-bold py-3 rounded-xl flex items-center justify-center gap-3 hover:bg-slate-200 transition mb-3">
+                    <i class="fab fa-google text-red-500"></i> Google
+                </button>
+                <p class="text-center text-sm text-slate-500">
+                    Вход необходим для оценки проектов и отправки отзывов
+                </p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Toast -->
+    <div id="toast" class="toast">
+        <i class="fas fa-check-circle text-emerald-400 text-xl"></i>
+        <span id="toastMessage">Действие выполнено</span>
+    </div>
+
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+        import { getAuth, signInWithPopup, GoogleAuthProvider, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
+        import { getFirestore, collection, doc, setDoc, getDoc, updateDoc, onSnapshot, query, where, orderBy, serverTimestamp, increment } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+
+        const firebaseConfig = {
+            apiKey: "AIzaSyBdXGYg2t8DJBrQHCC80-pFerZU9PWmSCk",
+            authDomain: "testnet-hub.firebaseapp.com",
+            projectId: "testnet-hub",
+            storageBucket: "testnet-hub.firebasestorage.app",
+            messagingSenderId: "497813176653",
+            appId: "1:497813176653:web:089188fdd1555d76cd7704"
+        };
+
+        const ADMIN_ID = "SAkz4mdW9reDaIsvqigCNZhEKJR2";
+
+        const app = initializeApp(firebaseConfig);
+        const auth = getAuth(app);
+        const db = getFirestore(app);
+
+        let currentUser = null;
+        let projects = [];
+        let ratings = {}; // projectId -> { avg, count, distribution }
+        let userRatings = {}; // projectId -> rating value
+        let currentSort = 'rating';
+        let currentRatingProject = null;
+        let currentFeedbackProject = null;
+        let tempRating = 0;
+
+        // Auth state
+        onAuthStateChanged(auth, async (user) => {
+            if (user) {
+                currentUser = user;
+                document.getElementById('loginBtn').classList.add('hidden');
+                document.getElementById('userPanel').classList.remove('hidden');
+                document.getElementById('userAvatar').src = user.photoURL || `https://ui-avatars.com/api/?name=${user.email}&background=random`;
+                document.getElementById('userName').textContent = user.displayName || user.email.split('@')[0];
+                
+                if (user.uid === ADMIN_ID) {
+                    document.getElementById('adminLink').classList.remove('hidden');
+                }
+                
+                await loadUserRatings(user.uid);
+            } else {
+                currentUser = null;
+                document.getElementById('loginBtn').classList.remove('hidden');
+                document.getElementById('userPanel').classList.add('hidden');
+                document.getElementById('adminLink').classList.add('hidden');
+            }
+        });
+
+        window.loginGoogle = async () => {
+            try {
+                await signInWithPopup(auth, new GoogleAuthProvider());
+                closeLoginModal();
+                showToast('Вход выполнен');
+            } catch (e) {
+                showToast('Ошибка входа: ' + e.message);
+            }
+        };
+
+        window.logout = () => signOut(auth).then(() => showToast('Вы вышли'));
+
+        window.openLoginModal = () => document.getElementById('loginModal').classList.add('active');
+        window.closeLoginModal = () => document.getElementById('loginModal').classList.remove('active');
+
+        // Load data
+        async function loadData() {
+            // Load projects
+            onSnapshot(collection(db, "projects"), (snapshot) => {
+                projects = snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
+                document.getElementById('totalProjects').textContent = projects.length;
+                loadRatings();
+            });
+        }
+
+        async function loadRatings() {
+            // Load all ratings
+            const ratingsSnap = await getDoc(doc(db, "ratings", "summary"));
+            if (ratingsSnap.exists()) {
+                ratings = ratingsSnap.data().projects || {};
+            }
+            renderProjects();
+        }
+
+        async function loadUserRatings(uid) {
+            const userRatingsSnap = await getDoc(doc(db, "userRatings", uid));
+            if (userRatingsSnap.exists()) {
+                userRatings = userRatingsSnap.data() || {};
+            }
+            renderProjects();
+        }
+
+        function renderProjects() {
+            const grid = document.getElementById('projectsGrid');
+            const empty = document.getElementById('emptyState');
+            
+            if (projects.length === 0) {
+                grid.innerHTML = '';
+                empty.classList.remove('hidden');
+                return;
+            }
+            
+            empty.classList.add('hidden');
+            
+            // Sort projects
+            let sorted = [...projects];
+            switch (currentSort) {
+                case 'rating':
+                    sorted.sort((a, b) => (ratings[b.id]?.avg || 0) - (ratings[a.id]?.avg || 0));
+                    break;
+                case 'reviews':
+                    sorted.sort((a, b) => (ratings[b.id]?.count || 0) - (ratings[a.id]?.count || 0));
+                    break;
+                case 'name':
+                    sorted.sort((a, b) => a.name.localeCompare(b.name));
+                    break;
+                case 'newest':
+                    sorted.sort((a, b) => new Date(b.createdAt || 0) - new Date(a.createdAt || 0));
+                    break;
+            }
+            
+            grid.innerHTML = sorted.map(p => {
+                const rating = ratings[p.id] || { avg: 0, count: 0, distribution: { 5: 0, 4: 0, 3: 0, 2: 0, 1: 0, 0.5: 0 } };
+                const userRating = userRatings[p.id];
+                const stars = renderStars(rating.avg);
+                const distribution = renderDistribution(rating);
+                
+                return `
+                    <div class="glass-card rounded-2xl p-5 relative">
+                        <div class="flex items-start gap-4 mb-4">
+                            <img src="${p.image || ''}" alt="${p.name}" 
+                                class="w-16 h-16 rounded-xl object-cover border border-slate-700"
+                                onerror="this.src='https://ui-avatars.com/api/?name=${encodeURIComponent(p.name)}&background=random&size=64'">
+                            <div class="flex-1 min-w-0">
+                                <h3 class="font-bold text-lg text-white truncate cursor-pointer hover:text-blue-400 transition-colors"
+                                    onclick="openFeedbackModal('${p.id}')" title="Нажмите для обратной связи">
+                                    ${p.name}
+                                </h3>
+                                <div class="flex items-center gap-2 mt-1">
+                                    <div class="flex text-yellow-400 text-sm">${stars}</div>
+                                    <span class="text-sm font-bold text-yellow-400">${rating.avg.toFixed(1)}</span>
+                                    <span class="text-xs text-slate-500">(${rating.count} оценок)</span>
+                                </div>
+                                ${userRating ? `<div class="text-xs text-emerald-400 mt-1"><i class="fas fa-check mr-1"></i>Ваша оценка: ${userRating}</div>` : ''}
+                            </div>
+                        </div>
+                        
+                        ${distribution}
+                        
+                        <div class="flex gap-2 mt-4">
+                            <button onclick="openRatingModal('${p.id}')" 
+                                class="flex-1 bg-yellow-600/20 hover:bg-yellow-600/30 border border-yellow-600/30 text-yellow-400 py-2 rounded-lg text-sm font-medium transition-colors flex items-center justify-center gap-2">
+                                <i class="fas fa-star"></i>
+                                ${userRating ? 'Изменить оценку' : 'Оценить'}
+                            </button>
+                            <button onclick="openFeedbackModal('${p.id}')" 
+                                class="feedback-btn px-4 py-2 rounded-lg text-sm font-medium transition-colors"
+                                title="Обратная связь админу">
+                                <i class="fas fa-comment-dots"></i>
+                            </button>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        function renderStars(avg) {
+            let html = '';
+            for (let i = 1; i <= 5; i++) {
+                if (avg >= i) {
+                    html += '<i class="fas fa-star"></i>';
+                } else if (avg >= i - 0.5) {
+                    html += '<i class="fas fa-star-half-alt"></i>';
+                } else {
+                    html += '<i class="far fa-star"></i>';
+                }
+            }
+            return html;
+        }
+
+        function renderDistribution(rating) {
+            const dist = rating.distribution || {};
+            const total = rating.count || 1;
+            const max = Math.max(...Object.values(dist), 1);
+            
+            return `
+                <div class="space-y-1">
+                    ${[5, 4, 3, 2, 1].map(star => {
+                        const count = dist[star] || 0;
+                        const percent = (count / total) * 100;
+                        const barWidth = max > 0 ? (count / max) * 100 : 0;
+                        return `
+                            <div class="flex items-center gap-2 text-xs">
+                                <span class="text-slate-400 w-3">${star}</span>
+                                <i class="fas fa-star text-yellow-500 text-[10px]"></i>
+                                <div class="flex-1 rating-bar">
+                                    <div class="rating-fill" style="width: ${barWidth}%"></div>
+                                </div>
+                                <span class="text-slate-500 w-6 text-right">${count}</span>
+                            </div>
+                        `;
+                    }).join('')}
+                </div>
+            `;
+        }
+
+        window.sortProjects = (sort) => {
+            currentSort = sort;
+            document.querySelectorAll('.sort-btn').forEach(btn => {
+                btn.classList.toggle('active', btn.dataset.sort === sort);
+            });
+            renderProjects();
+        };
+
+        // Rating Modal
+        window.openRatingModal = (projectId) => {
+            if (!currentUser) {
+                openLoginModal();
+                return;
+            }
+            const p = projects.find(x => x.id === projectId);
+            if (!p) return;
+            
+            currentRatingProject = projectId;
+            tempRating = userRatings[projectId] || 0;
+            
+            document.getElementById('ratingProjectName').textContent = p.name;
+            document.getElementById('ratingProjectImage').src = p.image || '';
+            document.getElementById('ratingValue').textContent = tempRating.toFixed(1);
+            
+            renderStarInput();
+            document.getElementById('ratingModal').classList.add('active');
+        };
+
+        window.closeRatingModal = () => {
+            document.getElementById('ratingModal').classList.remove('active');
+            currentRatingProject = null;
+            tempRating = 0;
+        };
+
+        function renderStarInput() {
+            const container = document.getElementById('starInput');
+            container.innerHTML = '';
+            
+            for (let i = 1; i <= 5; i++) {
+                const star = document.createElement('i');
+                star.className = 'star fas fa-star';
+                star.dataset.value = i;
+                
+                if (tempRating >= i) {
+                    star.classList.add('active');
+                } else if (tempRating >= i - 0.5) {
+                    star.classList.add('active', 'half');
+                }
+                
+                // Click for full star
+                star.onclick = (e) => {
+                    const rect = star.getBoundingClientRect();
+                    const x = e.clientX - rect.left;
+                    const isHalf = x < rect.width / 2;
+                    tempRating = isHalf ? i - 0.5 : i;
+                    document.getElementById('ratingValue').textContent = tempRating.toFixed(1);
+                    renderStarInput();
+                };
+                
+                container.appendChild(star);
+            }
+        }
+
+        window.saveRating = async () => {
+            if (!currentUser || !currentRatingProject) return;
+            
+            const oldRating = userRatings[currentRatingProject] || 0;
+            const newRating = tempRating;
+            
+            try {
+                // Save user rating
+                await setDoc(doc(db, "userRatings", currentUser.uid), {
+                    [currentRatingProject]: newRating
+                }, { merge: true });
+                
+                // Update summary
+                const summaryRef = doc(db, "ratings", "summary");
+                const summarySnap = await getDoc(summaryRef);
+                const data = summarySnap.exists() ? summarySnap.data() : { projects: {} };
+                
+                const proj = data.projects[currentRatingProject] || { 
+                    avg: 0, count: 0, total: 0, 
+                    distribution: { 5: 0, 4: 0, 3: 0, 2: 0, 1: 0, 0.5: 0 } 
+                };
+                
+                // Remove old rating from distribution
+                if (oldRating > 0) {
+                    proj.distribution[oldRating] = (proj.distribution[oldRating] || 0) - 1;
+                    proj.total -= oldRating;
+                    proj.count -= 1;
+                }
+                
+                // Add new rating
+                proj.distribution[newRating] = (proj.distribution[newRating] || 0) + 1;
+                proj.total += newRating;
+                proj.count += 1;
+                proj.avg = proj.total / proj.count;
+                
+                await setDoc(summaryRef, {
+                    projects: { ...data.projects, [currentRatingProject]: proj }
+                }, { merge: true });
+                
+                userRatings[currentRatingProject] = newRating;
+                ratings[currentRatingProject] = proj;
+                
+                showToast('Оценка сохранена!');
+                closeRatingModal();
+                renderProjects();
+                
+            } catch (e) {
+                showToast('Ошибка: ' + e.message);
+            }
+        };
+
+        // Feedback Modal
+        window.openFeedbackModal = (projectId) => {
+            if (!currentUser) {
+                openLoginModal();
+                return;
+            }
+            const p = projects.find(x => x.id === projectId);
+            if (!p) return;
+            
+            currentFeedbackProject = projectId;
+            document.getElementById('feedbackProjectName').textContent = p.name;
+            document.getElementById('feedbackProjectImage').src = p.image || '';
+            document.getElementById('feedbackText').value = '';
+            
+            document.getElementById('feedbackModal').classList.add('active');
+        };
+
+        window.closeFeedbackModal = () => {
+            document.getElementById('feedbackModal').classList.remove('active');
+            currentFeedbackProject = null;
+        };
+
+        window.sendFeedback = async () => {
+            if (!currentUser || !currentFeedbackProject) return;
+            
+            const type = document.getElementById('feedbackType').value;
+            const text = document.getElementById('feedbackText').value.trim();
+            
+            if (!text) {
+                showToast('Введите сообщение');
+                return;
+            }
+            
+            try {
+                await setDoc(doc(collection(db, "feedback")), {
+                    projectId: currentFeedbackProject,
+                    projectName: projects.find(p => p.id === currentFeedbackProject)?.name || 'Unknown',
+                    userId: currentUser.uid,
+                    userName: currentUser.displayName || currentUser.email,
+                    userEmail: currentUser.email,
+                    type: type,
+                    text: text,
+                    createdAt: serverTimestamp(),
+                    read: false
+                });
+                
+                // Increment unread count for admin
+                await updateDoc(doc(db, "adminStats", "feedback"), {
+                    unreadCount: increment(1)
+                });
+                
+                showToast('Отзыв отправлен администратору!');
+                closeFeedbackModal();
+                
+            } catch (e) {
+                showToast('Ошибка: ' + e.message);
+            }
+        };
+
+        function showToast(msg) {
+            const toast = document.getElementById('toast');
+            document.getElementById('toastMessage').textContent = msg;
+            toast.classList.add('show');
+            setTimeout(() => toast.classList.remove('show'), 3000);
+        }
+
+        // Init
+        loadData();
+    </script>
+</body>
+</html>
