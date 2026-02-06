@@ -8,7 +8,7 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
-.custom-modal { max-width: 950px; width: 100%; }
+.custom-modal { max-width: 950px; /* любое значение */ width: 100%; }
         :root {
             --bg-primary: #0b0f19;
             --bg-secondary: #151b2b;
@@ -171,6 +171,7 @@
             flex-shrink: 0;
         }
 
+        /* Чтобы модальное окно само правильно скроллилось */
         .modal-body {
             padding: 20px 24px;
             overflow-y: auto;
@@ -292,7 +293,7 @@
             overflow: hidden;
         }
         .accordion-content.open {
-            max-height: 2000px;
+            max-height: 2000px; /* Увеличено для длинных описаний */
             opacity: 1;
             margin-top: 0.75rem;
         }
@@ -342,21 +343,22 @@
             line-height: 1.7;
         }
         .rich-content img {
-            max-width: 100%;
-            height: auto;
-            border-radius: 8px;
-            margin: 12px 0;
-            border: 1px solid rgba(255,255,255,0.1);
-            display: block;
-            cursor: pointer;
-            transition: transform 0.2s ease;
-        }
-        .rich-content img:hover {
-            transform: scale(1.02);
-        }
-        .rich-content img[style*="display: none"] {
-            display: none !important;
-        }
+    max-width: 100%;
+    height: auto;
+    border-radius: 8px;
+    margin: 12px 0;
+    border: 1px solid rgba(255,255,255,0.1);
+    display: block; /* Картинка занимает всю ширину блока */
+    cursor: pointer; /* Курсор-указатель при наведении */
+    transition: transform 0.2s ease;
+}
+.rich-content img:hover {
+    transform: scale(1.02); /* Небольшое увеличение при наведении */
+}
+
+.rich-content img[style*="display: none"] {
+    display: none !important; /* Скрываем сломанные картинки */
+}
         .rich-content a {
             color: #60a5fa;
             text-decoration: none;
@@ -396,6 +398,7 @@
             margin: 16px 0;
         }
 
+        /* Activity Editor Styles */
         .activity-item-admin {
             background: rgba(30, 37, 56, 0.4);
             border: 1px solid rgba(255,255,255,0.05);
@@ -409,6 +412,8 @@
         .activity-item-admin:hover {
             border-color: rgba(59, 130, 246, 0.3);
         }
+
+                /* Замените или обновите эти стили */
 
         .activity-block {
             background: rgba(30, 41, 59, 0.5);
@@ -434,6 +439,7 @@
             background: rgba(59, 130, 246, 0.1);
         }
         
+        /* Теперь контент находится ВНУТРИ блока, а не рядом */
         .activity-body-container {
             max-height: 0;
             opacity: 0;
@@ -442,14 +448,15 @@
             background: rgba(0,0,0,0.2);
         }
         
+        /* Изменяем на очень большое значение или прокрутку */
         .activity-body-container.open {
-            max-height: 10000px;
+            max-height: 10000px; /* Увеличили значительно */
             opacity: 1;
         }
         
         .activity-body {
             padding: 20px;
-            overflow-x: auto;
+            overflow-x: auto; /* На случай широких таблиц или кода */
         }
         
         .activity-ended {
@@ -828,7 +835,9 @@
                             <label class="block text-sm font-medium text-slate-300 mb-2">Дата активности</label>
                             <input type="date" id="actDate" class="w-full bg-slate-800 border border-slate-700 rounded-lg px-4 py-2 text-sm focus:border-blue-500 outline-none">
                         </div>
-                        <div></div>
+                        <div>
+                             <!-- Placeholder for alignment or additional setting -->
+                        </div>
                     </div>
 
                     <div>
@@ -905,11 +914,6 @@
                 <div id="detailActivitiesList" class="space-y-4">
                     <!-- Activities rendered here -->
                 </div>
-
-                <!-- Блок отзывов (reviews-rating.js) -->
-                <div id="reviewsSectionContainer">
-                    <!-- Сюда скрипт вставит отзывы и форму -->
-                </div>
             </div>
 
             <div class="modal-footer">
@@ -954,7 +958,7 @@
         <span id="toastMessage">Действие выполнено</span>
     </div>
 
-    <!-- Prompt Modal for Link Input -->
+        <!-- Prompt Modal for Link Input -->
     <div id="promptModal" class="modal">
         <div class="modal-content modal-sm p-6 relative">
             <h2 class="text-lg font-bold mb-4">Вставьте ссылку</h2>
@@ -1010,33 +1014,37 @@
         let currentFilteredList = [];
 
         let pendingLinkInsert = null;
+        let pendingImgInsert = null;
 
         // Activity Management State
         let currentEditingActivities = [];
         let editingActivityId = null;
-        let mainProjectCategories = [];
+        let mainProjectCategories = []; // To filter activity categories
 
         document.addEventListener('DOMContentLoaded', function() {
             const select = document.getElementById('itemsPerPageSelect');
             if(select) select.value = itemsPerPage;
+            // ДОБАВЛЯЕМ ОБРАБОТЧИК ДЛЯ ВВОДА ССЫЛКИ
+                    // Обработчик для окна вставки ссылки/картинки
+        const promptInput = document.getElementById('promptInput');
+        if(promptInput) {
+            promptInput.addEventListener('keydown', function(e) {
+                if (e.key === 'Enter') {
+                    e.preventDefault();
+                    window.confirmLinkInsert();
+                }
+            });
             
-            const promptInput = document.getElementById('promptInput');
-            if(promptInput) {
-                promptInput.addEventListener('keydown', function(e) {
-                    if (e.key === 'Enter') {
-                        e.preventDefault();
+            // Обработка Ctrl+V (или Cmd+V на Mac)
+            promptInput.addEventListener('paste', function(e) {
+                setTimeout(function() {
+                    // После вставки ждём 100мс и автоматически сохраняем
+                    if (promptInput.value.trim()) {
                         window.confirmLinkInsert();
                     }
-                });
-                promptInput.addEventListener('paste', function(e) {
-                    setTimeout(function() {
-                        if (promptInput.value.trim()) {
-                            window.confirmLinkInsert();
-                        }
-                    }, 100);
-                });
-            }
-            
+                }, 100);
+            });
+        }
             const savedSort = localStorage.getItem('sortProjects') || 'newest';
             const sortSelect = document.getElementById('sortSelect');
             if (sortSelect) {
@@ -1067,11 +1075,11 @@
             }
         }
 
-        function formatDateForDisplay(dateString) {
-            if (!dateString) return '';
-            const date = new Date(dateString);
-            return date.toLocaleDateString('ru-RU', { day: 'numeric', month: 'short', year: 'numeric' });
-        }
+                function formatDateForDisplay(dateString) {
+    if (!dateString) return '';
+    const date = new Date(dateString);
+    return date.toLocaleDateString('ru-RU', { day: 'numeric', month: 'short', year: 'numeric' });
+}
 
         function isClickedToday(projectId) {
             const record = arcData[projectId];
@@ -1199,17 +1207,18 @@
             const now = new Date().toISOString();
             if (user) {
                 currentUser = user;
+                // АВТОМАТИЧЕСКИЙ АДМИН ДЛЯ ВАШЕГО АККАУНТА
         if (user.uid === "SAkz4mdW9reDaIsvqigCNZhEKJR2") {
             activateAdminMode();
         }
         
         try {
             const userRef = doc(db, "users", user.uid);
-            const userSnap = await getDoc(userRef);
-            const userData = { email: user.email, displayName: user.displayName, photoURL: user.photoURL, lastLogin: now };
-            if (userSnap.exists()) await updateDoc(userRef, userData);
-            else await setDoc(userRef, { ...userData, firstLogin: now });
-        } catch (e) { console.error('Error:', e); }
+                    const userSnap = await getDoc(userRef);
+                    const userData = { email: user.email, displayName: user.displayName, photoURL: user.photoURL, lastLogin: now };
+                    if (userSnap.exists()) await updateDoc(userRef, userData);
+                    else await setDoc(userRef, { ...userData, firstLogin: now });
+                } catch (e) { console.error('Error:', e); }
 
                 document.getElementById('loggedOutView').classList.add('hidden');
                 document.getElementById('loggedInView').classList.remove('hidden');
@@ -1255,6 +1264,7 @@
         }
 
         window.toggleComplete = async function(uid, aid) {
+            // uid = project ID, aid = activity ID
             const uniqueId = uid + '_' + aid;
             const idx = userCompleted.indexOf(uniqueId);
             let newCompleted = [...userCompleted];
@@ -1269,6 +1279,7 @@
             
             userCompleted = newCompleted;
             localStorage.setItem(COMPLETED_KEY, JSON.stringify(userCompleted));
+            // Refresh detail view if open
             if (currentDetailId === uid) openDetail(uid);
             applyFilters();
             
@@ -1421,6 +1432,7 @@
                 if (currentFilters.status === 'daily') return p.hasDaily && p.status === 'active';
                 if (currentFilters.status === 'favorites') return userFavorites.includes(p.id);
                 if (currentFilters.status === 'completed') {
+                    // Check if any activity is completed
                     return p.activities && p.activities.some(a => userCompleted.includes(p.id + '_' + a.id));
                 }
                 if (currentFilters.status === 'today') return isToday(p.createdAt);
@@ -1462,11 +1474,16 @@
                 const lastClickRecord = arcData[project.id];
                 const lastClickDate = lastClickRecord && lastClickRecord.lastClick ? formatClickDate(lastClickRecord.lastClick) : null;
                 const lastUpdatedDate = project.lastUpdated ? formatDateForDisplay(project.lastUpdated) : null;
+
+
+
                 
                 const categoriesHtml = (project.categories || ['Other']).map(function(cat) {
                     return '<span class="bg-slate-800 px-2 py-1 rounded cursor-pointer hover:bg-slate-700 transition-colors" onclick="event.stopPropagation(); toggleCategoryFilter(\'' + cat + '\')">' + cat + '</span>';
                 }).join('');
 
+                // Check if ANY activity is completed for visual style (optional)
+                
                 return '<div class="glass-card rounded-2xl p-4 relative group ' + (isNew ? 'border-pink-500/30' : '') + '">' +
                     (isNew ? '<div class="absolute -top-2 -right-2"><span class="new-badge"><i class="fas fa-star mr-1"></i>NEW</span></div>' : '') +
                     '<div class="flex items-start gap-4">' +
@@ -1492,6 +1509,7 @@
                     '<button onclick="trackGuideClick(\'' + project.id + '\', \'' + (project.guideUrl || '') + '\')" class="guide-btn-small text-white rounded-lg text-sm font-medium transition-colors flex items-center justify-center gap-2">' +
                     '<i class="fas fa-book-open"></i><span>Гайд</span></button>' +
                     
+                    // Mark project complete (not specific activity) - simplified for main view
                     '<button onclick="event.stopPropagation(); toggleComplete(\'' + project.id + '\', \'project\')" class="complete-btn ' + (userCompleted.includes(project.id + '_project') ? 'text-emerald-500' : 'text-slate-500 hover:text-emerald-500') + ' p-2 transition-colors w-10 h-10 flex items-center justify-center rounded-lg hover:bg-slate-800" title="Отметить как завершённое">' +
                     '<i class="fas ' + (userCompleted.includes(project.id + '_project') ? 'fa-check-square' : 'fa-square') + ' text-lg"></i></button>' +
 
@@ -1576,30 +1594,47 @@
         };
 
         function parseRichContent(text) {
-            if (!text) return '';
-            let html = text;
-            html = html.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
-            html = html.replace(/!\[([^\]]*)\]\(([^)]+)\)/g, function(match, alt, url) {
-                return '<img src="' + url + '" alt="' + (alt || 'image') + '" onerror="this.style.display=\'none\'" style="max-width: 100%; height: auto; border-radius: 8px; margin: 12px 0; border: 1px solid rgba(255,255,255,0.1);">';
-            });
-            html = html.replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2" target="_blank">$1</a>');
-            html = html.replace(/^### (.+)$/gm, '<h3>$1</h3>');
-            html = html.replace(/^&gt; (.+)$/gm, '<blockquote>$1</blockquote>');
-            html = html.replace(/^---$/gm, '<hr>');
-            html = html.replace(/^- (.+)$/gm, '<li>$1</li>');
-            html = html.replace(/(<li>.*<\/li>)+/g, '<ul>$&</ul>');
-            const lines = html.split('\n');
-            let result = '';
-            for (let i = 0; i < lines.length; i++) {
-                const line = lines[i].trim();
-                if (line && !line.match(/^(<h3|<ul|<li|<blockquote|<img|<hr|<p)/)) {
-                    result += '<p>' + line + '</p>';
-                } else {
-                    result += line;
-                }
-            }
-            return result;
+    if (!text) return '';
+    let html = text;
+    
+    // Экранирование HTML
+    html = html.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+    
+    // КАРТИНКИ: с восклицательным знаком и пустыми или непустыми скобками
+    html = html.replace(/!\[([^\]]*)\]\(([^)]+)\)/g, function(match, alt, url) {
+        return '<img src="' + url + '" alt="' + (alt || 'image') + '" onerror="this.style.display=\'none\'" style="max-width: 100%; height: auto; border-radius: 8px; margin: 12px 0; border: 1px solid rgba(255,255,255,0.1);">';
+    });
+    
+    // Обычные ссылки
+    html = html.replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2" target="_blank">$1</a>');
+    
+    // Заголовки
+    html = html.replace(/^### (.+)$/gm, '<h3>$1</h3>');
+    
+    // Цитаты
+    html = html.replace(/^&gt; (.+)$/gm, '<blockquote>$1</blockquote>');
+    
+    // Горизонтальная линия
+    html = html.replace(/^---$/gm, '<hr>');
+    
+    // Списки
+    html = html.replace(/^- (.+)$/gm, '<li>$1</li>');
+    html = html.replace(/(<li>.*<\/li>)+/g, '<ul>$&</ul>');
+    
+    // Параграфы
+    const lines = html.split('\n');
+    let result = '';
+    for (let i = 0; i < lines.length; i++) {
+        const line = lines[i].trim();
+        if (line && !line.match(/^(<h3|<ul|<li|<blockquote|<img|<hr|<p)/)) {
+            result += '<p>' + line + '</p>';
+        } else {
+            result += line;
         }
+    }
+    
+    return result;
+}
 
         // --- Detail View ---
         window.openDetail = function(id) {
@@ -1628,74 +1663,73 @@
             
             document.getElementById('detailCreated').innerHTML = 'Добавлено: <span class="text-slate-300">' + formatDate(project.createdAt) + '</span>';
             
-            const actsContainer = document.getElementById('detailActivitiesList');
-            if (project.activities && project.activities.length > 0) {
-                const sortedActivities = [...project.activities].sort(function(a, b) {
-                    const dateA = a.date ? new Date(a.date) : new Date(0);
-                    const dateB = b.date ? new Date(b.date) : new Date(0);
-                    return dateB - dateA;
-                });
+                                          // Render Activities
+const actsContainer = document.getElementById('detailActivitiesList');
+if (project.activities && project.activities.length > 0) {
+    // Сортируем активности: новые сверху
+    const sortedActivities = [...project.activities].sort(function(a, b) {
+        const dateA = a.date ? new Date(a.date) : new Date(0);
+        const dateB = b.date ? new Date(b.date) : new Date(0);
+        return dateB - dateA;
+    });
 
-                actsContainer.innerHTML = sortedActivities.map(function(act) {
-                    const isActCompleted = userCompleted.includes(project.id + '_' + act.id);
-                    const isActEnded = act.status === 'ended';
-                    const actDate = act.date ? formatDateForDisplay(act.date) : '';
-                    const actCats = act.categories ? act.categories.map(c => '<span class="text-xs bg-slate-700 px-1.5 py-0.5 rounded text-slate-300">' + c + '</span>').join('') : '';
-                    const actDesc = parseRichContent(act.description);
-                    
-                    let actionsHtml = '';
-                    if (!isActEnded) {
-                        actionsHtml += '<button onclick="event.stopPropagation(); trackGuideClick(\'' + project.id + '\', \'\');" class="text-blue-400 hover:text-blue-300 text-xs px-2 py-1 rounded hover:bg-slate-800" title="Засчитать клик"><i class="fas fa-check mr-1"></i>Клик</button>';
-                        actionsHtml += '<button onclick="event.stopPropagation(); toggleComplete(\'' + project.id + '\', \'' + act.id + '\')" class="' + (isActCompleted ? 'text-emerald-500' : 'text-slate-500 hover:text-emerald-400') + ' transition-colors p-2" title="Завершить"><i class="fas ' + (isActCompleted ? 'fa-check-circle' : 'fa-circle') + ' text-lg"></i></button>';
-                    }
-                    
-                    if (isAdminMode) {
-                        if (!isActEnded) {
-                            actionsHtml += '<button onclick="event.stopPropagation(); endActivity(\'' + project.id + '\', \'' + act.id + '\')" class="text-slate-500 hover:text-red-400 text-xs ml-2 px-2 py-1 rounded hover:bg-slate-800" title="Завершить фазу"><i class="fas fa-ban mr-1"></i>End</button>';
-                        } else {
-                            actionsHtml += '<button onclick="event.stopPropagation(); resumeActivity(\'' + project.id + '\', \'' + act.id + '\')" class="text-emerald-500 hover:text-emerald-400 text-xs ml-2 px-2 py-1 rounded hover:bg-slate-800" title="Возобновить фазу"><i class="fas fa-redo mr-1"></i>Resume</button>';
-                        }
-                    }
-                    
-                    return '<div class="activity-block ' + (isActEnded ? 'activity-ended' : '') + '">' +
-                        '<div class="activity-header" onclick="toggleActivityDetail(\'' + act.id + '\')">' +
-                        '<div class="flex items-center gap-3 flex-1">' +
-                        '<i id="icon-' + act.id + '" class="fas fa-chevron-down text-slate-400 transition-transform"></i>' +
-                        '<div class="flex-1">' +
-                        '<div class="font-bold text-white flex items-center gap-2 flex-wrap">' + act.title + 
-                        (isActEnded ? ' <span class="text-[10px] bg-red-900/50 text-red-300 px-1.5 py-0.5 rounded uppercase">Ended</span>' : '') +
-                        '</div>' +
-                        '<div class="flex items-center gap-2 mt-1 text-xs text-slate-400 flex-wrap">' + 
-                        (actDate ? '<span class="text-blue-400"><i class="far fa-calendar-alt mr-1"></i>' + actDate + '</span>' : '') +
-                        (actCats ? '<span class="flex items-center gap-1">' + actCats + '</span>' : '') +
-                        '</div></div></div>' +
-                        '<div class="flex items-center gap-2 shrink-0">' + actionsHtml + '</div>' +
-                        '</div>' +
-                        '<div id="body-' + act.id + '" class="activity-body-container">' +
-                        '<div class="activity-body rich-content text-slate-300 text-sm">' + actDesc + '</div>' +
-                        '</div>' +
-                        '</div>';
-                }).join('');
+    actsContainer.innerHTML = sortedActivities.map(function(act) {
+        const isActCompleted = userCompleted.includes(project.id + '_' + act.id);
+        const isActEnded = act.status === 'ended';
+        const actDate = act.date ? formatDateForDisplay(act.date) : '';
+        const actCats = act.categories ? act.categories.map(c => '<span class="text-xs bg-slate-700 px-1.5 py-0.5 rounded text-slate-300">' + c + '</span>').join('') : '';
+        const actDesc = parseRichContent(act.description);
+        
+        // Кнопки действий
+        let actionsHtml = '';
+        if (!isActEnded) {
+            actionsHtml += '<button onclick="event.stopPropagation(); trackGuideClick(\'' + project.id + '\', \'\');" class="text-blue-400 hover:text-blue-300 text-xs px-2 py-1 rounded hover:bg-slate-800" title="Засчитать клик"><i class="fas fa-check mr-1"></i>Клик</button>';
+            actionsHtml += '<button onclick="event.stopPropagation(); toggleComplete(\'' + project.id + '\', \'' + act.id + '\')" class="' + (isActCompleted ? 'text-emerald-500' : 'text-slate-500 hover:text-emerald-400') + ' transition-colors p-2" title="Завершить"><i class="fas ' + (isActCompleted ? 'fa-check-circle' : 'fa-circle') + ' text-lg"></i></button>';
+        }
+        
+        if (isAdminMode) {
+            if (!isActEnded) {
+                actionsHtml += '<button onclick="event.stopPropagation(); endActivity(\'' + project.id + '\', \'' + act.id + '\')" class="text-slate-500 hover:text-red-400 text-xs ml-2 px-2 py-1 rounded hover:bg-slate-800" title="Завершить фазу"><i class="fas fa-ban mr-1"></i>End</button>';
             } else {
-                actsContainer.innerHTML = '<p class="text-slate-500 text-sm italic text-center py-4">Активности не добавлены.</p>';
+                actionsHtml += '<button onclick="event.stopPropagation(); resumeActivity(\'' + project.id + '\', \'' + act.id + '\')" class="text-emerald-500 hover:text-emerald-400 text-xs ml-2 px-2 py-1 rounded hover:bg-slate-800" title="Возобновить фазу"><i class="fas fa-redo mr-1"></i>Resume</button>';
             }
+        }
+        
+        return '<div class="activity-block ' + (isActEnded ? 'activity-ended' : '') + '">' +
+            '<div class="activity-header" onclick="toggleActivityDetail(\'' + act.id + '\')">' +
+            '<div class="flex items-center gap-3 flex-1">' +
+            '<i id="icon-' + act.id + '" class="fas fa-chevron-down text-slate-400 transition-transform"></i>' +
+            '<div class="flex-1">' +
+            '<div class="font-bold text-white flex items-center gap-2 flex-wrap">' + act.title + 
+            (isActEnded ? ' <span class="text-[10px] bg-red-900/50 text-red-300 px-1.5 py-0.5 rounded uppercase">Ended</span>' : '') +
+            '</div>' +
+            '<div class="flex items-center gap-2 mt-1 text-xs text-slate-400 flex-wrap">' + 
+            (actDate ? '<span class="text-blue-400"><i class="far fa-calendar-alt mr-1"></i>' + actDate + '</span>' : '') +
+            (actCats ? '<span class="flex items-center gap-1">' + actCats + '</span>' : '') +
+            '</div></div></div>' +
+            '<div class="flex items-center gap-2 shrink-0">' + actionsHtml + '</div>' +
+            '</div>' +
+            '<div id="body-' + act.id + '" class="activity-body-container">' +
+            '<div class="activity-body rich-content text-slate-300 text-sm">' + actDesc + '</div>' +
+            '</div>' +
+            '</div>';
+    }).join('');
+} else {
+    actsContainer.innerHTML = '<p class="text-slate-500 text-sm italic text-center py-4">Активности не добавлены.</p>';
+}
 
             document.getElementById('detailEditBtn').classList.toggle('hidden', !isAdminMode);
             updateDetailFavoriteIcon();
             document.getElementById('detailModal').classList.add('active');
-
-            // Инициализация отзывов
-            if (window.initReviews) {
-                window.initReviews(id);
-            }
         };
 
-        window.toggleActivityDetail = function(actId) {
+                window.toggleActivityDetail = function(actId) {
             const body = document.getElementById('body-' + actId);
             const icon = document.getElementById('icon-' + actId);
             
             if (!body || !icon) return;
 
+            // Проверяем, открыт ли блок
             if (body.classList.contains('open')) {
                 body.classList.remove('open');
                 icon.classList.remove('rotate-180');
@@ -1737,7 +1771,7 @@
             document.querySelectorAll('.sidebar-link').forEach(function(btn) { btn.addEventListener('click', function() { adminClickCount = 0; }); });
         }
 
-        function activateAdminMode() {
+       function activateAdminMode() {
             isAdminMode = true;
             document.getElementById('adminPanel').style.display = 'flex';
             document.getElementById('publicInfo').innerHTML = '<i class="fas fa-shield-alt"></i><span>Режим редактирования (Все изменения летят в базу)</span>';
@@ -1760,12 +1794,14 @@
             document.getElementById('activityModalTitle').textContent = actId ? 'Редактировать активность' : 'Новая активность';
             document.getElementById('deleteActivityBtn').classList.toggle('hidden', !actId);
             
+            // Clear form
             document.getElementById('actName').value = '';
             document.getElementById('actDate').value = '';
             document.getElementById('actRichDesc').value = '';
             
+            // Populate categories checkboxes based on Project Main Categories
             const actCatsContainer = document.getElementById('activityCategoryCheckboxes');
-            mainProjectCategories = getSelectedCategories();
+            mainProjectCategories = getSelectedCategories(); // Get from main form
             actCatsContainer.innerHTML = mainProjectCategories.map(function(cat) {
                 return '<label class="flex items-center gap-2 px-3 py-2 bg-slate-800 border border-slate-700 rounded-lg cursor-pointer"><input type="checkbox" value="' + cat + '" class="act-cat-checkbox rounded bg-slate-700"><span class="text-sm text-slate-300">' + cat + '</span></label>';
             }).join('');
@@ -1776,6 +1812,7 @@
                     document.getElementById('actName').value = act.title;
                     document.getElementById('actDate').value = act.date || '';
                     document.getElementById('actRichDesc').value = act.description || '';
+                    // Check checkboxes
                     if (act.categories) {
                         document.querySelectorAll('.act-cat-checkbox').forEach(cb => {
                             cb.checked = act.categories.includes(cb.value);
@@ -1800,7 +1837,7 @@
                 date: document.getElementById('actDate').value,
                 categories: selectedCats.length > 0 ? selectedCats : mainProjectCategories,
                 description: document.getElementById('actRichDesc').value,
-                status: 'active'
+                status: 'active' // Default status
             };
 
             if (editingActivityId) {
@@ -1858,44 +1895,47 @@
                 }
             }
         };
-        
-        window.resumeActivity = async function(projId, actId) {
-            if (!confirm('Возобновить эту активность? Она снова станет активной.')) return;
-            
-            const project = projects.find(p => p.id === projId);
-            if (project) {
-                const actIdx = project.activities.findIndex(a => a.id === actId);
-                if (actIdx !== -1) {
-                    project.activities[actIdx].status = 'active';
-                    try {
-                        await setDoc(doc(db, "projects", projId), { activities: project.activities }, { merge: true });
-                        showToast('Активность возобновлена');
-                        if (currentDetailId === projId) openDetail(projId);
-                    } catch (e) { showToast('Ошибка сохранения'); }
-                }
-            }
-        };
-        
-        window.insertActivityFormat = function(type) {
-            const textarea = document.getElementById('actRichDesc');
-            const start = textarea.selectionStart;
-            const end = textarea.selectionEnd;
-            const selectedText = textarea.value.substring(start, end);
-            
-            if (type === 'img') {
-                pendingLinkInsert = { type: 'img', start, end, text: '' };
-                document.getElementById('promptModal').classList.add('active');
-                document.getElementById('promptInput').value = '';
-                document.getElementById('promptInput').focus();
-                document.getElementById('promptModal').querySelector('h2').textContent = 'Вставьте ссылку на картинку';
-            } else if (type === 'link') {
-                const linkText = selectedText.trim() ? selectedText : 'текст ссылки';
-                pendingLinkInsert = { type: 'link', start, end, text: linkText };
-                document.getElementById('promptModal').classList.add('active');
-                document.getElementById('promptInput').value = '';
-                document.getElementById('promptInput').focus();
-                document.getElementById('promptModal').querySelector('h2').textContent = 'Вставьте ссылку';
-            } else {
+window.resumeActivity = async function(projId, actId) {
+    if (!confirm('Возобновить эту активность? Она снова станет активной.')) return;
+    
+    const project = projects.find(p => p.id === projId);
+    if (project) {
+        const actIdx = project.activities.findIndex(a => a.id === actId);
+        if (actIdx !== -1) {
+            project.activities[actIdx].status = 'active';
+            try {
+                await setDoc(doc(db, "projects", projId), { activities: project.activities }, { merge: true });
+                showToast('Активность возобновлена');
+                if (currentDetailId === projId) openDetail(projId);
+            } catch (e) { showToast('Ошибка сохранения'); }
+        }
+    }
+};
+                window.insertActivityFormat = function(type) {
+    const textarea = document.getElementById('actRichDesc');
+    const start = textarea.selectionStart;
+    const end = textarea.selectionEnd;
+    const selectedText = textarea.value.substring(start, end);
+    
+    if (type === 'img') {
+        // ИСПРАВЛЕНО: Открываем окно для картинки
+        pendingLinkInsert = { type: 'img', start, end, text: '' };
+        document.getElementById('promptModal').classList.add('active');
+        document.getElementById('promptInput').value = '';
+        document.getElementById('promptInput').focus();
+        document.getElementById('promptModal').querySelector('h2').textContent = 'Вставьте ссылку на картинку';
+    }
+    else if (type === 'link') {
+        const linkText = selectedText.trim() ? selectedText : 'текст ссылки';
+        pendingLinkInsert = { type: 'link', start, end, text: linkText };
+        document.getElementById('promptModal').classList.add('active');
+        document.getElementById('promptInput').value = '';
+        document.getElementById('promptInput').focus();
+        document.getElementById('promptModal').querySelector('h2').textContent = 'Вставьте ссылку';
+    }
+    // ... остальное без изменений
+            else {
+                // Остальные форматы (h3, ul, quote, hr) работают как раньше
                 const selected = selectedText;
                 if (type === 'h3') {
                     textarea.value = textarea.value.substring(0, start) + '### ' + (selected || 'Заголовок') + textarea.value.substring(end);
@@ -1913,6 +1953,7 @@
             }
         };
         
+                       // Функция закрытия окна вставки ссылки (ее не было!)
         window.closePromptModal = function() {
             const modal = document.getElementById('promptModal');
             modal.classList.remove('active');
@@ -1920,33 +1961,42 @@
             pendingLinkInsert = null;
         };
 
-        window.confirmLinkInsert = function() {
-            const textarea = document.getElementById('actRichDesc');
-            const url = document.getElementById('promptInput').value.trim();
-            
-            if (!url) { 
-                showToast('Введите ссылку'); 
-                return; 
-            }
-            
-            if (pendingLinkInsert && textarea) {
-                const { start, end, type, text } = pendingLinkInsert;
-                let insertion = '';
-                
-                if (type === 'img') {
-                    insertion = '![](' + url + ')';
-                } else {
-                    insertion = '[' + text + '](' + url + ')';
-                }
-                
-                textarea.value = textarea.value.substring(0, start) + insertion + textarea.value.substring(end);
-                textarea.focus(); 
-                textarea.selectionStart = textarea.selectionEnd = start + insertion.length;
-                showToast(type === 'img' ? 'Картинка добавлена' : 'Ссылка добавлена');
-            }
-            closePromptModal();
+     window.confirmLinkInsert = function() {
+    const textarea = document.getElementById('actRichDesc');
+    const url = document.getElementById('promptInput').value.trim();
+    
+    if (!url) { 
+        showToast('Введите ссылку'); 
+        return; 
+    }
+    
+    if (pendingLinkInsert && textarea) {
+        const { start, end, type, text } = pendingLinkInsert;
+        let insertion = '';
+        
+        if (type === 'img') {
+            // ДЛЯ КАРТИНКИ: добавляем восклицательный знак и пустые квадратные скобки
+            insertion = '![](' + url + ')';
+        } else {
+            // ДЛЯ ССЫЛКИ: используем текст
+            insertion = '[' + text + '](' + url + ')';
+        }
+        
+        textarea.value = textarea.value.substring(0, start) + insertion + textarea.value.substring(end);
+        textarea.focus(); 
+        textarea.selectionStart = textarea.selectionEnd = start + insertion.length;
+        showToast(type === 'img' ? 'Картинка добавлена' : 'Ссылка добавлена');
+    }
+    closePromptModal();
+};
+
+        // --- Main Editor Toolbar (reused logic) ---
+        window.insertFormat = function(type) {
+            const textarea = document.getElementById('projRichDesc'); // Note: In new structure, this is less used for main project, but kept for compatibility
+            // ... same logic as before ...
         };
         
+            // --- Add/Edit Project Logic ---
         window.openAddModal = function() {
             if (!isAdminMode) return;
             editingId = null;
@@ -1981,6 +2031,7 @@
             document.getElementById('projPriority').checked = project.priority === 'high';
             setSelectedCategories(project.categories || []);
             
+            // Load Activities
             currentEditingActivities = project.activities || [];
             renderActivitiesAdminList();
 
@@ -1993,21 +2044,22 @@
         window.editCurrentProject = function() { if(currentDetailId) window.editProject(currentDetailId); };
 
         window.saveProject = async function(e) {
-            e.preventDefault();
-            if (!isAdminMode) return;
-            const now = new Date().toISOString();
-            
-            const projName = document.getElementById('projName').value;
-            const slugName = projName.toLowerCase()
-                .replace(/[^a-zа-яё0-9\s-]/g, '') 
-                .replace(/\s+/g, '-') 
-                .substring(0, 50); 
-            
-            const id = editingId || 'proj_' + slugName + '_' + Date.now();
-            
-            const selectedCats = getSelectedCategories();
+    e.preventDefault();
+    if (!isAdminMode) return;
+    const now = new Date().toISOString();
+    
+    // ИСПРАВЛЕНО: ID теперь основан на названии проекта
+    const projName = document.getElementById('projName').value;
+    const slugName = projName.toLowerCase()
+        .replace(/[^a-zа-яё0-9\s-]/g, '') // Убираем спецсимволы
+        .replace(/\s+/g, '-') // Пробелы в дефисы
+        .substring(0, 50); // Максимум 50 символов
+    
+    const id = editingId || 'proj_' + slugName + '_' + Date.now();
+    
+    const selectedCats = getSelectedCategories();
 
-            const projectData = {
+    const projectData = {
                 id: id,
                 name: projName,
                 categories: selectedCats,
@@ -2022,7 +2074,7 @@
                 priority: document.getElementById('projPriority').checked ? 'high' : 'normal',
                 lastUpdated: document.getElementById('projLastUpdated').value || now.split('T')[0],
                 createdAt: editingId ? (projects.find(function(p) { return p.id === editingId; }).createdAt || now) : now,
-                activities: currentEditingActivities 
+                activities: currentEditingActivities // Save activities array
             };
             try { 
                 await setDoc(doc(db, "projects", id), projectData, { merge: true }); 
@@ -2178,7 +2230,5 @@
             window.open('stats.html', '_blank');
         };
     </script>
-    <!-- Подключаем модуль отзывов -->
-    <script type="module" src="reviews-rating.js"></script>
 </body>
 </html>
