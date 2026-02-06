@@ -150,6 +150,26 @@
                 <div class="text-2xl font-bold text-purple-400" id="statProjects">0</div>
                 <div class="text-xs text-slate-400">Проектов</div>
             </div>
+               </div>
+
+        <!-- Topic stats -->
+        <div class="grid grid-cols-4 gap-4 mb-6">
+            <div class="stats-card">
+                <div class="text-2xl font-bold text-yellow-300" id="statSuggestion">0</div>
+                <div class="text-xs text-slate-400">💡 Предложения</div>
+            </div>
+            <div class="stats-card">
+                <div class="text-2xl font-bold text-amber-400" id="statReview">0</div>
+                <div class="text-xs text-slate-400">⭐ Отзывы</div>
+            </div>
+            <div class="stats-card">
+                <div class="text-2xl font-bold text-red-400" id="statBug">0</div>
+                <div class="text-xs text-slate-400">🐛 Проблемы</div>
+            </div>
+            <div class="stats-card">
+                <div class="text-2xl font-bold text-cyan-400" id="statQuestion">0</div>
+                <div class="text-xs text-slate-400">❓ Вопросы</div>
+            </div>
         </div>
 
         <!-- Filters -->
@@ -167,6 +187,19 @@
                 <i class="fas fa-clock mr-1"></i> Без ответа
             </button>
 
+            <div class="h-6 w-px bg-slate-700 mx-1"></div>
+            <button class="filter-btn" data-filter="suggestion" onclick="setFilter('suggestion')">
+                💡 Предложения
+            </button>
+            <button class="filter-btn" data-filter="review" onclick="setFilter('review')">
+                ⭐ Отзывы
+            </button>
+            <button class="filter-btn" data-filter="bug" onclick="setFilter('bug')">
+                🐛 Проблемы
+            </button>
+            <button class="filter-btn" data-filter="question" onclick="setFilter('question')">
+                ❓ Вопросы
+            </button>
             <div class="ml-auto">
                 <select id="projectFilter" onchange="setProjectFilter(this.value)" class="bg-slate-800 border border-slate-700 rounded-lg px-4 py-2 text-sm text-slate-200 outline-none cursor-pointer">
                     <option value="">Все проекты</option>
@@ -210,7 +243,7 @@
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
         import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
-        import { getFirestore, collection, doc, updateDoc, onSnapshot, query, orderBy, addDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+              import { getFirestore, collection, doc, updateDoc, deleteDoc, onSnapshot, query, orderBy, addDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
         const firebaseConfig = {
             apiKey: "AIzaSyBdXGYg2t8DJBrQHCC80-pFerZU9PWmSCk",
@@ -262,12 +295,16 @@
             });
         }
 
-        function updateStats() {
+                function updateStats() {
             document.getElementById('statTotal').textContent = allFeedback.length;
             document.getElementById('statUnread').textContent = allFeedback.filter(f => !f.read).length;
             document.getElementById('statReplied').textContent = allFeedback.filter(f => f.adminReply).length;
             const uniqueProjects = new Set(allFeedback.map(f => f.projectId));
             document.getElementById('statProjects').textContent = uniqueProjects.size;
+            document.getElementById('statSuggestion').textContent = allFeedback.filter(f => f.topic === 'suggestion').length;
+            document.getElementById('statReview').textContent = allFeedback.filter(f => f.topic === 'review').length;
+            document.getElementById('statBug').textContent = allFeedback.filter(f => f.topic === 'bug').length;
+            document.getElementById('statQuestion').textContent = allFeedback.filter(f => f.topic === 'question').length;
         }
 
         function populateProjectFilter() {
@@ -304,10 +341,14 @@
             const container = document.getElementById('feedbackContainer');
             const search = (document.getElementById('searchInput').value || '').toLowerCase();
 
-            let filtered = allFeedback.filter(function(f) {
+                        let filtered = allFeedback.filter(function(f) {
                 if (currentFilter === 'unread') return !f.read;
                 if (currentFilter === 'replied') return !!f.adminReply;
                 if (currentFilter === 'noreplied') return !f.adminReply;
+                if (currentFilter === 'suggestion') return f.topic === 'suggestion';
+                if (currentFilter === 'review') return f.topic === 'review';
+                if (currentFilter === 'bug') return f.topic === 'bug';
+                if (currentFilter === 'question') return f.topic === 'question';
                 return true;
             });
 
@@ -344,15 +385,17 @@
                     '<div class="flex items-center gap-3">' +
                     (fb.userPhoto ? '<img src="' + fb.userPhoto + '" class="w-9 h-9 rounded-full border border-slate-600">' : '<div class="w-9 h-9 rounded-full bg-slate-700 flex items-center justify-center text-sm font-bold">' + (fb.userName || '?')[0].toUpperCase() + '</div>') +
                     '<div>' +
-                    '<div class="flex items-center gap-2 flex-wrap">' +
+                                        '<div class="flex items-center gap-2 flex-wrap">' +
                     '<span class="font-bold text-white text-sm">' + (fb.userName || 'Аноним') + '</span>' +
                     '<span class="text-xs bg-blue-900/50 text-blue-300 px-2 py-0.5 rounded">' + (fb.projectName || fb.projectId) + '</span>' +
+                    (fb.topicLabel ? '<span class="text-xs bg-purple-900/50 text-purple-300 px-2 py-0.5 rounded">' + fb.topicLabel + '</span>' : (fb.topic ? '<span class="text-xs bg-purple-900/50 text-purple-300 px-2 py-0.5 rounded">' + fb.topic + '</span>' : '')) +
                     '</div>' +
                     '<div class="text-xs text-slate-500 mt-0.5">' + time + ' • ID: ' + fb.userId.substring(0,8) + '...</div>' +
                     '</div></div>' +
                     '<div class="flex items-center gap-2 shrink-0">' +
                     (!fb.read ? '<button onclick="markRead(\'' + fb.id + '\')" class="text-xs bg-blue-600/20 text-blue-400 hover:bg-blue-600/30 px-3 py-1 rounded transition-colors">Прочитано</button>' : '') +
-                    '<button onclick="openReplyModal(\'' + fb.id + '\')" class="text-xs bg-emerald-600/20 text-emerald-400 hover:bg-emerald-600/30 px-3 py-1 rounded transition-colors"><i class="fas fa-reply mr-1"></i>' + (fb.adminReply ? 'Изменить' : 'Ответить') + '</button>' +
+                                        '<button onclick="openReplyModal(\'' + fb.id + '\')" class="text-xs bg-emerald-600/20 text-emerald-400 hover:bg-emerald-600/30 px-3 py-1 rounded transition-colors"><i class="fas fa-reply mr-1"></i>' + (fb.adminReply ? 'Изменить' : 'Ответить') + '</button>' +
+                    '<button onclick="deleteFeedback(\'' + fb.id + '\')" class="text-xs bg-red-600/20 text-red-400 hover:bg-red-600/30 px-3 py-1 rounded transition-colors" title="Удалить отзыв"><i class="fas fa-trash"></i></button>' +
                     '</div></div>' +
                     '<div class="mt-3 text-sm text-slate-300 leading-relaxed bg-slate-800/30 p-3 rounded-lg">' + escapeHtml(fb.text) + '</div>' +
                     replyHtml +
@@ -373,8 +416,9 @@
             replyingToId = fbId;
             replyingToUserId = fb.userId;
             replyingToProjectName = fb.projectName || fb.projectId;
+                        var topicBadge = fb.topicLabel ? '<span class="text-xs bg-purple-900/50 text-purple-300 px-2 py-0.5 rounded ml-2">' + fb.topicLabel + '</span>' : '';
             document.getElementById('replyOriginal').innerHTML =
-                '<div class="flex items-center gap-2 mb-2"><span class="font-bold text-blue-400">' + (fb.userName || 'Аноним') + '</span><span class="text-slate-500 text-xs">о проекте ' + replyingToProjectName + '</span></div>' +
+                '<div class="flex items-center gap-2 mb-2 flex-wrap"><span class="font-bold text-blue-400">' + (fb.userName || 'Аноним') + '</span><span class="text-slate-500 text-xs">о проекте ' + replyingToProjectName + '</span>' + topicBadge + '</div>' +
                 '<div>' + escapeHtml(fb.text) + '</div>';
             document.getElementById('replyText').value = fb.adminReply || '';
             document.getElementById('replyModal').classList.add('active');
@@ -415,7 +459,16 @@
                 showToast('Ответ отправлен и уведомление создано!');
             } catch (e) { showToast('Ошибка отправки'); console.error(e); }
         };
-
+        window.deleteFeedback = async function(fbId) {
+            if (!confirm('Удалить этот отзыв навсегда?')) return;
+            try {
+                await deleteDoc(doc(db, "feedback", fbId));
+                showToast('Отзыв удалён');
+            } catch (e) {
+                showToast('Ошибка удаления');
+                console.error(e);
+            }
+        };
         function escapeHtml(text) {
             if (!text) return '';
             return text.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/\n/g, '<br>');
