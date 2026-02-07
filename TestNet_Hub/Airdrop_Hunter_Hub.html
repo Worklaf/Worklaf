@@ -1327,31 +1327,30 @@ function updateFeedbackBadge(count) {
 }
 
 // --- ПОЛЬЗОВАТЕЛЬ: ОТКРЫТЬ ЧАТ ---
-// --- ПОЛЬЗОВАТЕЛЬ: ОТКРЫТЬ ЧАТ ---
 window.openFeedbackModal = function(projId, projName) {
     if (!currentUser) {
         showToast('Войдите, чтобы отправлять отзывы');
         openLoginModal();
         return;
     }
-    
+
     const modal = document.getElementById('feedbackModal');
     document.getElementById('feedbackProjectId').value = projId;
     document.getElementById('feedbackProjectName').textContent = projName || 'Unknown';
     document.getElementById('feedbackChatHistory').innerHTML = '<div class="text-center py-8"><i class="fas fa-spinner fa-spin text-blue-400"></i></div>';
-    
+
     const q = query(
-        collection(db, "feedbacks"), 
-        where("userId", "==", currentUser.uid), 
+        collection(db, "feedbacks"),
+        where("userId", "==", currentUser.uid),
         where("projectId", "==", projId)
     );
 
     getDocs(q).then((snapshot) => {
         if (!snapshot.empty) {
-            const doc = snapshot.docs[0];  // ✅ ИСПРАВЛЕНО
-            const fb = doc.data();
-            document.getElementById('feedbackDocId').value = doc.id;
-            loadFeedbackChat(doc.id, projId);
+            const docSnap = snapshot.docs[0];         // берем первый документ
+            const fb = docSnap.data();
+            document.getElementById('feedbackDocId').value = docSnap.id;
+            loadFeedbackChat(docSnap.id, projId);
         } else {
             document.getElementById('feedbackDocId').value = '';
             showNewFeedbackForm();
@@ -1361,7 +1360,7 @@ window.openFeedbackModal = function(projId, projName) {
         showNewFeedbackForm();
     });
 
-    modal.classList.add('active);
+    modal.classList.add('active');
 };
 
 function showNewFeedbackForm() {
@@ -1370,6 +1369,7 @@ function showNewFeedbackForm() {
     document.getElementById('feedbackFormReply').classList.add('hidden');
     document.getElementById('feedbackSendBtn').classList.remove('hidden');
     document.getElementById('feedbackSendBtn').textContent = 'Отправить';
+    // Убедимся, что обработчик корректно установлен
     document.getElementById('feedbackSendBtn').onclick = window.sendUserFeedback;
     document.getElementById('feedbackText').value = '';
 }
