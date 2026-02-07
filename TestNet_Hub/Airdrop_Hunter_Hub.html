@@ -1273,39 +1273,96 @@ let adminFeedbacksUnsubscribe = null;
 
         
 
-        window.openFeedbackModal = function(projId, projName) {
+                window.openFeedbackModal = function(projId, projName) {
             if (!currentUser) {
                 showToast('Войдите, чтобы отправлять отзывы');
                 openLoginModal();
                 return;
             }
+            
             document.getElementById('feedbackProjectId').value = projId;
+            // projName might contain special chars, let's sanitize for innerHTML or use textContent
             document.getElementById('feedbackProjectName').textContent = 'Проект: ' + projName;
-            document.getElementById('feedbackText').value = '';
-            document.getElementById('feedbackModal').classList.add('active');
+            
+            const container = document.getElementById('feedbacksContainer'); // Reuse container or create specific div
+            const modal = document.getElementById('feedbackModal');
+            
+            // Query for existing feedback
+            const q = query(collection(db, "feedbacks"), where("userId", "==", currentUser.uid), where("projectId", "==", projId));
+            
+            getDocs(q).then(snapshot => {
+                if (!snapshot.empty) {
+                    const fb = snapshot.docs[0].data();
+                    fb.id = snapshot.docs[0].id;
+                    
+                    // Показываем существующий отзыв
+                    const replyHtml = fb.reply ? 
+                        `<div class="mt-3 bg-purple-900/20 border border-purple-500/30 rounded-lg p-3">
+                            <div class="text-xs text-purple-400 font-bold mb-1"><i class="fas fa-reply"></i> Ответ поддержки:</div>
+                            <div class="text-sm text-white">${fb.reply}</div>
+                         </div>` : '';
+
+                    document.querySelector('#feedbackModal h2').innerHTML = '<i class="fas fa-history text-yellow-400"></i> Ваш отзыв';
+                    
+                    document.getElementById('feedbackText').value = fb.message;
+                    document.getElementById('feedbackCategory').value = fb.category || 'other';
+                    
+                    // Блокируем повторную отправку, показываем кнопку удаления
+                    const footer = document.querySelector('#feedbackModal .modal-footer');
+                    footer.innerHTML = `
+                        <button onclick="deleteMyFeedback('${fb.id}')" class="bg-red-600/20 hover:bg-red-600/30 text-red-400 px-4 py-2 rounded-lg text-xs transition-colors">Удалить мой отзыв</button>
+                        <button onclick="closeFeedbackModal()" class="bg-slate-700 hover:bg-slate-600 px-4 py-2 rounded-lg text-sm transition-colors">Закрыть</button>
+                    `;
+                    
+                } else {
+                    // Новый отзыв
+                    document.querySelector('#feedbackModal h2').innerHTML = '<i class="fas fa-comment-dots text-purple-400"></i> Обратная связь';
+                    document.getElementById('feedbackText').value = '';
+                    document.getElementById('feedbackCategory').value = 'suggestion';
+                    document.querySelector('#feedbackModal .modal-footer').innerHTML = `
+                        <button onclick="closeFeedbackModal()" class="bg-slate-700 hover:bg-slate-600 px-4 py-2 rounded-lg text-sm transition-colors">Отмена</button>
+                        <button onclick="sendFeedback()" class="bg-blue-600 hover:bg-blue-500 px-6 py-2 rounded-lg text-sm font-bold transition-colors">Отправить</button>
+                    `;
+                }
+            });
+
+            modal.classList.add('active');
+        };
+
+        window.deleteMyFeedback = async function(id) {
+            if(!confirm('Удалить ваш отзыв?')) return;
+            try {
+                await deleteDoc(doc(db, "feedbacks", id));
+                showToast('Отзыв удален');
+                closeFeedbackModal();
+            } catch(e) { showToast('Ошибка'); }
         };
 
         window.closeFeedbackModal = function() {
             document.getElementById('feedbackModal').classList.remove('active');
         };
 
-        window.sendFeedback = async function() {
+                window.sendFeedback = async function() {
             const projId = document.getElementById('feedbackProjectId').value;
             const category = document.getElementById('feedbackCategory').value;
             const text = document.getElementById('feedbackText').value.trim();
             
             if (!text) { showToast('Введите текст сообщения'); return; }
 
+            const projName = document.getElementById('feedbackProjectName').textContent.replace('Проект: ', '');
+
             try {
                 await addDoc(collection(db, "feedbacks"), {
                     projectId: projId,
+                    projectName: projName, // Сохраняем имя проекта сразу
                     userId: currentUser.uid,
                     userName: currentUser.displayName || currentUser.email || 'Anonymous',
                     userPhoto: currentUser.photoURL || '',
                     category: category,
                     message: text,
                     createdAt: serverTimestamp(),
-                    read: false
+                    read: false,
+                    deleted: false
                 });
                 showToast('Спасибо! Ваш отзыв отправлен.');
                 closeFeedbackModal();
