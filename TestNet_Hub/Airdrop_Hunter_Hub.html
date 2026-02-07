@@ -1335,7 +1335,62 @@ let adminFeedbacksUnsubscribe = null;
                 closeFeedbackModal();
             } catch(e) { showToast('Ошибка'); }
         };
+// После функции window.deleteMyFeedback добавьте:
 
+window.sendFeedback = async function() {
+    const projId = document.getElementById('feedbackProjectId').value;
+    const category = document.getElementById('feedbackCategory').value;
+    const message = document.getElementById('feedbackText').value.trim();
+    
+    if (!message) {
+        showToast('Введите сообщение');
+        return;
+    }
+    
+    if (!currentUser) {
+        showToast('Войдите для отправки отзыва');
+        return;
+    }
+    
+    try {
+        await addDoc(collection(db, "feedbacks"), {
+            userId: currentUser.uid,
+            userName: currentUser.displayName || currentUser.email,
+            userPhoto: currentUser.photoURL || '',
+            projectId: projId,
+            projectName: document.getElementById('feedbackProjectName').textContent.replace('Проект: ', ''),
+            category: category,
+            message: message,
+            createdAt: serverTimestamp(),
+            read: false,
+            deleted: false
+        });
+        
+        showToast('Отзыв отправлен! Спасибо 💙');
+        closeFeedbackModal();
+    } catch (e) {
+        console.error('Error sending feedback:', e);
+        showToast('Ошибка отправки');
+    }
+};
+
+window.closeFeedbackModal = function() {
+    document.getElementById('feedbackModal').classList.remove('active');
+};
+
+window.openFeedbackListModal = function() {
+    if (!isAdminMode) {
+        showToast('Доступ запрещён');
+        return;
+    }
+    
+    document.getElementById('feedbackListModal').classList.add('active');
+    renderFeedbackList();
+};
+
+window.closeFeedbackListModal = function() {
+    document.getElementById('feedbackListModal').classList.remove('active');
+};
                 window.renderFeedbackList = function() {
             const container = document.getElementById('feedbacksContainer');
             if (adminFeedbacks.length === 0) {
