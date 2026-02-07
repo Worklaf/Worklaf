@@ -1,333 +1,295 @@
 <!DOCTYPE html>
 <html lang="ru">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>TestNet Hub | Отзывы</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <style>
-        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
-        body { font-family: 'Inter', sans-serif; background: #0b0f19; color: #f1f5f9; min-height: 100vh; }
-        .glass { background: rgba(30, 37, 56, 0.6); backdrop-filter: blur(12px); border: 1px solid rgba(255,255,255,0.08); }
-        .feedback-card { transition: all 0.2s; border-left: 3px solid transparent; }
-        .feedback-card:hover { background: rgba(59, 130, 246, 0.1); }
-        .feedback-card.unread { border-left-color: #3b82f6; background: rgba(59, 130, 246, 0.05); }
-        .badge-bug { background: rgba(239, 68, 68, 0.2); color: #f87171; }
-        .badge-suggestion { background: rgba(59, 130, 246, 0.2); color: #60a5fa; }
-        .badge-question { background: rgba(16, 185, 129, 0.2); color: #34d399; }
-        ::-webkit-scrollbar { width: 6px; }
-        ::-webkit-scrollbar-thumb { background: #334155; border-radius: 3px; }
-    </style>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>TestNet Hub | Отзывы</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+    body { font-family:'Inter',sans-serif; background:#0b0f19; color:#f1f5f9; }
+    .glass { background:rgba(30,37,56,0.6); backdrop-filter:blur(12px); border:1px solid rgba(255,255,255,0.08); }
+    .card { transition:all 0.2s; border-left:3px solid transparent; }
+    .card:hover { background:rgba(59,130,246,0.1); }
+    .card.unread { border-left-color:#3b82f6; background:rgba(59,130,246,0.05); }
+    .badge-bug { background:rgba(239,68,68,0.2); color:#f87171; }
+    .badge-suggestion { background:rgba(59,130,246,0.2); color:#60a5fa; }
+    .badge-question { background:rgba(16,185,129,0.2); color:#34d399; }
+    ::-webkit-scrollbar { width:6px; }
+    ::-webkit-scrollbar-thumb { background:#334155; border-radius:3px; }
+  </style>
 </head>
 <body class="antialiased">
-    <div class="max-w-5xl mx-auto px-4 py-8">
-        <!-- Header -->
-        <header class="mb-8 flex items-center justify-between">
-            <div class="flex items-center gap-4">
-                <a href="Airdrop_Hunter_Hub.html" class="glass px-4 py-2 rounded-lg text-blue-400 hover:text-white flex items-center gap-2 transition-colors">
-                    <i class="fas fa-arrow-left"></i> Назад
-                </a>
-                <div>
-                    <h1 class="text-2xl font-bold flex items-center gap-2">
-                        <i class="fas fa-comment-dots text-purple-400"></i>
-                        Отзывы и предложения
-                    </h1>
-                    <p class="text-sm text-slate-400" id="subtitle">Мои обращения</p>
-                </div>
-            </div>
-            <!-- Admin Panel Link -->
-            <div id="adminControls" class="hidden">
-                <button onclick="logout()" class="text-slate-400 hover:text-white transition-colors text-sm">Выйти</button>
-            </div>
-            <div id="userInfo" class="hidden flex items-center gap-2">
-                <img id="userAvatar" src="" class="w-8 h-8 rounded-full">
-                <span id="userName" class="text-sm font-bold"></span>
-            </div>
-        </header>
-
-        <!-- New Feedback Form (Only shown if viewing a specific project or creating) -->
-        <div id="composeSection" class="glass rounded-2xl p-6 mb-8 hidden">
-            <h3 class="font-bold text-lg mb-4 flex items-center gap-2">
-                <i class="fas fa-pen text-blue-400"></i>
-                <span id="composeTitle">Написать отзыв</span>
-            </h3>
-            <div class="space-y-4">
-                <div class="bg-slate-800/50 p-3 rounded-lg border border-slate-700 flex items-center gap-3">
-                    <div class="w-10 h-10 bg-slate-700 rounded flex items-center justify-center font-bold" id="composeIcon">!</div>
-                    <div>
-                        <div class="text-sm text-slate-400">Проект</div>
-                        <div class="font-bold" id="composeProjectName">Загрузка...</div>
-                    </div>
-                    <input type="hidden" id="composeProjectId">
-                </div>
-
-                <div>
-                    <label class="block text-xs text-slate-400 mb-2">Тема обращения</label>
-                    <select id="feedbackCategory" class="w-full bg-slate-800 border border-slate-700 rounded-lg px-4 py-2 text-sm outline-none">
-                        <option value="suggestion">💡 Предложение по улучшению</option>
-                        <option value="bug">🐛 Ошибка ссылок / гайда</option>
-                        <option value="question">❓ Вопрос</option>
-                        <option value="other">💬 Другое</option>
-                    </select>
-                </div>
-
-                <div>
-                    <label class="block text-xs text-slate-400 mb-2">Сообщение</label>
-                    <textarea id="feedbackMessage" rows="4" class="w-full bg-slate-800 border border-slate-700 rounded-lg px-4 py-2 text-sm outline-none resize-none" placeholder="Ваше сообщение..."></textarea>
-                </div>
-
-                <div class="flex justify-end gap-3">
-                    <button onclick="cancelCompose()" class="bg-slate-700 hover:bg-slate-600 px-4 py-2 rounded-lg text-sm transition-colors">Отмена</button>
-                    <button onclick="submitFeedback()" class="bg-blue-600 hover:bg-blue-500 px-6 py-2 rounded-lg text-sm font-bold transition-colors">Отправить</button>
-                </div>
-            </div>
-        </div>
-
-        <!-- Tabs -->
-        <div id="tabs" class="flex gap-2 mb-6 border-b border-slate-700 pb-2 hidden">
-            <button onclick="switchTab('list')" class="tab-btn px-4 py-2 rounded-lg text-sm font-medium text-slate-400 hover:text-white transition-colors active-tab bg-slate-800 text-white" data-tab="list">Список обращений</button>
-            <!-- Admin only -->
-            <button id="adminTabBtn" onclick="switchTab('admin')" class="hidden px-4 py-2 rounded-lg text-sm font-medium text-slate-400 hover:text-white transition-colors bg-slate-800" data-tab="admin">Панель админа</button>
-        </div>
-
-        <!-- Content Area -->
-        <div id="mainContent">
-            <!-- Empty State -->
-            <div id="emptyState" class="hidden text-center py-20 glass rounded-2xl">
-                <div class="text-6xl mb-4">💬</div>
-                <h2 class="text-xl font-bold mb-2">Нет обращений</h2>
-                <p class="text-slate-400 mb-4">У вас пока нет отзывов</p>
-            </div>
-
-            <!-- List of Feedbacks -->
-            <div id="feedbackList" class="space-y-4"></div>
-        </div>
+<div class="max-w-5xl mx-auto px-4 py-8">
+  <header class="mb-8 flex items-center justify-between">
+    <div class="flex items-center gap-4">
+      <a href="Airdrop_Hunter_Hub.html" class="glass px-4 py-2 rounded-lg text-blue-400 hover:text-white flex items-center gap-2 transition-colors">
+        <i class="fas fa-arrow-left"></i> Назад
+      </a>
+      <div>
+        <h1 class="text-2xl font-bold flex items-center gap-2">
+          <i class="fas fa-comment-dots text-purple-400"></i> Отзывы и предложения
+        </h1>
+        <p class="text-sm text-slate-400" id="subtitle">Мои обращения</p>
+      </div>
     </div>
-
-    <div id="toast" class="fixed bottom-4 right-4 bg-slate-800 border border-slate-700 text-white px-6 py-3 rounded-xl shadow-2xl opacity-0 transform translate-y-20 transition-all duration-300 z-50 flex items-center gap-3">
-        <i class="fas fa-check-circle text-emerald-400"></i>
-        <span id="toastMsg">Готово</span>
+    <div id="userInfo" class="hidden flex items-center gap-2">
+      <img id="userAvatar" src="" class="w-8 h-8 rounded-full">
+      <span id="userName" class="text-sm font-bold"></span>
     </div>
+  </header>
 
-    <script type="module">
-        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
-        import { getAuth, signInWithPopup, GoogleAuthProvider, signInAnonymously, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
-        import { getFirestore, collection, addDoc, query, where, orderBy, onSnapshot, doc, updateDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+  <div id="composeSection" class="glass rounded-2xl p-6 mb-8 hidden">
+    <h3 class="font-bold text-lg mb-4 flex items-center gap-2"><i class="fas fa-pen text-blue-400"></i><span id="composeTitle">Написать отзыв</span></h3>
+    <div class="space-y-4">
+      <div class="bg-slate-800/50 p-3 rounded-lg border border-slate-700 flex items-center gap-3">
+        <div class="w-10 h-10 bg-slate-700 rounded flex items-center justify-center font-bold" id="composeIcon">!</div>
+        <div>
+          <div class="text-sm text-slate-400">Проект</div>
+          <div class="font-bold" id="composeProjectName">Загрузка...</div>
+        </div>
+        <input type="hidden" id="composeProjectId">
+      </div>
 
-        const firebaseConfig = {
-            apiKey: "AIzaSyBdXGYg2t8DJBrQHCC80-pFerZU9PWmSCk",
-            authDomain: "testnet-hub.firebaseapp.com",
-            projectId: "testnet-hub",
-            storageBucket: "testnet-hub.firebasestorage.app",
-            messagingSenderId: "497813176653",
-            appId: "1:497813176653:web:089188fdd1555d76cd7704"
-        };
+      <div>
+        <label class="block text-xs text-slate-400 mb-2">Тема обращения</label>
+        <select id="feedbackCategory" class="w-full bg-slate-800 border border-slate-700 rounded-lg px-4 py-2 text-sm outline-none">
+          <option value="suggestion">💡 Предложение по улучшению</option>
+          <option value="bug">🐛 Ошибка ссылок / гайда</option>
+          <option value="question">❓ Вопрос</option>
+          <option value="other">💬 Другое</option>
+        </select>
+      </div>
 
-        const app = initializeApp(firebaseConfig);
-        const auth = getAuth(app);
-        const db = getFirestore(app);
-        const ADMIN_ID = "SAkz4mdW9reDaIsvqigCNZhEKJR2";
+      <div>
+        <label class="block text-xs text-slate-400 mb-2">Сообщение</label>
+        <textarea id="feedbackMessage" rows="4" class="w-full bg-slate-800 border border-slate-700 rounded-lg px-4 py-2 text-sm outline-none resize-none" placeholder="Ваше сообщение..."></textarea>
+      </div>
 
-        let currentUser = null;
-        let feedbacks = [];
-        let activeTab = 'list';
+      <div class="flex justify-end gap-3">
+        <button onclick="cancelCompose()" class="bg-slate-700 hover:bg-slate-600 px-4 py-2 rounded-lg text-sm transition-colors">Отмена</button>
+        <button onclick="submitFeedback()" class="bg-blue-600 hover:bg-blue-500 px-6 py-2 rounded-lg text-sm font-bold transition-colors">Отправить</button>
+      </div>
+    </div>
+  </div>
 
-        const params = new URLSearchParams(window.location.search);
-        const prefillProject = params.get('project'); // Get project ID from URL
-        const prefillName = params.get('name');
+  <div id="tabs" class="flex gap-2 mb-6 border-b border-slate-700 pb-2 hidden">
+    <button onclick="switchTab('list')" class="tab-btn px-4 py-2 rounded-lg text-sm font-medium text-slate-400 hover:text-white transition-colors active-tab bg-slate-800 text-white" data-tab="list">Список обращений</button>
+    <button id="adminTabBtn" onclick="switchTab('admin')" class="hidden px-4 py-2 rounded-lg text-sm font-medium text-slate-400 hover:text-white transition-colors bg-slate-800" data-tab="admin">Панель админа</button>
+  </div>
 
-        onAuthStateChanged(auth, async (user) => {
-            if (!user) {
-                // Try anonymous login if no user, to allow basic viewing or force login
-                await signInAnonymously(auth); 
-            } else {
-                currentUser = user;
-                document.getElementById('userInfo').classList.remove('hidden');
-                document.getElementById('userAvatar').src = user.photoURL || 'https://via.placeholder.com/32';
-                document.getElementById('userName').textContent = user.isAnonymous ? 'Гость' : (user.displayName?.split(' ')[0] || 'User');
+  <div id="mainContent">
+    <div id="emptyState" class="hidden text-center py-20 glass rounded-2xl">
+      <div class="text-6xl mb-4">💬</div>
+      <h2 class="text-xl font-bold mb-2">Нет обращений</h2>
+      <p class="text-slate-400 mb-4">У вас пока нет отзывов</p>
+    </div>
+    <div id="feedbackList" class="space-y-4"></div>
+  </div>
+</div>
 
-                if (user.uid === ADMIN_ID) {
-                    document.getElementById('adminTabBtn').classList.remove('hidden');
-                    document.getElementById('tabs').classList.remove('hidden');
-                    switchTab('admin');
-                } else {
-                    document.getElementById('tabs').classList.remove('hidden');
-                    switchTab('list');
-                }
-            }
-            
-            if (prefillProject) showComposeForm();
-            else loadFeedbacks();
-        });
+<div id="toast" class="fixed bottom-4 right-4 bg-slate-800 border border-slate-700 text-white px-6 py-3 rounded-xl shadow-2xl opacity-0 transform translate-y-20 transition-all duration-300 z-50 flex items-center gap-3">
+  <i class="fas fa-check-circle text-emerald-400"></i>
+  <span id="toastMsg">Готово</span>
+</div>
 
-        async function loadFeedbacks() {
-            const q = query(collection(db, "feedbacks"), orderBy("createdAt", "desc"));
-            onSnapshot(q, snapshot => {
-                feedbacks = [];
-                snapshot.forEach(s => feedbacks.push({ id: s.id, ...s.data() }));
-                renderFeedbacks();
-            });
-        }
+<script type="module">
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+  import { getAuth, signInWithPopup, GoogleAuthProvider, signInAnonymously, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
+  import { getFirestore, collection, addDoc, query, where, orderBy, onSnapshot, doc, updateDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
-        function renderFeedbacks() {
-            const list = document.getElementById('feedbackList');
-            const listContainer = document.getElementById('emptyState');
-            
-            // Filter logic
-            let displayFeedbacks = feedbacks;
-            if (currentUser.uid !== ADMIN_ID) {
-                displayFeedbacks = feedbacks.filter(f => f.userId === currentUser.uid);
-            }
+  const firebaseConfig = {
+    apiKey: "AIzaSyBdXGYg2t8DJBrQHCC80-pFerZU9PWmSCk",
+    authDomain: "testnet-hub.firebaseapp.com",
+    projectId: "testnet-hub",
+    storageBucket: "testnet-hub.firebasestorage.app",
+    messagingSenderId: "497813176653",
+    appId: "1:497813176653:web:089188fdd1555d76cd7704"
+  };
 
-            if (displayFeedbacks.length === 0) {
-                list.innerHTML = ''; listContainer.classList.remove('hidden'); return;
-            }
-            listContainer.classList.add('hidden');
+  const app = initializeApp(firebaseConfig);
+  const auth = getAuth(app);
+  const db = getFirestore(app);
+  const ADMIN_ID = "SAkz4mdW9reDaIsvqigCNZhEKJR2";
 
-            if (activeTab === 'admin' && currentUser.uid === ADMIN_ID) {
-                // Admin View: All feedbacks
-                list.innerHTML = displayFeedbacks.map(f => `
-                    <div class="glass rounded-xl p-4 feedback-card ${!f.read ? 'unread' : ''} relative">
-                        <div class="flex justify-between items-start mb-2">
-                            <div class="flex items-center gap-2">
-                                <span class="text-xs px-2 py-0.5 rounded ${f.category === 'bug' ? 'badge-bug' : f.category === 'question' ? 'badge-question' : 'badge-suggestion'}">
-                                    ${getCategoryName(f.category)}
-                                </span>
-                                <span class="text-xs text-slate-500">${f.createdAt?.toDate().toLocaleString() || 'Just now'}</span>
-                            </div>
-                            <div class="flex gap-2">
-                                ${!f.read ? `<button onclick="markRead('${f.id}')" class="text-xs text-blue-400 hover:underline">Отметить прочитанным</button>` : ''}
-                            </div>
-                        </div>
-                        <div class="mb-2">
-                            <span class="text-xs text-slate-400">Проект: </span>
-                            <span class="font-bold text-white">${f.projectName || 'Общее'}</span>
-                            <span class="text-xs text-slate-500 ml-2">(Пользователь: ${f.userName})</span>
-                        </div>
-                        <p class="text-slate-300 text-sm mb-3 bg-slate-800/50 p-3 rounded">${f.message}</p>
-                        
-                        <!-- Admin Reply Section -->
-                        <div class="border-t border-slate-700/50 pt-3">
-                            <label class="text-xs text-slate-400 block mb-1">Ответ администратора:</label>
-                            <textarea id="reply-${f.id}" class="w-full bg-slate-900 border border-slate-700 rounded p-2 text-sm text-white mb-2" rows="2" placeholder="Введите ответ...">${f.reply || ''}</textarea>
-                            <button onclick="sendReply('${f.id}')" class="bg-purple-600 hover:bg-purple-500 text-white px-3 py-1 rounded text-xs font-bold transition-colors">
-                                ${f.reply ? 'Обновить ответ' : 'Отправить ответ'}
-                            </button>
-                            ${f.replyAt ? `<span class="text-xs text-slate-500 ml-2">Отправлено ${f.replyAt.toDate().toLocaleString()}</span>` : ''}
-                        </div>
-                    </div>
-                `).join('');
-            } else {
-                // User View: My feedbacks
-                list.innerHTML = displayFeedbacks.map(f => `
-                    <div class="glass rounded-xl p-4 feedback-card">
-                        <div class="flex justify-between items-start mb-2">
-                            <div class="flex items-center gap-2">
-                                <span class="text-xs px-2 py-0.5 rounded ${f.category === 'bug' ? 'badge-bug' : f.category === 'question' ? 'badge-question' : 'badge-suggestion'}">
-                                    ${getCategoryName(f.category)}
-                                </span>
-                                <span class="text-xs text-slate-500">${f.createdAt?.toDate().toLocaleString() || ''}</span>
-                            </div>
-                            <div class="flex items-center gap-2">
-                                <span class="text-xs bg-blue-900/30 text-blue-300 px-2 py-1 rounded">
-                                    ${f.read ? '<i class="fas fa-check"></i> Прочитано' : 'Новое'}
-                                </span>
-                            </div>
-                        </div>
-                        <h4 class="font-bold text-white mb-1">${f.projectName || 'Общее'}</h4>
-                        <p class="text-slate-300 text-sm mb-3">${f.message}</p>
-                        
-                        ${f.reply ? `
-                        <div class="mt-3 bg-purple-900/20 border border-purple-500/30 rounded-lg p-3">
-                            <div class="flex items-center gap-2 mb-1">
-                                <i class="fas fa-reply text-purple-400"></i>
-                                <span class="text-xs font-bold text-purple-300">Ответ поддержки</span>
-                                <span class="text-xs text-slate-500 ml-auto">${f.replyAt?.toDate().toLocaleString() || ''}</span>
-                            </div>
-                            <p class="text-sm text-slate-200">${f.reply}</p>
-                        </div>` : ''}
-                    </div>
-                `).join('');
-            }
-        }
+  let currentUser = null;
+  let feedbacks = [];
+  let activeTab = 'list';
 
-        function getCategoryName(c) {
-            if (c === 'bug') return '🐛 Ошибка';
-            if (c === 'question') return '❓ Вопрос';
-            return '💡 Идея';
-        }
+  const params = new URLSearchParams(window.location.search);
+  const prefillProject = params.get('project');
+  const prefillName = params.get('name');
 
-        function showComposeForm() {
-            document.getElementById('composeSection').classList.remove('hidden');
-            document.getElementById('tabs').classList.add('hidden');
-            document.getElementById('mainContent').classList.add('hidden');
-            document.getElementById('composeProjectName').textContent = prefillName || prefillProject;
-            document.getElementById('composeProjectId').value = prefillProject || '';
-        }
+  onAuthStateChanged(auth, async (user) => {
+    if (!user) { await signInAnonymously(auth); return; }
+    currentUser = user;
+    document.getElementById('userInfo').classList.remove('hidden');
+    document.getElementById('userAvatar').src = user.photoURL || 'https://ui-avatars.com/api/?name=' + (user.displayName || 'User');
+    document.getElementById('userName').textContent = user.displayName || (user.isAnonymous ? 'Гость' : user.email || 'User');
 
-        window.cancelCompose = () => {
-            document.getElementById('composeSection').classList.add('hidden');
-            document.getElementById('tabs').classList.remove('hidden');
-            document.getElementById('mainContent').classList.remove('hidden');
-            // Clear params
-            window.history.replaceState({}, document.title, window.location.pathname);
-        };
+    if (user.uid === ADMIN_ID) {
+      document.getElementById('adminTabBtn').classList.remove('hidden');
+      document.getElementById('tabs').classList.remove('hidden');
+      switchTab('admin');
+    } else {
+      document.getElementById('tabs').classList.remove('hidden');
+      switchTab('list');
+    }
 
-        window.submitFeedback = async () => {
-            if (!currentUser) return alert('Ошибка входа');
-            const msg = document.getElementById('feedbackMessage').value.trim();
-            const cat = document.getElementById('feedbackCategory').value;
-            if (!msg) return showToast('Введите сообщение');
+    if (prefillProject) showComposeForm();
+    loadFeedbacks();
+  });
 
-            try {
-                await addDoc(collection(db, "feedbacks"), {
-                    userId: currentUser.uid,
-                    userName: currentUser.displayName || 'Аноним',
-                    projectId: document.getElementById('composeProjectId').value,
-                    projectName: document.getElementById('composeProjectName').textContent,
-                    category: cat,
-                    message: msg,
-                    read: false,
-                    reply: null,
-                    createdAt: serverTimestamp()
-                });
-                showToast('Отзыв отправлен!');
-                cancelCompose();
-            } catch (e) { console.error(e); alert('Ошибка отправки'); }
-        };
+  async function loadFeedbacks() {
+    const q = query(collection(db, "feedbacks"), orderBy("createdAt", "desc"));
+    onSnapshot(q, snapshot => {
+      feedbacks = [];
+      snapshot.forEach(s => feedbacks.push({ id: s.id, ...s.data() }));
+      renderFeedbacks();
+    });
+  }
 
-        window.sendReply = async (id) => {
-            const replyText = document.getElementById('reply-' + id).value.trim();
-            if (!replyText) return;
-            
-            const ref = doc(db, "feedbacks", id);
-            await updateDoc(ref, {
-                reply: replyText,
-                replyAt: serverTimestamp(),
-                read: true // Mark as read when replied
-            });
-            showToast('Ответ отправлен');
-        };
+  function renderFeedbacks() {
+    const list = document.getElementById('feedbackList');
+    const empty = document.getElementById('emptyState');
+    let display = feedbacks;
+    if (currentUser && currentUser.uid !== ADMIN_ID) {
+      display = feedbacks.filter(f => f.userId === currentUser.uid);
+    }
 
-        window.markRead = async (id) => {
-            await updateDoc(doc(db, "feedbacks", id), { read: true });
-        };
+    if (!display || display.length === 0) {
+      list.innerHTML = '';
+      empty.classList.remove('hidden');
+      return;
+    }
+    empty.classList.add('hidden');
 
-        window.switchTab = (tab) => {
-            activeTab = tab;
-            document.querySelectorAll('.tab-btn').forEach(b => {
-                if (b.dataset.tab === tab) { b.classList.add('bg-slate-800', 'text-white'); b.classList.remove('text-slate-400'); }
-                else { b.classList.remove('bg-slate-800', 'text-white'); b.classList.add('text-slate-400'); }
-            });
-            renderFeedbacks();
-        };
+    if (activeTab === 'admin' && currentUser.uid === ADMIN_ID) {
+      list.innerHTML = display.map(f => `
+        <div class="glass rounded-xl p-4 card ${!f.read ? 'unread' : ''}">
+          <div class="flex justify-between items-start mb-2">
+            <div class="flex items-center gap-2">
+              <span class="text-xs px-2 py-0.5 rounded ${badgeClass(f.category)}">${catName(f.category)}</span>
+              <span class="text-xs text-slate-500">${f.createdAt?.toDate().toLocaleString() || ''}</span>
+            </div>
+            ${!f.read ? `<button onclick="markRead('${f.id}')" class="text-xs text-blue-400 hover:underline">Прочитано</button>` : ''}
+          </div>
+          <div class="mb-2">
+            <span class="text-xs text-slate-400">Проект: </span>
+            <span class="font-bold text-white">${f.projectName || 'Общее'}</span>
+            <span class="text-xs text-slate-500 ml-2">(Пользователь: ${f.userName || '—'})</span>
+          </div>
+          <p class="text-slate-300 text-sm mb-3 bg-slate-800/50 p-3 rounded">${f.message}</p>
+          <div class="border-t border-slate-700/50 pt-3">
+            <label class="text-xs text-slate-400 block mb-1">Ответ администратора:</label>
+            <textarea id="reply-${f.id}" class="w-full bg-slate-900 border border-slate-700 rounded p-2 text-sm text-white mb-2" rows="2" placeholder="Введите ответ...">${f.reply || ''}</textarea>
+            <button onclick="sendReply('${f.id}')" class="bg-purple-600 hover:bg-purple-500 text-white px-3 py-1 rounded text-xs font-bold transition-colors">
+              ${f.reply ? 'Обновить ответ' : 'Отправить ответ'}
+            </button>
+            ${f.replyAt ? `<span class="text-xs text-slate-500 ml-2">Отправлено ${f.replyAt.toDate().toLocaleString()}</span>` : ''}
+          </div>
+        </div>
+      `).join('');
+    } else {
+      list.innerHTML = display.map(f => `
+        <div class="glass rounded-xl p-4 card ${!f.read ? 'unread' : ''}">
+          <div class="flex justify-between items-start mb-2">
+            <div class="flex items-center gap-2">
+              <span class="text-xs px-2 py-0.5 rounded ${badgeClass(f.category)}">${catName(f.category)}</span>
+              <span class="text-xs text-slate-500">${f.createdAt?.toDate().toLocaleString() || ''}</span>
+            </div>
+            <span class="text-xs bg-blue-900/30 text-blue-300 px-2 py-1 rounded">${f.read ? 'Прочитано' : 'Новое'}</span>
+          </div>
+          <h4 class="font-bold text-white mb-1">${f.projectName || 'Общее'}</h4>
+          <p class="text-slate-300 text-sm mb-3">${f.message}</p>
+          ${f.reply ? `
+          <div class="mt-3 bg-purple-900/20 border border-purple-500/30 rounded-lg p-3">
+            <div class="flex items-center gap-2 mb-1">
+              <i class="fas fa-reply text-purple-400"></i>
+              <span class="text-xs font-bold text-purple-300">Ответ поддержки</span>
+              <span class="text-xs text-slate-500 ml-auto">${f.replyAt?.toDate().toLocaleString() || ''}</span>
+            </div>
+            <p class="text-sm text-slate-200">${f.reply}</p>
+          </div>` : ''}
+        </div>
+      `).join('');
+    }
+  }
 
-        function showToast(msg) {
-            const t = document.getElementById('toast'); document.getElementById('toastMsg').textContent = msg;
-            t.classList.remove('opacity-0', 'translate-y-20');
-            setTimeout(() => t.classList.add('opacity-0', 'translate-y-20'), 3000);
-        }
-    </script>
+  function badgeClass(c) {
+    if (c === 'bug') return 'badge-bug';
+    if (c === 'question') return 'badge-question';
+    return 'badge-suggestion';
+  }
+  function catName(c) {
+    if (c === 'bug') return '🐛 Ошибка';
+    if (c === 'question') return '❓ Вопрос';
+    return '💡 Идея';
+  }
+
+  function showComposeForm() {
+    document.getElementById('composeSection').classList.remove('hidden');
+    document.getElementById('tabs').classList.add('hidden');
+    document.getElementById('mainContent').classList.add('hidden');
+    document.getElementById('composeProjectName').textContent = prefillName || prefillProject || 'Общее обращение';
+    document.getElementById('composeProjectId').value = prefillProject || '';
+  }
+  window.cancelCompose = () => {
+    document.getElementById('composeSection').classList.add('hidden');
+    document.getElementById('tabs').classList.remove('hidden');
+    document.getElementById('mainContent').classList.remove('hidden');
+    window.history.replaceState({}, document.title, window.location.pathname);
+  };
+
+  window.submitFeedback = async () => {
+    if (!currentUser) return toast('Ошибка входа');
+    const msg = document.getElementById('feedbackMessage').value.trim();
+    const cat = document.getElementById('feedbackCategory').value;
+    if (!msg) return toast('Введите сообщение');
+    try {
+      await addDoc(collection(db, "feedbacks"), {
+        userId: currentUser.uid,
+        userName: currentUser.displayName || 'Аноним',
+        projectId: document.getElementById('composeProjectId').value,
+        projectName: document.getElementById('composeProjectName').textContent,
+        category: cat,
+        message: msg,
+        read: false,
+        reply: null,
+        createdAt: serverTimestamp()
+      });
+      toast('Отзыв отправлен!');
+      cancelCompose();
+    } catch (e) { console.error(e); toast('Ошибка отправки'); }
+  };
+
+  window.sendReply = async (id) => {
+    const replyText = document.getElementById('reply-' + id).value.trim();
+    if (!replyText) return;
+    const ref = doc(db, "feedbacks", id);
+    await updateDoc(ref, { reply: replyText, replyAt: serverTimestamp(), read: true });
+    toast('Ответ отправлен');
+  };
+
+  window.markRead = async (id) => {
+    await updateDoc(doc(db, "feedbacks", id), { read: true });
+  };
+
+  window.switchTab = (tab) => {
+    activeTab = tab;
+    document.querySelectorAll('.tab-btn').forEach(b => {
+      if (b.dataset.tab === tab) { b.classList.add('bg-slate-800','text-white'); b.classList.remove('text-slate-400'); }
+      else { b.classList.remove('bg-slate-800','text-white'); b.classList.add('text-slate-400'); }
+    });
+    renderFeedbacks();
+  };
+
+  function toast(msg) {
+    const t = document.getElementById('toast'); document.getElementById('toastMsg').textContent = msg;
+    t.classList.remove('opacity-0','translate-y-20');
+    setTimeout(() => t.classList.add('opacity-0','translate-y-20'), 3000);
+  }
+</script>
 </body>
 </html>
