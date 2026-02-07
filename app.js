@@ -218,9 +218,9 @@ function processData() {
     }
     
     // Убеждаемся, что заголовок наверху после всех сортировок
-    const headerRow = data.find(r => r[0] === "Партия");
+    const headerRow = data.find(r => r[0] === "SUROWIEC");
     if (headerRow) {
-        data = data.filter(r => r[0] !== "Партия");
+        data = data.filter(r => r[0] !== "SUROWIEC");
         // data.unshift(headerRow); // Unshift не нужен, если ранее index 0 был заголовок
         // Поскольку мы добавили заголовок заранее, просто убедимся
     }
