@@ -999,42 +999,48 @@
         </div>
     </div>
 
-    <!-- Feedback Modal (User) -->
+        <!-- Feedback Modal (User) -->
     <div id="feedbackModal" class="modal">
-        <div class="modal-content modal-sm p-6 relative">
-            <div class="flex justify-between items-center mb-4">
-                <h2 class="text-xl font-bold flex items-center gap-2">
-                    <i class="fas fa-comment-dots text-purple-400"></i>
-                    Обратная связь
-                </h2>
-                <button onclick="closeFeedbackModal()" class="text-slate-400 hover:text-white">
-                    <i class="fas fa-times text-xl"></i>
-                </button>
+        <div class="modal-content modal-sm p-0 relative overflow-hidden">
+            <div class="modal-header">
+                <div class="flex justify-between items-center w-full">
+                    <h2 class="text-xl font-bold flex items-center gap-2">
+                        <i class="fas fa-comment-dots text-purple-400"></i>
+                        Обратная связь
+                    </h2>
+                    <button onclick="closeFeedbackModal()" class="text-slate-400 hover:text-white">
+                        <i class="fas fa-times text-xl"></i>
+                    </button>
+                </div>
             </div>
-            <div class="space-y-4">
-                <div>
-                    <input type="hidden" id="feedbackProjectId">
-                    <p id="feedbackProjectName" class="text-sm text-slate-400 mb-2">Проект: ...</p>
-                </div>
-                
-                <div>
-                    <label class="block text-sm font-medium text-slate-300 mb-2">Тема обращения</label>
-                    <select id="feedbackCategory" class="w-full bg-slate-800 border border-slate-700 rounded-lg px-4 py-2 text-sm focus:border-blue-500 outline-none text-slate-200">
-                        <option value="suggestion">💡 Предложение по улучшению</option>
-                        <option value="bug">🐛 Сообщить об ошибке (нерабочая ссылка)</option>
-                        <option value="question">❓ Вопрос по выполнению</option>
-                        <option value="other">💬 Другое</option>
-                    </select>
-                </div>
+            <div class="modal-body">
+                <div class="space-y-4">
+                    <div>
+                        <input type="hidden" id="feedbackProjectId">
+                        <p id="feedbackProjectName" class="text-sm text-slate-400 mb-2">Проект: ...</p>
+                    </div>
+                    
+                    <div>
+                        <label class="block text-sm font-medium text-slate-300 mb-2">Тема обращения</label>
+                        <select id="feedbackCategory" class="w-full bg-slate-800 border border-slate-700 rounded-lg px-4 py-2 text-sm focus:border-blue-500 outline-none text-slate-200">
+                            <option value="suggestion">💡 Предложение по улучшению</option>
+                            <option value="bug">🐛 Сообщить об ошибке (нерабочая ссылка)</option>
+                            <option value="question">❓ Вопрос по выполнению</option>
+                            <option value="other">💬 Другое</option>
+                        </select>
+                    </div>
 
-                <div>
-                    <label class="block text-sm font-medium text-slate-300 mb-2">Ваше сообщение</label>
-                    <textarea id="feedbackText" rows="4" class="w-full bg-slate-800 border border-slate-700 rounded-lg px-4 py-2 text-sm focus:border-blue-500 outline-none text-slate-200" placeholder="Опишите суть обращения..."></textarea>
+                    <div>
+                        <label class="block text-sm font-medium text-slate-300 mb-2">Ваше сообщение</label>
+                        <textarea id="feedbackText" rows="4" class="w-full bg-slate-800 border border-slate-700 rounded-lg px-4 py-2 text-sm focus:border-blue-500 outline-none text-slate-200" placeholder="Опишите суть обращения..."></textarea>
+                    </div>
                 </div>
-
-                <div class="flex gap-3 pt-2">
-                    <button onclick="closeFeedbackModal()" class="flex-1 bg-slate-700 hover:bg-slate-600 py-2 rounded-lg text-sm transition-colors">Отмена</button>
-                    <button onclick="sendFeedback()" class="flex-1 bg-blue-600 hover:bg-blue-500 py-2 rounded-lg text-sm font-bold transition-colors">Отправить</button>
+            </div>
+            <!-- ЭТОТ DIV КРИТИЧЕСКИ ВАЖЕН – БЕЗ НЕГО НЕ РАБОТАЮТ КНОПКИ -->
+            <div class="modal-footer bg-[#1e2538] border-t border-slate-700 p-4 shrink-0">
+                <div class="flex gap-3 w-full justify-center">
+                    <button onclick="closeFeedbackModal()" class="flex-1 bg-slate-700 hover:bg-slate-600 py-2.5 rounded-lg text-sm transition-colors">Отмена</button>
+                    <button onclick="sendFeedback()" class="flex-1 bg-blue-600 hover:bg-blue-500 py-2.5 rounded-lg text-sm font-bold transition-colors">Отправить</button>
                 </div>
             </div>
         </div>
@@ -1337,42 +1343,7 @@ let adminFeedbacksUnsubscribe = null;
         };
 // После функции window.deleteMyFeedback добавьте:
 
-window.sendFeedback = async function() {
-    const projId = document.getElementById('feedbackProjectId').value;
-    const category = document.getElementById('feedbackCategory').value;
-    const message = document.getElementById('feedbackText').value.trim();
-    
-    if (!message) {
-        showToast('Введите сообщение');
-        return;
-    }
-    
-    if (!currentUser) {
-        showToast('Войдите для отправки отзыва');
-        return;
-    }
-    
-    try {
-        await addDoc(collection(db, "feedbacks"), {
-            userId: currentUser.uid,
-            userName: currentUser.displayName || currentUser.email,
-            userPhoto: currentUser.photoURL || '',
-            projectId: projId,
-            projectName: document.getElementById('feedbackProjectName').textContent.replace('Проект: ', ''),
-            category: category,
-            message: message,
-            createdAt: serverTimestamp(),
-            read: false,
-            deleted: false
-        });
-        
-        showToast('Отзыв отправлен! Спасибо 💙');
-        closeFeedbackModal();
-    } catch (e) {
-        console.error('Error sending feedback:', e);
-        showToast('Ошибка отправки');
-    }
-};
+
 
 window.closeFeedbackModal = function() {
     document.getElementById('feedbackModal').classList.remove('active');
@@ -1524,7 +1495,69 @@ window.closeFeedbackListModal = function() {
         };
 
         window.closeNotificationsModal = function() { document.getElementById('notificationsModal').classList.remove('active'); };
+        // --- Admin Feedback List Modal Functions (MISSING IN YOUR CODE) ---
+        window.openFeedbackListModal = function() {
+            // Проверка, что пользователь админ
+            if (!currentUser || currentUser.uid !== "SAkz4mdW9reDaIsvqigCNZhEKJR2") {
+                showToast('Доступ только для админа');
+                return;
+            }
+            document.getElementById('feedbackListModal').classList.add('active');
+            // Принудительно перерисовываем список, чтобы данные были свежими
+            renderFeedbackList();
+        };
 
+        window.closeFeedbackListModal = function() {
+            document.getElementById('feedbackListModal').classList.remove('active');
+        };
+
+        // --- User Feedback System Overwrite (Fixes the buttons issue) ---
+        window.openFeedbackModal = function(projId, projName) {
+            // Очистка и проверка входа
+            if (!currentUser) {
+                showToast('Войдите, чтобы отправлять отзывы');
+                openLoginModal();
+                return;
+            }
+            
+            // Сброс формы
+            document.getElementById('feedbackProjectId').value = projId;
+            document.getElementById('feedbackProjectName').textContent = 'Проект: ' + projName;
+            document.getElementById('feedbackText').value = '';
+            document.getElementById('feedbackCategory').value = 'suggestion';
+            
+            const modal = document.getElementById('feedbackModal');
+            const footer = document.querySelector('#feedbackModal .modal-footer');
+
+            // Поиск существующего отзыва пользователя по этому проекту
+            // Внимание: это асинхронный запрос, но мы не ждем его, чтобы показать модалку сразу
+            // Внутри колбэка мы обновим футер, если отзыв найден
+            
+            const q = query(collection(db, "feedbacks"), where("userId", "==", currentUser.uid), where("projectId", "==", projId));
+            
+            getDocs(q).then(snapshot => {
+                const existingFooterHtml = !snapshot.empty ? 
+                    `<button onclick="deleteMyFeedback('${snapshot.docs[0].id}')" class="bg-red-600/20 hover:bg-red-600/30 text-red-400 px-4 py-2 rounded-lg text-sm transition-colors">Удалить</button>
+                     <button onclick="closeFeedbackModal()" class="bg-slate-700 hover:bg-slate-600 px-4 py-2 rounded-lg text-sm transition-colors">Закрыть</button>` : 
+                    `<button onclick="closeFeedbackModal()" class="bg-slate-700 hover:bg-slate-600 py-2.5 rounded-lg text-sm transition-colors w-1/3">Отмена</button>
+                     <button onclick="sendFeedback()" class="bg-blue-600 hover:bg-blue-500 py-2.5 rounded-lg text-sm font-bold transition-colors w-2/3">Отправить</button>`;
+                     
+                footer.innerHTML = `<div class="flex gap-3 w-full justify-center">${existingFooterHtml}</div>`;
+
+                // Также меняем заголовок, если есть отзыв
+                const modalTitle = modal.querySelector('h2');
+                if (modalTitle) {
+                    modalTitle.innerHTML = snapshot.empty ? 
+                        '<i class="fas fa-comment-dots text-purple-400"></i> Обратная связь' : 
+                        '<i class="fas fa-history text-yellow-400"></i> Ваш отзыв';
+                }
+            }).catch(err => {
+                console.error("Error checking feedback:", err);
+            });
+
+            // Открываем модалку
+            modal.classList.add('active');
+        };
         window.markNotificationAsRead = async function(notifId) {
             try {
                 await updateDoc(doc(db, "notifications", notifId), { read: true });
