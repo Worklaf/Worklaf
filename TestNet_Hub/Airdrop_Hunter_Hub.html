@@ -1733,14 +1733,7 @@ let adminFeedbacksUnsubscribe = null;
             document.getElementById('feedbackListModal').classList.remove('active');
         };
 
-        // --- User Feedback System Overwrite (Fixes the buttons issue) ---
-        window.openFeedbackModal = function(projId, projName) {
-            // Очистка и проверка входа
-            if (!currentUser) {
-                showToast('Войдите, чтобы отправлять отзывы');
-                openLoginModal();
-                return;
-            }
+       
             
             // Сброс формы
             document.getElementById('feedbackProjectId').value = projId;
@@ -1891,7 +1884,46 @@ let adminFeedbacksUnsubscribe = null;
                 }
             });
         }
+function initFeedbacksListener(uid) {
+    if (uid !== "SAkz4mdW9reDaIsvqigCNZhEKJR2") return; // Только для админа
+    
+    if (adminFeedbacksUnsubscribe) {
+        adminFeedbacksUnsubscribe();
+        adminFeedbacksUnsubscribe = null;
+    }
+    
+    const q = query(collection(db, "feedbacks"), orderBy("createdAt", "desc"));
+    
+    try {
+        adminFeedbacksUnsubscribe = onSnapshot(q, (snapshot) => {
+            adminFeedbacks = [];
+            let unreadCount = 0;
+            
+            snapshot.forEach((doc) => {
+                const data = doc.data();
+                if (data.deleted !== true) {
+                    data.id = doc.id;
+                    if (!data.read) unreadCount++;
+                    adminFeedbacks.push(data);
+                }
+            });
+            
+            updateFeedbackBadge(unreadCount);
+        }, (error) => {
+            console.error("Feedbacks listener error:", error);
+        });
+    } catch (e) {
+        console.error("Error starting feedbacks listener:", e);
+    }
+}
 
+function updateFeedbackBadge(count) {
+    const badge = document.getElementById('feedbackBadge');
+    if (badge) {
+        badge.textContent = count > 9 ? '9+' : (count > 0 ? count : '');
+        badge.classList.toggle('hidden', count <= 0);
+    }
+}
         window.toggleComplete = async function(uid, aid) {
             const uniqueId = uid + '_' + aid;
             const idx = userCompleted.indexOf(uniqueId);
