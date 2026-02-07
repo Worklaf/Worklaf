@@ -1,0 +1,228 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Svodka Calculator - Анализ производства</title>
+    <style>
+        /* --- Основные стили --- */
+        :root {
+            --primary-color: #2c3e50;
+            --accent-color: #3498db;
+            --bg-color: #f4f7f6;
+            --panel-bg: #ffffff;
+            --border-color: #dcdde1;
+            --text-color: #333;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            margin: 0;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        h1, h2, h3 { margin-top: 0; }
+
+        .container {
+            width: 100%;
+            max-width: 1200px;
+            display: grid;
+            grid-template-columns: 2fr 1fr; /* Таблица слева, настройки справа */
+            gap: 20px;
+        }
+
+        /* --- Панели (Карточки) --- */
+        .panel {
+            background: var(--panel-bg);
+            border-radius: 8px;
+            padding: 20px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+            margin-bottom: 20px;
+        }
+
+        .full-width {
+            grid-column: 1 / -1;
+        }
+
+        /* --- Зона загрузки --- */
+        .upload-zone {
+            border: 2px dashed var(--accent-color);
+            border-radius: 8px;
+            padding: 40px;
+            text-align: center;
+            cursor: pointer;
+            transition: background 0.3s;
+        }
+        .upload-zone:hover {
+            background-color: #eaf6ff;
+        }
+        .upload-zone.dragover {
+            background-color: #d4efff;
+            border-color: #2980b9;
+        }
+
+        /* --- Кнопки --- */
+        .btn {
+            background-color: var(--accent-color);
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 16px;
+            font-weight: bold;
+            transition: background 0.2s;
+        }
+        .btn:hover { background-color: #2980b9; }
+        .btn:disabled { background-color: #95a5a6; cursor: not-allowed; }
+
+        .btn-export {
+            background-color: #27ae60;
+            margin-top: 10px;
+        }
+        .btn-export:hover { background-color: #219150; }
+
+        /* --- Таблица настроек --- */
+        .settings-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 10px;
+        }
+        .settings-table th, .settings-table td {
+            border: 1px solid var(--border-color);
+            padding: 8px;
+            text-align: center;
+        }
+        .settings-table input {
+            width: 60px;
+            padding: 4px;
+            text-align: right;
+        }
+
+        /* --- Секция результатов (Таблица) --- */
+        #results-container {
+            overflow-x: auto;
+            margin-top: 20px;
+            display: none; /* Скрыто, пока не будет данных */
+        }
+        
+        table.result-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 13px;
+            font-family: 'Calibri', sans-serif;
+        }
+        
+        table.result-table th, table.result-table td {
+            border: 1px solid #000;
+            padding: 4px;
+            white-space: nowrap;
+        }
+
+        table.result-table th {
+            background-color: #d9d9d9; /* Серый фон заголовков из макроса */
+        }
+
+        /* Стили для подсветки данных (пример) */
+        .val-positive { background-color: lightgreen; }
+        .val-highlight { font-weight: bold; color: darkred; }
+        
+        .status-msg {
+            margin-top: 10px;
+            font-weight: bold;
+            color: var(--primary-color);
+        }
+
+    </style>
+</head>
+<body>
+
+    <!-- Заголовок -->
+    <header style="margin-bottom: 20px; text-align: center;">
+        <h1>Svodka Calculator</h1>
+        <p>Автоматизация расчета производства (система "Лосось")</p>
+    </header>
+
+    <div class="container">
+        
+        <!-- Левая колонка: Загрузка и Результаты -->
+        <div class="left-col">
+            
+            <!-- Панель загрузки -->
+            <div class="panel full-width">
+                <h3>1. Загрузка файла</h3>
+                <div class="upload-zone" id="drop-zone">
+                    <p>Перетащите Excel файл сюда или нажмите для выбора</p>
+                    <input type="file" id="file-input" accept=".xlsx, .xls, .csv" style="display: none;">
+                </div>
+                <div id="file-status" class="status-msg"></div>
+            </div>
+
+            <!-- Кнопки управления -->
+            <div class="panel full-width" style="text-align: center;">
+                <button id="btn-process" class="btn" disabled>Рассчитать (Run Process)</button>
+            </div>
+
+            <!-- Панель результатов -->
+            <div class="panel full-width" id="results-panel">
+                <div style="display: flex; justify-content: space-between; align-items: center;">
+                    <h3>2. Результаты (Svodka)</h3>
+                    <button id="btn-export" class="btn btn-export" disabled>Скачать Excel</button>
+                </div>
+                
+                <div id="results-container">
+                    <!-- Сюда JavaScript вставит таблицу -->
+                    <table id="output-table" class="result-table"></table>
+                </div>
+            </div>
+
+        </div>
+
+        <!-- Правая колонка: Настройки -->
+        <div class="right-col">
+            <div class="panel">
+                <h3>Настройки коэффициентов</h3>
+                <p style="font-size: 0.9em; color: #666;">Коэффициенты для VLOOKUP (Колонка AF)</p>
+                
+                <table class="settings-table">
+                    <thead>
+                        <tr>
+                            <th>Диапазон</th>
+                            <th>Коэффициент</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr><td>0-2</td><td><input type="number" value="76.1" step="0.1" class="coeff-input"></td></tr>
+                        <tr><td>2-3</td><td><input type="number" value="76.1" step="0.1" class="coeff-input"></td></tr>
+                        <tr><td>3-4</td><td><input type="number" value="79.1" step="0.1" class="coeff-input"></td></tr>
+                        <tr><td>4-5</td><td><input type="number" value="77.1" step="0.1" class="coeff-input"></td></tr>
+                        <tr><td>5-6</td><td><input type="number" value="76.1" step="0.1" class="coeff-input"></td></tr>
+                        <tr><td>6-7</td><td><input type="number" value="74.1" step="0.1" class="coeff-input"></td></tr>
+                        <tr><td>7++</td><td><input type="number" value="72.1" step="0.1" class="coeff-input"></td></tr>
+                    </tbody>
+                </table>
+
+                <div style="margin-top: 20px;">
+                    <label><input type="checkbox" id="check-lf" disabled checked> Поправка 1.06 для LF</label><br>
+                    <label><input type="checkbox" id="check-del-zero" checked> Удалять партии с Размером = 0 в конец</label>
+                </div>
+            </div>
+            
+            <div class="panel">
+                <h3>Инфо</h3>
+                <p>Версия: 1.0 (Web port)</p>
+                <p>Базовый макрос: BuildSalmon_Final</p>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- Подключение скрипта (пока пустой) -->
+    <script src="app.js"></script>
+</body>
+</html>
