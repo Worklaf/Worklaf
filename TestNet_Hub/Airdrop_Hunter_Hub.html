@@ -1529,63 +1529,59 @@ function loadFeedbackChat(docId, projId) {
             return timeA - timeB;
         });
 
+        const isCurrentUserAdmin = currentUser && currentUser.uid === "SAkz4mdW9reDaIsvqigCNZhEKJR2";
+
+        // ✅ Генерируем всё один раз
+        const bubbleHtml = messages.map(msg => {
+            const fromAdmin = msg.sender === 'admin';
+            const fromUser  = msg.sender === 'user';
+
+            let isMine = false;
+            if (isCurrentUserAdmin && fromAdmin) isMine = true;
+            if (!isCurrentUserAdmin && fromUser) isMine = true;
+
+            const bubbleSide = isMine ? 'user' : 'admin';
+            const senderName = isMine
+                ? 'Вы'
+                : isCurrentUserAdmin
+                    ? 'Пользователь'
+                    : 'Поддержка';
+
+            const avatarIcon = bubbleSide === 'user'
+                ? '<i class="fas fa-user text-white"></i>'
+                : '<i class="fas fa-user-shield text-white"></i>';
+
+            const time = msg.timestamp
+                ? formatTimeAgo(msg.timestamp.toDate ? msg.timestamp.toDate() : new Date(msg.timestamp))
+                : '';
+
+            return `
+              <div class="chat-bubble ${bubbleSide}">
+                 <div class="chat-avatar">${avatarIcon}</div>
+                 <div class="chat-bubble-wrapper">
+                    <span class="chat-sender">${senderName}</span>
+                    <div class="chat-content"><div class="chat-text">${msg.text}</div></div>
+                    <span class="chat-time">${time}</span>
+                 </div>
+              </div>`;
+        }).join('');
+
+        // 📦 Вставляем в контейнер
         const historyContainer = document.getElementById('feedbackChatHistory');
-        
-        if (messages.length === 0) {
-            historyContainer.innerHTML = `
-                <div class="flex flex-col items-center justify-center h-full text-slate-500">
-                    <i class="fas fa-comments text-3xl mb-2 opacity-50"></i>
-                    <p>История пуста</p>
-                </div>
-            `;
-        } else {
-            historyContainer.innerHTML = messages.map(msg => {
-                const isCurrentUserAdmin = currentUser && currentUser.uid === "SAkz4mdW9reDaIsvqigCNZhEKJR2";
+        historyContainer.innerHTML = bubbleHtml;
 
-const bubbleHtml = messages.map(msg => {
-    // === Определяем, кто пишет ===
-    const fromAdmin = msg.sender === 'admin';
-    const fromUser  = msg.sender === 'user';
-
-    // === Определяем направление пузыря ===
-    let isMine = false;
-    if (isCurrentUserAdmin && fromAdmin) isMine = true;      // админ видит свои справа
-    if (!isCurrentUserAdmin && fromUser) isMine = true;      // обычный юзер видит свои справа
-
-    // === Отступы и подписи ===
-    const bubbleSide = isMine ? 'user' : 'admin';
-    const senderName = isMine
-        ? 'Вы'
-        : isCurrentUserAdmin
-            ? 'Пользователь'
-            : 'Поддержка';
-
-    const avatarIcon = bubbleSide === 'user'
-        ? '<i class="fas fa-user text-white"></i>'
-        : '<i class="fas fa-user-shield text-white"></i>';
-
-    const time = msg.timestamp ? formatTimeAgo(msg.timestamp.toDate ? msg.timestamp.toDate() : new Date(msg.timestamp)) : '';
-
-    return `
-      <div class="chat-bubble ${bubbleSide}">
-         <div class="chat-avatar">${avatarIcon}</div>
-         <div class="chat-bubble-wrapper">
-            <span class="chat-sender">${senderName}</span>
-            <div class="chat-content"><div class="chat-text">${msg.text}</div></div>
-            <span class="chat-time">${time}</span>
-         </div>
-      </div>`;
-}).join('');
-
+        // ⬇ Прячем/показываем форму корректно
         document.getElementById('feedbackFormNew').classList.add('hidden');
         document.getElementById('feedbackFormReply').classList.remove('hidden');
         document.getElementById('feedbackSendBtn').classList.add('hidden');
         document.getElementById('feedbackUserReplyText').value = '';
 
+        // ⬇ Пролистываем вниз
         setTimeout(() => {
             historyContainer.scrollTop = historyContainer.scrollHeight;
         }, 100);
 
+        // ⬇ Помечаем как прочитанное
         if (!data.userRead) {
             updateDoc(doc(db, "feedbacks", docId), { userRead: true }).catch(e => console.error(e));
         }
