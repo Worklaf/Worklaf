@@ -1241,110 +1241,150 @@ let adminFeedbacksUnsubscribe = null;
         window.logout = function() { signOut(auth).then(() => showToast('Вы вышли из системы')); };
 
         // --- Feedback System (Admin) ---
-                function initFeedbacksListener(uid) {
-            if (uid !== "SAkz4mdW9reDaIsvqigCNZhEKJR2") return; // Только для админа
+                       // =====================
+        // FEEDBACK SYSTEM
+        // =====================
+
+        // --- ИНИЦИАЛИЗАЦИЯ ---
+        function initFeedbacksListener(uid) {
+            if (uid !== "SAkz4mdW9reDaIsvqigCNZhEKJR2") return;
             
-            if (adminFeedbacksUnsubscribe) adminFeedbacksUnsubscribe();
-            const q = query(collection(db, "feedbacks"), where("deleted", "!=", true), orderBy("createdAt", "desc"));
+            // Отписываемся от старого слушателя если был
+            if (adminFeedbacksUnsubscribe) {
+                adminFeedbacksUnsubscribe();
+                adminFeedbacksUnsubscribe = null;
+            }
             
-            adminFeedbacksUnsubscribe = onSnapshot(q, function(snapshot) {
-                adminFeedbacks = [];
-                let unreadCount = 0;
-                snapshot.forEach(function(doc) {
-                    const data = doc.data();
-                    data.id = doc.id;
-                    if (!data.read) unreadCount++;
-                    adminFeedbacks.push(data);
+            // Простой запрос - только по orderBy, без фильтра по deleted
+            // Firestore не поддерживает "!=" эффективно, будем фильтровать на клиенте
+            const q = query(collection(db, "feedbacks"), orderBy("createdAt", "desc"));
+            
+            try {
+                adminFeedbacksUnsubscribe = onSnapshot(q, (snapshot) => {
+                    adminFeedbacks = [];
+                    let unreadCount = 0;
+                    
+                    snapshot.forEach((doc) => {
+                        const data = doc.data();
+                        // Клиентская фильтрация удалённых
+                        if (data.deleted !== true) {
+                            data.id = doc.id;
+                            if (!data.read) unreadCount++;
+                            adminFeedbacks.push(data);
+                        }
+                    });
+                    
+                    updateFeedbackBadge(unreadCount);
+                    
+                    // Если админская модалка открыта - обновляем
+                    const modal = document.getElementById('feedbackListModal');
+                    if (modal && modal.classList.contains('active')) {
+                        renderFeedbackList();
+                    }
+                }, (error) => {
+                    console.error("Feedbacks listener error:", error);
+                    // Если ошибка индекса, попробуем альтернативный запрос
+                    if (error.code === 'failed-precondition') {
+                        console.warn("Index required for feedbacks query. Suggest to create composite index.");
+                    }
                 });
-                updateFeedbackBadge(unreadCount);
-                if (document.getElementById('feedbackListModal').classList.contains('active')) {
-                    renderFeedbackList();
-                }
-            });
+                console.log("✅ Feedbacks listener started for admin");
+            } catch (e) {
+                console.error("Error starting feedbacks listener:", e);
+            }
         }
 
         function updateFeedbackBadge(count) {
             const badge = document.getElementById('feedbackBadge');
             if (badge) {
-                if (count > 0) {
-                    badge.textContent = count > 9 ? '9+' : count;
-                    badge.classList.remove('hidden');
-                } else {
-                    badge.classList.add('hidden');
-                }
+                badge.textContent = count > 9 ? '9+' : (count > 0 ? count : '');
+                badge.classList.toggle('hidden', count <= 0);
             }
         }
 
-        
-
-                        window.openFeedbackModal = function(projId, projName) {
+        // --- ПОЛЬЗОВАТЕЛЬ: ОТКРЫТЬ ОКНО ОТЗЫВА ---
+        window.openFeedbackModal = function(projId, projName) {
             if (!currentUser) {
                 showToast('Войдите, чтобы отправлять отзывы');
                 openLoginModal();
                 return;
             }
             
-            document.getElementById('feedbackProjectId').value = projId;
-            // projName might contain special chars, let's sanitize for innerHTML or use textContent
-            document.getElementById('feedbackProjectName').textContent = 'Проект: ' + projName;
-            
-            const container = document.getElementById('feedbacksContainer'); // Reuse container or create specific div
             const modal = document.getElementById('feedbackModal');
+            const footer = modal.querySelector('.modal-footer');
+            const title = modal.querySelector('h2');
             
-            // Query for existing feedback
-            const q = query(collection(db, "feedbacks"), where("userId", "==", currentUser.uid), where("projectId", "==", projId));
+            // Сброс формы
+            document.getElementById('feedbackProjectId').value = projId;
+            document.getElementById('feedbackProjectName').textContent = 'Проект: ' + (projName || 'Unknown');
             
-            getDocs(q).then(snapshot => {
+            // Сначала показываем лоадер в футере
+            footer.innerHTML = '<div class="flex gap-3 w-full justify-center py-2"><i class="fas fa-spinner fa-spin text-blue-400"></i></div>';
+            
+            const q = query(
+                collection(db, "feedbacks"), 
+                where("userId", "==", currentUser.uid), 
+                where("projectId", "==", projId)
+            );
+
+            getDocs(q).then((snapshot) => {
                 if (!snapshot.empty) {
+                    // === ОТЗЫВ УЖЕ СУЩЕСТВУЕТ ===
                     const fb = snapshot.docs[0].data();
                     fb.id = snapshot.docs[0].id;
                     
-                    // Показываем существующий отзыв
-                    const replyHtml = fb.reply ? 
-                        `<div class="mt-3 bg-purple-900/20 border border-purple-500/30 rounded-lg p-3">
-                            <div class="text-xs text-purple-400 font-bold mb-1"><i class="fas fa-reply"></i> Ответ поддержки:</div>
-                            <div class="text-sm text-white">${fb.reply}</div>
-                         </div>` : '';
-
-                    document.querySelector('#feedbackModal h2').innerHTML = '<i class="fas fa-history text-yellow-400"></i> Ваш отзыв';
-                    
-                    document.getElementById('feedbackText').value = fb.message;
+                    // Заполняем форму данными
+                    document.getElementById('feedbackText').value = fb.message || '';
                     document.getElementById('feedbackCategory').value = fb.category || 'other';
                     
-                    // Блокируем повторную отправку, показываем кнопку удаления
-                    const footer = document.querySelector('#feedbackModal .modal-footer');
-                    footer.innerHTML = `
-                        <button onclick="deleteMyFeedback('${fb.id}')" class="bg-red-600/20 hover:bg-red-600/30 text-red-400 px-4 py-2 rounded-lg text-xs transition-colors">Удалить мой отзыв</button>
-                        <button onclick="closeFeedbackModal()" class="bg-slate-700 hover:bg-slate-600 px-4 py-2 rounded-lg text-sm transition-colors">Закрыть</button>
-                    `;
+                    // Меняем заголовок
+                    if (title) title.innerHTML = '<i class="fas fa-history text-yellow-400"></i> Ваш отзыв';
                     
+                    // Формируем футер с кнопкой УДАЛИТЬ
+                    footer.innerHTML = `
+                        <div class="flex flex-col gap-3 w-full">
+                            <!-- Показываем текст отзыва -->
+                            <div class="bg-slate-800/50 border border-slate-700 rounded-lg p-3 text-sm">
+                                <div class="text-xs text-slate-500 mb-1">Ваш отзыв:</div>
+                                <div class="text-slate-300">${fb.message || 'Пусто'}</div>
+                            </div>
+                            <div class="flex gap-3">
+                                <button onclick="deleteMyFeedback('${fb.id}')" class="flex-1 bg-red-600/20 hover:bg-red-600/30 text-red-400 px-4 py-2.5 rounded-lg text-sm transition-colors">Удалить</button>
+                                <button onclick="closeFeedbackModal()" class="flex-1 bg-slate-700 hover:bg-slate-600 px-4 py-2.5 rounded-lg text-sm transition-colors">Закрыть</button>
+                            </div>
+                        </div>
+                    `;
                 } else {
-                    // Новый отзыв
-                    document.querySelector('#feedbackModal h2').innerHTML = '<i class="fas fa-comment-dots text-purple-400"></i> Обратная связь';
+                    // === НОВЫЙ ОТЗЫВ ===
                     document.getElementById('feedbackText').value = '';
                     document.getElementById('feedbackCategory').value = 'suggestion';
-                    document.querySelector('#feedbackModal .modal-footer').innerHTML = `
-                        <button onclick="closeFeedbackModal()" class="bg-slate-700 hover:bg-slate-600 px-4 py-2 rounded-lg text-sm transition-colors">Отмена</button>
-                        <button onclick="sendFeedback()" class="bg-blue-600 hover:bg-blue-500 px-6 py-2 rounded-lg text-sm font-bold transition-colors">Отправить</button>
+                    
+                    if (title) title.innerHTML = '<i class="fas fa-comment-dots text-purple-400"></i> Оставить отзыв';
+                    
+                    footer.innerHTML = `
+                        <div class="flex gap-3 w-full justify-center">
+                            <button onclick="closeFeedbackModal()" class="flex-1 bg-slate-700 hover:bg-slate-600 py-2.5 rounded-lg text-sm transition-colors">Отмена</button>
+                            <button onclick="sendFeedback()" class="flex-1 bg-blue-600 hover:bg-blue-500 py-2.5 rounded-lg text-sm font-bold transition-colors shadow-lg shadow-blue-500/20">Отправить</button>
+                        </div>
                     `;
                 }
+            }).catch((error) => {
+                console.error("Error checking feedback:", error);
+                showToast('Ошибка загрузки отзыва');
+                // В случае ошибки показываем форму "Новый отзыв"
+                footer.innerHTML = `
+                    <div class="flex gap-3 w-full justify-center">
+                        <button onclick="closeFeedbackModal()" class="flex-1 bg-slate-700 hover:bg-slate-600 py-2.5 rounded-lg text-sm transition-colors">Отмена</button>
+                        <button onclick="sendFeedback()" class="flex-1 bg-blue-600 hover:bg-blue-500 py-2.5 rounded-lg text-sm font-bold transition-colors">Отправить</button>
+                    </div>
+                `;
             });
 
             modal.classList.add('active');
         };
 
-        window.deleteMyFeedback = async function(id) {
-            if(!confirm('Удалить ваш отзыв?')) return;
-            try {
-                await deleteDoc(doc(db, "feedbacks", id));
-                showToast('Отзыв удален');
-                closeFeedbackModal();
-            } catch(e) { showToast('Ошибка'); }
-        };
-        // Функция отправки отзыва (Обязательно добавь!)
-                // --- ФУНКЦИЯ ОТПРАВКИ (Добавлена!) ---
+        // --- ПОЛЬЗОВАТЕЛЬ: ОТПРАВИТЬ ---
         window.sendFeedback = async function() {
-            // Проверка входа
             if (!currentUser) {
                 showToast('Сначала войдите в аккаунт');
                 openLoginModal();
@@ -1378,173 +1418,152 @@ let adminFeedbacksUnsubscribe = null;
                 closeFeedbackModal();
             } catch (e) {
                 console.error("Error sending feedback:", e);
-                showToast('Ошибка отправки. Проверьте консоль.');
+                showToast('Ошибка отправки: ' + e.message);
             }
         };
 
-        // --- УДАЛЕНИЕ СВОЕГО ОТЗЫВА ---
+        // --- ПОЛЬЗОВАТЕЛЬ: УДАЛИТЬ ---
         window.deleteMyFeedback = async function(id) {
             if (!confirm('Вы уверены, что хотите удалить свой отзыв?')) return;
             try {
-                await deleteDoc(doc(db, "feedbacks", id));
+                // Используем soft delete для сохранения данных в админке
+                await updateDoc(doc(db, "feedbacks", id), {
+                    deleted: true,
+                    deletedAt: serverTimestamp()
+                });
                 showToast('Отзыв удален');
                 closeFeedbackModal();
             } catch (e) {
+                console.error("Error deleting feedback:", e);
                 showToast('Ошибка удаления: ' + e.message);
             }
         };
 
-        // --- ЗАКРЫТИЕ ОКНА ---
+        // --- ПОЛЬЗОВАТЕЛЬ: ЗАКРЫТЬ ---
         window.closeFeedbackModal = function() {
             document.getElementById('feedbackModal').classList.remove('active');
         };
 
-        // --- ОТКРЫТИЕ ОКНА ОТЗЫВА (Исправлена логика кнопок) ---
-        window.openFeedbackModal = function(projId, projName) {
-            // 1. Проверка входа
-            if (!currentUser) {
-                showToast('Войдите, чтобы отправлять отзывы');
-                openLoginModal();
+        // --- АДМИН: ОТКРЫТЬ СПИСОК ---
+        window.openFeedbackListModal = function() {
+            if (!currentUser || currentUser.uid !== "SAkz4mdW9reDaIsvqigCNZhEKJR2") {
+                showToast('Доступ только для админа');
                 return;
             }
-
-            // 2. Установка значений
-            document.getElementById('feedbackProjectId').value = projId;
-            const nameEl = document.getElementById('feedbackProjectName');
-            if (nameEl) nameEl.textContent = 'Проект: ' + (projName || 'Unknown');
-
-            // 3. Сбрасываем форму на "Новый отзыв"
-            document.getElementById('feedbackText').value = '';
-            document.getElementById('feedbackCategory').value = 'suggestion';
-
-            const modal = document.getElementById('feedbackModal');
-            const footer = modal.querySelector('.modal-footer');
-
-            // 4. По умолчанию показываем кнопку ОТПРАВИТЬ (если база не ответит, кнопка уже будет)
-            footer.innerHTML = `
-                <div class="flex gap-3 w-full justify-center">
-                    <button onclick="closeFeedbackModal()" class="bg-slate-700 hover:bg-slate-600 py-2.5 rounded-lg text-sm transition-colors w-1/3">Отмена</button>
-                    <button onclick="sendFeedback()" class="bg-blue-600 hover:bg-blue-500 py-2.5 rounded-lg text-sm font-bold transition-colors w-2/3 shadow-lg shadow-blue-500/20">Отправить</button>
-                </div>
-            `;
-
-            // 5. Проверяем в базе, есть ли уже отзыв
-            const q = query(
-                collection(db, "feedbacks"), 
-                where("userId", "==", currentUser.uid), 
-                where("projectId", "==", projId)
-            );
-
-            getDocs(q).then(snapshot => {
-                if (!snapshot.empty) {
-                    // Если отзыв уже ЕСТЬ -> Меняем кнопки на УДАЛИТЬ / ЗАКРЫТЬ
-                    const fb = snapshot.docs[0].data();
-                    fb.id = snapshot.docs[0].id;
-
-                    footer.innerHTML = `
-                        <div class="flex gap-3 w-full justify-center">
-                            <button onclick="deleteMyFeedback('${fb.id}')" class="bg-red-600/20 hover:bg-red-600/30 text-red-400 px-4 py-2 rounded-lg text-sm transition-colors">Удалить</button>
-                            <button onclick="closeFeedbackModal()" class="bg-slate-700 hover:bg-slate-600 px-4 py-2 rounded-lg text-sm transition-colors">Закрыть</button>
-                        </div>
-                    `;
-                    
-                    // Заполняем текст старым отзывом (на случай, если хотят изменить, но здесь мы только удаляем/пишем новый)
-                    document.getElementById('feedbackText').value = fb.message || '';
-                    document.getElementById('feedbackCategory').value = fb.category || 'other';
-                    
-                    // Меняем заголовок
-                    const title = modal.querySelector('h2');
-                    if(title) title.innerHTML = '<i class="fas fa-pen text-yellow-400"></i> Ваш отзыв';
-                } else {
-                    // Если отзыва НЕТ -> Подтверждаем, что кнопки "Отправить" на месте (они уже там)
-                    const title = modal.querySelector('h2');
-                    if(title) title.innerHTML = '<i class="fas fa-comment-dots text-purple-400"></i> Оставить отзыв';
-                }
-            }).catch(error => {
-                console.error("Error checking feedback:", error);
-                // Если ошибка в базе (например, нет индекса), кнопки "Отправить" уже стоят, пусть пробуют
-                showToast('Не удалось проверить старые отзывы, но можно отправить новый');
-            });
-
-            modal.classList.add('active');
+            
+            document.getElementById('feedbackListModal').classList.add('active');
+            renderFeedbackList();
         };
 
-window.openFeedbackListModal = function() {
-    if (!isAdminMode) {
-        showToast('Доступ запрещён');
-        return;
-    }
-    
-    document.getElementById('feedbackListModal').classList.add('active');
-    renderFeedbackList();
-};
+        window.closeFeedbackListModal = function() {
+            document.getElementById('feedbackListModal').classList.remove('active');
+        };
 
-window.closeFeedbackListModal = function() {
-    document.getElementById('feedbackListModal').classList.remove('active');
-};
-                window.renderFeedbackList = function() {
+        // --- АДМИН: ОТРИСОВАТЬ СПИСОК ---
+        window.renderFeedbackList = function() {
             const container = document.getElementById('feedbacksContainer');
-            if (adminFeedbacks.length === 0) {
-                container.innerHTML = '<div class="text-center py-10 text-slate-500"><i class="fas fa-comment-slash text-4xl mb-3"></i><p>Отзывов пока нет.</p></div>';
+            
+            if (!adminFeedbacks || adminFeedbacks.length === 0) {
+                container.innerHTML = `
+                    <div class="text-center py-10 text-slate-500">
+                        <i class="fas fa-comment-slash text-4xl mb-3"></i>
+                        <p>Отзывов пока нет.</p>
+                        ${currentUser && currentUser.uid === "SAkz4mdW9reDaIsvqigCNZhEKJR2" ? 
+                          '<p class="text-xs mt-2 text-slate-600">Подождите или проверьте консоль на ошибки</p>' : ''}
+                    </div>
+                `;
                 return;
             }
 
-            container.innerHTML = adminFeedbacks.map(function(item) {
+            container.innerHTML = adminFeedbacks.map((item) => {
                 const date = item.createdAt && item.createdAt.toDate ? item.createdAt.toDate() : new Date();
                 const formattedDate = formatTimeAgo(date);
                 
                 const iconMap = {
-                    suggestion: 'fa-lightbulb text-yellow-400',
-                    bug: 'fa-bug text-red-400',
-                    question: 'fa-question-circle text-blue-400',
-                    other: 'fa-comment text-slate-400'
+                    suggestion: { icon: 'fa-lightbulb', color: 'text-yellow-400', label: 'Предложение' },
+                    bug: { icon: 'fa-bug', color: 'text-red-400', label: 'Ошибка' },
+                    question: { icon: 'fa-question-circle', color: 'text-blue-400', label: 'Вопрос' },
+                    other: { icon: 'fa-comment', color: 'text-slate-400', label: 'Другое' }
                 };
-                const iconClass = iconMap[item.category] || 'fa-comment text-slate-400';
-                const categoryNames = {
-                    suggestion: 'Предложение',
-                    bug: 'Ошибка',
-                    question: 'Вопрос',
-                    other: 'Другое'
-                };
-
+                
+                const typeInfo = iconMap[item.category] || iconMap.other;
                 const replyHtml = item.reply ? 
-                    `<div class="mt-3 bg-purple-900/20 border border-purple-500/30 rounded-lg p-3">
-                        <div class="text-xs text-purple-400 font-bold mb-1"><i class="fas fa-reply"></i> Ваш ответ (${item.repliedAt ? item.repliedAt.toDate().toLocaleString() : ''}):</div>
+                    `<div class="mt-3 bg-purple-900/20 border border-l-4 border-purple-500 rounded-r-lg p-3">
+                        <div class="text-xs text-purple-400 font-bold mb-1">
+                            <i class="fas fa-reply"></i> Ответ поддержки (${item.repliedAt ? new Date(item.repliedAt.toDate()).toLocaleString() : ''}):
+                        </div>
                         <div class="text-sm text-white">${item.reply}</div>
                     </div>` : '';
 
-                return '<div class="bg-slate-800/50 border border-slate-700 rounded-xl p-4 hover:bg-slate-800 transition-colors flex gap-4 mb-4 cursor-pointer" onclick="markFeedbackRead(\'' + item.id + '\')">' +
-                    '<img src="' + (item.userPhoto || 'https://via.placeholder.com/40') + '" class="w-10 h-10 rounded-full bg-slate-700 border border-slate-600 flex-shrink-0">' +
-                    '<div class="flex-1">' +
-                    '<div class="flex justify-between items-start mb-1">' +
-                    '<div class="flex items-center gap-2">' +
-                    '<span class="font-bold text-white text-sm">' + item.userName + '</span>' +
-                    '<span class="text-xs text-slate-500">• ' + formattedDate + '</span>' +
-                    '</div>' +
-                    '<span class="text-xs bg-slate-700 px-2 py-1 rounded text-slate-300"><i class="fas ' + iconClass + ' mr-1"></i>' + (categoryNames[item.category] || item.category) + '</span>' +
-                    '</div>' +
-                    '<p class="text-slate-300 text-sm mt-1">' + item.message + '</p>' +
-                    replyHtml +
-                    '<div class="flex items-center gap-2 mt-3 border-t border-slate-700/50 pt-2">' +
-                    `<input type="text" id="reply-input-${item.id}" placeholder="Написать ответ..." class="flex-1 bg-slate-900 border border-slate-700 rounded px-3 py-1 text-xs text-white focus:outline-none focus:border-blue-500">` +
-                    `<button onclick="event.stopPropagation(); sendReply('${item.id}')" class="bg-blue-600 hover:bg-blue-500 text-white px-3 py-1 rounded text-xs transition-colors">Ответить</button>` +
-                    `<button onclick="event.stopPropagation(); deleteFeedback('${item.id}')" class="bg-red-600/20 hover:bg-red-600/30 text-red-400 px-3 py-1 rounded text-xs transition-colors">Удалить</button>` +
-                    '</div></div></div>';
+                // Получаем информацию о проекте
+                const projectName = item.projectId || 'Неизвестный проект';
+
+                return `
+                    <div class="bg-slate-800/50 border border-slate-700 rounded-xl p-4 hover:bg-slate-800 transition-colors flex gap-4 mb-4 ${!item.read ? 'border-l-4 border-l-blue-500' : ''}">
+                        <img src="${item.userPhoto || 'https://via.placeholder.com/40'}" 
+                             class="w-10 h-10 rounded-full bg-slate-700 border border-slate-600 flex-shrink-0"
+                             onerror="this.src='https://ui-avatars.com/api/?name=${encodeURIComponent(item.userName || 'U')}&background=random'">
+                        <div class="flex-1 min-w-0">
+                            <div class="flex justify-between items-start mb-2">
+                                <div class="flex items-center gap-2 flex-wrap">
+                                    <span class="font-bold text-white text-sm">${item.userName || 'Аноним'}</span>
+                                    <span class="text-xs text-slate-500">• ${formattedDate}</span>
+                                    <span class="text-xs bg-slate-700 px-2 py-0.5 rounded text-slate-300">
+                                        <i class="fas ${typeInfo.icon} ${typeInfo.color} mr-1"></i>${typeInfo.label}
+                                    </span>
+                                </div>
+                            </div>
+                            
+                            <div class="bg-slate-900/50 rounded-lg p-3 mb-2 border border-slate-700/50">
+                                <div class="text-xs text-slate-500 mb-1">О проекте: <span class="text-blue-400">${projectName}</span></div>
+                                <p class="text-slate-300 text-sm leading-relaxed">${item.message}</p>
+                            </div>
+                            
+                            ${replyHtml}
+                            
+                            <div class="flex items-center gap-2 mt-3 pt-2 border-t border-slate-700/50 flex-wrap">
+                                ${!item.reply ? `
+                                    <input type="text" 
+                                           id="reply-input-${item.id}" 
+                                           placeholder="Написать ответ..." 
+                                           class="flex-1 min-w-[200px] bg-slate-900 border border-slate-700 rounded px-3 py-1.5 text-xs text-white focus:outline-none focus:border-blue-500">
+                                    <button onclick="event.stopPropagation(); sendReply('${item.id}')" 
+                                            class="bg-blue-600 hover:bg-blue-500 text-white px-3 py-1.5 rounded text-xs transition-colors">
+                                        <i class="fas fa-paper-plane mr-1"></i> Ответить
+                                    </button>
+                                ` : ''}
+                                <button onclick="event.stopPropagation(); markFeedbackRead('${item.id}')" 
+                                        class="bg-slate-700 hover:bg-slate-600 text-slate-300 px-3 py-1.5 rounded text-xs transition-colors">
+                                    ${item.read ? '<i class="fas fa-check"></i> Прочитано' : '<i class="far fa-check-circle"></i> Отметить'}
+                                </button>
+                                <button onclick="event.stopPropagation(); deleteFeedback('${item.id}')" 
+                                        class="bg-red-600/20 hover:bg-red-600/30 text-red-400 px-3 py-1.5 rounded text-xs transition-colors">
+                                    <i class="fas fa-trash"></i>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                `;
             }).join('');
         };
 
+        // --- АДМИН: ОТМЕТИТЬ ПРОЧИТАННЫМ ---
         window.markFeedbackRead = async function(id) {
-            const fb = adminFeedbacks.find(f => f.id === id);
-            if (fb && !fb.read) {
+            try {
                 await updateDoc(doc(db, "feedbacks", id), { read: true });
-                // Badge updates automatically via listener
+            } catch (e) { 
+                console.error(e); 
             }
         };
 
+        // --- АДМИН: ОТПРАВИТЬ ОТВЕТ ---
         window.sendReply = async function(id) {
             const input = document.getElementById('reply-input-' + id);
             const replyText = input.value.trim();
-            if (!replyText) return;
+            if (!replyText) {
+                showToast('Введите ответ');
+                return;
+            }
             try {
                 await updateDoc(doc(db, "feedbacks", id), {
                     reply: replyText,
@@ -1552,16 +1571,21 @@ window.closeFeedbackListModal = function() {
                     read: true
                 });
                 showToast('Ответ отправлен');
-            } catch (e) { console.error(e); showToast('Ошибка'); }
+            } catch (e) { 
+                console.error(e); 
+                showToast('Ошибка отправки'); 
+            }
         };
 
+        // --- АДМИН: УДАЛИТЬ ОТЗЫВ ---
         window.deleteFeedback = async function(id) {
-            if (!confirm('Удалить этот отзыв?')) return;
+            if (!confirm('Полностью удалить этот отзыв из базы?')) return;
             try {
-                // Hard delete or soft delete. Using hard delete for simplicity or soft delete with 'deleted' flag
-                await deleteDoc(doc(db, "feedbacks", id)); 
-                showToast('Удалено');
-            } catch (e) { showToast('Ошибка удаления'); }
+                await deleteDoc(doc(db, "feedbacks", id));
+                showToast('Удалено из базы');
+            } catch (e) { 
+                showToast('Ошибка удаления: ' + e.message); 
+            }
         };
 
         // --- Notifications ---
