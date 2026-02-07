@@ -93,6 +93,109 @@
             font-weight: bold;
             border: 1px solid #1e2538;
         }
+        /* Стили чата обратной связи */
+.chat-bubble {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 16px;
+    animation: slideIn 0.3s ease;
+}
+
+.chat-bubble.user {
+    flex-direction: row-reverse;
+}
+
+.chat-avatar {
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 16px;
+    flex-shrink: 0;
+}
+
+.chat-bubble.user .chat-avatar {
+    background: linear-gradient(135deg, #3b82f6, #2563eb);
+    border: 2px solid rgba(59, 130, 246, 0.3);
+}
+
+.chat-bubble.admin .chat-avatar {
+    background: linear-gradient(135deg, #8b5cf6, #6d28d9);
+    border: 2px solid rgba(139, 92, 246, 0.3);
+}
+
+.chat-bubble-wrapper {
+    max-width: 80%;
+    display: flex;
+    flex-direction: column;
+}
+
+.chat-bubble.user .chat-bubble-wrapper {
+    align-items: flex-end;
+}
+
+.chat-bubble.admin .chat-bubble-wrapper {
+    align-items: flex-start;
+}
+
+.chat-content {
+    padding: 12px 16px;
+    border-radius: 16px;
+    position: relative;
+}
+
+.chat-bubble.user .chat-content {
+    background: linear-gradient(135deg, rgba(59, 130, 246, 0.2), rgba(37, 99, 235, 0.1));
+    border: 1px solid rgba(59, 130, 246, 0.3);
+    border-bottom-right-radius: 4px;
+}
+
+.chat-bubble.admin .chat-content {
+    background: linear-gradient(135deg, rgba(139, 92, 246, 0.2), rgba(109, 40, 217, 0.1));
+    border: 1px solid rgba(139, 92, 246, 0.3);
+    border-bottom-left-radius: 4px;
+}
+
+.chat-sender {
+    font-size: 0.75rem;
+    font-weight: 600;
+    margin-bottom: 4px;
+}
+
+.chat-bubble.user .chat-sender {
+    color: #60a5fa;
+}
+
+.chat-bubble.admin .chat-sender {
+    color: #a78bfa;
+}
+
+.chat-text {
+    font-size: 0.9rem;
+    line-height: 1.5;
+    color: #e2e8f0;
+    word-wrap: break-word;
+}
+
+.chat-time {
+    font-size: 0.7rem;
+    color: #64748b;
+    margin-top: 6px;
+    text-align: right;
+}
+
+@keyframes slideIn {
+    from {
+        opacity: 0;
+        transform: translateY(10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
 .chat-history {
     max-height: 400px;
     overflow-y: auto;
@@ -1041,12 +1144,12 @@
             </div>
             
             <!-- Chat History -->
-            <div id="feedbackChatHistory" class="chat-history text-sm mb-4">
-                <div class="text-center py-8 text-slate-500">
-                    <i class="fas fa-comments text-3xl mb-2 opacity-50"></i>
-                    <p>История пуста</p>
-                </div>
-            </div>
+<div id="feedbackChatHistory" class="h-80 overflow-y-auto pr-3 custom-scrollbar bg-slate-900/30 rounded-xl p-4">
+    <div class="flex flex-col items-center justify-center h-full text-slate-500">
+        <i class="fas fa-comments text-4xl mb-3 opacity-50"></i>
+        <p class="text-sm">Загрузка переписки...</p>
+    </div>
+</div>
 
             <!-- New Message Form (shown if no feedback yet) -->
             <div id="feedbackFormNew" class="space-y-4">
@@ -1364,18 +1467,22 @@ window.openFeedbackModal = function(projId, projName) {
 };
 
 function showNewFeedbackForm() {
-    document.getElementById('feedbackChatHistory').innerHTML = '<div class="text-center py-8 text-slate-500"><i class="fas fa-inbox text-3xl mb-2 opacity-50"></i><p>Начните новое обращение</p></div>';
+    document.getElementById('feedbackChatHistory').innerHTML = `
+        <div class="flex flex-col items-center justify-center h-full text-slate-500">
+            <i class="fas fa-inbox text-4xl mb-3 opacity-50"></i>
+            <p class="text-sm">Начните новое обращение</p>
+            <p class="text-xs text-slate-600 mt-1">Мы ответим в ближайшее время</p>
+        </div>
+    `;
     document.getElementById('feedbackFormNew').classList.remove('hidden');
     document.getElementById('feedbackFormReply').classList.add('hidden');
     document.getElementById('feedbackSendBtn').classList.remove('hidden');
     document.getElementById('feedbackSendBtn').textContent = 'Отправить';
-    // Убедимся, что обработчик корректно установлен
     document.getElementById('feedbackSendBtn').onclick = window.sendUserFeedback;
     document.getElementById('feedbackText').value = '';
 }
 
 function loadFeedbackChat(docId, projId) {
-    // Подписываемся на изменения в реальном времени
     const unsubscribe = onSnapshot(doc(db, "feedbacks", docId), (snapshot) => {
         if (!snapshot.exists()) {
             showNewFeedbackForm();
@@ -1387,41 +1494,49 @@ function loadFeedbackChat(docId, projId) {
 
         // Сортируем по времени
         messages.sort((a, b) => {
-            const timeA = a.timestamp?.toDate ? a.timestamp.toDate() : new Date(0);
-            const timeB = b.timestamp?.toDate ? b.timestamp.toDate() : new Date(0);
+            const timeA = a.timestamp?.toDate ? a.timestamp.toDate() : (a.timestamp ? new Date(a.timestamp) : new Date(0));
+            const timeB = b.timestamp?.toDate ? b.timestamp.toDate() : (b.timestamp ? new Date(b.timestamp) : new Date(0));
             return timeA - timeB;
         });
 
-        // Отрисовываем чат
         const historyContainer = document.getElementById('feedbackChatHistory');
+        
         if (messages.length === 0) {
-            historyContainer.innerHTML = '<div class="text-center py-4 text-slate-500">История пуста</div>';
+            historyContainer.innerHTML = `
+                <div class="flex flex-col items-center justify-center h-full text-slate-500">
+                    <i class="fas fa-comments text-3xl mb-2 opacity-50"></i>
+                    <p>История пуста</p>
+                </div>
+            `;
         } else {
             historyContainer.innerHTML = messages.map(msg => {
                 const isUser = msg.sender === 'user';
                 const time = msg.timestamp ? formatTimeAgo(msg.timestamp.toDate ? msg.timestamp.toDate() : new Date(msg.timestamp)) : '';
-                const avatarIcon = isUser ? '<i class="fas fa-user text-blue-400"></i>' : '<i class="fas fa-headset text-purple-400"></i>';
-                const bgClass = isUser ? 'bg-blue-600/20 border border-blue-500/30' : 'bg-slate-800 border border-slate-700';
-                const alignClass = isUser ? 'flex-row-reverse' : 'flex-row';
+                
+                // Аватар и имя
+                const avatarIcon = isUser 
+                    ? '<i class="fas fa-user text-white"></i>' 
+                    : '<i class="fas fa-headset text-white"></i>';
+                const senderName = isUser ? 'Вы' : 'Поддержка';
                 
                 return `
-                    <div class="message-bubble flex gap-3 ${alignClass} items-end mb-4">
-                        <div class="w-8 h-8 shrink-0 rounded-full bg-slate-700 border border-slate-600 flex items-center justify-center text-sm">
+                    <div class="chat-bubble ${isUser ? 'user' : 'admin'}">
+                        <div class="chat-avatar">
                             ${avatarIcon}
                         </div>
-                        <div class="flex-1 max-w-[80%] ${bgClass} rounded-2xl p-3">
-                            <div class="flex justify-between items-center gap-2 mb-1">
-                                <span class="text-xs text-slate-400 font-medium">${isUser ? 'Вы' : 'Поддержка'}</span>
-                                <span class="text-[10px] text-slate-500 whitespace-nowrap">${time}</span>
+                        <div class="chat-bubble-wrapper">
+                            <span class="chat-sender">${senderName}</span>
+                            <div class="chat-content">
+                                <div class="chat-text">${msg.text}</div>
                             </div>
-                            <p class="text-sm text-slate-200 break-words">${msg.text}</p>
+                            <span class="chat-time">${time}</span>
                         </div>
                     </div>
                 `;
             }).join('');
         }
 
-        // Показываем форму для ответа
+        // Форма для ответа
         document.getElementById('feedbackFormNew').classList.add('hidden');
         document.getElementById('feedbackFormReply').classList.remove('hidden');
         document.getElementById('feedbackSendBtn').classList.add('hidden');
@@ -1438,7 +1553,6 @@ function loadFeedbackChat(docId, projId) {
         }
     });
 
-    // Сохраняем unsub для последующей очистки (опционально)
     window.currentFeedbackUnsub = unsubscribe;
 }
 
@@ -1619,42 +1733,47 @@ window.openAdminFeedbackChat = function(feedbackId) {
     const feedback = adminFeedbacks.find(f => f.id === feedbackId);
     if (!feedback) return;
 
-    // Создаём временную модалку для чата админа
     const modal = document.getElementById('feedbackModal');
     document.getElementById('feedbackProjectId').value = feedback.projectId;
-    document.getElementById('feedbackProjectName').textContent = `${feedback.projectId} (от ${feedback.userName})`;
+    document.getElementById('feedbackProjectName').textContent = `${feedback.projectId} (от ${feedback.userName || 'Аноним'})`;
     document.getElementById('feedbackDocId').value = feedbackId;
     
-    document.getElementById('feedbackModalTitle').textContent = 'Переписка с пользователем';
+    document.getElementById('feedbackModalTitle').textContent = '💬 Переписка';
     document.getElementById('feedbackFormNew').classList.add('hidden');
     document.getElementById('feedbackFormReply').classList.remove('hidden');
     document.getElementById('feedbackSendBtn').classList.add('hidden');
 
-    // Загружаем чат
     const messages = feedback.messages || [];
     const historyContainer = document.getElementById('feedbackChatHistory');
     
     if (messages.length === 0) {
-        historyContainer.innerHTML = '<div class="text-center py-4 text-slate-500">Нет сообщений</div>';
+        historyContainer.innerHTML = `
+            <div class="flex flex-col items-center justify-center h-full text-slate-500">
+                <i class="fas fa-comment-slash text-3xl mb-2 opacity-50"></i>
+                <p>Нет сообщений</p>
+            </div>
+        `;
     } else {
         historyContainer.innerHTML = messages.map(msg => {
             const isUser = msg.sender === 'user';
             const time = msg.timestamp ? formatTimeAgo(msg.timestamp.toDate ? msg.timestamp.toDate() : new Date(msg.timestamp)) : '';
-            const avatarIcon = isUser ? '<i class="fas fa-user text-blue-400"></i>' : '<i class="fas fa-headset text-purple-400"></i>';
-            const bgClass = isUser ? 'bg-blue-600/20 border border-blue-500/30' : 'bg-purple-600/20 border border-purple-500/30';
-            const alignClass = isUser ? 'flex-row-reverse' : 'flex-row';
+            
+            const avatarIcon = isUser 
+                ? '<i class="fas fa-user text-white"></i>' 
+                : '<i class="fas fa-user-shield text-white"></i>';
+            const senderName = isUser ? (feedback.userName || 'Пользователь') : 'Вы';
             
             return `
-                <div class="message-bubble flex gap-3 ${alignClass} items-end mb-4">
-                    <div class="w-8 h-8 shrink-0 rounded-full bg-slate-700 border border-slate-600 flex items-center justify-center text-sm">
+                <div class="chat-bubble ${isUser ? 'user' : 'admin'}">
+                    <div class="chat-avatar">
                         ${avatarIcon}
                     </div>
-                    <div class="flex-1 max-w-[80%] ${bgClass} rounded-2xl p-3">
-                        <div class="flex justify-between items-center gap-2 mb-1">
-                            <span class="text-xs text-slate-300 font-medium">${isUser ? 'Пользователь' : 'Вы'}</span>
-                            <span class="text-[10px] text-slate-400 whitespace-nowrap">${time}</span>
+                    <div class="chat-bubble-wrapper">
+                        <span class="chat-sender">${senderName}</span>
+                        <div class="chat-content">
+                            <div class="chat-text">${msg.text}</div>
                         </div>
-                        <p class="text-sm text-slate-200 break-words">${msg.text}</p>
+                        <span class="chat-time">${time}</span>
                     </div>
                 </div>
             `;
@@ -1662,9 +1781,9 @@ window.openAdminFeedbackChat = function(feedbackId) {
     }
 
     document.getElementById('feedbackUserReplyText').value = '';
-    document.getElementById('feedbackUserReplyText').placeholder = 'Напишите ответ пользователю...';
+    document.getElementById('feedbackUserReplyText').placeholder = 'Напишите ответ...';
 
-    // Переопределяем обработчик для админа
+    // Переопределяем отправку для админа
     document.getElementById('feedbackUserReplyText').onkeypress = function(e) {
         if (e.key === 'Enter') sendAdminReply(feedbackId);
     };
