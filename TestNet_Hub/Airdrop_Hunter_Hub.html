@@ -1514,71 +1514,45 @@ function showNewFeedbackForm() {
 }
 
 function loadFeedbackChat(docId, projId) {
-    const unsubscribe = onSnapshot(doc(db, "feedbacks", docId), (snapshot) => {
-        if (!snapshot.exists()) {
-            showNewFeedbackForm();
-            return;
-        }
+    const unsub = onSnapshot(doc(db, "feedbacks", docId), (snap) => {
+        if (!snap.exists()) return showNewFeedbackForm();
 
-        const data = snapshot.data();
-        const messages = data.messages || [];
+        const d = snap.data();
+        const messages = d.messages || [];
+        messages.sort((a,b) => new Date(a.timestamp) - new Date(b.timestamp));
 
-        messages.sort((a, b) => {
-            const timeA = a.timestamp?.toDate ? a.timestamp.toDate() : (a.timestamp ? new Date(a.timestamp) : new Date(0));
-            const timeB = b.timestamp?.toDate ? b.timestamp.toDate() : (b.timestamp ? new Date(b.timestamp) : new Date(0));
-            return timeA - timeB;
-        });
+        const html = messages.map((msg) => {
+            const fromUser = msg.sender === 'user'; // пользователь писал
+            const bubbleSide = fromUser ? 'user' : 'admin';
+            const senderName = fromUser ? 'Вы' : 'Поддержка';
+            const avatar = fromUser
+                ? `<img src="${currentUser?.photoURL || 'https://ui-avatars.com/api/?name=U'}" class="chat-avatar" alt>` 
+                : `<div class="chat-avatar"><i class="fas fa-user-shield"></i></div>`;
 
-        // isCurrentUserAdmin здесь всегда false для обычного пользователя.
-
-        const bubbleHtml = messages.map(msg => {
-            // Для обычного пользователя "мое" сообщение - это то, которое он отправил ('user').
-            const isMine = msg.sender === 'user'; 
-
-            // bubbleSide: 'user' для справа, 'admin' для слева
-            const bubbleSide = isMine ? 'user' : 'admin'; 
-            
-            // senderName: 'Вы' для своих, 'Поддержка' для чужих
-            const senderName = isMine ? 'Вы' : 'Поддержка'; 
-
-            // avatarIcon: иконка пользователя для своих, иконка админа для чужих
-            const avatarIcon = isMine
-                ? '<i class="fas fa-user text-white"></i>' // Аватар пользователя
-                : '<i class="fas fa-user-shield text-white"></i>'; // Аватар админа
-
-            const time = msg.timestamp
-                ? formatTimeAgo(msg.timestamp.toDate ? msg.timestamp.toDate() : new Date(msg.timestamp))
-                : '';
+            const t = msg.timestamp ? formatTimeAgo(msg.timestamp.toDate ? msg.timestamp.toDate() : new Date(msg.timestamp)) : '';
 
             return `
-              <div class="chat-bubble ${bubbleSide}">
-                 <div class="chat-avatar">${avatarIcon}</div>
-                 <div class="chat-bubble-wrapper">
+            <div class="chat-bubble ${bubbleSide}">
+                ${avatar}
+                <div class="chat-bubble-wrapper">
                     <span class="chat-sender">${senderName}</span>
-                    <div class="chat-content"><div class="chat-text">${msg.text}</div></div>
-                    <span class="chat-time">${time}</span>
-                 </div>
-              </div>`;
+                    <div class="chat-content">${msg.text}</div>
+                    <span class="chat-time">${t}</span>
+                </div>
+            </div>`;
         }).join('');
 
-        const historyContainer = document.getElementById('feedbackChatHistory');
-        historyContainer.innerHTML = bubbleHtml;
-
+        const history = document.getElementById("feedbackChatHistory");
+        history.innerHTML = html || `<p class="text-center text-slate-500 py-4">Нет сообщений</p>`;
         document.getElementById('feedbackFormNew').classList.add('hidden');
         document.getElementById('feedbackFormReply').classList.remove('hidden');
         document.getElementById('feedbackSendBtn').classList.add('hidden');
-        document.getElementById('feedbackUserReplyText').value = '';
+        history.scrollTop = history.scrollHeight;
 
-        setTimeout(() => {
-            historyContainer.scrollTop = historyContainer.scrollHeight;
-        }, 100);
-
-        if (!data.userRead) {
-            updateDoc(doc(db, "feedbacks", docId), { userRead: true }).catch(e => console.error(e));
-        }
+        // отметить как прочитанное
+        if (!d.userRead) updateDoc(doc(db, "feedbacks", docId), { userRead: true });
     });
-
-    window.currentFeedbackUnsub = unsubscribe;
+    window.currentFeedbackUnsub = unsub;
 }
 window.sendUserFeedback = async function() {
     if (!currentUser) return showToast('Войдите в аккаунт');
@@ -1753,89 +1727,52 @@ window.renderFeedbackList = function() {
 };
 
 // --- АДМИН: ОТКРЫТЬ ЧАТ КОНКРЕТНОГО ОТЗЫВА ---
-window.openAdminFeedbackChat = function(feedbackId) {
-    const feedback = adminFeedbacks.find(f => f.id === feedbackId);
-    if (!feedback) return;
+window.openAdminFeedbackChat = function (feedbackId) {
+    const fb = adminFeedbacks.find(f => f.id === feedbackId);
+    if (!fb) return;
 
     const modal = document.getElementById('feedbackModal');
-    document.getElementById('feedbackProjectId').value = feedback.projectId;
-    // Для админа в заголовке удобно видеть и проект, и имя пользователя
-    document.getElementById('feedbackProjectName').textContent = `${feedback.projectId || 'Неизвестный проект'} (от ${feedback.userName || 'Аноним'})`;
-    document.getElementById('feedbackDocId').value = feedbackId;
-    
-    document.getElementById('feedbackModalTitle').textContent = '💬 Переписка';
+    document.getElementById('feedbackProjectId').value = fb.projectId;
+    document.getElementById('feedbackProjectName').textContent = `${fb.projectId} (от ${fb.userName || 'Пользователь'})`;
+    document.getElementById('feedbackDocId').value = fb.id;
+
+    document.getElementById('feedbackModalTitle').textContent = 'Чат с пользователем';
     document.getElementById('feedbackFormNew').classList.add('hidden');
     document.getElementById('feedbackFormReply').classList.remove('hidden');
     document.getElementById('feedbackSendBtn').classList.add('hidden');
 
-    const messages = feedback.messages || [];
-    const historyContainer = document.getElementById('feedbackChatHistory');
-    
-    if (messages.length === 0) {
-        historyContainer.innerHTML = `
-            <div class="flex flex-col items-center justify-center h-full text-slate-500">
-                <i class="fas fa-comment-slash text-3xl mb-2 opacity-50"></i>
-                <p>Нет сообщений</p>
-            </div>
-        `;
-    } else {
-        const bubbleHtml = messages.map(msg => {
-            // Для админа "мое" сообщение - это то, которое он отправил ('admin').
-            const isMine = msg.sender === 'admin'; 
+    const messages = fb.messages || [];
+    messages.sort((a,b)=> new Date(a.timestamp)-new Date(b.timestamp));
 
-            // bubbleSide: 'user' для справа (свои), 'admin' для слева (чужие)
-            const bubbleSide = isMine ? 'user' : 'admin'; 
-            
-            // senderName: 'Вы' для своих, имя пользователя для чужих
-            const senderName = isMine
-                ? 'Вы' // Сообщение админа
-                : (feedback.userName || 'Пользователь'); // Сообщение пользователя
-
-            // avatarIcon: иконка админа для своих, иконка пользователя для чужих
-            const avatarIcon = isMine
-                ? '<i class="fas fa-user-shield text-white"></i>' // Аватар админа
-                : '<i class="fas fa-user text-white"></i>'; // Аватар пользователя
-
-            const time = msg.timestamp ? formatTimeAgo(msg.timestamp.toDate ? msg.timestamp.toDate() : new Date(msg.timestamp)) : '';
-            
-            return `
-                <div class="chat-bubble ${bubbleSide}">
-                    <div class="chat-avatar">
-                        ${avatarIcon}
-                    </div>
-                    <div class="chat-bubble-wrapper">
-                        <span class="chat-sender">${senderName}</span>
-                        <div class="chat-content">
-                            <div class="chat-text">${msg.text}</div>
-                        </div>
-                        <span class="chat-time">${time}</span>
-                    </div>
+    const html = messages.map(msg => {
+        const fromAdmin = msg.sender === 'admin';
+        const bubbleSide = fromAdmin ? 'user' : 'admin';
+        const senderName = fromAdmin ? 'Вы' : (fb.userName || 'Пользователь');
+        const avatar = fromAdmin
+            ? `<div class="chat-avatar"><i class="fas fa-user-shield"></i></div>`
+            : `<img src="${fb.userPhoto || 'https://ui-avatars.com/api/?name=P'}" class="chat-avatar" alt>`;
+        const t = msg.timestamp ? formatTimeAgo(msg.timestamp.toDate ? msg.timestamp.toDate() : new Date(msg.timestamp)) : '';
+        return `
+            <div class="chat-bubble ${bubbleSide}">
+                ${avatar}
+                <div class="chat-bubble-wrapper">
+                    <span class="chat-sender">${senderName}</span>
+                    <div class="chat-content">${msg.text}</div>
+                    <span class="chat-time">${t}</span>
                 </div>
-            `;
-        }).join('');
-        historyContainer.innerHTML = bubbleHtml;
-    }
+            </div>`;
+    }).join('');
 
-    document.getElementById('feedbackUserReplyText').value = '';
-    document.getElementById('feedbackUserReplyText').placeholder = 'Напишите ответ...';
+    const hist = document.getElementById('feedbackChatHistory');
+    hist.innerHTML = html || `<p class="text-center text-slate-500 py-4">Нет сообщений</p>`;
+    hist.scrollTop = hist.scrollHeight;
 
-    // Устанавливаем обработчик для кнопки отправки ответа админа
-    document.getElementById('feedbackFormReply').querySelector('button').onclick = () => sendAdminReply(feedbackId);
-    // Обработчик Enter для поля ввода ответа админа
-    document.getElementById('feedbackUserReplyText').onkeypress = function(e) {
-        if (e.key === 'Enter') {
-            e.preventDefault(); // Предотвратить новую строку в поле ввода
-            sendAdminReply(feedbackId);
-        }
-    };
+    const inp = document.getElementById('feedbackUserReplyText');
+    inp.value = '';
+    inp.placeholder = 'Ответ пользователю...';
+    inp.onkeypress = e => { if (e.key === 'Enter') { e.preventDefault(); sendAdminReply(feedbackId);} };
 
     modal.classList.add('active');
-    // Прокрутка вниз для новых сообщений
-    setTimeout(() => {
-        historyContainer.scrollTop = historyContainer.scrollHeight;
-    }, 100);
-
-    // Помечаем как прочитанное для админа
     markFeedbackRead(feedbackId);
 };
 
