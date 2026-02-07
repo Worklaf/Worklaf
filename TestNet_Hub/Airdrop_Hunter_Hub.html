@@ -93,18 +93,37 @@
             font-weight: bold;
             border: 1px solid #1e2538;
         }
-        /* Стили чата обратной связи */
+        /* ============ СТИЛИ ЧАТА ============ */
+.chat-history {
+    max-height: 400px;
+    overflow-y: auto;
+    padding: 16px;
+    background: rgba(0, 0, 0, 0.3);
+    border-radius: 12px;
+    margin-bottom: 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+/* Общий стиль пузыря */
 .chat-bubble {
     display: flex;
     gap: 10px;
-    margin-bottom: 16px;
-    animation: slideIn 0.3s ease;
+    max-width: 85%;
+    animation: fadeIn 0.3s ease;
 }
 
 .chat-bubble.user {
+    align-self: flex-end;
     flex-direction: row-reverse;
 }
 
+.chat-bubble.admin {
+    align-self: flex-start;
+}
+
+/* Аватарка */
 .chat-avatar {
     width: 36px;
     height: 36px;
@@ -118,18 +137,19 @@
 
 .chat-bubble.user .chat-avatar {
     background: linear-gradient(135deg, #3b82f6, #2563eb);
-    border: 2px solid rgba(59, 130, 246, 0.3);
+    box-shadow: 0 2px 8px rgba(59, 130, 246, 0.4);
 }
 
 .chat-bubble.admin .chat-avatar {
     background: linear-gradient(135deg, #8b5cf6, #6d28d9);
-    border: 2px solid rgba(139, 92, 246, 0.3);
+    box-shadow: 0 2px 8px rgba(139, 92, 246, 0.4);
 }
 
+/* Wrapper для контента */
 .chat-bubble-wrapper {
-    max-width: 80%;
     display: flex;
     flex-direction: column;
+    max-width: calc(100% - 46px);
 }
 
 .chat-bubble.user .chat-bubble-wrapper {
@@ -140,28 +160,35 @@
     align-items: flex-start;
 }
 
+/* Цветной пузырь сообщения */
 .chat-content {
     padding: 12px 16px;
     border-radius: 16px;
     position: relative;
+    word-wrap: break-word;
 }
 
 .chat-bubble.user .chat-content {
-    background: linear-gradient(135deg, rgba(59, 130, 246, 0.2), rgba(37, 99, 235, 0.1));
-    border: 1px solid rgba(59, 130, 246, 0.3);
+    background: linear-gradient(135deg, rgba(59, 130, 246, 0.25), rgba(37, 99, 235, 0.15));
+    border: 1px solid rgba(59, 130, 246, 0.35);
     border-bottom-right-radius: 4px;
+    color: #e2e8f0;
 }
 
 .chat-bubble.admin .chat-content {
-    background: linear-gradient(135deg, rgba(139, 92, 246, 0.2), rgba(109, 40, 217, 0.1));
-    border: 1px solid rgba(139, 92, 246, 0.3);
+    background: linear-gradient(135deg, rgba(139, 92, 246, 0.25), rgba(109, 40, 217, 0.15));
+    border: 1px solid rgba(139, 92, 246, 0.35);
     border-bottom-left-radius: 4px;
+    color: #e2e8f0;
 }
 
+/* Имя отправителя (если нужно) */
 .chat-sender {
-    font-size: 0.75rem;
+    font-size: 0.7rem;
     font-weight: 600;
     margin-bottom: 4px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
 }
 
 .chat-bubble.user .chat-sender {
@@ -172,21 +199,21 @@
     color: #a78bfa;
 }
 
+/* Текст сообщения */
 .chat-text {
     font-size: 0.9rem;
     line-height: 1.5;
-    color: #e2e8f0;
-    word-wrap: break-word;
 }
 
+/* Время */
 .chat-time {
-    font-size: 0.7rem;
+    font-size: 0.65rem;
     color: #64748b;
-    margin-top: 6px;
-    text-align: right;
+    margin-top: 4px;
 }
 
-@keyframes slideIn {
+/* Анимация появления */
+@keyframes fadeIn {
     from {
         opacity: 0;
         transform: translateY(10px);
@@ -196,24 +223,8 @@
         transform: translateY(0);
     }
 }
-.chat-history {
-    max-height: 400px;
-    overflow-y: auto;
-    padding: 10px;
-    background: rgba(0,0,0,0.2);
-    border-radius: 8px;
-    margin-bottom: 15px;
-}
 
-.message-bubble {
-    margin-bottom: 12px;
-    animation: fadeIn 0.3s ease;
-}
-
-@keyframes fadeIn { 
-    from { opacity: 0; transform: translateY(10px); } 
-    to { opacity: 1; transform: translateY(0); } 
-}
+/* ============ КОНЕЦ СТИЛЕЙ ЧАТА ============ */
         .glass-card.user-completed,
         .glass-card.daily-completed {
             opacity: 0.6;
@@ -1492,7 +1503,6 @@ function loadFeedbackChat(docId, projId) {
         const data = snapshot.data();
         const messages = data.messages || [];
 
-        // Сортируем по времени
         messages.sort((a, b) => {
             const timeA = a.timestamp?.toDate ? a.timestamp.toDate() : (a.timestamp ? new Date(a.timestamp) : new Date(0));
             const timeB = b.timestamp?.toDate ? b.timestamp.toDate() : (b.timestamp ? new Date(b.timestamp) : new Date(0));
@@ -1513,7 +1523,6 @@ function loadFeedbackChat(docId, projId) {
                 const isUser = msg.sender === 'user';
                 const time = msg.timestamp ? formatTimeAgo(msg.timestamp.toDate ? msg.timestamp.toDate() : new Date(msg.timestamp)) : '';
                 
-                // Аватар и имя
                 const avatarIcon = isUser 
                     ? '<i class="fas fa-user text-white"></i>' 
                     : '<i class="fas fa-headset text-white"></i>';
@@ -1536,18 +1545,15 @@ function loadFeedbackChat(docId, projId) {
             }).join('');
         }
 
-        // Форма для ответа
         document.getElementById('feedbackFormNew').classList.add('hidden');
         document.getElementById('feedbackFormReply').classList.remove('hidden');
         document.getElementById('feedbackSendBtn').classList.add('hidden');
         document.getElementById('feedbackUserReplyText').value = '';
 
-        // Прокручиваем вниз
         setTimeout(() => {
             historyContainer.scrollTop = historyContainer.scrollHeight;
         }, 100);
 
-        // Отмечаем как прочитанное
         if (!data.userRead) {
             updateDoc(doc(db, "feedbacks", docId), { userRead: true }).catch(e => console.error(e));
         }
@@ -1555,7 +1561,6 @@ function loadFeedbackChat(docId, projId) {
 
     window.currentFeedbackUnsub = unsubscribe;
 }
-
 window.sendUserFeedback = async function() {
     if (!currentUser) return showToast('Войдите в аккаунт');
     
