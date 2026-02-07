@@ -1139,9 +1139,8 @@
 
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
-       
-       import { getAuth, signInWithPopup, GoogleAuthProvider, TwitterAuthProvider, signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
-import { getFirestore, collection, doc, setDoc, getDoc, getDocs, updateDoc, deleteDoc, onSnapshot, query, where, orderBy, addDoc, serverTimestamp, arrayUnion } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+        import { getAuth, signInWithPopup, GoogleAuthProvider, TwitterAuthProvider, signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
+        import { getFirestore, collection, doc, setDoc, getDoc, getDocs, updateDoc, deleteDoc, onSnapshot, query, where, orderBy, addDoc, serverTimestamp, arrayUnion } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
         const firebaseConfig = {
             apiKey: "AIzaSyBdXGYg2t8DJBrQHCC80-pFerZU9PWmSCk",
@@ -1156,59 +1155,29 @@ import { getFirestore, collection, doc, setDoc, getDoc, getDocs, updateDoc, dele
         const auth = getAuth(app);
         const db = getFirestore(app);
 
+        // Глобальные переменные
         const STORAGE_KEY = 'arc_tracker_v3';
-        const COMPLETED_KEY = 'arc_completed_v1'; 
-        
+        const COMPLETED_KEY = 'arc_completed_v1';
         let projects = [];
-        let categories = ['DeFi', 'Gaming', 'Infra', 'L1/L2', 'NFT', 'Social', 'Other'];
-        let currentFilters = { status: 'all', categories: [] };
-        let editingId = null;
-        let isEditModalOpen = false; // Для предотвращения перезаписи данных в модалке
-        let currentDetailId = null;
-        let isAdminMode = false;
-        let currentUser = null;
-        let userFavorites = [];
-        let userCompleted = [];
-        let arcData = JSON.parse(localStorage.getItem(STORAGE_KEY)) || {};
-        let tempCustomCategories = [];
-        let adminClickCount = 0;
-        const ADMIN_CLICK_THRESHOLD = 5;
+        // ... (остальные let переменные остаются такими же как у тебя) ...
+        let adminFeedbacks = [];
+        let adminFeedbacksUnsubscribe = null;
+        let feedbackUnsub = null; // Для чата
 
-        let notifications = [];
-        let unreadNotificationsCount = 0;
-        let notificationsUnsubscribe = null;
-
-    
-
-        let itemsPerPage = parseInt(localStorage.getItem('itemsPerPage')) || 10;
-        let currentPage = 1;
-        let currentFilteredList = [];
-
-        let pendingLinkInsert = null;
-        let pendingImgInsert = null;
-// Feedback System
-let adminFeedbacks = [];
-let adminFeedbacksUnsubscribe = null;
-        // Activity Management State
-        let currentEditingActivities = [];
-        let editingActivityId = null;
-        let mainProjectCategories = []; 
-async function sendNotificationToUser(userId, message, type = 'info') {
+        // ЭТА ФУНКЦИЯ ДОЛЖНА БЫТЬ ОПРЕДЕЛЕНА РАНЬШЕ ЕЕ ВЫЗОВА
+        async function sendNotificationToUser(userId, message, type = 'info') {
             try {
                 await addDoc(collection(db, "notifications"), {
                     userId: userId,
                     message: message,
                     type: type,
                     read: false,
-                    createdAt: new Date(),
+                    createdAt: new Date(), // Используем new Date() для совместимости
                     link: '/feedbacks'
                 });
-            } catch (e) {
-                console.error('Ошибка отправки уведомления:', e);
-            }
+            } catch (e) { console.error('Ошибка отправки уведомления:', e); }
         }
-        // Делаем доступной глобально для надежности
-        window.sendNotificationToUser = sendNotificationToUser;
+        window.sendNotificationToUser = sendNotificationToUser; 
         document.addEventListener('DOMContentLoaded', function() {
             const select = document.getElementById('itemsPerPageSelect');
             if(select) select.value = itemsPerPage;
@@ -2979,5 +2948,27 @@ window.deleteMyFeedback = window.deleteUserFeedback;
         };
         
     </script>
+        <!-- Feedback List Modal (Admin View) -->
+    <div id="feedbackListModal" class="modal">
+        <div class="modal-content modal-large">
+            <div class="modal-header">
+                <h2 class="text-xl font-bold flex items-center gap-2">
+                    <i class="fas fa-comments text-purple-400"></i>
+                    Список обращений
+                </h2>
+                <button onclick="closeFeedbackListModal()" class="text-slate-400 hover:text-white">
+                    <i class="fas fa-times text-xl"></i>
+                </button>
+            </div>
+            <div class="modal-body">
+                <div id="feedbacksContainer" class="space-y-4 max-h-[60vh] overflow-y-auto pr-2">
+                    <p class="text-slate-500 text-center py-8">Загрузка...</p>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button onclick="closeFeedbackListModal()" class="bg-slate-700 hover:bg-slate-600 px-6 py-2 rounded-lg text-sm transition-colors w-full">Закрыть</button>
+            </div>
+        </div>
+    </div>
 </body>
 </html>
