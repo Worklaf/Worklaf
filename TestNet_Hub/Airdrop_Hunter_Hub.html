@@ -1744,40 +1744,66 @@ window.openAdminFeedbackChat = function (feedbackId) {
     document.getElementById('feedbackFormReply').classList.remove('hidden');
     document.getElementById('feedbackSendBtn').classList.add('hidden');
 
-    const messages = fb.messages || [];
-    messages.sort((a,b)=> new Date(a.timestamp)-new Date(b.timestamp));
+    // Убираем старый listener если был
+    if (window.currentFeedbackUnsub) {
+        window.currentFeedbackUnsub();
+        window.currentFeedbackUnsub = null;
+    }
 
-    const html = messages.map(msg => {
-        // Ключевая логика: если сообщение от 'admin', оно отображается как 'user' (справа)
-        const fromAdmin = msg.sender === 'admin'; 
-        const bubbleSide = fromAdmin ? 'user' : 'admin'; 
-        
-        const senderName = fromAdmin ? 'Вы' : (fb.userName || 'Пользователь');
-        const avatar = fromAdmin
-            ? `<div class="chat-avatar"><i class="fas fa-user-shield"></i></div>`
-            : `<img src="${fb.userPhoto || 'https://ui-avatars.com/api/?name=P'}" class="chat-avatar" alt>`;
-            
-        const t = msg.timestamp ? formatTimeAgo(msg.timestamp.toDate ? msg.timestamp.toDate() : new Date(msg.timestamp)) : '';
-        
-        return `
-            <div class="chat-bubble ${bubbleSide}">
-                ${avatar}
-                <div class="chat-bubble-wrapper">
-                    <span class="chat-sender">${senderName}</span>
-                    <div class="chat-content">${msg.text}</div>
-                    <span class="chat-time">${t}</span>
-                </div>
-            </div>`;
-    }).join('');
+    // Подписываемся на realtime обновления документа
+    const unsub = onSnapshot(doc(db, "feedbacks", feedbackId), (snap) => {
+        if (!snap.exists()) return;
 
-    const hist = document.getElementById('feedbackChatHistory');
-    hist.innerHTML = html || `<p class="text-center text-slate-500 py-4">Нет сообщений</p>`;
-    hist.scrollTop = hist.scrollHeight;
+        const d = snap.data();
+        const messages = d.messages || [];
+        messages.sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp));
 
+        const html = messages.map(msg => {
+            const fromAdmin = msg.sender === 'admin';
+            const bubbleSide = fromAdmin ? 'user' : 'admin';
+
+            const senderName = fromAdmin ? 'Вы' : (d.userName || 'Пользователь');
+            const avatar = fromAdmin
+                ? `<div class="chat-avatar"><i class="fas fa-user-shield"></i></div>`
+                : `<img src="${d.userPhoto || 'https://ui-avatars.com/api/?name=P'}" class="chat-avatar" alt>`;
+
+            const t = msg.timestamp ? formatTimeAgo(msg.timestamp.toDate ? msg.timestamp.toDate() : new Date(msg.timestamp)) : '';
+
+            return `
+                <div class="chat-bubble ${bubbleSide}">
+                    ${avatar}
+                    <div class="chat-bubble-wrapper">
+                        <span class="chat-sender">${senderName}</span>
+                        <div class="chat-content">${msg.text}</div>
+                        <span class="chat-time">${t}</span>
+                    </div>
+                </div>`;
+        }).join('');
+
+        const hist = document.getElementById('feedbackChatHistory');
+        hist.innerHTML = html || `<p class="text-center text-slate-500 py-4">Нет сообщений</p>`;
+        hist.scrollTop = hist.scrollHeight;
+    });
+
+    window.currentFeedbackUnsub = unsub;
+
+    // Настраиваем поле ввода для админского ответа
     const inp = document.getElementById('feedbackUserReplyText');
     inp.value = '';
     inp.placeholder = 'Ответ пользователю...';
-    inp.onkeypress = e => { if (e.key === 'Enter') { e.preventDefault(); sendAdminReply(feedbackId);} };
+
+    // Переопределяем кнопку отправки рядом с инпутом
+    const sendBtn = inp.parentElement.querySelector('button');
+    if (sendBtn) {
+        sendBtn.onclick = function () { sendAdminReply(feedbackId); };
+    }
+
+    inp.onkeypress = e => {
+        if (e.key === 'Enter') {
+            e.preventDefault();
+            sendAdminReply(feedbackId);
+        }
+    };
 
     modal.classList.add('active');
     markFeedbackRead(feedbackId);
@@ -1785,21 +1811,21 @@ window.openAdminFeedbackChat = function (feedbackId) {
 
 // --- АДМИН: ОТПРАВИТЬ ОТВЕТ ---
 window.sendAdminReply = async function(feedbackId) {
-    const text = document.getElementById('feedbackUserReplyText').value.trim();
+    const inp = document.getElementById('feedbackUserReplyText');
+    const text = inp.value.trim();
     if (!text) return showToast('Введите ответ');
 
     try {
         await updateDoc(doc(db, "feedbacks", feedbackId), {
-            // ИЗМЕНЕНО: new Date() вместо serverTimestamp()
             messages: arrayUnion({
                 sender: 'admin',
                 text: text,
                 timestamp: new Date()
             }),
-            read: true
+            read: true,
+            userRead: false
         });
-        document.getElementById('feedbackUserReplyText').value = '';
-        showToast('Ответ отправлен');
+        inp.value = '';
     } catch (e) {
         console.error(e);
         showToast('Ошибка: ' + e.message);
