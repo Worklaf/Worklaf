@@ -1523,33 +1523,43 @@ function loadFeedbackChat(docId, projId) {
         const data = snapshot.data();
         const messages = data.messages || [];
 
+        // Сортируем по времени (возрастание)
         messages.sort((a, b) => {
-            const timeA = a.timestamp?.toDate ? a.timestamp.toDate() : (a.timestamp ? new Date(a.timestamp) : new Date(0));
-            const timeB = b.timestamp?.toDate ? b.timestamp.toDate() : (b.timestamp ? new Date(b.timestamp) : new Date(0));
+            const timeA = a.timestamp?.toDate ? a.timestamp.toDate() : new Date(a.timestamp || 0);
+            const timeB = b.timestamp?.toDate ? b.timestamp.toDate() : new Date(b.timestamp || 0);
             return timeA - timeB;
         });
 
+        // Определяем, кто сейчас авторизован
         const isCurrentUserAdmin = currentUser && currentUser.uid === "SAkz4mdW9reDaIsvqigCNZhEKJR2";
 
-        // ✅ Генерируем всё один раз
+        const historyContainer = document.getElementById('feedbackChatHistory');
+
+        // Генерируем всё содержимое истории
         const bubbleHtml = messages.map(msg => {
             const fromAdmin = msg.sender === 'admin';
             const fromUser  = msg.sender === 'user';
 
-            let isMine = false;
-            if (isCurrentUserAdmin && fromAdmin) isMine = true;
-            if (!isCurrentUserAdmin && fromUser) isMine = true;
-
+            // для админа — свои (admin) справа, для пользователя — свои (user) справа
+            const isMine = (isCurrentUserAdmin && fromAdmin) || (!isCurrentUserAdmin && fromUser);
             const bubbleSide = isMine ? 'user' : 'admin';
-            const senderName = isMine
-                ? 'Вы'
-                : isCurrentUserAdmin
-                    ? 'Пользователь'
-                    : 'Поддержка';
 
+            // Имя отправителя
+            let senderName = '';
+            if (isCurrentUserAdmin) {
+                senderName = fromAdmin ? 'Вы (Админ)' : (data.userName || 'Пользователь');
+            } else {
+                senderName = fromUser ? 'Вы' : 'Админ';
+            }
+
+            // Аватарки
             const avatarIcon = bubbleSide === 'user'
-                ? '<i class="fas fa-user text-white"></i>'
-                : '<i class="fas fa-user-shield text-white"></i>';
+                ? (isCurrentUserAdmin
+                    ? '<i class="fas fa-user-shield text-white"></i>'
+                    : '<i class="fas fa-user text-white"></i>')
+                : (isCurrentUserAdmin
+                    ? '<i class="fas fa-user text-white"></i>'
+                    : '<i class="fas fa-user-shield text-white"></i>');
 
             const time = msg.timestamp
                 ? formatTimeAgo(msg.timestamp.toDate ? msg.timestamp.toDate() : new Date(msg.timestamp))
@@ -1557,33 +1567,42 @@ function loadFeedbackChat(docId, projId) {
 
             return `
               <div class="chat-bubble ${bubbleSide}">
-                 <div class="chat-avatar">${avatarIcon}</div>
-                 <div class="chat-bubble-wrapper">
-                    <span class="chat-sender">${senderName}</span>
-                    <div class="chat-content"><div class="chat-text">${msg.text}</div></div>
-                    <span class="chat-time">${time}</span>
-                 </div>
+                <div class="chat-avatar">${avatarIcon}</div>
+                <div class="chat-bubble-wrapper">
+                  <span class="chat-sender">${senderName}</span>
+                  <div class="chat-content">
+                    <div class="chat-text">${msg.text}</div>
+                  </div>
+                  <span class="chat-time">${time}</span>
+                </div>
               </div>`;
         }).join('');
 
-        // 📦 Вставляем в контейнер
-        const historyContainer = document.getElementById('feedbackChatHistory');
-        historyContainer.innerHTML = bubbleHtml;
+        // Вставляем в DOM
+        historyContainer.innerHTML = bubbleHtml || `
+            <div class="flex flex-col items-center justify-center h-full text-slate-500">
+                <i class="fas fa-comments text-3xl mb-2 opacity-50"></i>
+                <p>Нет сообщений</p>
+            </div>`;
 
-        // ⬇ Прячем/показываем форму корректно
+        // Управление формами
         document.getElementById('feedbackFormNew').classList.add('hidden');
         document.getElementById('feedbackFormReply').classList.remove('hidden');
         document.getElementById('feedbackSendBtn').classList.add('hidden');
         document.getElementById('feedbackUserReplyText').value = '';
 
-        // ⬇ Пролистываем вниз
+        // Прокрутка вниз
         setTimeout(() => {
             historyContainer.scrollTop = historyContainer.scrollHeight;
         }, 100);
 
-        // ⬇ Помечаем как прочитанное
-        if (!data.userRead) {
-            updateDoc(doc(db, "feedbacks", docId), { userRead: true }).catch(e => console.error(e));
+        // Помечаем переписку как прочитанную (для пользователя)
+        if (!isCurrentUserAdmin && !data.userRead) {
+            updateDoc(doc(db, "feedbacks", docId), { userRead: true }).catch(console.error);
+        }
+        // Помечаем как прочитанную (для админа)
+        if (isCurrentUserAdmin && !data.read) {
+            updateDoc(doc(db, "feedbacks", docId), { read: true }).catch(console.error);
         }
     });
 
