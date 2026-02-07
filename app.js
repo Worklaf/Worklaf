@@ -91,14 +91,14 @@ function processData() {
     // В идеале нам нужно искать ключевое слово "Партия" в 0-м столбце.
     let headerRowIndex = -1;
     for(let i=0; i<rawData.length; i++) {
-        if(rawData[i][0] === "Партия") {
+        if(rawData[i][0] === "SUROWIEC") {
             headerRowIndex = i;
             break;
         }
     }
 
     if (headerRowIndex === -1) {
-        alert("Не найден заголовок таблицы ('Партия')! Проверьте структуру файла.");
+        alert("Не найден заголовок таблицы ('SUROWIEC')! Проверьте структуру файла.");
         return;
     }
 
