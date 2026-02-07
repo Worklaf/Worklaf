@@ -56,6 +56,44 @@
             box-shadow: 0 10px 30px -10px rgba(0, 0, 0, 0.5);
         }
 
+        /* Стили для карточки проекта с кнопкой отзыва */
+        .project-card-wrapper {
+            position: relative;
+        }
+        .feedback-trigger-btn {
+            position: absolute;
+            right: 10px;
+            top: 10px; /* Рядом с кнопкой избранного */
+            opacity: 0;
+            transform: translateX(10px);
+            transition: all 0.3s ease;
+            z-index: 15;
+            background: rgba(30, 37, 56, 0.9);
+            border: 1px solid rgba(255,255,255,0.1);
+            backdrop-filter: blur(4px);
+        }
+        .glass-card:hover .feedback-trigger-btn {
+            opacity: 1;
+            transform: translateX(0);
+        }
+
+        /* Стили админской кнопки отзывов */
+        .admin-feedback-btn {
+            position: relative;
+        }
+        .admin-feedback-badge {
+            position: absolute;
+            top: -2px;
+            right: -2px;
+            background: #ef4444;
+            color: white;
+            font-size: 0.65rem;
+            padding: 1px 4px;
+            border-radius: 999px;
+            font-weight: bold;
+            border: 1px solid #1e2538;
+        }
+
         .glass-card.user-completed,
         .glass-card.daily-completed {
             opacity: 0.6;
@@ -171,7 +209,6 @@
             flex-shrink: 0;
         }
 
-        /* Чтобы модальное окно само правильно скроллилось */
         .modal-body {
             padding: 20px 24px;
             overflow-y: auto;
@@ -413,8 +450,6 @@
             border-color: rgba(59, 130, 246, 0.3);
         }
 
-                /* Замените или обновите эти стили */
-
         .activity-block {
             background: rgba(30, 41, 59, 0.5);
             border: 1px solid rgba(255,255,255,0.08);
@@ -439,7 +474,6 @@
             background: rgba(59, 130, 246, 0.1);
         }
         
-        /* Теперь контент находится ВНУТРИ блока, а не рядом */
         .activity-body-container {
             max-height: 0;
             opacity: 0;
@@ -447,8 +481,7 @@
             transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
             background: rgba(0,0,0,0.2);
         }
-        
-        /* Изменяем на очень большое значение или прокрутку */
+
         .activity-body-container.open {
             max-height: 10000px; /* Увеличили значительно */
             opacity: 1;
@@ -458,14 +491,7 @@
             padding: 20px;
             overflow-x: auto; /* На случай широких таблиц или кода */
         }
-        /* кнопка справа при наведении */
-.glass-card{ position:relative; }
-.feedback-hud{ position:absolute; z-index:5; }
-.group:hover .hidden.group-hover\:flex{ display:flex; }
-
-/* счётчик отзывов */
-.feedback-counter{ margin-left:4px; }
-.feedback-counter.unread{ color:#f87171; font-weight:600; }
+        
         .activity-ended {
             opacity: 0.6;
             filter: grayscale(0.5);
@@ -531,8 +557,6 @@
             color: #60a5fa;
         }
     </style>
-    <!-- ФИДБЕК-МОДУЛЬ -->
-<script type="module" src="feedback.js"></script>
 </head>
 <body class="antialiased">
 
@@ -574,6 +598,14 @@
                         <button onclick="showNotifications()" class="p-2 text-slate-400 hover:text-white transition-colors rounded-lg hover:bg-slate-800 relative">
                             <i class="fas fa-bell text-xl"></i>
                             <span id="notificationBadge" class="absolute -top-1 -right-1 w-5 h-5 bg-red-500 rounded-full text-xs flex items-center justify-center hidden font-bold">0</span>
+                        </button>
+                    </div>
+
+                    <!-- Admin Feedback Button (Hidden by default) -->
+                    <div id="adminFeedbackPanel" class="hidden">
+                        <button onclick="openFeedbackListModal()" class="admin-feedback-btn p-2 text-slate-400 hover:text-blue-400 transition-colors rounded-lg hover:bg-slate-800 relative" title="Отзывы и предложения">
+                            <i class="fas fa-comment-dots text-xl"></i>
+                            <span id="feedbackBadge" class="admin-feedback-badge hidden">0</span>
                         </button>
                     </div>
 
@@ -626,6 +658,11 @@
                             <span><i class="fas fa-layer-group mr-2 w-5"></i>Все проекты</span>
                             <span class="bg-slate-700 px-2 py-0.5 rounded text-xs" id="countAll">0</span>
                         </button>
+                        <!-- New Filter: Unvisited -->
+                        <button onclick="filterProjects('unvisited')" class="sidebar-link w-full text-left px-4 py-2 rounded-lg text-sm text-slate-300 flex justify-between items-center" data-filter="unvisited">
+                            <span><i class="fas fa-eye-slash mr-2 w-5 text-red-400"></i>Не посещённые</span>
+                            <span class="bg-red-900/50 text-red-400 px-2 py-0.5 rounded text-xs" id="countUnvisited">0</span>
+                        </button>
                         <button onclick="filterProjects('today')" class="sidebar-link w-full text-left px-4 py-2 rounded-lg text-sm text-slate-300 flex justify-between items-center" data-filter="today">
                             <span><i class="fas fa-calendar-day mr-2 w-5 text-pink-400"></i>Сегодня</span>
                             <span class="bg-pink-900/50 text-pink-400 px-2 py-0.5 rounded text-xs" id="countToday">0</span>
@@ -650,17 +687,6 @@
                             <span><i class="fas fa-check-circle mr-2 w-5 text-slate-500"></i>Архив</span>
                             <span class="bg-slate-700 px-2 py-0.5 rounded text-xs" id="countEnded">0</span>
                         </button>
-                        <button onclick="filterProjects('missed')" class="sidebar-link w-full text-left px-4 py-2 rounded-lg text-sm text-slate-300 flex justify-between items-center" data-filter="missed">
-  <span><i class="fas fa-eye-slash mr-2 w-5 text-amber-400"></i>Не заходил</span>
-  <span class="bg-amber-900/50 text-amber-400 px-2 py-0.5 rounded text-xs" id="countMissed">0</span>
-</button>
-                   <!-- кнопка «отзывы» появится справа при наведении на карточку -->
-<div class="feedback-hud hidden group-hover:flex items-center gap-2 absolute -right-2 top-2 bg-slate-800/80 backdrop-blur px-2 py-1 rounded-lg border border-slate-700">
-  <button onclick="openFeedbackModal('${project.id}')" class="text-xs text-slate-300 hover:text-white" title="Оставить отзыв / предложение">
-    <i class="fas fa-comment-dots"></i> Отзыв
-  </button>
-  <span class="feedback-counter text-xs text-slate-400 cursor-pointer" onclick="openFeedbackList('${project.id}')" title="Показать отзывы"></span>
-</div> 
                     </div>
                 </div>
 
@@ -973,12 +999,81 @@
         </div>
     </div>
 
+    <!-- Feedback Modal (User) -->
+    <div id="feedbackModal" class="modal">
+        <div class="modal-content modal-sm p-6 relative">
+            <div class="flex justify-between items-center mb-4">
+                <h2 class="text-xl font-bold flex items-center gap-2">
+                    <i class="fas fa-comment-dots text-purple-400"></i>
+                    Обратная связь
+                </h2>
+                <button onclick="closeFeedbackModal()" class="text-slate-400 hover:text-white">
+                    <i class="fas fa-times text-xl"></i>
+                </button>
+            </div>
+            <div class="space-y-4">
+                <div>
+                    <input type="hidden" id="feedbackProjectId">
+                    <p id="feedbackProjectName" class="text-sm text-slate-400 mb-2">Проект: ...</p>
+                </div>
+                
+                <div>
+                    <label class="block text-sm font-medium text-slate-300 mb-2">Тема обращения</label>
+                    <select id="feedbackCategory" class="w-full bg-slate-800 border border-slate-700 rounded-lg px-4 py-2 text-sm focus:border-blue-500 outline-none text-slate-200">
+                        <option value="suggestion">💡 Предложение по улучшению</option>
+                        <option value="bug">🐛 Сообщить об ошибке (нерабочая ссылка)</option>
+                        <option value="question">❓ Вопрос по выполнению</option>
+                        <option value="other">💬 Другое</option>
+                    </select>
+                </div>
+
+                <div>
+                    <label class="block text-sm font-medium text-slate-300 mb-2">Ваше сообщение</label>
+                    <textarea id="feedbackText" rows="4" class="w-full bg-slate-800 border border-slate-700 rounded-lg px-4 py-2 text-sm focus:border-blue-500 outline-none text-slate-200" placeholder="Опишите суть обращения..."></textarea>
+                </div>
+
+                <div class="flex gap-3 pt-2">
+                    <button onclick="closeFeedbackModal()" class="flex-1 bg-slate-700 hover:bg-slate-600 py-2 rounded-lg text-sm transition-colors">Отмена</button>
+                    <button onclick="sendFeedback()" class="flex-1 bg-blue-600 hover:bg-blue-500 py-2 rounded-lg text-sm font-bold transition-colors">Отправить</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Feedback List Modal (Admin) -->
+    <div id="feedbackListModal" class="modal">
+        <div class="modal-content modal-large">
+            <div class="modal-header">
+                <div class="flex justify-between items-center w-full">
+                    <h2 class="text-xl font-bold flex items-center gap-2">
+                        <i class="fas fa-comments text-purple-400"></i>
+                        Отзывы и предложения
+                    </h2>
+                    <button onclick="closeFeedbackListModal()" class="text-slate-400 hover:text-white">
+                        <i class="fas fa-times text-xl"></i>
+                    </button>
+                </div>
+            </div>
+            <div class="modal-body">
+                <div id="feedbacksContainer" class="space-y-4 max-h-[60vh] overflow-y-auto pr-2">
+                    <!-- Feedback items will be injected here -->
+                    <p class="text-slate-500 text-center py-8">Загрузка отзывов...</p>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <div class="flex justify-center w-full">
+                     <button onclick="closeFeedbackListModal()" class="bg-slate-700 hover:bg-slate-600 px-6 py-2 rounded-lg text-sm transition-colors">Закрыть</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <div id="toast" class="fixed bottom-4 right-4 bg-slate-800 border border-slate-700 text-white px-6 py-3 rounded-xl shadow-2xl transform translate-y-20 opacity-0 transition-all duration-300 z-50 flex items-center gap-3">
         <i class="fas fa-check-circle text-emerald-400"></i>
         <span id="toastMessage">Действие выполнено</span>
     </div>
 
-        <!-- Prompt Modal for Link Input -->
+    <!-- Prompt Modal for Link Input -->
     <div id="promptModal" class="modal">
         <div class="modal-content modal-sm p-6 relative">
             <h2 class="text-lg font-bold mb-4">Вставьте ссылку</h2>
@@ -993,7 +1088,7 @@
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
         import { getAuth, signInWithPopup, GoogleAuthProvider, TwitterAuthProvider, signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
-        import { getFirestore, collection, doc, setDoc, getDoc, updateDoc, deleteDoc, onSnapshot, query, where } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+        import { getFirestore, collection, doc, setDoc, getDoc, updateDoc, deleteDoc, onSnapshot, query, where, orderBy, addDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
         const firebaseConfig = {
             apiKey: "AIzaSyBdXGYg2t8DJBrQHCC80-pFerZU9PWmSCk",
@@ -1029,6 +1124,10 @@
         let unreadNotificationsCount = 0;
         let notificationsUnsubscribe = null;
 
+        // Feedback specific
+        let adminFeedbacks = [];
+        let adminFeedbacksUnsubscribe = null;
+
         let itemsPerPage = parseInt(localStorage.getItem('itemsPerPage')) || 10;
         let currentPage = 1;
         let currentFilteredList = [];
@@ -1039,32 +1138,21 @@
         // Activity Management State
         let currentEditingActivities = [];
         let editingActivityId = null;
-        let mainProjectCategories = []; // To filter activity categories
+        let mainProjectCategories = []; 
 
         document.addEventListener('DOMContentLoaded', function() {
             const select = document.getElementById('itemsPerPageSelect');
             if(select) select.value = itemsPerPage;
-            // ДОБАВЛЯЕМ ОБРАБОТЧИК ДЛЯ ВВОДА ССЫЛКИ
-                    // Обработчик для окна вставки ссылки/картинки
-        const promptInput = document.getElementById('promptInput');
-        if(promptInput) {
-            promptInput.addEventListener('keydown', function(e) {
-                if (e.key === 'Enter') {
-                    e.preventDefault();
-                    window.confirmLinkInsert();
-                }
-            });
             
-            // Обработка Ctrl+V (или Cmd+V на Mac)
-            promptInput.addEventListener('paste', function(e) {
-                setTimeout(function() {
-                    // После вставки ждём 100мс и автоматически сохраняем
-                    if (promptInput.value.trim()) {
+            const promptInput = document.getElementById('promptInput');
+            if(promptInput) {
+                promptInput.addEventListener('keydown', function(e) {
+                    if (e.key === 'Enter') {
+                        e.preventDefault();
                         window.confirmLinkInsert();
                     }
-                }, 100);
-            });
-        }
+                });
+            }
             const savedSort = localStorage.getItem('sortProjects') || 'newest';
             const sortSelect = document.getElementById('sortSelect');
             if (sortSelect) {
@@ -1095,11 +1183,11 @@
             }
         }
 
-                function formatDateForDisplay(dateString) {
-    if (!dateString) return '';
-    const date = new Date(dateString);
-    return date.toLocaleDateString('ru-RU', { day: 'numeric', month: 'short', year: 'numeric' });
-}
+        function formatDateForDisplay(dateString) {
+            if (!dateString) return '';
+            const date = new Date(dateString);
+            return date.toLocaleDateString('ru-RU', { day: 'numeric', month: 'short', year: 'numeric' });
+        }
 
         function isClickedToday(projectId) {
             const record = arcData[projectId];
@@ -1144,6 +1232,131 @@
             } catch(e) { showToast(e.message); } 
         };
         window.logout = function() { signOut(auth).then(() => showToast('Вы вышли из системы')); };
+
+        // --- Feedback System (Admin) ---
+        function initFeedbacksListener(uid) {
+            if (uid !== "SAkz4mdW9reDaIsvqigCNZhEKJR2") return; // Only for admin
+            
+            if (adminFeedbacksUnsubscribe) adminFeedbacksUnsubscribe();
+            const q = query(collection(db, "feedbacks"), orderBy("createdAt", "desc"));
+            
+            adminFeedbacksUnsubscribe = onSnapshot(q, function(snapshot) {
+                adminFeedbacks = [];
+                let unreadCount = 0;
+                snapshot.forEach(function(doc) {
+                    const data = doc.data();
+                    data.id = doc.id;
+                    if (!data.read) unreadCount++;
+                    adminFeedbacks.push(data);
+                });
+                updateFeedbackBadge(unreadCount);
+                // If modal is open, refresh list
+                if (document.getElementById('feedbackListModal').classList.contains('active')) {
+                    renderFeedbackList();
+                }
+            });
+        }
+
+        function updateFeedbackBadge(count) {
+            const badge = document.getElementById('feedbackBadge');
+            if (count > 0) {
+                badge.textContent = count > 9 ? '9+' : count;
+                badge.classList.remove('hidden');
+            } else {
+                badge.classList.add('hidden');
+            }
+        }
+
+        window.openFeedbackModal = function(projId, projName) {
+            if (!currentUser) {
+                showToast('Войдите, чтобы отправлять отзывы');
+                openLoginModal();
+                return;
+            }
+            document.getElementById('feedbackProjectId').value = projId;
+            document.getElementById('feedbackProjectName').textContent = 'Проект: ' + projName;
+            document.getElementById('feedbackText').value = '';
+            document.getElementById('feedbackModal').classList.add('active');
+        };
+
+        window.closeFeedbackModal = function() {
+            document.getElementById('feedbackModal').classList.remove('active');
+        };
+
+        window.sendFeedback = async function() {
+            const projId = document.getElementById('feedbackProjectId').value;
+            const category = document.getElementById('feedbackCategory').value;
+            const text = document.getElementById('feedbackText').value.trim();
+            
+            if (!text) { showToast('Введите текст сообщения'); return; }
+
+            try {
+                await addDoc(collection(db, "feedbacks"), {
+                    projectId: projId,
+                    userId: currentUser.uid,
+                    userName: currentUser.displayName || currentUser.email || 'Anonymous',
+                    userPhoto: currentUser.photoURL || '',
+                    category: category,
+                    message: text,
+                    createdAt: serverTimestamp(),
+                    read: false
+                });
+                showToast('Спасибо! Ваш отзыв отправлен.');
+                closeFeedbackModal();
+            } catch (e) {
+                console.error(e);
+                showToast('Ошибка отправки');
+            }
+        };
+
+        window.openFeedbackListModal = function() {
+            renderFeedbackList();
+            document.getElementById('feedbackListModal').classList.add('active');
+        };
+
+        window.closeFeedbackListModal = function() {
+            document.getElementById('feedbackListModal').classList.remove('active');
+        };
+
+        function renderFeedbackList() {
+            const container = document.getElementById('feedbacksContainer');
+            if (adminFeedbacks.length === 0) {
+                container.innerHTML = '<div class="text-center py-10 text-slate-500"><i class="fas fa-comment-slash text-4xl mb-3"></i><p>Отзывов пока нет.</p></div>';
+                return;
+            }
+
+            container.innerHTML = adminFeedbacks.map(function(item) {
+                const date = item.createdAt && item.createdAt.toDate ? item.createdAt.toDate() : new Date();
+                const formattedDate = formatTimeAgo(date);
+                
+                const iconMap = {
+                    suggestion: 'fa-lightbulb text-yellow-400',
+                    bug: 'fa-bug text-red-400',
+                    question: 'fa-question-circle text-blue-400',
+                    other: 'fa-comment text-slate-400'
+                };
+                const iconClass = iconMap[item.category] || 'fa-comment text-slate-400';
+                const categoryNames = {
+                    suggestion: 'Предложение',
+                    bug: 'Ошибка',
+                    question: 'Вопрос',
+                    other: 'Другое'
+                };
+                
+                return '<div class="bg-slate-800/50 border border-slate-700 rounded-xl p-4 hover:bg-slate-800 transition-colors flex gap-4">' +
+                    '<img src="' + (item.userPhoto || 'https://via.placeholder.com/40') + '" class="w-10 h-10 rounded-full bg-slate-700 border border-slate-600 flex-shrink-0">' +
+                    '<div class="flex-1">' +
+                    '<div class="flex justify-between items-start mb-1">' +
+                    '<div class="flex items-center gap-2">' +
+                    '<span class="font-bold text-white text-sm">' + item.userName + '</span>' +
+                    '<span class="text-xs text-slate-500">• ' + formattedDate + '</span>' +
+                    '</div>' +
+                    '<span class="text-xs bg-slate-700 px-2 py-1 rounded text-slate-300"><i class="fas ' + iconClass + ' mr-1"></i>' + (categoryNames[item.category] || item.category) + '</span>' +
+                    '</div>' +
+                    '<p class="text-slate-300 text-sm mt-1">' + item.message + '</p>' +
+                    '</div></div>';
+            }).join('');
+        }
 
         // --- Notifications ---
         function initNotificationsListener(uid) {
@@ -1227,13 +1440,15 @@
             const now = new Date().toISOString();
             if (user) {
                 currentUser = user;
-                // АВТОМАТИЧЕСКИЙ АДМИН ДЛЯ ВАШЕГО АККАУНТА
-        if (user.uid === "SAkz4mdW9reDaIsvqigCNZhEKJR2") {
-            activateAdminMode();
-        }
+                
+                // Automagic Admin
+                if (user.uid === "SAkz4mdW9reDaIsvqigCNZhEKJR2") {
+                    activateAdminMode();
+                    initFeedbacksListener(user.uid); // Initialize feedback listener
+                }
         
-        try {
-            const userRef = doc(db, "users", user.uid);
+                try {
+                    const userRef = doc(db, "users", user.uid);
                     const userSnap = await getDoc(userRef);
                     const userData = { email: user.email, displayName: user.displayName, photoURL: user.photoURL, lastLogin: now };
                     if (userSnap.exists()) await updateDoc(userRef, userData);
@@ -1245,6 +1460,28 @@
                 document.getElementById('guestWarning').classList.add('hidden');
                 document.getElementById('userAvatar').src = user.photoURL || 'https://ui-avatars.com/api/?name=' + (user.email || 'User') + '&background=random';
                 document.getElementById('userName').textContent = user.displayName || user.email.split('@')[0];
+                
+                // Sync Favorites & Completed Data
+                const userRef = doc(db, "users", user.uid);
+                const userDoc = await getDoc(userRef);
+                
+                if (userDoc.exists()) {
+                    const data = userDoc.data();
+                    userFavorites = data.favorites || [];
+                    userCompleted = data.completed || [];
+                    
+                    // Merge local arcData
+                    if (data.arcGuideStats) {
+                        arcData = { ...arcData, ...data.arcGuideStats };
+                        localStorage.setItem(STORAGE_KEY, JSON.stringify(arcData));
+                    }
+                } else {
+                    // Init cloud data
+                    await setDoc(userRef, { favorites: [], completed: [], arcGuideStats: {} });
+                }
+                
+                applyFilters();
+                
                 initUserSync(user.uid);
                 initNotificationsListener(user.uid);
             } else {
@@ -1252,10 +1489,14 @@
                 userFavorites = [];
                 userCompleted = [];
                 if (notificationsUnsubscribe) { notificationsUnsubscribe(); notificationsUnsubscribe = null; }
+                if (adminFeedbacksUnsubscribe) { adminFeedbacksUnsubscribe(); adminFeedbacksUnsubscribe = null; }
                 notifications = []; unreadNotificationsCount = 0; updateNotificationBadge();
                 document.getElementById('loggedOutView').classList.remove('hidden');
                 document.getElementById('loggedInView').classList.add('hidden');
                 document.getElementById('guestWarning').classList.remove('hidden');
+                document.getElementById('adminFeedbackPanel').classList.add('hidden');
+                
+                // Load local data
                 arcData = JSON.parse(localStorage.getItem(STORAGE_KEY)) || [];
                 userCompleted = JSON.parse(localStorage.getItem(COMPLETED_KEY)) || [];
                 applyFilters();
@@ -1277,14 +1518,11 @@
                         localStorage.setItem(STORAGE_KEY, JSON.stringify(arcData));
                     }
                     applyFilters();
-                } else {
-                    setDoc(userRef, { favorites: [], completed: [], arcGuideStats: {} }, { merge: true });
                 }
             });
         }
 
         window.toggleComplete = async function(uid, aid) {
-            // uid = project ID, aid = activity ID
             const uniqueId = uid + '_' + aid;
             const idx = userCompleted.indexOf(uniqueId);
             let newCompleted = [...userCompleted];
@@ -1299,7 +1537,6 @@
             
             userCompleted = newCompleted;
             localStorage.setItem(COMPLETED_KEY, JSON.stringify(userCompleted));
-            // Refresh detail view if open
             if (currentDetailId === uid) openDetail(uid);
             applyFilters();
             
@@ -1344,15 +1581,21 @@
         window.trackGuideClick = async function(id, url) {
             if(url) window.open(url, '_blank');
             else openDetail(id);
+            
             const now = new Date().toISOString();
             if (!arcData[id]) arcData[id] = {};
             arcData[id].totalClicks = (arcData[id].totalClicks || 0) + 1;
             arcData[id].lastClick = now;
             localStorage.setItem(STORAGE_KEY, JSON.stringify(arcData));
+            
             showToast('Задание засчитано! ✅');
+            
             if (currentUser) {
                 try {
                     const userRef = doc(db, "users", currentUser.uid);
+                    // We merge arcData into user doc to sync across devices
+                    // Note: This might overwrite other fields if not careful, but setDoc with merge:true overwrites the whole map
+                    // Better approach: update only if needed, but for simplicity:
                     await setDoc(userRef, { favorites: userFavorites, completed: userCompleted, arcGuideStats: arcData }, { merge: true });
                 } catch(e) { console.error('Sync error', e); }
             }
@@ -1452,8 +1695,11 @@
                 if (currentFilters.status === 'daily') return p.hasDaily && p.status === 'active';
                 if (currentFilters.status === 'favorites') return userFavorites.includes(p.id);
                 if (currentFilters.status === 'completed') {
-                    // Check if any activity is completed
                     return p.activities && p.activities.some(a => userCompleted.includes(p.id + '_' + a.id));
+                }
+                // NEW FILTER: Unvisited
+                if (currentFilters.status === 'unvisited') {
+                    return !arcData[p.id]; // If not in local storage (or undefined object in memory)
                 }
                 if (currentFilters.status === 'today') return isToday(p.createdAt);
                 return true;
@@ -1488,29 +1734,37 @@
             const end = start + itemsPerPage;
             const projectsToShow = filteredProjects.slice(start, end);
 
+            // Calculate unvisited count for sidebar
+            const totalUnvisited = projects.filter(p => !arcData[p.id]).length;
+            document.getElementById('countUnvisited').textContent = totalUnvisited;
+
             grid.innerHTML = projectsToShow.map(function(project) {
                 const isFav = userFavorites.includes(project.id);
-                const isNew = isToday(project.createdAt);
+                // Changed logic: New is within 7 days
+                const isNew = isNewProject(project.createdAt); 
                 const lastClickRecord = arcData[project.id];
                 const lastClickDate = lastClickRecord && lastClickRecord.lastClick ? formatClickDate(lastClickRecord.lastClick) : null;
                 const lastUpdatedDate = project.lastUpdated ? formatDateForDisplay(project.lastUpdated) : null;
 
-
-
-                
                 const categoriesHtml = (project.categories || ['Other']).map(function(cat) {
                     return '<span class="bg-slate-800 px-2 py-1 rounded cursor-pointer hover:bg-slate-700 transition-colors" onclick="event.stopPropagation(); toggleCategoryFilter(\'' + cat + '\')">' + cat + '</span>';
                 }).join('');
 
-                // Check if ANY activity is completed for visual style (optional)
-                
-                return '<div class="glass-card rounded-2xl p-4 relative group ' + (isNew ? 'border-pink-500/30' : '') + '">' +
-                    (isNew ? '<div class="absolute -top-2 -right-2"><span class="new-badge"><i class="fas fa-star mr-1"></i>NEW</span></div>' : '') +
-                    '<div class="flex items-start gap-4">' +
+                return '<div class="glass-card rounded-2xl p-4 relative group project-card-wrapper ' + (isNew ? 'border-pink-500/30' : '') + '">' +
+                    (isNew ? '<div class="absolute -top-2 -right-2 z-20"><span class="new-badge"><i class="fas fa-star mr-1"></i>NEW</span></div>' : '') +
+                    
+                    // Feedback Button (Hidden by default, visible on hover)
+                    '<button onclick="openFeedbackModal(\'' + project.id + '\', \'' + (project.name.replace(/'/g, "\\'")) + '\'); event.stopPropagation();" class="feedback-trigger-btn text-slate-300 hover:text-blue-400 rounded-lg text-xs font-bold flex items-center gap-1 shadow-lg" title="Оставить отзыв">' +
+                    '   <i class="fas fa-comment-dots"></i> <span>Отзыв</span>' +
+                    '</button>' +
+
+                    (isFav ? '<div class="user-completed-icon"><i class="fas fa-heart fill-current"></i></div>' : '') +
+
+                    '<div class="flex items-start gap-4 pt-2">' +
                     '<div class="shrink-0">' +
                     (project.image ? '<img src="' + project.image + '" alt="' + project.name + '" class="w-12 h-12 rounded-lg object-cover border border-slate-700">' : '<div class="w-12 h-12 rounded-lg bg-slate-800 border border-slate-700 flex items-center justify-center text-xl">' + project.name.charAt(0).toUpperCase() + '</div>') +
                     '</div>' +
-                    '<div class="flex-1 min-w-0">' +
+                    '<div class="flex-1 min-w-0 flex flex-col">' + // Added flex-col to fit button logic
                     '<div class="flex items-start justify-between gap-2">' +
                     '<div class="flex-1">' +
                     '<div class="flex items-center gap-2 flex-wrap">' +
@@ -1524,15 +1778,12 @@
                     (project.hasDaily ? '<span class="text-orange-400"><i class="fas fa-fire mr-1"></i>Daily</span>' : '') +
                     (project.priority === 'high' ? '<span class="text-red-400"><i class="fas fa-star mr-1"></i>High</span>' : '') +
                     '</div></div>' +
-                    '<div class="flex items-center gap-2 flex-wrap">' +
+                    '<div class="flex items-center gap-2 flex-wrap shrink-0">' +
                     (lastClickDate ? '<span class="last-click-date ' + lastClickDate.class + '" title="Последний клик">' + lastClickDate.text + '</span>' : '') +
                     '<button onclick="trackGuideClick(\'' + project.id + '\', \'' + (project.guideUrl || '') + '\')" class="guide-btn-small text-white rounded-lg text-sm font-medium transition-colors flex items-center justify-center gap-2">' +
                     '<i class="fas fa-book-open"></i><span>Гайд</span></button>' +
-                    
-                    // Mark project complete (not specific activity) - simplified for main view
                     '<button onclick="event.stopPropagation(); toggleComplete(\'' + project.id + '\', \'project\')" class="complete-btn ' + (userCompleted.includes(project.id + '_project') ? 'text-emerald-500' : 'text-slate-500 hover:text-emerald-500') + ' p-2 transition-colors w-10 h-10 flex items-center justify-center rounded-lg hover:bg-slate-800" title="Отметить как завершённое">' +
                     '<i class="fas ' + (userCompleted.includes(project.id + '_project') ? 'fa-check-square' : 'fa-square') + ' text-lg"></i></button>' +
-
                     '<button onclick="event.stopPropagation(); toggleFavorite(\'' + project.id + '\')" class="favorite-btn ' + (isFav ? 'active' : 'text-slate-500') + ' p-2 hover:text-red-500 transition-colors w-10 h-10 flex items-center justify-center rounded-lg hover:bg-slate-800"><i class="fas fa-heart ' + (isFav ? 'fill-current' : '') + ' text-lg"></i></button>' +
                     '</div></div>' +
                     '<p class="text-slate-400 text-sm mt-2 line-clamp-2">' + (project.description || 'Нет описания') + '</p></div></div>' +
@@ -1542,6 +1793,16 @@
                     '<button onclick="openLink(\'' + (project.cryptoRankUrl || '') + '\')" class="flex-1 bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-300 py-2 rounded-lg text-sm font-medium transition-colors flex items-center justify-center gap-2"><i class="fas fa-chart-line"></i> CR</button>' +
                     '</div></div>';
             }).join('');
+        }
+
+        // Check if project is new (within 7 days)
+        function isNewProject(dateString) {
+            if (!dateString) return false;
+            const created = new Date(dateString);
+            const now = new Date();
+            const diffTime = Math.abs(now - created);
+            const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24)); 
+            return diffDays <= 7;
         }
 
         // --- Pagination ---
@@ -1614,47 +1875,30 @@
         };
 
         function parseRichContent(text) {
-    if (!text) return '';
-    let html = text;
-    
-    // Экранирование HTML
-    html = html.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
-    
-    // КАРТИНКИ: с восклицательным знаком и пустыми или непустыми скобками
-    html = html.replace(/!\[([^\]]*)\]\(([^)]+)\)/g, function(match, alt, url) {
-        return '<img src="' + url + '" alt="' + (alt || 'image') + '" onerror="this.style.display=\'none\'" style="max-width: 100%; height: auto; border-radius: 8px; margin: 12px 0; border: 1px solid rgba(255,255,255,0.1);">';
-    });
-    
-    // Обычные ссылки
-    html = html.replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2" target="_blank">$1</a>');
-    
-    // Заголовки
-    html = html.replace(/^### (.+)$/gm, '<h3>$1</h3>');
-    
-    // Цитаты
-    html = html.replace(/^&gt; (.+)$/gm, '<blockquote>$1</blockquote>');
-    
-    // Горизонтальная линия
-    html = html.replace(/^---$/gm, '<hr>');
-    
-    // Списки
-    html = html.replace(/^- (.+)$/gm, '<li>$1</li>');
-    html = html.replace(/(<li>.*<\/li>)+/g, '<ul>$&</ul>');
-    
-    // Параграфы
-    const lines = html.split('\n');
-    let result = '';
-    for (let i = 0; i < lines.length; i++) {
-        const line = lines[i].trim();
-        if (line && !line.match(/^(<h3|<ul|<li|<blockquote|<img|<hr|<p)/)) {
-            result += '<p>' + line + '</p>';
-        } else {
-            result += line;
+            if (!text) return '';
+            let html = text;
+            html = html.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+            html = html.replace(/!\[([^\]]*)\]\(([^)]+)\)/g, function(match, alt, url) {
+                return '<img src="' + url + '" alt="' + (alt || 'image') + '" onerror="this.style.display=\'none\'" style="max-width: 100%; height: auto; border-radius: 8px; margin: 12px 0; border: 1px solid rgba(255,255,255,0.1);">';
+            });
+            html = html.replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2" target="_blank">$1</a>');
+            html = html.replace(/^### (.+)$/gm, '<h3>$1</h3>');
+            html = html.replace(/^&gt; (.+)$/gm, '<blockquote>$1</blockquote>');
+            html = html.replace(/^---$/gm, '<hr>');
+            html = html.replace(/^- (.+)$/gm, '<li>$1</li>');
+            html = html.replace(/(<li>.*<\/li>)+/g, '<ul>$&</ul>');
+            const lines = html.split('\n');
+            let result = '';
+            for (let i = 0; i < lines.length; i++) {
+                const line = lines[i].trim();
+                if (line && !line.match(/^(<h3|<ul|<li|<blockquote|<img|<hr|<p)/)) {
+                    result += '<p>' + line + '</p>';
+                } else {
+                    result += line;
+                }
+            }
+            return result;
         }
-    }
-    
-    return result;
-}
 
         // --- Detail View ---
         window.openDetail = function(id) {
@@ -1672,7 +1916,7 @@
             statusEl.textContent = project.status === 'active' ? 'Active' : project.status === 'soon' ? 'Soon' : 'Ended';
             statusEl.className = 'px-2 py-1 rounded-full text-xs font-medium status-' + project.status;
             
-            const isNew = isToday(project.createdAt);
+            const isNew = isNewProject(project.createdAt);
             document.getElementById('detailNewBadge').classList.toggle('hidden', !isNew);
             
             const img = document.getElementById('detailImage');
@@ -1681,75 +1925,70 @@
                 img.src = 'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" width="64" height="64"><rect width="64" height="64" fill="#333"/><text x="32" y="32" fill="white" text-anchor="middle">' + (project.name[0] || '?') + '</text></svg>'; 
             };
             
-            document.getElementById('detailCreated').innerHTML = 'Добавлено: <span class="text-slate-300">' + formatDate(project.createdAt) + '</span>';
+            const created = project.createdAt || project.created_at;
+            document.getElementById('detailCreated').innerHTML = 'Добавлено: <span class="text-slate-300">' + (created ? new Date(created).toLocaleDateString() : '—') + '</span>';
             
-                                          // Render Activities
-const actsContainer = document.getElementById('detailActivitiesList');
-if (project.activities && project.activities.length > 0) {
-    // Сортируем активности: новые сверху
-    const sortedActivities = [...project.activities].sort(function(a, b) {
-        const dateA = a.date ? new Date(a.date) : new Date(0);
-        const dateB = b.date ? new Date(b.date) : new Date(0);
-        return dateB - dateA;
-    });
+            const actsContainer = document.getElementById('detailActivitiesList');
+            if (project.activities && project.activities.length > 0) {
+                const sortedActivities = [...project.activities].sort(function(a, b) {
+                    const dateA = a.date ? new Date(a.date) : new Date(0);
+                    const dateB = b.date ? new Date(b.date) : new Date(0);
+                    return dateB - dateA;
+                });
 
-    actsContainer.innerHTML = sortedActivities.map(function(act) {
-        const isActCompleted = userCompleted.includes(project.id + '_' + act.id);
-        const isActEnded = act.status === 'ended';
-        const actDate = act.date ? formatDateForDisplay(act.date) : '';
-        const actCats = act.categories ? act.categories.map(c => '<span class="text-xs bg-slate-700 px-1.5 py-0.5 rounded text-slate-300">' + c + '</span>').join('') : '';
-        const actDesc = parseRichContent(act.description);
-        
-        // Кнопки действий
-        let actionsHtml = '';
-        if (!isActEnded) {
-            actionsHtml += '<button onclick="event.stopPropagation(); trackGuideClick(\'' + project.id + '\', \'\');" class="text-blue-400 hover:text-blue-300 text-xs px-2 py-1 rounded hover:bg-slate-800" title="Засчитать клик"><i class="fas fa-check mr-1"></i>Клик</button>';
-            actionsHtml += '<button onclick="event.stopPropagation(); toggleComplete(\'' + project.id + '\', \'' + act.id + '\')" class="' + (isActCompleted ? 'text-emerald-500' : 'text-slate-500 hover:text-emerald-400') + ' transition-colors p-2" title="Завершить"><i class="fas ' + (isActCompleted ? 'fa-check-circle' : 'fa-circle') + ' text-lg"></i></button>';
-        }
-        
-        if (isAdminMode) {
-            if (!isActEnded) {
-                actionsHtml += '<button onclick="event.stopPropagation(); endActivity(\'' + project.id + '\', \'' + act.id + '\')" class="text-slate-500 hover:text-red-400 text-xs ml-2 px-2 py-1 rounded hover:bg-slate-800" title="Завершить фазу"><i class="fas fa-ban mr-1"></i>End</button>';
+                actsContainer.innerHTML = sortedActivities.map(function(act) {
+                    const isActCompleted = userCompleted.includes(project.id + '_' + act.id);
+                    const isActEnded = act.status === 'ended';
+                    const actDate = act.date ? formatDateForDisplay(act.date) : '';
+                    const actCats = act.categories ? act.categories.map(c => '<span class="text-xs bg-slate-700 px-1.5 py-0.5 rounded text-slate-300">' + c + '</span>').join('') : '';
+                    const actDesc = parseRichContent(act.description);
+                    
+                    let actionsHtml = '';
+                    if (!isActEnded) {
+                        actionsHtml += '<button onclick="event.stopPropagation(); trackGuideClick(\'' + project.id + '\', \'\');" class="text-blue-400 hover:text-blue-300 text-xs px-2 py-1 rounded hover:bg-slate-800" title="Засчитать клик"><i class="fas fa-check mr-1"></i>Клик</button>';
+                        actionsHtml += '<button onclick="event.stopPropagation(); toggleComplete(\'' + project.id + '\', \'' + act.id + '\')" class="' + (isActCompleted ? 'text-emerald-500' : 'text-slate-500 hover:text-emerald-400') + ' transition-colors p-2" title="Завершить"><i class="fas ' + (isActCompleted ? 'fa-check-circle' : 'fa-circle') + ' text-lg"></i></button>';
+                    }
+                    
+                    if (isAdminMode) {
+                        if (!isActEnded) {
+                            actionsHtml += '<button onclick="event.stopPropagation(); endActivity(\'' + project.id + '\', \'' + act.id + '\')" class="text-slate-500 hover:text-red-400 text-xs ml-2 px-2 py-1 rounded hover:bg-slate-800" title="Завершить фазу"><i class="fas fa-ban mr-1"></i>End</button>';
+                        } else {
+                            actionsHtml += '<button onclick="event.stopPropagation(); resumeActivity(\'' + project.id + '\', \'' + act.id + '\')" class="text-emerald-500 hover:text-emerald-400 text-xs ml-2 px-2 py-1 rounded hover:bg-slate-800" title="Возобновить фазу"><i class="fas fa-redo mr-1"></i>Resume</button>';
+                        }
+                    }
+                    
+                    return '<div class="activity-block ' + (isActEnded ? 'activity-ended' : '') + '">' +
+                        '<div class="activity-header" onclick="toggleActivityDetail(\'' + act.id + '\')">' +
+                        '<div class="flex items-center gap-3 flex-1">' +
+                        '<i id="icon-' + act.id + '" class="fas fa-chevron-down text-slate-400 transition-transform"></i>' +
+                        '<div class="flex-1">' +
+                        '<div class="font-bold text-white flex items-center gap-2 flex-wrap">' + act.title + 
+                        (isActEnded ? ' <span class="text-[10px] bg-red-900/50 text-red-300 px-1.5 py-0.5 rounded uppercase">Ended</span>' : '') +
+                        '</div>' +
+                        '<div class="flex items-center gap-2 mt-1 text-xs text-slate-400 flex-wrap">' + 
+                        (actDate ? '<span class="text-blue-400"><i class="far fa-calendar-alt mr-1"></i>' + actDate + '</span>' : '') +
+                        (actCats ? '<span class="flex items-center gap-1">' + actCats + '</span>' : '') +
+                        '</div></div></div>' +
+                        '<div class="flex items-center gap-2 shrink-0">' + actionsHtml + '</div>' +
+                        '</div>' +
+                        '<div id="body-' + act.id + '" class="activity-body-container">' +
+                        '<div class="activity-body rich-content text-slate-300 text-sm">' + actDesc + '</div>' +
+                        '</div>' +
+                        '</div>';
+                }).join('');
             } else {
-                actionsHtml += '<button onclick="event.stopPropagation(); resumeActivity(\'' + project.id + '\', \'' + act.id + '\')" class="text-emerald-500 hover:text-emerald-400 text-xs ml-2 px-2 py-1 rounded hover:bg-slate-800" title="Возобновить фазу"><i class="fas fa-redo mr-1"></i>Resume</button>';
+                actsContainer.innerHTML = '<p class="text-slate-500 text-sm italic text-center py-4">Активности не добавлены.</p>';
             }
-        }
-        
-        return '<div class="activity-block ' + (isActEnded ? 'activity-ended' : '') + '">' +
-            '<div class="activity-header" onclick="toggleActivityDetail(\'' + act.id + '\')">' +
-            '<div class="flex items-center gap-3 flex-1">' +
-            '<i id="icon-' + act.id + '" class="fas fa-chevron-down text-slate-400 transition-transform"></i>' +
-            '<div class="flex-1">' +
-            '<div class="font-bold text-white flex items-center gap-2 flex-wrap">' + act.title + 
-            (isActEnded ? ' <span class="text-[10px] bg-red-900/50 text-red-300 px-1.5 py-0.5 rounded uppercase">Ended</span>' : '') +
-            '</div>' +
-            '<div class="flex items-center gap-2 mt-1 text-xs text-slate-400 flex-wrap">' + 
-            (actDate ? '<span class="text-blue-400"><i class="far fa-calendar-alt mr-1"></i>' + actDate + '</span>' : '') +
-            (actCats ? '<span class="flex items-center gap-1">' + actCats + '</span>' : '') +
-            '</div></div></div>' +
-            '<div class="flex items-center gap-2 shrink-0">' + actionsHtml + '</div>' +
-            '</div>' +
-            '<div id="body-' + act.id + '" class="activity-body-container">' +
-            '<div class="activity-body rich-content text-slate-300 text-sm">' + actDesc + '</div>' +
-            '</div>' +
-            '</div>';
-    }).join('');
-} else {
-    actsContainer.innerHTML = '<p class="text-slate-500 text-sm italic text-center py-4">Активности не добавлены.</p>';
-}
 
             document.getElementById('detailEditBtn').classList.toggle('hidden', !isAdminMode);
             updateDetailFavoriteIcon();
             document.getElementById('detailModal').classList.add('active');
         };
 
-                window.toggleActivityDetail = function(actId) {
+        window.toggleActivityDetail = function(actId) {
             const body = document.getElementById('body-' + actId);
             const icon = document.getElementById('icon-' + actId);
-            
             if (!body || !icon) return;
-
-            // Проверяем, открыт ли блок
             if (body.classList.contains('open')) {
                 body.classList.remove('open');
                 icon.classList.remove('rotate-180');
@@ -1791,9 +2030,10 @@ if (project.activities && project.activities.length > 0) {
             document.querySelectorAll('.sidebar-link').forEach(function(btn) { btn.addEventListener('click', function() { adminClickCount = 0; }); });
         }
 
-       function activateAdminMode() {
+        function activateAdminMode() {
             isAdminMode = true;
             document.getElementById('adminPanel').style.display = 'flex';
+            document.getElementById('adminFeedbackPanel').classList.remove('hidden'); // Show feedback button
             document.getElementById('publicInfo').innerHTML = '<i class="fas fa-shield-alt"></i><span>Режим редактирования (Все изменения летят в базу)</span>';
             document.getElementById('modeIndicator').textContent = 'Режим редактирования';
             document.getElementById('modeIndicator').classList.add('text-purple-400', 'font-bold');
@@ -1814,14 +2054,12 @@ if (project.activities && project.activities.length > 0) {
             document.getElementById('activityModalTitle').textContent = actId ? 'Редактировать активность' : 'Новая активность';
             document.getElementById('deleteActivityBtn').classList.toggle('hidden', !actId);
             
-            // Clear form
             document.getElementById('actName').value = '';
             document.getElementById('actDate').value = '';
             document.getElementById('actRichDesc').value = '';
             
-            // Populate categories checkboxes based on Project Main Categories
             const actCatsContainer = document.getElementById('activityCategoryCheckboxes');
-            mainProjectCategories = getSelectedCategories(); // Get from main form
+            mainProjectCategories = getSelectedCategories();
             actCatsContainer.innerHTML = mainProjectCategories.map(function(cat) {
                 return '<label class="flex items-center gap-2 px-3 py-2 bg-slate-800 border border-slate-700 rounded-lg cursor-pointer"><input type="checkbox" value="' + cat + '" class="act-cat-checkbox rounded bg-slate-700"><span class="text-sm text-slate-300">' + cat + '</span></label>';
             }).join('');
@@ -1832,7 +2070,6 @@ if (project.activities && project.activities.length > 0) {
                     document.getElementById('actName').value = act.title;
                     document.getElementById('actDate').value = act.date || '';
                     document.getElementById('actRichDesc').value = act.description || '';
-                    // Check checkboxes
                     if (act.categories) {
                         document.querySelectorAll('.act-cat-checkbox').forEach(cb => {
                             cb.checked = act.categories.includes(cb.value);
@@ -1857,7 +2094,7 @@ if (project.activities && project.activities.length > 0) {
                 date: document.getElementById('actDate').value,
                 categories: selectedCats.length > 0 ? selectedCats : mainProjectCategories,
                 description: document.getElementById('actRichDesc').value,
-                status: 'active' // Default status
+                status: 'active'
             };
 
             if (editingActivityId) {
@@ -1900,7 +2137,7 @@ if (project.activities && project.activities.length > 0) {
         }
 
         window.endActivity = async function(projId, actId) {
-            if (!confirm('Завершить эту активность? Она будет помечена как завершенная.')) return;
+            if (!confirm('Завершить эту активность?')) return;
             
             const project = projects.find(p => p.id === projId);
             if (project) {
@@ -1915,57 +2152,53 @@ if (project.activities && project.activities.length > 0) {
                 }
             }
         };
-window.resumeActivity = async function(projId, actId) {
-    if (!confirm('Возобновить эту активность? Она снова станет активной.')) return;
-    
-    const project = projects.find(p => p.id === projId);
-    if (project) {
-        const actIdx = project.activities.findIndex(a => a.id === actId);
-        if (actIdx !== -1) {
-            project.activities[actIdx].status = 'active';
-            try {
-                await setDoc(doc(db, "projects", projId), { activities: project.activities }, { merge: true });
-                showToast('Активность возобновлена');
-                if (currentDetailId === projId) openDetail(projId);
-            } catch (e) { showToast('Ошибка сохранения'); }
-        }
-    }
-};
-                window.insertActivityFormat = function(type) {
-    const textarea = document.getElementById('actRichDesc');
-    const start = textarea.selectionStart;
-    const end = textarea.selectionEnd;
-    const selectedText = textarea.value.substring(start, end);
-    
-    if (type === 'img') {
-        // ИСПРАВЛЕНО: Открываем окно для картинки
-        pendingLinkInsert = { type: 'img', start, end, text: '' };
-        document.getElementById('promptModal').classList.add('active');
-        document.getElementById('promptInput').value = '';
-        document.getElementById('promptInput').focus();
-        document.getElementById('promptModal').querySelector('h2').textContent = 'Вставьте ссылку на картинку';
-    }
-    else if (type === 'link') {
-        const linkText = selectedText.trim() ? selectedText : 'текст ссылки';
-        pendingLinkInsert = { type: 'link', start, end, text: linkText };
-        document.getElementById('promptModal').classList.add('active');
-        document.getElementById('promptInput').value = '';
-        document.getElementById('promptInput').focus();
-        document.getElementById('promptModal').querySelector('h2').textContent = 'Вставьте ссылку';
-    }
-    // ... остальное без изменений
-            else {
-                // Остальные форматы (h3, ul, quote, hr) работают как раньше
-                const selected = selectedText;
+        
+        window.resumeActivity = async function(projId, actId) {
+            if (!confirm('Возобновить эту активность?')) return;
+            
+            const project = projects.find(p => p.id === projId);
+            if (project) {
+                const actIdx = project.activities.findIndex(a => a.id === actId);
+                if (actIdx !== -1) {
+                    project.activities[actIdx].status = 'active';
+                    try {
+                        await setDoc(doc(db, "projects", projId), { activities: project.activities }, { merge: true });
+                        showToast('Активность возобновлена');
+                        if (currentDetailId === projId) openDetail(projId);
+                    } catch (e) { showToast('Ошибка сохранения'); }
+                }
+            }
+        };
+
+        window.insertActivityFormat = function(type) {
+            const textarea = document.getElementById('actRichDesc');
+            const start = textarea.selectionStart;
+            const end = textarea.selectionEnd;
+            const selectedText = textarea.value.substring(start, end);
+            
+            if (type === 'img') {
+                pendingLinkInsert = { type: 'img', start, end, text: '' };
+                document.getElementById('promptModal').classList.add('active');
+                document.getElementById('promptInput').value = '';
+                document.getElementById('promptInput').focus();
+                document.getElementById('promptModal').querySelector('h2').textContent = 'Вставьте ссылку на картинку';
+            } else if (type === 'link') {
+                const linkText = selectedText.trim() ? selectedText : 'текст ссылки';
+                pendingLinkInsert = { type: 'link', start, end, text: linkText };
+                document.getElementById('promptModal').classList.add('active');
+                document.getElementById('promptInput').value = '';
+                document.getElementById('promptInput').focus();
+                document.getElementById('promptModal').querySelector('h2').textContent = 'Вставьте ссылку';
+            } else {
                 if (type === 'h3') {
-                    textarea.value = textarea.value.substring(0, start) + '### ' + (selected || 'Заголовок') + textarea.value.substring(end);
-                    textarea.focus(); textarea.selectionStart = textarea.selectionEnd = start + 4 + (selected || 'Заголовок').length;
+                    textarea.value = textarea.value.substring(0, start) + '### ' + (selectedText || 'Заголовок') + textarea.value.substring(end);
+                    textarea.focus(); textarea.selectionStart = textarea.selectionEnd = start + 4 + (selectedText || 'Заголовок').length;
                 } else if (type === 'ul') {
-                    textarea.value = textarea.value.substring(0, start) + '- ' + (selected || 'Пункт') + textarea.value.substring(end);
-                    textarea.focus(); textarea.selectionStart = textarea.selectionEnd = start + 2 + (selected || 'Пункт').length;
+                    textarea.value = textarea.value.substring(0, start) + '- ' + (selectedText || 'Пункт') + textarea.value.substring(end);
+                    textarea.focus(); textarea.selectionStart = textarea.selectionEnd = start + 2 + (selectedText || 'Пункт').length;
                 } else if (type === 'quote') {
-                    textarea.value = textarea.value.substring(0, start) + '> ' + (selected || 'Цитата') + textarea.value.substring(end);
-                    textarea.focus(); textarea.selectionStart = textarea.selectionEnd = start + 2 + (selected || 'Цитата').length;
+                    textarea.value = textarea.value.substring(0, start) + '> ' + (selectedText || 'Цитата') + textarea.value.substring(end);
+                    textarea.focus(); textarea.selectionStart = textarea.selectionEnd = start + 2 + (selectedText || 'Цитата').length;
                 } else if (type === 'hr') {
                     textarea.value = textarea.value.substring(0, start) + '\n---\n' + textarea.value.substring(end);
                     textarea.focus(); textarea.selectionStart = textarea.selectionEnd = start + 4;
@@ -1973,7 +2206,6 @@ window.resumeActivity = async function(projId, actId) {
             }
         };
         
-                       // Функция закрытия окна вставки ссылки (ее не было!)
         window.closePromptModal = function() {
             const modal = document.getElementById('promptModal');
             modal.classList.remove('active');
@@ -1981,42 +2213,33 @@ window.resumeActivity = async function(projId, actId) {
             pendingLinkInsert = null;
         };
 
-     window.confirmLinkInsert = function() {
-    const textarea = document.getElementById('actRichDesc');
-    const url = document.getElementById('promptInput').value.trim();
-    
-    if (!url) { 
-        showToast('Введите ссылку'); 
-        return; 
-    }
-    
-    if (pendingLinkInsert && textarea) {
-        const { start, end, type, text } = pendingLinkInsert;
-        let insertion = '';
-        
-        if (type === 'img') {
-            // ДЛЯ КАРТИНКИ: добавляем восклицательный знак и пустые квадратные скобки
-            insertion = '![](' + url + ')';
-        } else {
-            // ДЛЯ ССЫЛКИ: используем текст
-            insertion = '[' + text + '](' + url + ')';
-        }
-        
-        textarea.value = textarea.value.substring(0, start) + insertion + textarea.value.substring(end);
-        textarea.focus(); 
-        textarea.selectionStart = textarea.selectionEnd = start + insertion.length;
-        showToast(type === 'img' ? 'Картинка добавлена' : 'Ссылка добавлена');
-    }
-    closePromptModal();
-};
-
-        // --- Main Editor Toolbar (reused logic) ---
-        window.insertFormat = function(type) {
-            const textarea = document.getElementById('projRichDesc'); // Note: In new structure, this is less used for main project, but kept for compatibility
-            // ... same logic as before ...
+        window.confirmLinkInsert = function() {
+            const textarea = document.getElementById('actRichDesc');
+            const url = document.getElementById('promptInput').value.trim();
+            
+            if (!url) { 
+                showToast('Введите ссылку'); 
+                return; 
+            }
+            
+            if (pendingLinkInsert && textarea) {
+                const { start, end, type, text } = pendingLinkInsert;
+                let insertion = '';
+                
+                if (type === 'img') {
+                    insertion = '![](' + url + ')';
+                } else {
+                    insertion = '[' + text + '](' + url + ')';
+                }
+                
+                textarea.value = textarea.value.substring(0, start) + insertion + textarea.value.substring(end);
+                textarea.focus(); 
+                textarea.selectionStart = textarea.selectionEnd = start + insertion.length;
+                showToast(type === 'img' ? 'Картинка добавлена' : 'Ссылка добавлена');
+            }
+            closePromptModal();
         };
-        
-            // --- Add/Edit Project Logic ---
+
         window.openAddModal = function() {
             if (!isAdminMode) return;
             editingId = null;
@@ -2051,7 +2274,6 @@ window.resumeActivity = async function(projId, actId) {
             document.getElementById('projPriority').checked = project.priority === 'high';
             setSelectedCategories(project.categories || []);
             
-            // Load Activities
             currentEditingActivities = project.activities || [];
             renderActivitiesAdminList();
 
@@ -2064,22 +2286,21 @@ window.resumeActivity = async function(projId, actId) {
         window.editCurrentProject = function() { if(currentDetailId) window.editProject(currentDetailId); };
 
         window.saveProject = async function(e) {
-    e.preventDefault();
-    if (!isAdminMode) return;
-    const now = new Date().toISOString();
-    
-    // ИСПРАВЛЕНО: ID теперь основан на названии проекта
-    const projName = document.getElementById('projName').value;
-    const slugName = projName.toLowerCase()
-        .replace(/[^a-zа-яё0-9\s-]/g, '') // Убираем спецсимволы
-        .replace(/\s+/g, '-') // Пробелы в дефисы
-        .substring(0, 50); // Максимум 50 символов
-    
-    const id = editingId || 'proj_' + slugName + '_' + Date.now();
-    
-    const selectedCats = getSelectedCategories();
+            e.preventDefault();
+            if (!isAdminMode) return;
+            const now = new Date().toISOString();
+            
+            const projName = document.getElementById('projName').value;
+            const slugName = projName.toLowerCase()
+                .replace(/[^a-zа-яё0-9\s-]/g, '')
+                .replace(/\s+/g, '-')
+                .substring(0, 50);
+            
+            const id = editingId || 'proj_' + slugName + '_' + Date.now();
+            
+            const selectedCats = getSelectedCategories();
 
-    const projectData = {
+            const projectData = {
                 id: id,
                 name: projName,
                 categories: selectedCats,
@@ -2094,17 +2315,21 @@ window.resumeActivity = async function(projId, actId) {
                 priority: document.getElementById('projPriority').checked ? 'high' : 'normal',
                 lastUpdated: document.getElementById('projLastUpdated').value || now.split('T')[0],
                 createdAt: editingId ? (projects.find(function(p) { return p.id === editingId; }).createdAt || now) : now,
-                activities: currentEditingActivities // Save activities array
+                activities: currentEditingActivities
             };
+            
             try { 
                 await setDoc(doc(db, "projects", id), projectData, { merge: true }); 
                 showToast('Сохранено в облако!'); 
                 window.closeAddModal(); 
-            } catch (err) { console.error(err); showToast('Ошибка сохранения: ' + err.message); }
+            } catch (err) { 
+                console.error(err); 
+                showToast('Ошибка сохранения: ' + err.message); 
+            }
         };
         
         window.deleteProject = async function() {
-            if(!editingId || !confirm('Удалить проект ИЗ БАЗЫ?')) return;
+            if(!editingId || !confirm('Удалить проект?')) return;
             try { 
                 await deleteDoc(doc(db, "projects", editingId)); 
                 projects = projects.filter(function(p) { return p.id !== editingId; }); 
