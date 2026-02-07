@@ -752,13 +752,14 @@
                         </button>
                     </div>
 
-                    <!-- Admin Feedback Button (Hidden by default) -->
-                    <div id="adminFeedbackPanel" class="hidden">
-                        <button onclick="openFeedbackListModal()" class="admin-feedback-btn p-2 text-slate-400 hover:text-blue-400 transition-colors rounded-lg hover:bg-slate-800 relative" title="Отзывы и предложения">
-                            <i class="fas fa-comment-dots text-xl"></i>
-                            <span id="feedbackBadge" class="admin-feedback-badge hidden">0</span>
-                        </button>
-                    </div>
+                    <!-- Universal Feedback Button (Visible for all logged in users) -->
+<div id="generalFeedbackPanel" class="hidden">
+    <button onclick="openFeedbackListModal()" class="p-2 text-slate-400 hover:text-purple-400 transition-colors rounded-lg hover:bg-slate-800 relative" title="Сообщения и отзывы">
+        <i class="fas fa-comment-dots text-xl"></i>
+        <!-- Единый бейдж для всех -->
+        <span id="feedbackBadge" class="absolute -top-1 -right-1 w-5 h-5 bg-purple-500 rounded-full text-xs flex items-center justify-center hidden font-bold text-white shadow-sm border border-[#0b0f19]">0</span>
+    </button>
+</div>
 
                     <div id="adminPanel" style="display: none;" class="flex gap-2 items-center">
                         <span class="admin-badge text-xs px-2 py-1 rounded-lg font-bold text-white mr-2">ADMIN</span>
@@ -1420,14 +1421,26 @@ let adminFeedbacksUnsubscribe = null;
 
 // Инициализация для админа
 function initFeedbacksListener(uid) {
-    if (uid !== "SAkz4mdW9reDaIsvqigCNZhEKJR2") return;
-    
+    // Сбрасываем старую подписку
     if (adminFeedbacksUnsubscribe) {
         adminFeedbacksUnsubscribe();
         adminFeedbacksUnsubscribe = null;
     }
     
-    const q = query(collection(db, "feedbacks"), orderBy("createdAt", "desc"));
+    let q;
+    const isAdmin = uid === "SAkz4mdW9reDaIsvqigCNZhEKJR2";
+
+    if (isAdmin) {
+        // АДМИН: Видит все чаты
+        q = query(collection(db, "feedbacks"), orderBy("createdAt", "desc"));
+    } else {
+        // ЮЗЕР: Видит только свои чаты
+        q = query(
+            collection(db, "feedbacks"), 
+            where("userId", "==", uid),
+            orderBy("createdAt", "desc")
+        );
+    }
     
     try {
         adminFeedbacksUnsubscribe = onSnapshot(q, (snapshot) => {
@@ -1436,19 +1449,50 @@ function initFeedbacksListener(uid) {
             
             snapshot.forEach((doc) => {
                 const data = doc.data();
-                if (data.deleted !== true) {
-                    data.id = doc.id;
+                
+                // Фильтрация удаленных (мягкое удаление)
+                if (isAdmin && data.deleted) return;
+                if (!isAdmin && data.userDeleted) return;
+
+                data.id = doc.id;
+                
+                // --- ЛОГИКА СЧЕТЧИКА ---
+                if (isAdmin) {
+                    // Для админа: если тикет не помечен как read
                     if (!data.read) unreadCount++;
-                    adminFeedbacks.push(data);
+                } else {
+                    // Для юзера: если тикет не readUser (значит админ ответил)
+                    if (!data.userRead) unreadCount++;
                 }
+                
+                adminFeedbacks.push(data);
             });
             
-            updateFeedbackBadge(unreadCount);
+            // Обновляем тот самый единственный бейдж
+            const badge = document.getElementById('feedbackBadge');
+            if (badge) {
+                badge.textContent = unreadCount > 9 ? '9+' : unreadCount;
+                if (unreadCount > 0) {
+                    badge.classList.remove('hidden');
+                    // Добавим анимацию, если есть новые
+                    badge.classList.add('animate-pulse');
+                } else {
+                    badge.classList.add('hidden');
+                    badge.classList.remove('animate-pulse');
+                }
+            }
+            
+            // Если список прямо сейчас открыт - перерисовываем его
+            const listModal = document.getElementById('feedbackListModal');
+            if (listModal && listModal.classList.contains('active')) {
+                renderFeedbackList();
+            }
+
         }, (error) => {
-            console.error("Feedbacks listener error:", error);
+            console.error("Listener error:", error);
         });
     } catch (e) {
-        console.error("Error starting feedbacks listener:", e);
+        console.error("Error init listener:", e);
     }
 }
 
@@ -1647,10 +1691,21 @@ window.closeFeedbackModal = function() {
 
 // --- АДМИН: ОТКРЫТЬ СПИСОК ОТЗЫВОВ ---
 window.openFeedbackListModal = function() {
-    if (!currentUser || currentUser.uid !== "SAkz4mdW9reDaIsvqigCNZhEKJR2") {
-        showToast('Доступ только для админа');
+    if (!currentUser) {
+        showToast('Войдите в аккаунт');
         return;
     }
+    
+    // Меняем заголовок в модалке
+    const titleContainer = document.querySelector('#feedbackListModal h2');
+    const isAdmin = currentUser.uid === "SAkz4mdW9reDaIsvqigCNZhEKJR2";
+    
+    if(titleContainer) {
+        titleContainer.innerHTML = isAdmin 
+            ? '<i class="fas fa-shield-alt text-purple-400 mr-2"></i>Все обращения (Админ)'
+            : '<i class="fas fa-comments text-purple-400 mr-2"></i>Мои сообщения';
+    }
+
     document.getElementById('feedbackListModal').classList.add('active');
     renderFeedbackList();
 };
@@ -1662,71 +1717,88 @@ window.closeFeedbackListModal = function() {
 // --- АДМИН: ОТРИСОВАТЬ СПИСОК ОТЗЫВОВ ---
 window.renderFeedbackList = function() {
     const container = document.getElementById('feedbacksContainer');
+    const isAdmin = currentUser && currentUser.uid === "SAkz4mdW9reDaIsvqigCNZhEKJR2";
     
     if (!adminFeedbacks || adminFeedbacks.length === 0) {
-        container.innerHTML = '<div class="text-center py-10 text-slate-500"><i class="fas fa-inbox text-4xl mb-2"></i><p>Отзывов пока нет</p></div>';
+        container.innerHTML = `
+            <div class="text-center py-12 text-slate-500">
+                <div class="bg-slate-800/50 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4">
+                    <i class="fas fa-inbox text-2xl text-slate-600"></i>
+                </div>
+                <p>Нет сообщений</p>
+            </div>`;
         return;
     }
 
     container.innerHTML = adminFeedbacks.map((item) => {
-        if (item.deleted) return ''; // Пропускаем полностью удалённые
-        
-        const date = item.createdAt && item.createdAt.toDate ? item.createdAt.toDate() : new Date();
-        const formattedDate = formatTimeAgo(date);
-        
-        const iconMap = {
-            suggestion: { icon: 'fa-lightbulb', color: 'text-yellow-400' },
-            bug: { icon: 'fa-bug', color: 'text-red-400' },
-            question: { icon: 'fa-question-circle', color: 'text-blue-400' },
-            other: { icon: 'fa-comment', color: 'text-slate-400' }
-        };
-        
-        const typeInfo = iconMap[item.category] || iconMap.other;
-        const projectName = item.projectId || 'Неизвестный проект';
+        // Данные сообщений
         const messages = item.messages || [];
+        const lastMsg = messages[messages.length - 1] || { text: '...', sender: 'unknown' };
+        const date = item.createdAt && item.createdAt.toDate ? item.createdAt.toDate() : new Date();
         
-        // Показываем первое и последнее сообщение
-        const firstMsg = messages.find(m => m.sender === 'user');
-        const lastAdminMsg = [...messages].reverse().find(m => m.sender === 'admin');
+        // Статус "Непрочитано"
+        const isUnread = isAdmin ? !item.read : !item.userRead;
+        
+        // Основной текст заголовка
+        // Админ видит: Имя юзера (Проект)
+        // Юзер видит: Название Проекта
+        let titleHtml = '';
+        if (isAdmin) {
+            titleHtml = `<span class="font-bold text-white">${item.userName || 'User'}</span> <span class="text-xs text-slate-500 ml-1">${item.projectId}</span>`;
+        } else {
+            titleHtml = `<span class="font-bold text-white text-lg">${item.projectId}</span>`;
+        }
+
+        // Текст последнего сообщения
+        // Если юзер видит, что последнее от админа -> пишем "Поддержка: ..."
+        let msgPreview = lastMsg.text;
+        if (!isAdmin && lastMsg.sender === 'admin') {
+            msgPreview = `<span class="text-purple-400 font-bold mr-1">Поддержка:</span> ${lastMsg.text}`;
+        } else if (isAdmin && lastMsg.sender === 'user') {
+             msgPreview = `<span class="text-blue-400 font-bold mr-1">User:</span> ${lastMsg.text}`;
+        } else {
+             msgPreview = `<span class="text-slate-500 mr-1">Вы:</span> ${lastMsg.text}`;
+        }
 
         return `
-            <div class="bg-slate-800/50 border border-slate-700 rounded-xl p-4 ${!item.read ? 'border-l-4 border-l-blue-500' : ''}">
-                <div class="flex justify-between items-start mb-3">
-                    <div class="flex items-center gap-2 flex-wrap">
-                        <span class="font-bold text-white text-sm">${item.userName || 'Аноним'}</span>
-                        <span class="text-xs text-slate-500">• ${formattedDate}</span>
-                        <span class="text-xs bg-slate-700 px-2 py-0.5 rounded">
-                            <i class="fas ${typeInfo.icon} ${typeInfo.color} mr-1"></i>${item.category}
-                        </span>
-                    </div>
-                </div>
+            <div onclick="${isAdmin ? `openAdminFeedbackChat('${item.id}')` : `openFeedbackFromList('${item.id}', '${item.projectId}')`}" 
+                 class="cursor-pointer group relative bg-slate-800/40 border border-slate-700/50 hover:bg-slate-800 hover:border-slate-600 rounded-xl p-4 transition-all duration-200">
                 
-                <div class="bg-slate-900/50 rounded-lg p-3 mb-2 border border-slate-700/50">
-                    <div class="text-xs text-slate-500 mb-2">О проекте: <span class="text-blue-400">${projectName}</span></div>
-                    <p class="text-slate-300 text-sm">${firstMsg ? firstMsg.text : '(нет сообщения)'}</p>
+                ${isUnread ? `<div class="absolute top-4 right-4 w-2.5 h-2.5 bg-purple-500 rounded-full shadow-[0_0_10px_rgba(168,85,247,0.5)]"></div>` : ''}
+                
+                <div class="flex justify-between items-start mb-2 pr-4">
+                    <div class="flex flex-col">
+                        ${titleHtml}
+                        <span class="text-xs text-slate-500 mt-0.5">${formatTimeAgo(date)}</span>
+                    </div>
                 </div>
 
-                ${lastAdminMsg ? `
-                    <div class="bg-purple-900/20 border border-l-4 border-l-purple-500 rounded-r-lg p-3 mb-2">
-                        <div class="text-xs text-purple-400 font-bold mb-1"><i class="fas fa-reply"></i> Последний ответ:</div>
-                        <div class="text-sm text-white">${lastAdminMsg.text}</div>
-                    </div>
-                ` : ''}
-
-                <div class="flex items-center gap-2 flex-wrap">
-                    <button onclick="openAdminFeedbackChat('${item.id}')" class="flex-1 min-w-[120px] bg-blue-600 hover:bg-blue-500 text-white px-3 py-1.5 rounded text-xs transition-colors">
-                        <i class="fas fa-comments mr-1"></i> Ответить
-                    </button>
-                    <button onclick="markFeedbackRead('${item.id}')" class="bg-slate-700 hover:bg-slate-600 text-slate-300 px-3 py-1.5 rounded text-xs transition-colors">
-                        ${item.read ? '<i class="fas fa-check"></i> Прочитано' : '<i class="fas fa-circle"></i> Отметить'}
-                    </button>
-                    <button onclick="deleteAdminFeedback('${item.id}')" class="bg-red-600/20 hover:bg-red-600/30 text-red-400 px-3 py-1.5 rounded text-xs transition-colors">
-                        <i class="fas fa-trash"></i>
-                    </button>
+                <div class="text-sm text-slate-300 line-clamp-2 pr-8 opacity-90 group-hover:opacity-100">
+                    ${msgPreview}
                 </div>
             </div>
         `;
     }).join('');
+};
+
+// Хелпер для открытия чата юзером из списка
+window.openFeedbackFromList = function(docId, projectId) {
+    document.getElementById('feedbackListModal').classList.remove('active'); // Закрыть список
+    
+    // Подготовка и открытие чата
+    const modal = document.getElementById('feedbackModal');
+    document.getElementById('feedbackProjectId').value = projectId;
+    document.getElementById('feedbackProjectName').textContent = projectId;
+    document.getElementById('feedbackDocId').value = docId;
+    document.getElementById('feedbackModalTitle').textContent = 'Чат с поддержкой'; // Заголовок чата
+
+    // Переключаем в режим ответа
+    document.getElementById('feedbackFormNew').classList.add('hidden');
+    document.getElementById('feedbackFormReply').classList.remove('hidden');
+    document.getElementById('feedbackSendBtn').classList.add('hidden');
+
+    loadFeedbackChat(docId, projectId);
+    modal.classList.add('active');
 };
 
 // --- АДМИН: ОТКРЫТЬ ЧАТ КОНКРЕТНОГО ОТЗЫВА ---
@@ -1968,72 +2040,117 @@ window.deleteMyFeedback = window.deleteUserFeedback;
         }
 
         // --- User Sync ---
-        onAuthStateChanged(auth, async function(user) {
-            const now = new Date().toISOString();
-            if (user) {
-                currentUser = user;
-                
-                // Automagic Admin
-                if (user.uid === "SAkz4mdW9reDaIsvqigCNZhEKJR2") {
-                    activateAdminMode();
-                    initFeedbacksListener(user.uid); // Initialize feedback listener
-                }
-        
-                try {
-                    const userRef = doc(db, "users", user.uid);
-                    const userSnap = await getDoc(userRef);
-                    const userData = { email: user.email, displayName: user.displayName, photoURL: user.photoURL, lastLogin: now };
-                    if (userSnap.exists()) await updateDoc(userRef, userData);
-                    else await setDoc(userRef, { ...userData, firstLogin: now });
-                } catch (e) { console.error('Error:', e); }
+onAuthStateChanged(auth, async function(user) {
+    const now = new Date().toISOString();
 
-                document.getElementById('loggedOutView').classList.add('hidden');
-                document.getElementById('loggedInView').classList.remove('hidden');
-                document.getElementById('guestWarning').classList.add('hidden');
-                document.getElementById('userAvatar').src = user.photoURL || 'https://ui-avatars.com/api/?name=' + (user.email || 'User') + '&background=random';
-                document.getElementById('userName').textContent = user.displayName || user.email.split('@')[0];
-                
-                // Sync Favorites & Completed Data
-                const userRef = doc(db, "users", user.uid);
-                const userDoc = await getDoc(userRef);
-                
-                if (userDoc.exists()) {
-                    const data = userDoc.data();
-                    userFavorites = data.favorites || [];
-                    userCompleted = data.completed || [];
-                    
-                    // Merge local arcData
-                    if (data.arcGuideStats) {
-                        arcData = { ...arcData, ...data.arcGuideStats };
-                        localStorage.setItem(STORAGE_KEY, JSON.stringify(arcData));
-                    }
-                } else {
-                    // Init cloud data
-                    await setDoc(userRef, { favorites: [], completed: [], arcGuideStats: {} });
-                }
-                
-                applyFilters();
-                
-                initUserSync(user.uid);
-                initNotificationsListener(user.uid);
+    if (user) {
+        currentUser = user;
+
+        // --- Показываем кнопку фидбека всем авторизованным ---
+        document.getElementById('generalFeedbackPanel').classList.remove('hidden');
+
+        // --- Инициализируем слушатель фидбеков (он сам решит, что грузить) ---
+        initFeedbacksListener(user.uid);
+
+        // --- Автоматический админ ---
+        if (user.uid === "SAkz4mdW9reDaIsvqigCNZhEKJR2") {
+            activateAdminMode();
+        }
+
+        // --- Синхронизация данных пользователя ---
+        try {
+            const userRef = doc(db, "users", user.uid);
+            const userSnap = await getDoc(userRef);
+
+            const userData = {
+                email: user.email,
+                displayName: user.displayName,
+                photoURL: user.photoURL,
+                lastLogin: now
+            };
+
+            if (userSnap.exists()) {
+                await updateDoc(userRef, userData);
             } else {
-                currentUser = null;
-                userFavorites = [];
-                userCompleted = [];
-                if (notificationsUnsubscribe) { notificationsUnsubscribe(); notificationsUnsubscribe = null; }
-                if (adminFeedbacksUnsubscribe) { adminFeedbacksUnsubscribe(); adminFeedbacksUnsubscribe = null; }
-                notifications = []; unreadNotificationsCount = 0; updateNotificationBadge();
-                document.getElementById('loggedOutView').classList.remove('hidden');
-                document.getElementById('loggedInView').classList.add('hidden');
-                document.getElementById('guestWarning').classList.remove('hidden');
-                document.getElementById('adminFeedbackPanel').classList.add('hidden');
-                
-                // Load local data
-                arcData = JSON.parse(localStorage.getItem(STORAGE_KEY)) || [];
-                userCompleted = JSON.parse(localStorage.getItem(COMPLETED_KEY)) || [];
-                applyFilters();
+                await setDoc(userRef, { ...userData, firstLogin: now });
             }
-        });
+        } catch (e) {
+            console.error('Error:', e);
+        }
+
+        // --- UI обновление ---
+        document.getElementById('loggedOutView').classList.add('hidden');
+        document.getElementById('loggedInView').classList.remove('hidden');
+        document.getElementById('guestWarning').classList.add('hidden');
+
+        document.getElementById('userAvatar').src =
+            user.photoURL ||
+            'https://ui-avatars.com/api/?name=' + (user.email || 'User') + '&background=random';
+
+        document.getElementById('userName').textContent =
+            user.displayName || user.email.split('@')[0];
+
+        // --- Синхронизация Favorites / Completed / ArcGuideStats ---
+        const userRef = doc(db, "users", user.uid);
+        const userDoc = await getDoc(userRef);
+
+        if (userDoc.exists()) {
+            const data = userDoc.data();
+            userFavorites = data.favorites || [];
+            userCompleted = data.completed || [];
+
+            // Merge arcData
+            if (data.arcGuideStats) {
+                arcData = { ...arcData, ...data.arcGuideStats };
+                localStorage.setItem(STORAGE_KEY, JSON.stringify(arcData));
+            }
+        } else {
+            await setDoc(userRef, { favorites: [], completed: [], arcGuideStats: {} });
+        }
+
+        applyFilters();
+
+        // --- Слушатели пользователя ---
+        initUserSync(user.uid);
+        initNotificationsListener(user.uid);
+
+    } else {
+        // --- Пользователь вышел ---
+        currentUser = null;
+        userFavorites = [];
+        userCompleted = [];
+
+        // --- Скрываем кнопку фидбека ---
+        document.getElementById('generalFeedbackPanel').classList.add('hidden');
+
+        // --- Отписываемся от слушателей ---
+        if (notificationsUnsubscribe) {
+            notificationsUnsubscribe();
+            notificationsUnsubscribe = null;
+        }
+        if (adminFeedbacksUnsubscribe) {
+            adminFeedbacksUnsubscribe();
+            adminFeedbacksUnsubscribe = null;
+        }
+
+        notifications = [];
+        unreadNotificationsCount = 0;
+        updateNotificationBadge();
+
+        // --- UI ---
+        document.getElementById('loggedOutView').classList.remove('hidden');
+        document.getElementById('loggedInView').classList.add('hidden');
+        document.getElementById('guestWarning').classList.remove('hidden');
+        document.getElementById('adminFeedbackPanel').classList.add('hidden');
+
+        // --- Локальные данные ---
+        arcData = JSON.parse(localStorage.getItem(STORAGE_KEY)) || [];
+        userCompleted = JSON.parse(localStorage.getItem(COMPLETED_KEY)) || [];
+
+        applyFilters();
+    }
+});
+
 
         function initUserSync(uid) {
             const userRef = doc(db, "users", uid);
