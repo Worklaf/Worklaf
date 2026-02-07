@@ -1110,6 +1110,7 @@
         let categories = ['DeFi', 'Gaming', 'Infra', 'L1/L2', 'NFT', 'Social', 'Other'];
         let currentFilters = { status: 'all', categories: [] };
         let editingId = null;
+        let isEditModalOpen = false; // Для предотвращения перезаписи данных в модалке
         let currentDetailId = null;
         let isAdminMode = false;
         let currentUser = null;
@@ -1134,7 +1135,9 @@
 
         let pendingLinkInsert = null;
         let pendingImgInsert = null;
-
+// Feedback System
+let adminFeedbacks = [];
+let adminFeedbacksUnsubscribe = null;
         // Activity Management State
         let currentEditingActivities = [];
         let editingActivityId = null;
@@ -1234,11 +1237,11 @@
         window.logout = function() { signOut(auth).then(() => showToast('Вы вышли из системы')); };
 
         // --- Feedback System (Admin) ---
-        function initFeedbacksListener(uid) {
-            if (uid !== "SAkz4mdW9reDaIsvqigCNZhEKJR2") return; // Only for admin
+                function initFeedbacksListener(uid) {
+            if (uid !== "SAkz4mdW9reDaIsvqigCNZhEKJR2") return; // Только для админа
             
             if (adminFeedbacksUnsubscribe) adminFeedbacksUnsubscribe();
-            const q = query(collection(db, "feedbacks"), orderBy("createdAt", "desc"));
+            const q = query(collection(db, "feedbacks"), where("deleted", "!=", true), orderBy("createdAt", "desc"));
             
             adminFeedbacksUnsubscribe = onSnapshot(q, function(snapshot) {
                 adminFeedbacks = [];
@@ -1250,7 +1253,6 @@
                     adminFeedbacks.push(data);
                 });
                 updateFeedbackBadge(unreadCount);
-                // If modal is open, refresh list
                 if (document.getElementById('feedbackListModal').classList.contains('active')) {
                     renderFeedbackList();
                 }
@@ -1259,13 +1261,17 @@
 
         function updateFeedbackBadge(count) {
             const badge = document.getElementById('feedbackBadge');
-            if (count > 0) {
-                badge.textContent = count > 9 ? '9+' : count;
-                badge.classList.remove('hidden');
-            } else {
-                badge.classList.add('hidden');
+            if (badge) {
+                if (count > 0) {
+                    badge.textContent = count > 9 ? '9+' : count;
+                    badge.classList.remove('hidden');
+                } else {
+                    badge.classList.add('hidden');
+                }
             }
         }
+
+        
 
         window.openFeedbackModal = function(projId, projName) {
             if (!currentUser) {
@@ -1552,25 +1558,28 @@
         document.addEventListener('DOMContentLoaded', function() { loadData(); setupSearchListener(); setupAdminUnlock(); });
 
         window.loadData = async function() {
-            try {
-                const response = await fetch(EXTERNAL_DATA_URL);
-                if (response.ok) {
-                    const data = await response.json();
-                    if(data.projects) projects = data.projects.map(normalizeData);
-                    if(data.categories) categories = data.categories;
-                }
-            } catch (e) { console.log('JSON load error', e); }
-            
-            onSnapshot(collection(db, "projects"), function(snapshot) {
-                snapshot.forEach(function(docSnap) {
-                    const fireProject = docSnap.data();
-                    const idx = projects.findIndex(function(p) { return p.id === fireProject.id; });
-                    if (idx !== -1) projects[idx] = { ...projects[idx], ...fireProject };
-                    else projects.push(normalizeData(fireProject));
-                });
-                applyFilters();
-            });
-        };
+    try {
+        const response = await fetch(EXTERNAL_DATA_URL);
+        if (response.ok) {
+            const data = await response.json();
+            if(data.projects) projects = data.projects.map(normalizeData);
+            if(data.categories) categories = data.categories;
+        }
+    } catch (e) { console.log('JSON load error', e); }
+    
+    onSnapshot(collection(db, "projects"), function(snapshot) {
+        // ЕСЛИ ОТКРЫТА МОДАЛКА РЕДАКТИРОВАНИЯ, НЕ ОБНОВЛЯЕМ ДАННЫЕ
+        if (isEditModalOpen) return; 
+
+        snapshot.forEach(function(docSnap) {
+            const fireProject = docSnap.data();
+            const idx = projects.findIndex(function(p) { return p.id === fireProject.id; });
+            if (idx !== -1) projects[idx] = { ...projects[idx], ...fireProject };
+            else projects.push(normalizeData(fireProject));
+        });
+        applyFilters();
+    });
+};
 
         function normalizeData(project) {
             if (!project.categories) project.categories = project.category ? [project.category] : ['Other'];
@@ -1787,11 +1796,21 @@
                     '<button onclick="event.stopPropagation(); toggleFavorite(\'' + project.id + '\')" class="favorite-btn ' + (isFav ? 'active' : 'text-slate-500') + ' p-2 hover:text-red-500 transition-colors w-10 h-10 flex items-center justify-center rounded-lg hover:bg-slate-800"><i class="fas fa-heart ' + (isFav ? 'fill-current' : '') + ' text-lg"></i></button>' +
                     '</div></div>' +
                     '<p class="text-slate-400 text-sm mt-2 line-clamp-2">' + (project.description || 'Нет описания') + '</p></div></div>' +
-                    '<div class="mt-4 pt-3 border-t border-slate-700/50 flex gap-2">' +
-                    '<button onclick="openLink(\'' + (project.referralLink || project.cryptoRankUrl || '') + '\')" class="flex-1 bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-300 py-2 rounded-lg text-sm font-medium transition-colors flex items-center justify-center gap-2"><i class="fas fa-globe"></i> Website</button>' +
-                    '<button onclick="openLink(\'' + (project.twitterUrl || '') + '\')" class="flex-1 bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-300 py-2 rounded-lg text-sm font-medium transition-colors flex items-center justify-center gap-2"><i class="fab fa-twitter"></i> Twitter</button>' +
-                    '<button onclick="openLink(\'' + (project.cryptoRankUrl || '') + '\')" class="flex-1 bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-300 py-2 rounded-lg text-sm font-medium transition-colors flex items-center justify-center gap-2"><i class="fas fa-chart-line"></i> CR</button>' +
-                    '</div></div>';
+                    
+    '<div class="mt-4 pt-3 border-t border-slate-700/50 flex gap-2">' +
+                    
+        '<button onclick="trackGuideClick(\'' + project.id + '\', \'' + (project.referralLink || project.cryptoRankUrl || '') + '\'); event.stopPropagation();" ' +
+        'class="flex-1 bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-300 py-2 rounded-lg text-sm font-medium transition-colors flex items-center justify-center gap-2">' +
+        '<i class="fas fa-globe"></i> Website</button>' +
+
+        '<button onclick="trackGuideClick(\'' + project.id + '\', \'' + (project.twitterUrl || '') + '\'); event.stopPropagation();" ' +
+        'class="flex-1 bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-300 py-2 rounded-lg text-sm font-medium transition-colors flex items-center justify-center gap-2">' +
+        '<i class="fab fa-twitter"></i> Twitter</button>' +
+
+        '<button onclick="trackGuideClick(\'' + project.id + '\', \'' + (project.cryptoRankUrl || '') + '\'); event.stopPropagation();" ' +
+        'class="flex-1 bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-300 py-2 rounded-lg text-sm font-medium transition-colors flex items-center justify-center gap-2">' +
+        '<i class="fas fa-chart-line"></i> CR</button>' +
+'</div></div>';
             }).join('');
         }
 
@@ -2000,15 +2019,22 @@
 
         window.closeDetailModal = function() { document.getElementById('detailModal').classList.remove('active'); currentDetailId = null; };
         window.openLink = function(url) { if(url) window.open(url, '_blank'); };
-        window.openDetailLink = function(type) {
-            const project = projects.find(function(p) { return p.id === currentDetailId; });
-            if(!project) return;
-            let url = '';
-            if (type === 'ref') url = project.referralLink || project.cryptoRankUrl;
-            else if (type === 'twitter') url = project.twitterUrl;
-            else if (type === 'cryptorank') url = project.cryptoRankUrl;
-            if (url) window.open(url, '_blank');
-        };
+       window.openDetailLink = function(type) {
+    if (!currentDetailId) return;
+    const project = projects.find(function(p) { return p.id === currentDetailId; });
+    if(!project) return;
+    
+    let url = '';
+    if (type === 'ref') url = project.referralLink || project.cryptoRankUrl;
+    else if (type === 'twitter') url = project.twitterUrl;
+    else if (type === 'cryptorank') url = project.cryptoRankUrl;
+    
+    if (url) {
+        trackGuideClick(currentDetailId, url); // Засчитываем клик + открываем
+    } else {
+        showToast('Ссылка не найдена');
+    }
+};
         window.openGuideFromDetail = function() { 
             if(currentDetailId) {
                 const project = projects.find(function(p) { return p.id === currentDetailId; });
@@ -2250,10 +2276,14 @@
             renderCategoryOptions();
             currentEditingActivities = [];
             renderActivitiesAdminList();
-            document.getElementById('addModal').classList.add('active');
+            isEditModalOpen = true; // БЛОКИРУЕМ ОБНОВЛЕНИЕ
+    document.getElementById('addModal').classList.add('active');
         };
         
-        window.closeAddModal = function() { document.getElementById('addModal').classList.remove('active'); };
+        window.closeAddModal = function() { 
+    document.getElementById('addModal').classList.remove('active'); 
+    isEditModalOpen = false; // РАЗРЕШАЕМ ОБНОВЛЕНИЕ
+};
         
         window.editProject = function(id) {
             if (!isAdminMode) return;
@@ -2279,8 +2309,9 @@
 
             document.getElementById('modalTitle').textContent = 'Редактировать проект';
             document.getElementById('deleteBtn').classList.remove('hidden');
-            document.getElementById('addModal').classList.add('active');
-            window.closeDetailModal();
+            isEditModalOpen = true; // БЛОКИРУЕМ
+    document.getElementById('addModal').classList.add('active');
+    window.closeDetailModal();
         };
         
         window.editCurrentProject = function() { if(currentDetailId) window.editProject(currentDetailId); };
