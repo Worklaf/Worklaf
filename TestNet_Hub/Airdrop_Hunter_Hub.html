@@ -1341,7 +1341,43 @@ let adminFeedbacksUnsubscribe = null;
                 closeFeedbackModal();
             } catch(e) { showToast('Ошибка'); }
         };
-// После функции window.deleteMyFeedback добавьте:
+        // Функция отправки отзыва (Обязательно добавь!)
+        window.sendFeedback = async function() {
+            const projId = document.getElementById('feedbackProjectId').value;
+            const category = document.getElementById('feedbackCategory').value;
+            const message = document.getElementById('feedbackText').value.trim();
+
+            if (!projId || !message) {
+                showToast('Пожалуйста, напишите текст отзыва');
+                return;
+            }
+            
+            if (!currentUser) {
+                showToast('Ошибка авторизации, войдите снова');
+                return;
+            }
+
+            try {
+                await addDoc(collection(db, "feedbacks"), {
+                    projectId: projId,
+                    category: category,
+                    message: message,
+                    userId: currentUser.uid,
+                    userName: currentUser.displayName || currentUser.email || 'Anonymous',
+                    userPhoto: currentUser.photoURL || '',
+                    read: false,
+                    reply: null,
+                    deleted: false,
+                    createdAt: serverTimestamp()
+                });
+                
+                showToast('Спасибо! Отзыв отправлен.');
+                window.closeFeedbackModal(); // Используем window для надежности
+            } catch (e) {
+                console.error("Error sending feedback:", e);
+                showToast('Ошибка отправки: ' + e.message);
+            }
+        };
 
 
 
