@@ -373,7 +373,41 @@
         .stats-btn:hover { 
             background: linear-gradient(135deg, rgba(139, 92, 246, 0.3), rgba(59, 130, 246, 0.2));
         }
+.message-avatar {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+}
 
+.message-avatar.admin {
+    background: linear-gradient(135deg, #8b5cf6, #3b82f6);
+    color: white;
+    font-size: 0.75rem;
+    font-weight: bold;
+}
+
+.message-avatar.user-photo img {
+    width: 100%;
+    height: 100%;
+    border-radius: 50%;
+    object-fit: cover;
+}
+
+.message-avatar.user-initial {
+    background: #2563eb;
+    color: white;
+    font-size: 0.75rem;
+    font-weight: bold;
+}
+
+.admin-chat-header {
+    background: linear-gradient(135deg, rgba(139, 92, 246, 0.1), rgba(59, 130, 246, 0.1));
+    border-bottom: 1px solid rgba(139, 92, 246, 0.3);
+}
         .notification-badge {
             animation: bounce 0.5s ease;
         }
@@ -1018,6 +1052,7 @@
 
         <!-- Feedback Modal (User Chat) -->
 <div id="feedbackModal" class="modal">
+    <div class="modal-header" id="feedbackModalHeader">
     <div class="modal-content modal-lg relative overflow-hidden">
         <div class="modal-header">
             <div class="flex justify-between items-center w-full">
@@ -1133,6 +1168,7 @@
 
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+        import { collection, doc, setDoc, ... } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
        import { getAuth, signInWithPopup, GoogleAuthProvider, TwitterAuthProvider, signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
 import { getFirestore, collection, doc, setDoc, getDoc, getDocs, updateDoc, deleteDoc, onSnapshot, query, where, orderBy, addDoc, serverTimestamp, arrayUnion } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
@@ -1375,8 +1411,13 @@ function showNewFeedbackForm() {
 }
 
 function loadFeedbackChat(docId, projId) {
-    // Подписываемся на изменения в реальном времени
-    const unsubscribe = onSnapshot(doc(db, "feedbacks", docId), (snapshot) => {
+    const chatContainer = document.getElementById('feedbackChatHistory');
+    
+    if (window.currentFeedbackUnsub) {
+        window.currentFeedbackUnsub();
+    }
+    
+    window.currentFeedbackUnsub = onSnapshot(doc(db, "feedbacks", docId), (snapshot) => {
         if (!snapshot.exists()) {
             showNewFeedbackForm();
             return;
@@ -1385,41 +1426,76 @@ function loadFeedbackChat(docId, projId) {
         const data = snapshot.data();
         const messages = data.messages || [];
 
-        // Сортируем по времени
         messages.sort((a, b) => {
             const timeA = a.timestamp?.toDate ? a.timestamp.toDate() : new Date(0);
             const timeB = b.timestamp?.toDate ? b.timestamp.toDate() : new Date(0);
             return timeA - timeB;
         });
 
-        // Отрисовываем чат
-        const historyContainer = document.getElementById('feedbackChatHistory');
-        if (messages.length === 0) {
-            historyContainer.innerHTML = '<div class="text-center py-4 text-slate-500">История пуста</div>';
-        } else {
-            historyContainer.innerHTML = messages.map(msg => {
-                const isUser = msg.sender === 'user';
-                const time = msg.timestamp ? formatTimeAgo(msg.timestamp.toDate ? msg.timestamp.toDate() : new Date(msg.timestamp)) : '';
-                const avatarIcon = isUser ? '<i class="fas fa-user text-blue-400"></i>' : '<i class="fas fa-headset text-purple-400"></i>';
-                const bgClass = isUser ? 'bg-blue-600/20 border border-blue-500/30' : 'bg-slate-800 border border-slate-700';
-                const alignClass = isUser ? 'flex-row-reverse' : 'flex-row';
-                
-                return `
-                    <div class="message-bubble flex gap-3 ${alignClass} items-end mb-4">
-                        <div class="w-8 h-8 shrink-0 rounded-full bg-slate-700 border border-slate-600 flex items-center justify-center text-sm">
-                            ${avatarIcon}
-                        </div>
-                        <div class="flex-1 max-w-[80%] ${bgClass} rounded-2xl p-3">
-                            <div class="flex justify-between items-center gap-2 mb-1">
-                                <span class="text-xs text-slate-400 font-medium">${isUser ? 'Вы' : 'Поддержка'}</span>
-                                <span class="text-[10px] text-slate-500 whitespace-nowrap">${time}</span>
-                            </div>
-                            <p class="text-sm text-slate-200 break-words">${msg.text}</p>
-                        </div>
-                    </div>
-                `;
-            }).join('');
+        chatContainer.innerHTML = messages.length === 0 
+            ? '<div class="text-center py-4 text-slate-500">История пуста</div>'
+            : messages.map(msg => renderMessageBubble(msg, 'user', data.userName, data.userPhoto)).join('');
+
+        document.getElementById('feedbackFormNew').classList.add('hidden');
+        document.getElementById('feedbackFormReply').classList.remove('hidden');
+        document.getElementById('feedbackSendBtn').classList.add('hidden');
+        document.getElementById('feedbackUserReplyText').value = '';
+
+        chatContainer.scrollTop = chatContainer.scrollHeight;
+
+        if (!data.userRead) {
+            updateDoc(doc(db, "feedbacks", docId), { userRead: true }).catch(e => console.error(e));
         }
+    });
+
+    modal.classList.add('active');
+}
+
+// ========== ДОБАВИТЬ НОВУЮ ФУНКЦИЮ renderMessageBubble ==========
+function renderMessageBubble(msg, mode = 'user', otherUserName = '', otherUserPhoto = '') {
+    const isMyMessage = (mode === 'user' && msg.sender === 'user') || (mode === 'admin' && msg.sender === 'admin');
+    const isAdminMsg = msg.sender === 'admin';
+    
+    const time = msg.timestamp ? formatTimeAgo(msg.timestamp.toDate ? msg.timestamp.toDate() : new Date(msg.timestamp)) : '';
+    
+    // Определяем имя и аватар
+    let senderName = '';
+    let senderAvatar = '';
+    
+    if (isAdminMsg) {
+        senderName = 'Поддержка TestNet Hub';
+        senderAvatar = '<div class="w-8 h-8 rounded-full bg-purple-600 flex items-center justify-center text-xs"><i class="fas fa-headset"></i></div>';
+    } else {
+        senderName = mode === 'user' ? 'Вы' : (otherUserName || 'Пользователь');
+        if (otherUserPhoto) {
+            senderAvatar = `<img src="${otherUserPhoto}" class="w-8 h-8 rounded-full object-cover">`;
+        } else {
+            const initial = (senderName[0] || 'U').toUpperCase();
+            senderAvatar = `<div class="w-8 h-8 rounded-full bg-blue-600 flex items-center justify-center text-xs font-bold">${initial}</div>`;
+        }
+    }
+
+    // Стили для разных типов сообщений
+    const bubbleClass = isMyMessage 
+        ? 'bg-blue-600/20 border border-blue-500/30' 
+        : 'bg-slate-800 border border-slate-700';
+    
+    const alignClass = isMyMessage ? 'flex-row-reverse' : 'flex-row';
+    const nameClass = isMyMessage ? 'text-blue-300' : 'text-purple-300';
+
+    return `
+        <div class="message-bubble flex gap-3 ${alignClass} items-end mb-4">
+            ${senderAvatar}
+            <div class="flex-1 max-w-[80%] ${bubbleClass} rounded-2xl p-3">
+                <div class="flex justify-between items-center gap-2 mb-1">
+                    <span class="text-xs ${nameClass} font-medium">${senderName}</span>
+                    <span class="text-[10px] text-slate-500 whitespace-nowrap">${time}</span>
+                </div>
+                <p class="text-sm text-slate-200 break-words">${msg.text}</p>
+            </div>
+        </div>
+    `;
+}
 
         // Показываем форму для ответа
         document.getElementById('feedbackFormNew').classList.add('hidden');
@@ -1554,7 +1630,7 @@ window.renderFeedbackList = function() {
     }
 
     container.innerHTML = adminFeedbacks.map((item) => {
-        if (item.deleted) return ''; // Пропускаем полностью удалённые
+        if (item.deleted) return '';
         
         const date = item.createdAt && item.createdAt.toDate ? item.createdAt.toDate() : new Date();
         const formattedDate = formatTimeAgo(date);
@@ -1570,40 +1646,50 @@ window.renderFeedbackList = function() {
         const projectName = item.projectId || 'Неизвестный проект';
         const messages = item.messages || [];
         
-        // Показываем первое и последнее сообщение
-        const firstMsg = messages.find(m => m.sender === 'user');
-        const lastAdminMsg = [...messages].reverse().find(m => m.sender === 'admin');
+        // Последнее сообщение
+        const lastMsg = messages.length > 0 ? messages[messages.length - 1] : null;
+        const lastSender = lastMsg ? (lastMsg.sender === 'admin' ? 'Вы' : 'Пользователь') : '';
+        const lastText = lastMsg ? lastMsg.text : '(нет сообщения)';
+        
+        // Аватар пользователя
+        let userAvatar = '';
+        if (item.userPhoto) {
+            userAvatar = `<img src="${item.userPhoto}" class="w-10 h-10 rounded-full object-cover border border-slate-600">`;
+        } else {
+            const initial = (item.userName ? item.userName[0] : 'U').toUpperCase();
+            userAvatar = `<div class="w-10 h-10 rounded-full bg-slate-700 flex items-center justify-center font-bold text-slate-300">${initial}</div>`;
+        }
 
         return `
             <div class="bg-slate-800/50 border border-slate-700 rounded-xl p-4 ${!item.read ? 'border-l-4 border-l-blue-500' : ''}">
-                <div class="flex justify-between items-start mb-3">
-                    <div class="flex items-center gap-2 flex-wrap">
-                        <span class="font-bold text-white text-sm">${item.userName || 'Аноним'}</span>
-                        <span class="text-xs text-slate-500">• ${formattedDate}</span>
-                        <span class="text-xs bg-slate-700 px-2 py-0.5 rounded">
-                            <i class="fas ${typeInfo.icon} ${typeInfo.color} mr-1"></i>${item.category}
-                        </span>
+                <div class="flex items-start gap-3 mb-3">
+                    ${userAvatar}
+                    <div class="flex-1 min-w-0">
+                        <div class="flex items-center gap-2 flex-wrap">
+                            <span class="font-bold text-white text-sm">${item.userName || 'Аноним'}</span>
+                            <span class="text-xs text-slate-500">• ${formattedDate}</span>
+                            <span class="text-xs bg-slate-700 px-2 py-0.5 rounded flex items-center gap-1">
+                                <i class="fas ${typeInfo.icon} ${typeInfo.color}"></i>${item.category}
+                            </span>
+                            ${!item.read ? '<span class="text-[10px] bg-blue-600 text-white px-1.5 py-0.5 rounded">Новый</span>' : ''}
+                        </div>
+                        <div class="text-xs text-slate-500 mt-0.5">Проект: <span class="text-blue-400">${projectName}</span></div>
                     </div>
                 </div>
                 
-                <div class="bg-slate-900/50 rounded-lg p-3 mb-2 border border-slate-700/50">
-                    <div class="text-xs text-slate-500 mb-2">О проекте: <span class="text-blue-400">${projectName}</span></div>
-                    <p class="text-slate-300 text-sm">${firstMsg ? firstMsg.text : '(нет сообщения)'}</p>
+                <div class="bg-slate-900/50 rounded-lg p-3 mb-3 border border-slate-700/50">
+                    <div class="text-xs text-slate-500 mb-1">Последнее сообщение:</div>
+                    <p class="text-slate-300 text-sm flex items-center gap-2">
+                        <span class="font-medium ${lastSender === 'Вы' ? 'text-purple-400' : 'text-blue-400'}">
+                            ${lastSender}:
+                        </span>
+                        ${lastText.length > 80 ? lastText.substring(0, 80) + '...' : lastText}
+                    </p>
                 </div>
 
-                ${lastAdminMsg ? `
-                    <div class="bg-purple-900/20 border border-l-4 border-l-purple-500 rounded-r-lg p-3 mb-2">
-                        <div class="text-xs text-purple-400 font-bold mb-1"><i class="fas fa-reply"></i> Последний ответ:</div>
-                        <div class="text-sm text-white">${lastAdminMsg.text}</div>
-                    </div>
-                ` : ''}
-
                 <div class="flex items-center gap-2 flex-wrap">
-                    <button onclick="openAdminFeedbackChat('${item.id}')" class="flex-1 min-w-[120px] bg-blue-600 hover:bg-blue-500 text-white px-3 py-1.5 rounded text-xs transition-colors">
-                        <i class="fas fa-comments mr-1"></i> Ответить
-                    </button>
-                    <button onclick="markFeedbackRead('${item.id}')" class="bg-slate-700 hover:bg-slate-600 text-slate-300 px-3 py-1.5 rounded text-xs transition-colors">
-                        ${item.read ? '<i class="fas fa-check"></i> Прочитано' : '<i class="fas fa-circle"></i> Отметить'}
+                    <button onclick="openAdminFeedbackChat('${item.id}')" class="flex-1 min-w-[120px] bg-blue-600 hover:bg-blue-500 text-white px-3 py-1.5 rounded text-xs transition-colors flex items-center justify-center gap-1">
+                        <i class="fas fa-comments"></i> Открыть чат
                     </button>
                     <button onclick="deleteAdminFeedback('${item.id}')" class="bg-red-600/20 hover:bg-red-600/30 text-red-400 px-3 py-1.5 rounded text-xs transition-colors">
                         <i class="fas fa-trash"></i>
@@ -1619,52 +1705,54 @@ window.openAdminFeedbackChat = function(feedbackId) {
     const feedback = adminFeedbacks.find(f => f.id === feedbackId);
     if (!feedback) return;
 
-    // Создаём временную модалку для чата админа
+    // Закрываем список отзывов
+    document.getElementById('feedbackListModal').classList.remove('active');
+    
+    // Открываем чат
     const modal = document.getElementById('feedbackModal');
     document.getElementById('feedbackProjectId').value = feedback.projectId;
-    document.getElementById('feedbackProjectName').textContent = `${feedback.projectId} (от ${feedback.userName})`;
+    document.getElementById('feedbackProjectName').textContent = `${feedback.projectId || 'Неизвестный проект'} (от ${feedback.userName || 'Аноним'})`;
     document.getElementById('feedbackDocId').value = feedbackId;
     
-    document.getElementById('feedbackModalTitle').textContent = 'Переписка с пользователем';
+    document.getElementById('feedbackModalTitle').innerHTML = `<i class="fas fa-comments text-purple-400"></i> Переписка с ${feedback.userName || 'пользователем'}`;
     document.getElementById('feedbackFormNew').classList.add('hidden');
     document.getElementById('feedbackFormReply').classList.remove('hidden');
     document.getElementById('feedbackSendBtn').classList.add('hidden');
 
-    // Загружаем чат
-    const messages = feedback.messages || [];
-    const historyContainer = document.getElementById('feedbackChatHistory');
+    // Подписываемся на чат в реальном времени
+    const chatContainer = document.getElementById('feedbackChatHistory');
     
-    if (messages.length === 0) {
-        historyContainer.innerHTML = '<div class="text-center py-4 text-slate-500">Нет сообщений</div>';
-    } else {
-        historyContainer.innerHTML = messages.map(msg => {
-            const isUser = msg.sender === 'user';
-            const time = msg.timestamp ? formatTimeAgo(msg.timestamp.toDate ? msg.timestamp.toDate() : new Date(msg.timestamp)) : '';
-            const avatarIcon = isUser ? '<i class="fas fa-user text-blue-400"></i>' : '<i class="fas fa-headset text-purple-400"></i>';
-            const bgClass = isUser ? 'bg-blue-600/20 border border-blue-500/30' : 'bg-purple-600/20 border border-purple-500/30';
-            const alignClass = isUser ? 'flex-row-reverse' : 'flex-row';
-            
-            return `
-                <div class="message-bubble flex gap-3 ${alignClass} items-end mb-4">
-                    <div class="w-8 h-8 shrink-0 rounded-full bg-slate-700 border border-slate-600 flex items-center justify-center text-sm">
-                        ${avatarIcon}
-                    </div>
-                    <div class="flex-1 max-w-[80%] ${bgClass} rounded-2xl p-3">
-                        <div class="flex justify-between items-center gap-2 mb-1">
-                            <span class="text-xs text-slate-300 font-medium">${isUser ? 'Пользователь' : 'Вы'}</span>
-                            <span class="text-[10px] text-slate-400 whitespace-nowrap">${time}</span>
-                        </div>
-                        <p class="text-sm text-slate-200 break-words">${msg.text}</p>
-                    </div>
-                </div>
-            `;
-        }).join('');
+    if (window.currentFeedbackUnsub) {
+        window.currentFeedbackUnsub();
     }
+    
+    window.currentFeedbackUnsub = onSnapshot(doc(db, "feedbacks", feedbackId), (snapshot) => {
+        if (!snapshot.exists()) {
+            chatContainer.innerHTML = '<div class="text-center py-8 text-slate-500">Чат удалён</div>';
+            return;
+        }
+        
+        const data = snapshot.data();
+        const messages = data.messages || [];
+        
+        // Сортируем по времени
+        messages.sort((a, b) => {
+            const timeA = a.timestamp?.toDate ? a.timestamp.toDate() : new Date(0);
+            const timeB = b.timestamp?.toDate ? b.timestamp.toDate() : new Date(0);
+            return timeA - timeB;
+        });
+
+        chatContainer.innerHTML = messages.length === 0 
+            ? '<div class="text-center py-4 text-slate-500">Нет сообщений</div>'
+            : messages.map(msg => renderMessageBubble(msg, 'admin')).join('');
+        
+        chatContainer.scrollTop = chatContainer.scrollHeight;
+    });
 
     document.getElementById('feedbackUserReplyText').value = '';
     document.getElementById('feedbackUserReplyText').placeholder = 'Напишите ответ пользователю...';
-
-    // Переопределяем обработчик для админа
+    
+    // Обработка Enter
     document.getElementById('feedbackUserReplyText').onkeypress = function(e) {
         if (e.key === 'Enter') sendAdminReply(feedbackId);
     };
@@ -1679,17 +1767,36 @@ window.sendAdminReply = async function(feedbackId) {
     if (!text) return showToast('Введите ответ');
 
     try {
+        // Получаем данные фидбека для отправки уведомления
+        const feedbackDoc = await getDoc(doc(db, "feedbacks", feedbackId));
+        const feedbackData = feedbackDoc.data();
+
         await updateDoc(doc(db, "feedbacks", feedbackId), {
-            // ИЗМЕНЕНО: new Date() вместо serverTimestamp()
             messages: arrayUnion({
                 sender: 'admin',
                 text: text,
                 timestamp: new Date()
             }),
-            read: true
+            read: true,
+            userRead: false // Сбрасываем флаг прочтения для пользователя
         });
+
+        // Отправляем уведомление пользователю
+        if (feedbackData.userId) {
+            await sendNotificationToUser(
+                feedbackData.userId,
+                `🔔 Админ ответил на ваш отзыв по проекту "${feedbackData.projectId || 'неизвестный'}". Нажмите, чтобы посмотреть.`,
+                'info'
+            );
+        }
+
         document.getElementById('feedbackUserReplyText').value = '';
         showToast('Ответ отправлен');
+        
+        // Если админ в списке - обновляем список
+        if (document.getElementById('feedbackListModal').classList.contains('active')) {
+            renderFeedbackList();
+        }
     } catch (e) {
         console.error(e);
         showToast('Ошибка: ' + e.message);
@@ -2884,6 +2991,20 @@ window.deleteMyFeedback = window.deleteUserFeedback;
             if (currentUser.uid !== "SAkz4mdW9reDaIsvqigCNZhEKJR2") { showToast('Нет доступа к статистике'); return; }
             window.open('stats.html', '_blank');
         };
+        async function sendNotificationToUser(userId, message, type = 'info') {
+    try {
+        await addDoc(collection(db, "notifications"), {
+            userId: userId,
+            message: message,
+            type: type,
+            read: false,
+            createdAt: new Date(),
+            link: '/feedbacks'
+        });
+    } catch (e) {
+        console.error('Ошибка отправки уведомления:', e);
+    }
+}
     </script>
 </body>
 </html>
