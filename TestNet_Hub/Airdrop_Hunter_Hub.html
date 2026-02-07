@@ -1735,25 +1735,34 @@ window.openAdminFeedbackChat = function (feedbackId) {
     const fb = adminFeedbacks.find(f => f.id === feedbackId);
     if (!fb) return;
 
-    // ЗАКРЫВАЕМ СПИСОК ОТЗЫВОВ
-    closeFeedbackListModal();
+    // 1. ПРИНУДИТЕЛЬНО ЗАКРЫВАЕМ ОКНО СПИСКА ОТЗЫВОВ ПРЯМО ЗДЕСЬ
+    const listModal = document.getElementById('feedbackListModal');
+    if (listModal) {
+        listModal.classList.remove('active'); // Убираем класс активности, окно исчезнет
+    }
 
-    const modal = document.getElementById('feedbackModal');
+    // 2. ОТКРЫВАЕМ ОКНО ЧАТА
+    const chatModal = document.getElementById('feedbackModal');
+    
+    // Заполняем данными
     document.getElementById('feedbackProjectId').value = fb.projectId;
     document.getElementById('feedbackProjectName').textContent = `${fb.projectId} (от ${fb.userName || 'Пользователь'})`;
     document.getElementById('feedbackDocId').value = fb.id;
 
     document.getElementById('feedbackModalTitle').textContent = 'Чат с пользователем';
+    
+    // Переключаем форму в режим ответа
     document.getElementById('feedbackFormNew').classList.add('hidden');
     document.getElementById('feedbackFormReply').classList.remove('hidden');
     document.getElementById('feedbackSendBtn').classList.add('hidden');
 
-    // Остальной код без изменений...
+    // Очищаем старую подписку
     if (window.currentFeedbackUnsub) {
         window.currentFeedbackUnsub();
         window.currentFeedbackUnsub = null;
     }
 
+    // Подписываемся на сообщения
     const unsub = onSnapshot(doc(db, "feedbacks", feedbackId), (snap) => {
         if (!snap.exists()) return;
 
@@ -1769,16 +1778,21 @@ window.openAdminFeedbackChat = function (feedbackId) {
             const avatar = fromAdmin
                 ? `<div class="chat-avatar"><i class="fas fa-user-shield"></i></div>`
                 : `<img src="${d.userPhoto || 'https://ui-avatars.com/api/?name=P'}" class="chat-avatar" alt>`;
-                
-            const t = msg.timestamp ? formatTimeAgo(msg.timestamp.toDate ? msg.timestamp.toDate() : new Date(msg.timestamp)) : '';
-            
+
+            // Форматирование времени (безопасная проверка)
+            let timeStr = '';
+            if (msg.timestamp) {
+                const dateObj = msg.timestamp.toDate ? msg.timestamp.toDate() : new Date(msg.timestamp);
+                timeStr = formatTimeAgo(dateObj);
+            }
+
             return `
                 <div class="chat-bubble ${bubbleSide}">
                     ${avatar}
                     <div class="chat-bubble-wrapper">
                         <span class="chat-sender">${senderName}</span>
                         <div class="chat-content">${msg.text}</div>
-                        <span class="chat-time">${t}</span>
+                        <span class="chat-time">${timeStr}</span>
                     </div>
                 </div>`;
         }).join('');
@@ -1787,26 +1801,31 @@ window.openAdminFeedbackChat = function (feedbackId) {
         hist.innerHTML = html || `<p class="text-center text-slate-500 py-4">Нет сообщений</p>`;
         hist.scrollTop = hist.scrollHeight;
     });
-
+    
     window.currentFeedbackUnsub = unsub;
 
+    // Настраиваем поле ввода
     const inp = document.getElementById('feedbackUserReplyText');
     inp.value = '';
     inp.placeholder = 'Ответ пользователю...';
-
-    const sendBtn = inp.parentElement.querySelector('button');
-    if (sendBtn) {
-        sendBtn.onclick = function () { sendAdminReply(feedbackId); };
+    
+    // Кнопка отправки
+    const replyBtn = inp.parentElement.querySelector('button');
+    if (replyBtn) {
+        replyBtn.onclick = function() { sendAdminReply(feedbackId); };
     }
 
-    inp.onkeypress = e => {
-        if (e.key === 'Enter') {
-            e.preventDefault();
+    inp.onkeypress = e => { 
+        if (e.key === 'Enter') { 
+            e.preventDefault(); 
             sendAdminReply(feedbackId);
-        }
+        } 
     };
 
-    modal.classList.add('active');
+    // Показываем окно чата
+    chatModal.classList.add('active');
+    
+    // Помечаем как прочитанное
     markFeedbackRead(feedbackId);
 };
 
