@@ -1458,70 +1458,7 @@ let adminFeedbacksUnsubscribe = null;
         // ADMIN: FEEDBACK LIST
         // =========================
 
-        window.renderFeedbackList = function() {
-            const container = document.getElementById('feedbacksContainer');
-            if (!adminFeedbacks || adminFeedbacks.length === 0) {
-                container.innerHTML = '<div class="text-center py-10 text-slate-500"><i class="fas fa-inbox text-4xl mb-3"></i><p>Нет активных обращений</p></div>';
-                return;
-            }
-
-            container.innerHTML = adminFeedbacks.map(item => {
-                // Собираем историю сообщений
-                let messages = item.messages || [];
-                // Миграция старых данных
-                if (messages.length === 0 && item.message) {
-                    messages = [{ sender: 'user', text: item.message, timestamp: item.createdAt }];
-                    if (item.reply) messages.push({ sender: 'admin', text: item.reply, timestamp: item.repliedAt });
-                }
-                // Сортировка
-                messages.sort((a, b) => (a.timestamp?.toDate() || 0) - (b.timestamp?.toDate() || 0));
-
-                const historyHtml = messages.slice(-3).map(msg => { // Показываем последние 3 для превью
-                    const isAdmin = msg.sender === 'admin';
-                    const bg = isAdmin ? 'bg-purple-900/30 border-purple-500/30' : 'bg-slate-700/50';
-                    return `<div class="text-xs p-2 rounded border mb-1 ${bg}">
-                        <span class="font-bold ${isAdmin ? 'text-purple-300' : 'text-blue-300'}">${isAdmin ? 'Admin' : 'User'}:</span> 
-                        <span class="text-slate-300 truncate block w-full">${msg.text}</span>
-                    </div>`;
-                }).join('');
-                
-                const moreCount = messages.length > 3 ? ` (+${messages.length - 3} сообщений)` : '';
-
-                return `
-                    <div class="bg-slate-800/50 border border-slate-700 rounded-xl p-4 mb-4 hover:bg-slate-800 transition-all">
-                        <div class="flex justify-between items-start mb-3">
-                            <div class="flex items-center gap-2">
-                                <img src="${item.userPhoto || ''}" onerror="this.src='https://ui-avatars.com/api/?name=${encodeURIComponent(item.userName)}&background=random'" class="w-8 h-8 rounded-full bg-slate-700">
-                                <div>
-                                    <div class="font-bold text-sm text-white">${item.userName}</div>
-                                    <div class="text-xs text-slate-500">${item.projectId || 'Без проекта'}</div>
-                                </div>
-                            </div>
-                            <span class="text-xs bg-slate-700 px-2 py-1 rounded text-slate-300">${item.category || 'other'}</span>
-                        </div>
-                        
-                        <div class="mb-3 bg-slate-900/50 rounded-lg p-2 border border-slate-700/50">
-                            ${historyHtml}
-                            ${moreCount ? `<div class="text-xs text-center text-slate-500">${moreCount}</div>` : ''}
-                        </div>
-
-                        <div class="flex flex-col gap-2">
-                            <input type="text" id="reply-input-${item.id}" placeholder="Написать ответ пользователю..." class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-sm text-white focus:border-blue-500 outline-none">
-                            <div class="flex justify-between items-center">
-                                <div class="flex gap-2">
-                                    <button onclick="sendReply('${item.id}')" class="bg-blue-600 hover:bg-blue-500 text-white px-4 py-1.5 rounded text-xs font-medium transition-colors">
-                                        <i class="fas fa-reply mr-1"></i> Ответить
-                                    </button>
-                                    ${!item.read ? `<button onclick="markFeedbackRead('${item.id}')" class="text-slate-500 hover:text-white text-xs px-2">Отметить прочитанным</button>` : ''}
-                                    <button onclick="deleteFeedback('${item.id}')" class="text-red-400 hover:text-red-300 text-xs px-2"><i class="fas fa-trash"></i></button>
-                                </div>
-                                <div class="text-xs text-slate-500">${item.status === 'closed' ? '🔒 Закрыт' : 'Открыт'}</div>
-                            </div>
-                        </div>
-                    </div>
-                `;
-            }).join('');
-        };
+        
 
         // --- 4. АДМИН: ОТПРАВИТЬ ОТВЕТ И УВЕДОМЛЕНИЕ ---
         window.sendReply = async function(id) {
