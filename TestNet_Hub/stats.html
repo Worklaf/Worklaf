@@ -75,13 +75,29 @@
             50% { opacity: 0.5; }
         }
 
-        .notification-badge {
-            animation: bounce 0.5s ease;
+        .loading-spinner {
+            border: 3px solid rgba(255, 255, 255, 0.1);
+            border-top: 3px solid #3b82f6;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
         }
 
-        @keyframes bounce {
-            0%, 100% { transform: scale(1); }
-            50% { transform: scale(1.2); }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .skeleton {
+            background: linear-gradient(90deg, rgba(255,255,255,0.05) 25%, rgba(255,255,255,0.1) 50%, rgba(255,255,255,0.05) 75%);
+            background-size: 200% 100%;
+            animation: shimmer 1.5s infinite;
+        }
+
+        @keyframes shimmer {
+            0% { background-position: 200% 0; }
+            100% { background-position: -200% 0; }
         }
     </style>
 </head>
@@ -89,7 +105,7 @@
     <div class="max-w-7xl mx-auto px-4 py-6">
         <!-- Header -->
         <header class="mb-8">
-            <div class="flex items-center justify-between">
+            <div class="flex items-center justify-between flex-wrap gap-4">
                 <div class="flex items-center gap-4">
                     <a href="Airdrop_Hunter_Hub.html" class="back-btn px-4 py-2 rounded-lg text-blue-400 hover:text-white transition-colors flex items-center gap-2">
                         <i class="fas fa-arrow-left"></i>
@@ -105,7 +121,7 @@
                 </div>
                 <div class="flex items-center gap-4">
                     <div id="lastUpdate" class="text-xs text-slate-500"></div>
-                    <button onclick="loadStats()" class="bg-blue-600 hover:bg-blue-500 px-4 py-2 rounded-lg text-sm transition-colors flex items-center gap-2">
+                    <button onclick="forceReloadData()" id="refreshBtn" class="bg-blue-600 hover:bg-blue-500 px-4 py-2 rounded-lg text-sm transition-colors flex items-center gap-2">
                         <i class="fas fa-sync-alt"></i>
                         <span class="hidden sm:inline">Обновить</span>
                     </button>
@@ -123,71 +139,73 @@
             </a>
         </div>
 
+        <!-- Loading State -->
+        <div id="loading" class="text-center py-20">
+            <div class="loading-spinner mx-auto mb-4"></div>
+            <p class="text-slate-400" id="loadingText">Загрузка данных...</p>
+        </div>
+
         <!-- Admin Content -->
         <div id="adminContent" class="hidden">
-            <!-- Stats & Broadcast -->
-            <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
-                <!-- Overview Cards -->
-                <div class="lg:col-span-2">
-                    <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
-                        <div class="glass-card rounded-2xl p-5 stat-card">
-                            <div class="flex items-center justify-between mb-3">
-                                <div class="w-12 h-12 rounded-xl bg-blue-600/20 flex items-center justify-center">
-                                    <i class="fas fa-users text-blue-400 text-xl"></i>
-                                </div>
-                                <span class="text-emerald-400 text-xs flex items-center gap-1">
-                                    <span class="pulse-dot w-2 h-2 rounded-full bg-emerald-400"></span>
-                                    Online
-                                </span>
-                            </div>
-                            <div class="stat-value text-3xl font-bold mb-1" id="totalUsers">0</div>
-                            <div class="text-slate-400 text-sm">Всего пользователей</div>
+            <!-- Stats Cards -->
+            <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+                <div class="glass-card rounded-2xl p-5 stat-card">
+                    <div class="flex items-center justify-between mb-3">
+                        <div class="w-12 h-12 rounded-xl bg-blue-600/20 flex items-center justify-center">
+                            <i class="fas fa-users text-blue-400 text-xl"></i>
                         </div>
-
-                        <div class="glass-card rounded-2xl p-5">
-                            <div class="flex items-center justify-between mb-3">
-                                <div class="w-12 h-12 rounded-xl bg-green-600/20 flex items-center justify-center">
-                                    <i class="fas fa-user-plus text-green-400 text-xl"></i>
-                                </div>
-                            </div>
-                            <div class="stat-value text-3xl font-bold mb-1" id="newToday">0</div>
-                            <div class="text-slate-400 text-sm">Новых сегодня</div>
-                        </div>
-
-                        <div class="glass-card rounded-2xl p-5">
-                            <div class="flex items-center justify-between mb-3">
-                                <div class="w-12 h-12 rounded-xl bg-yellow-600/20 flex items-center justify-center">
-                                    <i class="fas fa-clock text-yellow-400 text-xl"></i>
-                                </div>
-                            </div>
-                            <div class="stat-value text-3xl font-bold mb-1" id="activeWeek">0</div>
-                            <div class="text-slate-400 text-sm">За неделю</div>
-                        </div>
-
-                        <div class="glass-card rounded-2xl p-5">
-                            <div class="flex items-center justify-between mb-3">
-                                <div class="w-12 h-12 rounded-xl bg-purple-600/20 flex items-center justify-center">
-                                    <i class="fas fa-fire text-purple-400 text-xl"></i>
-                                </div>
-                            </div>
-                            <div class="stat-value text-3xl font-bold mb-1" id="onlineNow">0</div>
-                            <div class="text-slate-400 text-sm">Онлайн сейчас</div>
-                        </div>
+                        <span class="text-emerald-400 text-xs flex items-center gap-1">
+                            <span class="pulse-dot w-2 h-2 rounded-full bg-emerald-400"></span>
+                            Online
+                        </span>
                     </div>
+                    <div class="stat-value text-3xl font-bold mb-1" id="totalUsers">0</div>
+                    <div class="text-slate-400 text-sm">Всего пользователей</div>
+                </div>
 
+                <div class="glass-card rounded-2xl p-5">
+                    <div class="w-12 h-12 rounded-xl bg-green-600/20 flex items-center justify-center mb-3">
+                        <i class="fas fa-user-plus text-green-400 text-xl"></i>
+                    </div>
+                    <div class="stat-value text-3xl font-bold mb-1" id="newToday">0</div>
+                    <div class="text-slate-400 text-sm">Новых сегодня</div>
+                </div>
+
+                <div class="glass-card rounded-2xl p-5">
+                    <div class="w-12 h-12 rounded-xl bg-yellow-600/20 flex items-center justify-center mb-3">
+                        <i class="fas fa-clock text-yellow-400 text-xl"></i>
+                    </div>
+                    <div class="stat-value text-3xl font-bold mb-1" id="activeWeek">0</div>
+                    <div class="text-slate-400 text-sm">За неделю</div>
+                </div>
+
+                <div class="glass-card rounded-2xl p-5">
+                    <div class="w-12 h-12 rounded-xl bg-purple-600/20 flex items-center justify-center mb-3">
+                        <i class="fas fa-fire text-purple-400 text-xl"></i>
+                    </div>
+                    <div class="stat-value text-3xl font-bold mb-1" id="onlineNow">0</div>
+                    <div class="text-slate-400 text-sm">Онлайн сейчас</div>
+                </div>
+            </div>
+
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
+                <!-- Overview -->
+                <div class="lg:col-span-2 space-y-6">
                     <!-- Top Projects -->
-                    <div class="glass-card rounded-2xl p-5 mb-6">
+                    <div class="glass-card rounded-2xl p-5">
                         <h3 class="font-semibold text-lg mb-4 flex items-center gap-2">
                             <i class="fas fa-star text-yellow-400"></i>
                             Топ проектов по кликам
                         </h3>
                         <div id="topProjects" class="grid grid-cols-2 md:grid-cols-3 gap-3">
-                            <!-- Заполнится JS -->
+                            <div class="skeleton h-24 rounded-lg"></div>
+                            <div class="skeleton h-24 rounded-lg"></div>
+                            <div class="skeleton h-24 rounded-lg"></div>
                         </div>
                     </div>
                     
                     <!-- Notification Stats -->
-                    <div class="glass-card rounded-2xl p-5 mb-6">
+                    <div class="glass-card rounded-2xl p-5">
                         <h3 class="font-semibold text-lg mb-4 flex items-center gap-2">
                             <i class="fas fa-bell text-pink-400"></i>
                             Статистика уведомлений
@@ -216,7 +234,6 @@
                         Рассылка уведомлений
                     </h3>
                     
-                    <!-- Выбор получателей -->
                     <div class="mb-4">
                         <label class="text-sm text-slate-400 block mb-2">Получатели:</label>
                         <div class="space-y-2">
@@ -238,25 +255,22 @@
                         </div>
                     </div>
 
-                    <!-- Выбранные пользователи -->
                     <div id="selectedUsersList" class="hidden mb-4 max-h-32 overflow-y-auto">
                         <div class="text-xs text-slate-500 mb-2">Выбрано:</div>
                         <div id="selectedNames" class="space-y-1 text-sm text-slate-300"></div>
                     </div>
 
-                    <!-- Текст сообщения -->
                     <div class="mb-4">
                         <label class="text-sm text-slate-400 block mb-2">Сообщение:</label>
                         <textarea id="broadcastMessage" rows="4" 
                             class="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-sm focus:border-blue-500 outline-none resize-none"
-                            placeholder="Введите текст уведомления... Ссылки автоматически станут кликабельными"></textarea>
+                            placeholder="Введите текст уведомления..."></textarea>
                         <div class="flex justify-between mt-1">
                             <span class="text-xs text-slate-500">Поддерживаются ссылки</span>
                             <span id="msgLength" class="text-xs text-slate-500">0/500</span>
                         </div>
                     </div>
 
-                    <!-- Тип уведомления -->
                     <div class="mb-4">
                         <label class="text-sm text-slate-400 block mb-2">Тип:</label>
                         <select id="broadcastType" class="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-sm outline-none">
@@ -268,56 +282,55 @@
                         </select>
                     </div>
 
-                    <!-- Кнопка отправки -->
                     <button onclick="sendBroadcast()" id="sendBtn" class="w-full bg-gradient-to-r from-pink-600 to-purple-600 hover:from-pink-500 hover:to-purple-500 px-4 py-3 rounded-lg text-sm font-medium transition-all flex items-center justify-center gap-2">
                         <i class="fas fa-paper-plane"></i>
                         Отправить уведомление
                     </button>
                     
-                    <!-- Статус отправки -->
                     <div id="broadcastStatus" class="mt-3 text-center text-sm hidden"></div>
                 </div>
             </div>
 
             <!-- Activity Chart & Top Users -->
-            <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
-                <!-- Activity Chart -->
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
                 <div class="glass-card rounded-2xl p-5">
                     <h3 class="font-semibold text-lg mb-4 flex items-center gap-2">
                         <i class="fas fa-chart-line text-blue-400"></i>
                         Активность по дням (7 дней)
                     </h3>
                     <div id="activityChart" class="space-y-3">
-                        <!-- Chart will be rendered here -->
+                        <div class="skeleton h-8 rounded-lg"></div>
+                        <div class="skeleton h-8 rounded-lg"></div>
+                        <div class="skeleton h-8 rounded-lg"></div>
                     </div>
                 </div>
 
-                <!-- Top Users -->
                 <div class="glass-card rounded-2xl p-5">
                     <h3 class="font-semibold text-lg mb-4 flex items-center gap-2">
                         <i class="fas fa-trophy text-yellow-400"></i>
                         Топ пользователей
                     </h3>
                     <div id="topUsers" class="space-y-3">
-                        <!-- Top users will be rendered here -->
+                        <div class="skeleton h-14 rounded-lg"></div>
+                        <div class="skeleton h-14 rounded-lg"></div>
+                        <div class="skeleton h-14 rounded-lg"></div>
                     </div>
                 </div>
             </div>
 
-            <!-- User List with Selection -->
+            <!-- User List -->
             <div class="glass-card rounded-2xl p-5">
                 <div class="flex items-center justify-between mb-4 flex-wrap gap-4">
                     <h3 class="font-semibold text-lg flex items-center gap-2">
-                        <input type="checkbox" id="selectAllUsers" onchange="toggleSelectAll()" class="w-4 h-4 rounded">
-                        <i class="fas fa-list text-blue-400 ml-2"></i>
+                        <i class="fas fa-list text-blue-400"></i>
                         Все пользователи
                     </h3>
                     <div class="flex items-center gap-3 flex-wrap">
                         <button onclick="selectOnlineOnly()" class="text-xs bg-emerald-600/20 text-emerald-400 px-3 py-1.5 rounded-lg hover:bg-emerald-600/30 transition-colors">
                             <i class="fas fa-circle mr-1"></i>Онлайн
                         </button>
-                        <input type="text" id="searchUser" placeholder="Поиск..." 
-                               class="bg-slate-800 border border-slate-700 rounded-lg px-3 py-1.5 text-sm focus:border-blue-500 outline-none"
+                        <input type="text" id="searchUser" placeholder="Поиск пользователя..." 
+                               class="bg-slate-800 border border-slate-700 rounded-lg px-3 py-1.5 text-sm focus:border-blue-500 outline-none w-48"
                                onkeyup="filterUsers()">
                         <select id="sortUsers" onchange="sortUsersList()" class="bg-slate-800 border border-slate-700 rounded-lg px-3 py-1.5 text-sm outline-none">
                             <option value="lastLogin">По последнему входу</option>
@@ -332,20 +345,17 @@
                     <table class="w-full">
                         <thead>
                             <tr class="text-left text-slate-400 text-sm border-b border-slate-700">
-                                <th class="pb-3 pl-2 w-10">
-                                    <input type="checkbox" onchange="toggleSelectAll()" class="w-4 h-4 rounded">
-                                </th>
                                 <th class="pb-3">Пользователь</th>
                                 <th class="pb-3">Первый вход</th>
                                 <th class="pb-3">Последний вход</th>
-                                <th class="pb-3 text-center">Кликов по гайдам</th>
-                                <th class="pb-3 text-center">Завершено активностей</th>
-                                <th class="pb-3 text-center">Избранное ❤️</th>
+                                <th class="pb-3 text-center">Клики</th>
+                                <th class="pb-3 text-center">Активности</th>
+                                <th class="pb-3 text-center">❤️</th>
                                 <th class="pb-3">Любимый проект</th>
                             </tr>
                         </thead>
                         <tbody id="usersTableBody">
-                            <!-- Users will be rendered here -->
+                            <tr><td colspan="7" class="py-8 text-center text-slate-500">Загрузка...</td></tr>
                         </tbody>
                     </table>
                 </div>
@@ -358,22 +368,21 @@
                     История рассылок
                 </h3>
                 <div id="broadcastHistory" class="space-y-3">
-                    <!-- Заполнится JS -->
+                    <div class="skeleton h-16 rounded-lg"></div>
+                    <div class="skeleton h-16 rounded-lg"></div>
                 </div>
             </div>
         </div>
-
-        <!-- Loading -->
-        <div id="loading" class="text-center py-20">
-            <div class="text-4xl mb-4 animate-pulse">📊</div>
-            <p class="text-slate-400">Загрузка...</p>
-        </div>
     </div>
 
+    <!-- Toast Container -->
+    <div id="toastContainer" class="fixed bottom-4 right-4 z-50 flex flex-col gap-2"></div>
+
     <script type="module">
+        // Импорт Firebase
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
         import { getAuth, signInWithPopup, GoogleAuthProvider, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
-        import { getFirestore, collection, doc, getDocs, query, orderBy, limit, getDoc, addDoc, setDoc, where, writeBatch, serverTimestamp, increment, deleteDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+        import { getFirestore, collection, doc, getDocs, query, orderBy, limit, addDoc, setDoc, where, writeBatch, serverTimestamp, deleteDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
         const firebaseConfig = {
             apiKey: "AIzaSyBdXGYg2t8DJBrQHCC80-pFerZU9PWmSCk",
@@ -386,229 +395,296 @@
 
         const ALLOWED_ADMIN_ID = "SAkz4mdW9reDaIsvqigCNZhEKJR2";
 
-        const app = initializeApp(firebaseConfig);
-        const auth = getAuth(app);
-        const db = getFirestore(app);
+        // Инициализация Firebase
+        let app, auth, db;
+        let isFirebaseReady = false;
 
+        async function initFirebase() {
+            if (isFirebaseReady) return { app, auth, db };
+            
+            try {
+                app = initializeApp(firebaseConfig);
+                auth = getAuth(app);
+                db = getFirestore(app);
+                isFirebaseReady = true;
+                console.log('✅ Firebase initialized successfully');
+                return { app, auth, db };
+            } catch (error) {
+                console.error('❌ Firebase initialization error:', error);
+                throw error;
+            }
+        }
+
+        // Глобальные переменные
         let allUsers = [];
         let filteredUsers = [];
         let selectedUserIds = new Set();
         let projectStats = {};
         let notificationStats = { total: 0, viewed: 0 };
         let allProjectsMap = new Map();
-// Глобальный обработчик ошибок
-window.addEventListener('error', (event) => {
-    console.error('Global error:', event.error);
-    showToast('Критическая ошибка: ' + event.error.message);
-});
-        // Проверка доступа
-        onAuthStateChanged(auth, async (user) => {
-    try {
-        console.log('Auth state changed:', user ? user.uid : 'null');
-        
-        const loadingEl = document.getElementById('loading');
-        if (!loadingEl) {
-            console.error('Element #loading not found!');
-            return;
-        }
-        
-        loadingEl.classList.add('hidden');
+        let dataLoaded = { users: false, projects: false, notifications: false, broadcasts: false };
 
-        if (!user) {
-            showLoginButton();
-            return;
+        // Утилиты
+        function showToast(message, type = 'info') {
+            const container = document.getElementById('toastContainer');
+            const toast = document.createElement('div');
+            
+            const colors = {
+                success: 'bg-green-600 border-green-500',
+                error: 'bg-red-600 border-red-500',
+                warning: 'bg-yellow-600 border-yellow-500',
+                info: 'bg-blue-600 border-blue-500'
+            };
+            
+            toast.className = `px-4 py-3 rounded-lg text-white text-sm shadow-lg border ${colors[type]} flex items-center gap-2 animate-pulse`;
+            toast.innerHTML = `<i class="fas fa-info-circle"></i> ${message}`;
+            
+            container.appendChild(toast);
+            
+            setTimeout(() => {
+                toast.style.opacity = '0';
+                toast.style.transform = 'translateX(100%)';
+                toast.style.transition = 'all 0.3s ease';
+                setTimeout(() => toast.remove(), 300);
+            }, 3000);
         }
 
-        if (user.uid !== ALLOWED_ADMIN_ID) {
-            document.getElementById('accessDenied')?.classList.remove('hidden');
-            return;
+        function updateLoadingText(text) {
+            const el = document.getElementById('loadingText');
+            if (el) el.textContent = text;
         }
 
-        const adminContent = document.getElementById('adminContent');
-        if (!adminContent) {
-            console.error('Element #adminContent not found!');
-            return;
+        async function delay(ms) {
+            return new Promise(resolve => setTimeout(resolve, ms));
         }
-        
-        adminContent.classList.remove('hidden');
-        await loadAllData();
-        
-    } catch (error) {
-        console.error('Critical error in auth handler:', error);
-        showToast('Ошибка загрузки: ' + error.message);
-    }
-});
 
-        function showLoginButton() {
+        // Проверка доступа и загрузка данных
+        async function checkAuthAndLoad() {
+            try {
+                updateLoadingText('Инициализация Firebase...');
+                await initFirebase();
+
+                return new Promise((resolve) => {
+                    const unsubscribe = onAuthStateChanged(auth, async (user) => {
+                        unsubscribe();
+                        
+                        if (!user) {
+                            showLoginForm();
+                            resolve();
+                            return;
+                        }
+
+                        if (user.uid !== ALLOWED_ADMIN_ID) {
+                            showAccessDenied();
+                            resolve();
+                            return;
+                        }
+
+                        console.log('✅ Admin authorized:', user.uid);
+                        showAdminPanel();
+                        
+                        // Загружаем данные с небольшой задержкой для стабильности
+                        await delay(500);
+                        await loadAllData();
+                        resolve();
+                    });
+
+                    // Таймаут ожидания авторизации
+                    setTimeout(() => {
+                        if (!auth.currentUser) {
+                            console.warn('Auth timeout - showing login');
+                            showLoginForm();
+                            resolve();
+                        }
+                    }, 10000);
+                });
+            } catch (error) {
+                console.error('Auth check error:', error);
+                showToast('Ошибка инициализации: ' + error.message, 'error');
+                showLoginForm();
+            }
+        }
+
+        function showLoginForm() {
+            document.getElementById('loading').classList.add('hidden');
             const content = document.getElementById('loading');
             content.innerHTML = `
                 <div class="text-6xl mb-4">🔐</div>
                 <h2 class="text-2xl font-bold mb-4">Требуется вход</h2>
                 <p class="text-slate-400 mb-6">Войдите, чтобы просмотреть статистику</p>
-                <button onclick="login()" class="bg-blue-600 hover:bg-blue-500 px-6 py-3 rounded-lg text-sm font-medium transition-colors flex items-center gap-2 mx-auto">
+                <button onclick="doLogin()" class="bg-blue-600 hover:bg-blue-500 px-6 py-3 rounded-lg text-sm font-medium transition-colors flex items-center gap-2 mx-auto">
                     <i class="fab fa-google"></i> Войти через Google
                 </button>
             `;
             content.classList.remove('hidden');
         }
 
-        window.login = async () => {
+        function showAccessDenied() {
+            document.getElementById('loading').classList.add('hidden');
+            document.getElementById('accessDenied').classList.remove('hidden');
+        }
+
+        function showAdminPanel() {
+            document.getElementById('loading').classList.add('hidden');
+            document.getElementById('adminContent').classList.remove('hidden');
+        }
+
+        window.doLogin = async () => {
             try {
                 await signInWithPopup(auth, new GoogleAuthProvider());
             } catch (e) {
-                alert('Ошибка входа: ' + e.message);
+                showToast('Ошибка входа: ' + e.message, 'error');
             }
         };
+
+        // Принудительная перезагрузка данных
+        window.forceReloadData = async function() {
+            const btn = document.getElementById('refreshBtn');
+            const originalContent = btn.innerHTML;
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Загрузка...';
+            btn.disabled = true;
+            
+            // Сбрасываем флаги загрузки
+            dataLoaded = { users: false, projects: false, notifications: false, broadcasts: false };
+            
+            await loadAllData();
+            
+            btn.innerHTML = originalContent;
+            btn.disabled = false;
+            showToast('Данные обновлены', 'success');
+        };
+
+        // Основная функция загрузки всех данных
+        async function loadAllData() {
+            try {
+                console.log('📊 Loading all data...');
+                updateLoadingText('Загрузка проектов...');
+                
+                // Загружаем параллельно
+                const results = await Promise.allSettled([
+                    loadProjectsData(),
+                    loadUsersData(),
+                    loadNotificationStats(),
+                    loadBroadcastHistory()
+                ]);
+
+                // Проверяем результаты
+                const errors = [];
+                results.forEach((result, index) => {
+                    if (result.status === 'rejected') {
+                        const names = ['Проекты', 'Пользователи', 'Уведомления', 'Рассылки'];
+                        errors.push(`${names[index]}: ${result.reason.message}`);
+                    }
+                });
+
+                if (errors.length > 0) {
+                    console.warn('⚠️ Some data failed to load:', errors);
+                    showToast('Часть данных не загрузилась', 'warning');
+                }
+
+                // Обновляем UI
+                updateStatsCards();
+                renderTopProjects();
+                renderUsersTable();
+                renderActivityChart();
+                renderTopUsers();
+                renderBroadcastHistory();
+                updateLastUpdateTime();
+                updateSelectedCount();
+
+                console.log('✅ All data loaded successfully');
+
+            } catch (error) {
+                console.error('❌ Error loading data:', error);
+                showToast('Ошибка загрузки данных: ' + error.message, 'error');
+            }
+        }
 
         async function loadProjectsData() {
             try {
                 const projectsSnapshot = await getDocs(collection(db, "projects"));
+                allProjectsMap.clear();
+                
                 projectsSnapshot.docs.forEach(docSnap => {
-                    const projectData = docSnap.data();
-                    allProjectsMap.set(docSnap.id, projectData);
+                    allProjectsMap.set(docSnap.id, { id: docSnap.id, ...docSnap.data() });
                 });
-            } catch (e) {
-                console.error("Ошибка загрузки проектов:", e);
+                
+                console.log('✅ Projects loaded:', allProjectsMap.size);
+                dataLoaded.projects = true;
+            } catch (error) {
+                console.error('Projects load error:', error);
+                throw error;
             }
         }
 
-        async function loadAllData() {
-            await loadProjectsData();
-            await Promise.all([
-                loadUsers(),
-                loadProjectStats(),
-                loadNotificationStats(),
-                loadBroadcastHistory()
-            ]);
-            updateSelectedCount();
-        }
-
-        async function loadUsers() {
-    const tbody = document.getElementById('usersTableBody');
-    if (!tbody) {
-        console.error('Element #usersTableBody not found!');
-        return;
-    }
-
-    try {
-        console.log('Loading users...');
-        const usersSnapshot = await getDocs(collection(db, "users"));
-        console.log('Users snapshot loaded:', usersSnapshot.docs.length);
-        
-        allUsers = [];
-        const now = new Date();
-        const thirtyMinAgo = new Date(now.getTime() - 30 * 60 * 1000);
-
-        for (const docSnap of usersSnapshot.docs) {
+        async function loadUsersData() {
             try {
-                const userData = docSnap.data();
-                const userId = docSnap.id;
-
-                // Проверяем обязательные поля
-                if (!userData) {
-                    console.warn('Empty user data for ID:', userId);
-                    continue;
-                }
-
-                const lastLoginDate = userData.lastLogin ? new Date(userData.lastLogin) : null;
-                const firstLoginDate = userData.firstLogin ? new Date(userData.firstLogin) : null;
-                const isOnline = lastLoginDate && lastLoginDate >= thirtyMinAgo;
-                
-                const arcGuideStats = userData.arcGuideStats || {};
-                
-                let totalClicks = 0;
-                let topProject = null;
-                let topProjectClicks = 0;
-                const projectClicks = {};
-
-                // Безопасная обработка статистики
-                Object.entries(arcGuideStats).forEach(([projectId, stats]) => {
-                    if (stats && typeof stats === 'object') {
-                        const clicks = Number(stats.totalClicks) || 0;
-                        if (clicks > 0) {
-                            projectClicks[projectId] = clicks;
-                            totalClicks += clicks;
-                            
-                            if (clicks > topProjectClicks) {
-                                topProjectClicks = clicks;
-                                topProject = projectId;
-                            }
-                        }
-                    }
-                });
-
-                allUsers.push({
-                    id: userId,
-                    email: userData.email || '—',
-                    displayName: userData.displayName || 'Аноним',
-                    photoURL: userData.photoURL || null,
-                    firstLogin: firstLoginDate,
-                    lastLogin: lastLoginDate,
-                    totalClicks: totalClicks,
-                    projectClicks: projectClicks,
-                    topProject: topProject,
-                    topProjectClicks: topProjectClicks,
-                    completedCount: Array.isArray(userData.completed) ? userData.completed.length : 0,
-                    favoritesCount: Array.isArray(userData.favorites) ? userData.favorites.length : 0,
-                    isOnline: isOnline
-                });
-            } catch (userError) {
-                console.error('Error processing user', docSnap.id, userError);
-            }
-        }
-
-        if (allUsers.length === 0) {
-            console.warn('No users found in database');
-            tbody.innerHTML = '<tr><td colspan="8" class="py-8 text-center text-slate-500">Нет пользователей в базе</td></tr>';
-            return;
-        }
-
-        allUsers.sort((a, b) => (b.lastLogin || 0) - (a.lastLogin || 0));
-        filteredUsers = [...allUsers];
-
-        const onlineCount = allUsers.filter(u => u.isOnline).length;
-        document.getElementById('onlineNow').textContent = onlineCount;
-
-        renderStats();
-        renderUsersTable();
-        updateLastUpdateTime();
-
-        console.log('Users loaded successfully:', allUsers.length);
-
-    } catch (e) {
-        console.error('Ошибка загрузки пользователей:', e);
-        tbody.innerHTML = `<tr><td colspan="8" class="py-8 text-center text-red-400">Ошибка загрузки: ${e.message}</td></tr>`;
-    }
-}
-function showToast(message) {
-    const toast = document.createElement('div');
-    toast.className = 'fixed bottom-4 right-4 bg-slate-800 border border-slate-700 text-white px-6 py-3 rounded-xl shadow-2xl z-50';
-    toast.textContent = message;
-    document.body.appendChild(toast);
-    setTimeout(() => toast.remove(), 3000);
-}
-        async function loadProjectStats() {
-            try {
-                // Агрегируем клики по проектам из всех пользователей
+                updateLoadingText('Загрузка пользователей...');
                 const usersSnapshot = await getDocs(collection(db, "users"));
-                projectStats = {};
+                allUsers = [];
+                
+                const now = new Date();
+                const thirtyMinAgo = new Date(now.getTime() - 30 * 60 * 1000);
 
                 for (const docSnap of usersSnapshot.docs) {
-                    const userData = docSnap.data();
-                    if (userData.arcGuideStats) {
-                        Object.entries(userData.arcGuideStats).forEach(([projectId, stats]) => {
-                            if (!projectStats[projectId]) {
-                                projectStats[projectId] = { clicks: 0, users: new Set() };
+                    try {
+                        const userData = docSnap.data();
+                        if (!userData) continue;
+
+                        const lastLoginDate = userData.lastLogin ? new Date(userData.lastLogin) : null;
+                        const firstLoginDate = userData.firstLogin ? new Date(userData.firstLogin) : null;
+                        const isOnline = lastLoginDate && lastLoginDate >= thirtyMinAgo;
+                        
+                        const arcGuideStats = userData.arcGuideStats || {};
+                        
+                        let totalClicks = 0;
+                        let topProject = null;
+                        let topProjectClicks = 0;
+                        const projectClicks = {};
+
+                        Object.entries(arcGuideStats).forEach(([projectId, stats]) => {
+                            if (stats && typeof stats === 'object') {
+                                const clicks = Number(stats.totalClicks) || 0;
+                                if (clicks > 0) {
+                                    projectClicks[projectId] = clicks;
+                                    totalClicks += clicks;
+                                    
+                                    if (clicks > topProjectClicks) {
+                                        topProjectClicks = clicks;
+                                        topProject = projectId;
+                                    }
+                                }
                             }
-                            projectStats[projectId].clicks += stats.totalClicks || 0;
-                            projectStats[projectId].users.add(docSnap.id);
                         });
+
+                        allUsers.push({
+                            id: docSnap.id,
+                            email: userData.email || '—',
+                            displayName: userData.displayName || 'Аноним',
+                            photoURL: userData.photoURL || null,
+                            firstLogin: firstLoginDate,
+                            lastLogin: lastLoginDate,
+                            totalClicks: totalClicks,
+                            projectClicks: projectClicks,
+                            topProject: topProject,
+                            topProjectClicks: topProjectClicks,
+                            completedCount: Array.isArray(userData.completed) ? userData.completed.length : 0,
+                            favoritesCount: Array.isArray(userData.favorites) ? userData.favorites.length : 0,
+                            isOnline: isOnline
+                        });
+                    } catch (userError) {
+                        console.warn('Error processing user:', userError);
                     }
                 }
 
-                renderTopProjects();
-            } catch (e) {
-                console.error('Ошибка загрузки статистики проектов:', e);
+                allUsers.sort((a, b) => (b.lastLogin || 0) - (a.lastLogin || 0));
+                filteredUsers = [...allUsers];
+                
+                console.log('✅ Users loaded:', allUsers.length);
+                dataLoaded.users = true;
+            } catch (error) {
+                console.error('Users load error:', error);
+                throw error;
             }
         }
 
@@ -621,9 +697,7 @@ function showToast(message) {
                 notificationsSnapshot.docs.forEach(doc => {
                     total++;
                     const data = doc.data();
-                    if (data.read || data.viewedAt) {
-                        viewed++;
-                    }
+                    if (data.read || data.viewedAt) viewed++;
                 });
 
                 notificationStats = { total, viewed };
@@ -634,8 +708,11 @@ function showToast(message) {
                 const viewRate = total > 0 ? Math.round((viewed / total) * 100) : 0;
                 document.getElementById('viewRate').textContent = viewRate + '%';
                 
-            } catch (e) {
-                console.error('Ошибка загрузки уведомлений:', e);
+                console.log('✅ Notifications loaded');
+                dataLoaded.notifications = true;
+            } catch (error) {
+                console.error('Notifications load error:', error);
+                throw error;
             }
         }
 
@@ -644,101 +721,99 @@ function showToast(message) {
                 const historySnapshot = await getDocs(
                     query(collection(db, "broadcasts"), orderBy("createdAt", "desc"), limit(10))
                 );
-
-                const container = document.getElementById('broadcastHistory');
                 
-                if (historySnapshot.empty) {
-                    container.innerHTML = '<p class="text-slate-500 text-sm">Нет рассылок</p>';
-                    return;
-                }
-
-                container.innerHTML = historySnapshot.docs.map(doc => {
-                    const data = doc.data();
-                    const date = data.createdAt ? new Date(data.createdAt.toDate()) : new Date();
-                    const typeColors = {
-                        info: 'bg-blue-600/20 text-blue-400',
-                        success: 'bg-green-600/20 text-green-400',
-                        warning: 'bg-yellow-600/20 text-yellow-400',
-                        promo: 'bg-pink-600/20 text-pink-400',
-                        referral: 'bg-purple-600/20 text-purple-400'
-                    };
-
-                    return `
-                        <div class="flex items-start gap-4 p-3 bg-slate-800/50 rounded-lg">
-                            <div class="w-10 h-10 rounded-lg ${typeColors[data.type] || 'bg-blue-600/20 text-blue-400'} flex items-center justify-center flex-shrink-0">
-                                <i class="fas fa-bell"></i>
-                            </div>
-                            <div class="flex-1 min-w-0">
-                                <div class="flex items-center gap-2 mb-1">
-                                    <span class="text-xs px-2 py-0.5 rounded ${typeColors[data.type]}">${data.type}</span>
-                                    <span class="text-xs text-slate-500">${date.toLocaleString('ru-RU')}</span>
-                                </div>
-                                <p class="text-sm text-slate-300 line-clamp-2">${data.message}</p>
-                                <div class="flex flex-wrap gap-3 mt-2">
-                                    <span class="text-xs text-slate-500">📤 ${data.recipientCount || 0} отправлено</span>
-                                    <span class="text-xs text-blue-400">👁️ ${data.viewCount || 0} просмотров</span>
-                                    <span class="text-xs text-green-400">📖 ${data.guideClickCount || 0} кликов на гайд</span>
-                                </div>
-                            </div>
-                            <button onclick="deleteBroadcast('${doc.id}')" class="text-xs text-red-400 hover:text-red-300 px-2 py-1 rounded hover:bg-red-600/20 transition-colors">
-                                <i class="fas fa-trash"></i>
-                            </button>
-                        </div>
-                    `;
-                }).join('');
-
-            } catch (e) {
-                console.error('Ошибка истории:', e);
+                window.broadcastsData = historySnapshot.docs.map(doc => ({
+                    id: doc.id,
+                    ...doc.data()
+                }));
+                
+                console.log('✅ Broadcasts loaded:', window.broadcastsData.length);
+                dataLoaded.broadcasts = true;
+            } catch (error) {
+                console.error('Broadcasts load error:', error);
+                throw error;
             }
         }
 
-        window.deleteBroadcast = async function(broadcastId) {
-            if (!confirm('Удалить эту рассылку?')) return;
+        // Рендеринг функций
+        function updateStatsCards() {
+            const now = new Date();
+            const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+            const weekStart = new Date(todayStart);
+            weekStart.setDate(weekStart.getDate() - 7);
+
+            const newToday = allUsers.filter(u => u.firstLogin && u.firstLogin >= todayStart).length;
+            const activeWeek = allUsers.filter(u => u.lastLogin && u.lastLogin >= weekStart).length;
+            const onlineNow = allUsers.filter(u => u.isOnline).length;
+
+            animateNumber('totalUsers', allUsers.length);
+            animateNumber('newToday', newToday);
+            animateNumber('activeWeek', activeWeek);
+            animateNumber('onlineNow', onlineNow);
+        }
+
+        function animateNumber(id, endValue) {
+            const obj = document.getElementById(id);
+            if (!obj) return;
             
-            try {
-                await deleteDoc(doc(db, "broadcasts", broadcastId));
-                loadBroadcastHistory();
-            } catch (e) {
-                console.error('Ошибка удаления:', e);
-                alert('Ошибка удаления: ' + e.message);
+            const duration = 500;
+            const startValue = 0;
+            const startTime = performance.now();
+
+            function update(currentTime) {
+                const elapsed = currentTime - startTime;
+                const progress = Math.min(elapsed / duration, 1);
+                const value = Math.floor(progress * (endValue - startValue) + startValue);
+                obj.textContent = value;
+
+                if (progress < 1) {
+                    requestAnimationFrame(update);
+                }
             }
-        };
+
+            requestAnimationFrame(update);
+        }
 
         function renderTopProjects() {
             const container = document.getElementById('topProjects');
             
+            if (allProjectsMap.size === 0 && Object.keys(projectStats).length === 0) {
+                container.innerHTML = '<p class="text-slate-500 text-sm col-span-3 text-center py-4">Нет данных о проектах</p>';
+                return;
+            }
+
+            if (Object.keys(projectStats).length === 0) {
+                container.innerHTML = '<p class="text-slate-500 text-sm col-span-3 text-center py-4">Нет статистики по проектам</p>';
+                return;
+            }
+
             const sorted = Object.entries(projectStats)
                 .map(([id, stats]) => ({ id, ...stats }))
                 .sort((a, b) => b.clicks - a.clicks)
                 .slice(0, 6);
 
             if (sorted.length === 0) {
-                container.innerHTML = '<p class="text-slate-500 text-sm col-span-3">Нет данных о проектах</p>';
+                container.innerHTML = '<p class="text-slate-500 text-sm col-span-3 text-center py-4">Нет кликов по проектам</p>';
                 return;
             }
 
             const maxClicks = sorted[0]?.clicks || 1;
+            const colors = ['bg-yellow-500', 'bg-slate-400', 'bg-orange-500', 'bg-blue-500', 'bg-purple-500', 'bg-green-500'];
+            const medals = ['🥇', '🥈', '🥉', '4️⃣', '5️⃣', '6️⃣'];
 
             container.innerHTML = sorted.map((projectStat, index) => {
                 const project = allProjectsMap.get(projectStat.id);
                 const percent = (projectStat.clicks / maxClicks) * 100;
-                const colors = ['bg-yellow-500', 'bg-slate-400', 'bg-orange-500', 'bg-blue-500', 'bg-purple-500', 'bg-green-500'];
-                const medals = ['🥇', '🥈', '🥉', '4️⃣', '5️⃣', '6️⃣'];
-
-                const projectName = project ? project.name : 'Неизвестный проект';
+                const projectName = project ? project.name : projectStat.id;
                 const projectImage = project?.image || `https://ui-avatars.com/api/?name=${encodeURIComponent(projectName.charAt(0))}&background=random&color=fff`;
 
                 return `
-                    <div class="bg-slate-800/50 rounded-lg p-3 flex flex-col justify-between items-start">
-                        <div class="flex items-center justify-between w-full mb-2">
-                            <span class="text-lg">${medals[index]}</span>
-                            <span class="text-xs text-slate-500">${projectStat.users.size} чел.</span>
+                    <div class="bg-slate-800/50 rounded-lg p-3 flex flex-col">
+                        <div class="flex items-center justify-between mb-2">
+                            <span class="text-sm font-medium truncate flex-1">${medals[index]} ${projectName}</span>
+                            <span class="text-xs text-slate-500">${projectStat.users?.size || 0} чел.</span>
                         </div>
-                        <div class="flex items-center gap-2 mb-2 w-full">
-                            <img src="${projectImage}" alt="${projectName}" class="w-8 h-8 rounded-full object-cover">
-                            <div class="text-sm font-medium truncate flex-1" title="${projectName}">${projectName}</div>
-                        </div>
-                        <div class="w-full">
+                        <div class="w-full mt-auto">
                             <div class="flex justify-between text-xs text-slate-400 mb-1">
                                 <span>${projectStat.clicks} кликов</span>
                                 <span>${Math.round(percent)}%</span>
@@ -752,41 +827,50 @@ function showToast(message) {
             }).join('');
         }
 
-        function renderStats() {
-            const now = new Date();
-            const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-            const weekStart = new Date(todayStart);
-            weekStart.setDate(weekStart.getDate() - 7);
+        function renderUsersTable() {
+            const tbody = document.getElementById('usersTableBody');
+            if (!tbody) return;
 
-            const newToday = allUsers.filter(u => u.firstLogin && u.firstLogin >= todayStart).length;
-            const activeWeek = allUsers.filter(u => u.lastLogin && u.lastLogin >= weekStart).length;
-
-            animateValue('totalUsers', 0, allUsers.length, 1000);
-            animateValue('newToday', 0, newToday, 500);
-            animateValue('activeWeek', 0, activeWeek, 800);
-
-            renderActivityChart();
-            renderTopUsers();
-        }
-
-        function animateValue(id, start, end, duration) {
-            const obj = document.getElementById(id);
-            if (!obj) return;
-            const range = end - start;
-            const startTime = performance.now();
-
-            function update(currentTime) {
-                const elapsed = currentTime - startTime;
-                const progress = Math.min(elapsed / duration, 1);
-                const value = Math.floor(progress * range + start);
-                obj.textContent = value;
-
-                if (progress < 1) {
-                    requestAnimationFrame(update);
-                }
+            if (filteredUsers.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="7" class="py-8 text-center text-slate-500">Нет пользователей</td></tr>';
+                return;
             }
 
-            requestAnimationFrame(update);
+            tbody.innerHTML = filteredUsers.map((user) => {
+                const topProjectData = user.topProject ? allProjectsMap.get(user.topProject) : null;
+                const topProjectName = topProjectData ? topProjectData.name : '—';
+                const topProjectImage = topProjectData?.image || `https://ui-avatars.com/api/?name=${encodeURIComponent(topProjectName === '—' ? '?' : topProjectName.charAt(0))}&background=333&color=fff`;
+
+                return `
+                    <tr class="user-row border-b border-slate-800/50 transition-colors hover:bg-slate-800/50">
+                        <td class="py-3">
+                            <div class="flex items-center gap-3">
+                                <img src="${user.photoURL || `https://ui-avatars.com/api/?name=${encodeURIComponent(user.displayName)}&background=3b82f6&color=fff`}" class="w-8 h-8 rounded-full" alt="">
+                                <div>
+                                    <div class="font-medium text-sm flex items-center gap-2">
+                                        ${user.displayName}
+                                        ${user.isOnline ? '<span class="w-2 h-2 bg-emerald-400 rounded-full" title="Онлайн"></span>' : ''}
+                                    </div>
+                                    <div class="text-xs text-slate-500 truncate max-w-[150px]">${user.email}</div>
+                                </div>
+                            </div>
+                        </td>
+                        <td class="py-3 text-sm text-slate-300">${formatDateTime(user.firstLogin)}</td>
+                        <td class="py-3 text-sm ${isRecent(user.lastLogin) ? 'text-emerald-400' : 'text-slate-300'}">${formatDateTime(user.lastLogin)}</td>
+                        <td class="py-3 text-center"><span class="px-2 py-1 bg-blue-600/20 text-blue-400 rounded text-sm font-medium">${user.totalClicks}</span></td>
+                        <td class="py-3 text-center"><span class="px-2 py-1 bg-teal-600/20 text-teal-400 rounded text-sm font-medium">${user.completedCount}</span></td>
+                        <td class="py-3 text-center"><span class="px-2 py-1 bg-red-600/20 text-red-400 rounded text-sm font-medium">${user.favoritesCount}</span></td>
+                        <td class="py-3 text-sm text-slate-300">
+                            ${user.topProject ? `
+                                <div class="flex items-center gap-2">
+                                    <img src="${topProjectImage}" class="w-5 h-5 rounded-full object-cover" title="${topProjectName}">
+                                    <span class="truncate max-w-[100px]">${topProjectName}</span>
+                                </div>
+                            ` : '—'}
+                        </td>
+                    </tr>
+                `;
+            }).join('');
         }
 
         function renderActivityChart() {
@@ -812,7 +896,7 @@ function showToast(message) {
                 const isToday = day.date.toDateString() === now.toDateString();
                 return `
                     <div class="flex items-center gap-3">
-                        <span class="text-xs text-slate-400 w-12">${day.label}</span>
+                        <span class="text-xs text-slate-400 w-10">${day.label}</span>
                         <div class="flex-1 h-8 bg-slate-800 rounded-lg overflow-hidden">
                             <div class="h-full rounded-lg transition-all duration-500 ${isToday ? 'bg-gradient-to-r from-blue-500 to-purple-500' : 'bg-gradient-to-r from-blue-600/50 to-purple-600/50'}" style="width: ${height}%"></div>
                         </div>
@@ -824,13 +908,13 @@ function showToast(message) {
 
         function renderTopUsers() {
             const container = document.getElementById('topUsers');
-            const top5 = [...allUsers].sort((a, b) => b.totalClicks - a.totalClicks).slice(0, 5);
-
-            if (top5.length === 0) {
+            
+            if (allUsers.length === 0) {
                 container.innerHTML = '<p class="text-slate-500 text-sm">Нет данных</p>';
                 return;
             }
 
+            const top5 = [...allUsers].sort((a, b) => b.totalClicks - a.totalClicks).slice(0, 5);
             const medals = ['🥇', '🥈', '🥉', '4️⃣', '5️⃣'];
 
             container.innerHTML = top5.map((user, index) => `
@@ -849,160 +933,49 @@ function showToast(message) {
             `).join('');
         }
 
-        window.renderUsersTable = function() {
-            const tbody = document.getElementById('usersTableBody');
-
-            if (filteredUsers.length === 0) {
-                tbody.innerHTML = '<tr><td colspan="8" class="py-8 text-center text-slate-500">Нет пользователей</td></tr>';
+        function renderBroadcastHistory() {
+            const container = document.getElementById('broadcastHistory');
+            
+            if (!window.broadcastsData || window.broadcastsData.length === 0) {
+                container.innerHTML = '<p class="text-slate-500 text-sm">Нет рассылок</p>';
                 return;
             }
 
-            tbody.innerHTML = filteredUsers.map((user) => {
-                const isSelected = selectedUserIds.has(user.id);
+            const typeColors = {
+                info: 'bg-blue-600/20 text-blue-400',
+                success: 'bg-green-600/20 text-green-400',
+                warning: 'bg-yellow-600/20 text-yellow-400',
+                promo: 'bg-pink-600/20 text-pink-400',
+                referral: 'bg-purple-600/20 text-purple-400'
+            };
+
+            container.innerHTML = window.broadcastsData.map(doc => {
+                const data = doc;
+                const date = data.createdAt ? new Date(data.createdAt.toDate()) : new Date();
                 
-                const topProjectData = user.topProject ? allProjectsMap.get(user.topProject) : null;
-                const topProjectName = topProjectData ? topProjectData.name : '—';
-                const topProjectImage = topProjectData?.image || `https://ui-avatars.com/api/?name=${encodeURIComponent(topProjectName === '—' ? '?' : topProjectName.charAt(0))}&background=333&color=fff`;
-
-                const topProjectDisplay = user.topProject && allProjectsMap.has(user.topProject) 
-    ? `<div class="flex items-center gap-2">
-          <img src="${topProjectImage}" class="w-5 h-5 rounded-full object-cover" title="${topProjectName}"> 
-          <span class="truncate max-w-[120px]">${topProjectName}</span> 
-          <span class="text-xs text-slate-500">(${user.topProjectClicks})</span>
-       </div>`
-    : '—';
-
                 return `
-                    <tr class="user-row border-b border-slate-800/50 transition-colors ${isSelected ? 'bg-blue-900/20' : ''}">
-                        <td class="py-3 pl-2">
-                            <input type="checkbox" ${isSelected ? 'checked' : ''} 
-                                onchange="toggleUserSelect('${user.id}')" class="w-4 h-4 rounded">
-                        </td>
-                        <td class="py-3">
-                            <div class="flex items-center gap-3">
-                                <img src="${user.photoURL || `https://ui-avatars.com/api/?name=${encodeURIComponent(user.displayName)}&background=3b82f6&color=fff`}" class="w-8 h-8 rounded-full" alt="">
-                                <div>
-                                    <div class="font-medium text-sm flex items-center gap-2">
-                                        ${user.displayName}
-                                        ${user.isOnline ? '<span class="w-2 h-2 bg-emerald-400 rounded-full" title="Онлайн"></span>' : ''}
-                                    </div>
-                                    <div class="text-xs text-slate-500 truncate max-w-[150px]">${user.email}</div>
-                                </div>
+                    <div class="flex items-start gap-4 p-3 bg-slate-800/50 rounded-lg">
+                        <div class="w-10 h-10 rounded-lg ${typeColors[data.type] || 'bg-blue-600/20 text-blue-400'} flex items-center justify-center flex-shrink-0">
+                            <i class="fas fa-bell"></i>
+                        </div>
+                        <div class="flex-1 min-w-0">
+                            <div class="flex items-center gap-2 mb-1">
+                                <span class="text-xs px-2 py-0.5 rounded ${typeColors[data.type]}">${data.type}</span>
+                                <span class="text-xs text-slate-500">${date.toLocaleString('ru-RU')}</span>
                             </div>
-                        </td>
-                        <td class="py-3 text-sm text-slate-300">${formatDateTime(user.firstLogin)}</td>
-                        <td class="py-3 text-sm">
-                            <span class="${isRecent(user.lastLogin) ? 'text-emerald-400' : 'text-slate-300'}">
-                                ${formatDateTime(user.lastLogin)}
-                            </span>
-                        </td>
-                        <td class="py-3 text-center">
-                            <span class="px-2 py-1 bg-blue-600/20 text-blue-400 rounded text-sm font-medium">${user.totalClicks}</span>
-                        </td>
-                        <td class="py-3 text-center">
-                            <span class="px-2 py-1 bg-teal-600/20 text-teal-400 rounded text-sm font-medium">${user.completedCount}</span>
-                        </td>
-                        <td class="py-3 text-center">
-                            <span class="px-2 py-1 bg-red-600/20 text-red-400 rounded text-sm font-medium">${user.favoritesCount}</span>
-                        </td>
-                        <td class="py-3 text-sm text-slate-300">
-                            ${topProjectDisplay}
-                        </td>
-                    </tr>
+                            <p class="text-sm text-slate-300 line-clamp-2">${data.message}</p>
+                            <div class="flex flex-wrap gap-3 mt-2">
+                                <span class="text-xs text-slate-500">📤 ${data.recipientCount || 0}</span>
+                                <span class="text-xs text-blue-400">👁️ ${data.viewCount || 0}</span>
+                                <span class="text-xs text-green-400">📖 ${data.guideClickCount || 0}</span>
+                            </div>
+                        </div>
+                    </div>
                 `;
             }).join('');
-        };
+        }
 
-        window.toggleUserSelect = function(userId) {
-            if (selectedUserIds.has(userId)) {
-                selectedUserIds.delete(userId);
-            } else {
-                selectedUserIds.add(userId);
-            }
-            
-            if (selectedUserIds.size > 0) {
-                document.querySelector('input[name="broadcastTarget"][value="selected"]').checked = true;
-                toggleSelectedUsers();
-            }
-            
-            renderUsersTable();
-            updateSelectedCount();
-        };
-
-        window.toggleSelectAll = function() {
-            const checkbox = document.getElementById('selectAllUsers');
-            
-            if (checkbox.checked) {
-                selectedUserIds = new Set(filteredUsers.map(u => u.id));
-            } else {
-                selectedUserIds.clear();
-            }
-            
-            if (selectedUserIds.size > 0) {
-                document.querySelector('input[name="broadcastTarget"][value="selected"]').checked = true;
-                toggleSelectedUsers();
-            }
-            
-            renderUsersTable();
-            updateSelectedCount();
-        };
-
-        window.selectOnlineOnly = function() {
-            selectedUserIds = new Set(filteredUsers.filter(u => u.isOnline).map(u => u.id));
-            document.querySelector('input[name="broadcastTarget"][value="online"]').checked = true;
-            toggleSelectedUsers();
-            renderUsersTable();
-            updateSelectedCount();
-        };
-
-        window.toggleSelectedUsers = function() {
-            const list = document.getElementById('selectedUsersList');
-            const namesContainer = document.getElementById('selectedNames');
-            const target = document.querySelector('input[name="broadcastTarget"]:checked').value;
-            
-            if (target === 'selected' && selectedUserIds.size > 0) {
-                list.classList.remove('hidden');
-                const selectedNames = filteredUsers
-                    .filter(u => selectedUserIds.has(u.id))
-                    .slice(0, 5)
-                    .map(u => u.displayName);
-                
-                if (selectedUserIds.size > 5) {
-                    selectedNames.push(`... и ещё ${selectedUserIds.size - 5}`);
-                }
-                
-                namesContainer.innerHTML = selectedNames.map(n => `<div>• ${n}</div>`).join('');
-            } else {
-                list.classList.add('hidden');
-            }
-        };
-
-        window.updateSelectedCount = function() {
-            const target = document.querySelector('input[name="broadcastTarget"]:checked').value;
-            
-            let count = 0;
-            
-            switch (target) {
-                case 'all':
-                    count = allUsers.length;
-                    break;
-                case 'online':
-                    count = allUsers.filter(u => u.isOnline).length;
-                    break;
-                case 'selected':
-                    count = selectedUserIds.size;
-                    break;
-            }
-            
-            document.getElementById('countAll').textContent = `(${allUsers.length})`;
-            document.getElementById('countOnline').textContent = `(${allUsers.filter(u => u.isOnline).length})`;
-            document.getElementById('countSelected').textContent = count;
-            
-            if (target === 'selected') {
-                toggleSelectedUsers();
-            }
-        };
-
+        // Функции фильтрации и сортировки
         window.filterUsers = function() {
             const search = document.getElementById('searchUser').value.toLowerCase();
             filteredUsers = allUsers.filter(u => 
@@ -1026,48 +999,105 @@ function showToast(message) {
             renderUsersTable();
         };
 
+        // Функции рассылки
+        window.updateSelectedCount = function() {
+            const target = document.querySelector('input[name="broadcastTarget"]:checked')?.value || 'all';
+            
+            const getCount = () => {
+                switch (target) {
+                    case 'all': return allUsers.length;
+                    case 'online': return allUsers.filter(u => u.isOnline).length;
+                    case 'selected': return selectedUserIds.size;
+                    default: return allUsers.length;
+                }
+            };
+
+            const count = getCount();
+            
+            const countAll = document.getElementById('countAll');
+            const countOnline = document.getElementById('countOnline');
+            const countSelected = document.getElementById('countSelected');
+            
+            if (countAll) countAll.textContent = `(${allUsers.length})`;
+            if (countOnline) countOnline.textContent = `(${allUsers.filter(u => u.isOnline).length})`;
+            if (countSelected) countSelected.textContent = count;
+
+            if (target === 'selected') {
+                toggleSelectedUsers();
+            } else {
+                document.getElementById('selectedUsersList')?.classList.add('hidden');
+            }
+        };
+
+        window.toggleSelectedUsers = function() {
+            const list = document.getElementById('selectedUsersList');
+            const namesContainer = document.getElementById('selectedNames');
+            const target = document.querySelector('input[name="broadcastTarget"]:checked')?.value;
+            
+            if (target === 'selected' && selectedUserIds.size > 0 && list && namesContainer) {
+                list.classList.remove('hidden');
+                const selectedNames = filteredUsers
+                    .filter(u => selectedUserIds.has(u.id))
+                    .slice(0, 5)
+                    .map(u => u.displayName);
+                
+                if (selectedUserIds.size > 5) {
+                    selectedNames.push(`... и ещё ${selectedUserIds.size - 5}`);
+                }
+                
+                namesContainer.innerHTML = selectedNames.map(n => `<div>• ${n}</div>`).join('');
+            } else if (list) {
+                list.classList.add('hidden');
+            }
+        };
+
+        window.selectOnlineOnly = function() {
+            selectedUserIds = new Set(filteredUsers.filter(u => u.isOnline).map(u => u.id));
+            document.querySelector('input[name="broadcastTarget"][value="online"]')?.click();
+            renderUsersTable();
+            updateSelectedCount();
+        };
+
         window.sendBroadcast = async function() {
-            const message = document.getElementById('broadcastMessage').value.trim();
-            const type = document.getElementById('broadcastType').value;
+            const message = document.getElementById('broadcastMessage')?.value.trim();
+            const type = document.getElementById('broadcastType')?.value;
             
             if (!message) {
-                showBroadcastStatus('Введите сообщение', 'error');
+                showToast('Введите сообщение', 'error');
                 return;
             }
             
             if (message.length > 500) {
-                showBroadcastStatus('Сообщение слишком длинное (макс. 500 символов)', 'error');
+                showToast('Максимум 500 символов', 'error');
                 return;
             }
 
-            const target = document.querySelector('input[name="broadcastTarget"]:checked').value;
+            const target = document.querySelector('input[name="broadcastTarget"]:checked')?.value;
             let recipientIds = [];
             
-            switch (target) {
-                case 'all':
-                    recipientIds = allUsers.map(u => u.id);
-                    break;
-                case 'online':
-                    recipientIds = allUsers.filter(u => u.isOnline).map(u => u.id);
-                    break;
-                case 'selected':
-                    recipientIds = Array.from(selectedUserIds);
-                    break;
+            if (target === 'all') {
+                recipientIds = allUsers.map(u => u.id);
+            } else if (target === 'online') {
+                recipientIds = allUsers.filter(u => u.isOnline).map(u => u.id);
+            } else {
+                recipientIds = Array.from(selectedUserIds);
             }
             
             if (recipientIds.length === 0) {
-                showBroadcastStatus('Нет получателей', 'error');
+                showToast('Нет получателей', 'error');
                 return;
             }
 
             const btn = document.getElementById('sendBtn');
-            btn.disabled = true;
-            btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Отправка...';
+            if (btn) {
+                btn.disabled = true;
+                btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Отправка...';
+            }
 
             try {
                 const batch = writeBatch(db);
-
                 const broadcastRef = doc(collection(db, "broadcasts"));
+                
                 batch.set(broadcastRef, {
                     message: message,
                     type: type,
@@ -1081,8 +1111,7 @@ function showToast(message) {
                 const notificationsRef = collection(db, "notifications");
                 
                 recipientIds.forEach(userId => {
-                    const notifRef = doc(notificationsRef);
-                    batch.set(notifRef, {
+                    batch.set(doc(notificationsRef), {
                         userId: userId,
                         broadcastId: broadcastRef.id,
                         message: message,
@@ -1094,41 +1123,28 @@ function showToast(message) {
 
                 await batch.commit();
 
-                showBroadcastStatus(`Отправлено ${recipientIds.length} пользователям!`, 'success');
-                document.getElementById('broadcastMessage').value = '';
+                showToast(`Отправлено ${recipientIds.length} пользователям`, 'success');
+                
+                if (document.getElementById('broadcastMessage')) {
+                    document.getElementById('broadcastMessage').value = '';
+                }
                 document.getElementById('msgLength').textContent = '0/500';
                 
-                loadBroadcastHistory();
-                loadNotificationStats();
+                await loadBroadcastHistory();
+                await loadNotificationStats();
                 
             } catch (e) {
-                console.error('Ошибка отправки:', e);
-                showBroadcastStatus('Ошибка отправки: ' + e.message, 'error');
+                console.error('Broadcast error:', e);
+                showToast('Ошибка отправки: ' + e.message, 'error');
             } finally {
-                btn.disabled = false;
-                btn.innerHTML = '<i class="fas fa-paper-plane"></i> Отправить уведомление';
+                if (btn) {
+                    btn.disabled = false;
+                    btn.innerHTML = '<i class="fas fa-paper-plane"></i> Отправить уведомление';
+                }
             }
         };
 
-        function showBroadcastStatus(text, type) {
-            const status = document.getElementById('broadcastStatus');
-            status.textContent = text;
-            status.className = `mt-3 text-center text-sm ${type === 'error' ? 'text-red-400' : 'text-green-400'}`;
-            status.classList.remove('hidden');
-            
-            setTimeout(() => {
-                status.classList.add('hidden');
-            }, 5000);
-        }
-
-        document.getElementById('broadcastMessage').addEventListener('input', function(e) {
-            document.getElementById('msgLength').textContent = `${this.value.length}/500`;
-        });
-
-        function updateLastUpdateTime() {
-            document.getElementById('lastUpdate').textContent = `Обновлено: ${new Date().toLocaleTimeString('ru-RU')}`;
-        }
-
+        // Утилиты форматирования
         function formatDateTime(date) {
             if (!date) return '—';
             return date.toLocaleString('ru-RU');
@@ -1141,13 +1157,13 @@ function showToast(message) {
             const dateDay = new Date(date.getFullYear(), date.getMonth(), date.getDate());
 
             if (dateDay.getTime() === today.getTime()) {
-                return `сегодня в ${date.toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' })}`;
+                return `сегодня ${date.toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' })}`;
             }
 
             const yesterday = new Date(today);
             yesterday.setDate(yesterday.getDate() - 1);
             if (dateDay.getTime() === yesterday.getTime()) {
-                return `вчера в ${date.toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' })}`;
+                return `вчера ${date.toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' })}`;
             }
 
             return date.toLocaleDateString('ru-RU', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' });
@@ -1160,9 +1176,23 @@ function showToast(message) {
             return diff < 30 * 60 * 1000;
         }
 
-        window.loadStats = async function() {
-            await loadAllData();
-        };
+        function updateLastUpdateTime() {
+            const el = document.getElementById('lastUpdate');
+            if (el) el.textContent = `Обновлено: ${new Date().toLocaleTimeString('ru-RU')}`;
+        }
+
+        // Обработчик ввода сообщения
+        document.addEventListener('DOMContentLoaded', () => {
+            const msgInput = document.getElementById('broadcastMessage');
+            if (msgInput) {
+                msgInput.addEventListener('input', function() {
+                    document.getElementById('msgLength').textContent = `${this.value.length}/500`;
+                });
+            }
+            
+            // Запускаем проверку auth
+            checkAuthAndLoad();
+        });
     </script>
 </body>
 </html>
