@@ -1335,13 +1335,6 @@ let currentSortType = 'latest';
             }
         });
     }
-    
-   // ✅ СОРТИРОВКА ВСЕГДА СБРАСЫВАЕТСЯ НА 'LATEST' ПРИ ЗАГРУЗКЕ
-const sortSelect = document.getElementById('sortSelect');
-if (sortSelect) {
-    sortSelect.value = 'latest';
-}
-sortProjects('latest');
 });
 
         function formatClickDate(dateString) {
@@ -2189,7 +2182,9 @@ onAuthStateChanged(auth, async function(user) {
         const EXTERNAL_DATA_URL = 'https://raw.githubusercontent.com/Worklaf/Worklaf/main/TestNet_Hub/projects.json';
         document.addEventListener('DOMContentLoaded', function() { loadData(); setupSearchListener(); setupAdminUnlock(); });
 
-        window.loadData = async function() {
+        let firstDataLoadComplete = false;
+
+window.loadData = async function() {
     try {
         const response = await fetch(EXTERNAL_DATA_URL);
         if (response.ok) {
@@ -2209,7 +2204,14 @@ onAuthStateChanged(auth, async function(user) {
             if (idx !== -1) projects[idx] = { ...projects[idx], ...fireProject };
             else projects.push(normalizeData(fireProject));
         });
-        applyFilters();
+        
+        // ✅ ПЕРВЫЙ РАЗ ПОСЛЕ ЗАГРУЗКИ - ПРИМЕНЯЕМ СОРТИРОВКУ
+        if (!firstDataLoadComplete) {
+            firstDataLoadComplete = true;
+            sortProjects('latest');
+        } else {
+            applyFilters();
+        }
     });
 };
 
