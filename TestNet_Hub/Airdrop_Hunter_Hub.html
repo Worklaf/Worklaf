@@ -976,25 +976,16 @@
                         <div><label class="block text-sm font-medium text-slate-300 mb-2">Краткое описание</label><textarea id="projDesc" rows="2" class="w-full bg-slate-800 border border-slate-700 rounded-lg px-4 py-2 text-sm focus:border-blue-500 outline-none" placeholder="Краткое описание для карточки"></textarea></div>
                         
                         <div class="grid grid-cols-2 gap-4">
-   <div class="grid grid-cols-2 gap-4">
-    <div>
-        <label class="block text-sm font-medium text-slate-300 mb-2">Статус</label>
-        <select id="projStatus" class="w-full bg-slate-800 border border-slate-700 rounded-lg px-4 py-2 text-sm focus:border-blue-500 outline-none">
-            <option value="active">🟢 Active</option>
-            <option value="soon">🟡 Soon</option>
-            <option value="ended">🔴 Ended</option>
-        </select>
-    </div>
-    <div class="flex items-end">
-        <div class="w-full p-3 bg-slate-800/50 border border-slate-700 rounded-lg">
-            <div class="text-xs text-slate-500 mb-1">Дата обновления</div>
-            <div class="text-sm font-bold text-blue-400" id="projLastUpdatedDisplay">—</div>
-            <div class="text-xs text-slate-600 mt-1">ℹ️ Устанавливается автоматически</div>
-        </div>
-    </div>
-    <!-- Hidden input for backward compatibility -->
-    <input type="hidden" id="projLastUpdated">
-</div>
+                            <div>
+                                <label class="block text-sm font-medium text-slate-300 mb-2">Статус</label>
+                                <select id="projStatus" class="w-full bg-slate-800 border border-slate-700 rounded-lg px-4 py-2 text-sm focus:border-blue-500 outline-none">
+                                    <option value="active">🟢 Active</option>
+                                    <option value="soon">🟡 Soon</option>
+                                    <option value="ended">🔴 Ended</option>
+                                </select>
+                            </div>
+                            <div><label class="block text-sm font-medium text-slate-300 mb-2">Дата обновления проекта</label><input type="date" id="projLastUpdated" class="w-full bg-slate-800 border border-slate-700 rounded-lg px-4 py-2 text-sm focus:border-blue-500 outline-none"></div>
+                        </div>
                         <div class="flex gap-6">
                             <label class="flex items-center gap-2 text-sm text-slate-300 cursor-pointer"><input type="checkbox" id="projDaily" class="rounded bg-slate-800 border-slate-700 text-blue-600"><span>Есть ежедневные квесты</span></label>
                             <label class="flex items-center gap-2 text-sm text-slate-300 cursor-pointer"><input type="checkbox" id="projPriority" class="rounded bg-slate-800 border-slate-700 text-blue-600"><span>Высокий приоритет</span></label>
@@ -2387,211 +2378,82 @@ onAuthStateChanged(auth, async function(user) {
             const totalUnvisited = projects.filter(p => !arcData[p.id]).length;
             document.getElementById('countUnvisited').textContent = totalUnvisited;
 
-           grid.innerHTML = projectsToShow.map(function(project) {
-    const isFav = userFavorites.includes(project.id);
+            grid.innerHTML = projectsToShow.map(function(project) {
+                const isFav = userFavorites.includes(project.id);
+                // Changed logic: New is within 7 days
+                const isNew = isNewProject(project.createdAt); 
+                const lastClickRecord = arcData[project.id];
+                const lastClickDate = lastClickRecord && lastClickRecord.lastClick ? formatClickDate(lastClickRecord.lastClick) : null;
+                const lastUpdatedDate = project.lastUpdated ? formatDateForDisplay(project.lastUpdated) : null;
 
-    // NEW logic — передаём весь объект
-    const isNew = isNewProject(project);
+                const categoriesHtml = (project.categories || ['Other']).map(function(cat) {
+                    return '<span class="bg-slate-800 px-2 py-1 rounded cursor-pointer hover:bg-slate-700 transition-colors" onclick="event.stopPropagation(); toggleCategoryFilter(\'' + cat + '\')">' + cat + '</span>';
+                }).join('');
 
-    const lastClickRecord = arcData[project.id];
-    const lastClickDate = lastClickRecord && lastClickRecord.lastClick
-        ? formatClickDate(lastClickRecord.lastClick)
-        : null;
+                return '<div class="glass-card rounded-2xl p-4 relative group project-card-wrapper ' + (isNew ? 'border-pink-500/30' : '') + '">' +
+                    (isNew ? '<div class="absolute -top-2 -right-2 z-20"><span class="new-badge"><i class="fas fa-star mr-1"></i>NEW</span></div>' : '') +
+                    
+                    // Feedback Button (Hidden by default, visible on hover)
+                    '<button onclick="openFeedbackModal(\'' + project.id + '\', \'' + (project.name.replace(/'/g, "\\'")) + '\'); event.stopPropagation();" class="feedback-trigger-btn text-slate-300 hover:text-blue-400 rounded-lg text-xs font-bold flex items-center gap-1 shadow-lg" title="Оставить отзыв">' +
+                    '   <i class="fas fa-comment-dots"></i> <span>Отзыв</span>' +
+                    '</button>' +
 
-    const latestActivityDate = getLatestActivityDate(project);
-    const lastUpdatedDate = latestActivityDate
-        ? formatDateForDisplay(latestActivityDate)
-        : null;
+                    (isFav ? '<div class="user-completed-icon"><i class="fas fa-heart fill-current"></i></div>' : '') +
 
-    const categoriesHtml = (project.categories || ['Other'])
-        .map(function(cat) {
-            return (
-                '<span class="bg-slate-800 px-2 py-1 rounded cursor-pointer hover:bg-slate-700 transition-colors" ' +
-                'onclick="event.stopPropagation(); toggleCategoryFilter(\'' + cat + '\')">' +
-                cat +
-                '</span>'
-            );
-        })
-        .join('');
-
-    return (
-        '<div class="glass-card rounded-2xl p-4 relative group project-card-wrapper ' +
-        (isNew ? 'border-pink-500/30' : '') +
-        '">' +
-
-        // NEW badge
-        (isNew
-            ? '<div class="absolute -top-2 -right-2 z-20"><span class="new-badge"><i class="fas fa-star mr-1"></i>NEW</span></div>'
-            : '') +
-
-        // Feedback button
-        '<button onclick="openFeedbackModal(\'' +
-        project.id +
-        '\', \'' +
-        project.name.replace(/'/g, "\\'") +
-        '\'); event.stopPropagation();" ' +
-        'class="feedback-trigger-btn text-slate-300 hover:text-blue-400 rounded-lg text-xs font-bold flex items-center gap-1 shadow-lg" title="Оставить отзыв">' +
-        '<i class="fas fa-comment-dots"></i> <span>Отзыв</span>' +
-        '</button>' +
-
-        // Favorite heart
-        (isFav ? '<div class="user-completed-icon"><i class="fas fa-heart fill-current"></i></div>' : '') +
-
-        '<div class="flex items-start gap-4 pt-2">' +
-        '<div class="shrink-0">' +
-        (project.image
-            ? '<img src="' +
-              project.image +
-              '" alt="' +
-              project.name +
-              '" class="w-12 h-12 rounded-lg object-cover border border-slate-700">'
-            : '<div class="w-12 h-12 rounded-lg bg-slate-800 border border-slate-700 flex items-center justify-center text-xl">' +
-              project.name.charAt(0).toUpperCase() +
-              '</div>') +
-        '</div>' +
-
-        '<div class="flex-1 min-w-0 flex flex-col">' +
-        '<div class="flex items-start justify-between gap-2">' +
-        '<div class="flex-1">' +
-
-        '<div class="flex items-center gap-2 flex-wrap">' +
-        // FIXED: data-project-id + openDetail
-        '<h3 class="font-bold text-lg leading-tight text-white cursor-pointer hover:text-blue-400" ' +
-        'data-project-id="' +
-        project.id +
-        '" onclick="openDetail(this.dataset.projectId)">' +
-        project.name +
-        '</h3>' +
-
-        (lastUpdatedDate
-            ? '<span class="last-updated-date" title="Дата последней активности">🔄 ' +
-              lastUpdatedDate +
-              '</span>'
-            : '') +
-
-        (isAdminMode
-            ? '<button onclick="event.stopPropagation(); editProject(\'' +
-              project.id +
-              '\')" class="text-slate-500 hover:text-blue-400 text-xs edit-btn"><i class="fas fa-pencil-alt"></i></button>'
-            : '') +
-        '</div>' +
-
-        '<div class="flex flex-wrap gap-2 items-center text-xs text-slate-400 mb-2">' +
-        '<div class="flex flex-wrap gap-1">' +
-        categoriesHtml +
-        '</div>' +
-        '<span class="status-' +
-        project.status +
-        ' px-2 py-1 rounded font-medium">' +
-        (project.status === 'active'
-            ? 'Active'
-            : project.status === 'soon'
-            ? 'Soon'
-            : 'Ended') +
-        '</span>' +
-        (project.hasDaily ? '<span class="text-orange-400"><i class="fas fa-fire mr-1"></i>Daily</span>' : '') +
-        (project.priority === 'high' ? '<span class="text-red-400"><i class="fas fa-star mr-1"></i>High</span>' : '') +
-        '</div>' +
-        '</div>' +
-
-        '<div class="flex items-center gap-2 flex-wrap shrink-0">' +
-        (lastClickDate
-            ? '<span class="last-click-date ' +
-              lastClickDate.class +
-              '" title="Последний клик">' +
-              lastClickDate.text +
-              '</span>'
-            : '') +
-
-        '<button onclick="trackGuideClick(\'' +
-        project.id +
-        '\', \'' +
-        (project.guideUrl || '') +
-        '\')" class="guide-btn-small text-white rounded-lg text-sm font-medium transition-colors flex items-center justify-center gap-2">' +
-        '<i class="fas fa-book-open"></i><span>Гайд</span></button>' +
-
-        '<button onclick="event.stopPropagation(); toggleComplete(\'' +
-        project.id +
-        '\', \'project\')" class="complete-btn ' +
-        (userCompleted.includes(project.id + '_project')
-            ? 'text-emerald-500'
-            : 'text-slate-500 hover:text-emerald-500') +
-        ' p-2 transition-colors w-10 h-10 flex items-center justify-center rounded-lg hover:bg-slate-800" title="Отметить как завершённое">' +
-        '<i class="fas ' +
-        (userCompleted.includes(project.id + '_project') ? 'fa-check-square' : 'fa-square') +
-        ' text-lg"></i></button>' +
-
-        '<button onclick="event.stopPropagation(); toggleFavorite(\'' +
-        project.id +
-        '\')" class="favorite-btn ' +
-        (isFav ? 'active' : 'text-slate-500') +
-        ' p-2 hover:text-red-500 transition-colors w-10 h-10 flex items-center justify-center rounded-lg hover:bg-slate-800">' +
-        '<i class="fas fa-heart ' +
-        (isFav ? 'fill-current' : '') +
-        ' text-lg"></i></button>' +
-        '</div>' +
-        '</div>' +
-
-        '<p class="text-slate-400 text-sm mt-2 line-clamp-2">' +
-        (project.description || 'Нет описания') +
-        '</p>' +
-        '</div>' +
-        '</div>' +
-
-        // Footer buttons
-        '<div class="mt-4 pt-3 border-t border-slate-700/50 flex gap-2">' +
-        '<button onclick="trackGuideClick(\'' +
-        project.id +
-        '\', \'' +
-        (project.referralLink || project.cryptoRankUrl || '') +
-        '\'); event.stopPropagation();" ' +
+                    '<div class="flex items-start gap-4 pt-2">' +
+                    '<div class="shrink-0">' +
+                    (project.image ? '<img src="' + project.image + '" alt="' + project.name + '" class="w-12 h-12 rounded-lg object-cover border border-slate-700">' : '<div class="w-12 h-12 rounded-lg bg-slate-800 border border-slate-700 flex items-center justify-center text-xl">' + project.name.charAt(0).toUpperCase() + '</div>') +
+                    '</div>' +
+                    '<div class="flex-1 min-w-0 flex flex-col">' + // Added flex-col to fit button logic
+                    '<div class="flex items-start justify-between gap-2">' +
+                    '<div class="flex-1">' +
+                    '<div class="flex items-center gap-2 flex-wrap">' +
+                    '<h3 class="font-bold text-lg leading-tight text-white cursor-pointer hover:text-blue-400" onclick="openDetail(\'' + project.id + '\')">' + project.name + '</h3>' +
+                    (lastUpdatedDate ? '<span class="last-updated-date" title="Дата последней активности">🔄 ' + lastUpdatedDate + '</span>' : '') +
+                    (isAdminMode ? '<button onclick="event.stopPropagation(); editProject(\'' + project.id + '\')" class="text-slate-500 hover:text-blue-400 text-xs edit-btn"><i class="fas fa-pencil-alt"></i></button>' : '') +
+                    '</div>' +
+                    '<div class="flex flex-wrap gap-2 items-center text-xs text-slate-400 mb-2">' +
+                    '<div class="flex flex-wrap gap-1">' + categoriesHtml + '</div>' +
+                    '<span class="status-' + project.status + ' px-2 py-1 rounded font-medium">' + (project.status === 'active' ? 'Active' : project.status === 'soon' ? 'Soon' : 'Ended') + '</span>' +
+                    (project.hasDaily ? '<span class="text-orange-400"><i class="fas fa-fire mr-1"></i>Daily</span>' : '') +
+                    (project.priority === 'high' ? '<span class="text-red-400"><i class="fas fa-star mr-1"></i>High</span>' : '') +
+                    '</div></div>' +
+                    '<div class="flex items-center gap-2 flex-wrap shrink-0">' +
+                    (lastClickDate ? '<span class="last-click-date ' + lastClickDate.class + '" title="Последний клик">' + lastClickDate.text + '</span>' : '') +
+                    '<button onclick="trackGuideClick(\'' + project.id + '\', \'' + (project.guideUrl || '') + '\')" class="guide-btn-small text-white rounded-lg text-sm font-medium transition-colors flex items-center justify-center gap-2">' +
+                    '<i class="fas fa-book-open"></i><span>Гайд</span></button>' +
+                    '<button onclick="event.stopPropagation(); toggleComplete(\'' + project.id + '\', \'project\')" class="complete-btn ' + (userCompleted.includes(project.id + '_project') ? 'text-emerald-500' : 'text-slate-500 hover:text-emerald-500') + ' p-2 transition-colors w-10 h-10 flex items-center justify-center rounded-lg hover:bg-slate-800" title="Отметить как завершённое">' +
+                    '<i class="fas ' + (userCompleted.includes(project.id + '_project') ? 'fa-check-square' : 'fa-square') + ' text-lg"></i></button>' +
+                    '<button onclick="event.stopPropagation(); toggleFavorite(\'' + project.id + '\')" class="favorite-btn ' + (isFav ? 'active' : 'text-slate-500') + ' p-2 hover:text-red-500 transition-colors w-10 h-10 flex items-center justify-center rounded-lg hover:bg-slate-800"><i class="fas fa-heart ' + (isFav ? 'fill-current' : '') + ' text-lg"></i></button>' +
+                    '</div></div>' +
+                    '<p class="text-slate-400 text-sm mt-2 line-clamp-2">' + (project.description || 'Нет описания') + '</p></div></div>' +
+                    
+    '<div class="mt-4 pt-3 border-t border-slate-700/50 flex gap-2">' +
+                    
+        '<button onclick="trackGuideClick(\'' + project.id + '\', \'' + (project.referralLink || project.cryptoRankUrl || '') + '\'); event.stopPropagation();" ' +
         'class="flex-1 bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-300 py-2 rounded-lg text-sm font-medium transition-colors flex items-center justify-center gap-2">' +
         '<i class="fas fa-globe"></i> Website</button>' +
 
-        '<button onclick="trackGuideClick(\'' +
-        project.id +
-        '\', \'' +
-        (project.twitterUrl || '') +
-        '\'); event.stopPropagation();" ' +
+        '<button onclick="trackGuideClick(\'' + project.id + '\', \'' + (project.twitterUrl || '') + '\'); event.stopPropagation();" ' +
         'class="flex-1 bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-300 py-2 rounded-lg text-sm font-medium transition-colors flex items-center justify-center gap-2">' +
         '<i class="fab fa-twitter"></i> Twitter</button>' +
 
-        '<button onclick="trackGuideClick(\'' +
-        project.id +
-        '\', \'' +
-        (project.cryptoRankUrl || '') +
-        '\'); event.stopPropagation();" ' +
+        '<button onclick="trackGuideClick(\'' + project.id + '\', \'' + (project.cryptoRankUrl || '') + '\'); event.stopPropagation();" ' +
         'class="flex-1 bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-300 py-2 rounded-lg text-sm font-medium transition-colors flex items-center justify-center gap-2">' +
         '<i class="fas fa-chart-line"></i> CR</button>' +
-        '</div>' +
-        '</div>'
-    );
-}).join('');
-
+'</div></div>';
+            }).join('');
         }
 
-        // ✅ Получить дату последней активности проекта
-function getLatestActivityDate(project) {
-    if (!project.activities || project.activities.length === 0) {
-        return project.lastUpdated || project.createdAt;
-    }
-    const latestActivity = project.activities
-        .filter(a => a.date)
-        .sort((a, b) => new Date(b.date) - new Date(a.date))[0];
-    return latestActivity && latestActivity.date ? latestActivity.date : (project.lastUpdated || project.createdAt);
-}
-
-// Check if project is new (within 7 days) - ✅ ПО ПОСЛЕДНЕЙ АКТИВНОСТИ
-function isNewProject(project) {
-    if (!project) return false;
-    const latestDate = getLatestActivityDate(project);
-    if (!latestDate) return false;
-    const created = new Date(latestDate);
-    const now = new Date();
-    const diffTime = Math.abs(now - created);
-    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24)); 
-    return diffDays <= 7;
-}
+        // Check if project is new (within 7 days)
+        function isNewProject(dateString) {
+            if (!dateString) return false;
+            const created = new Date(dateString);
+            const now = new Date();
+            const diffTime = Math.abs(now - created);
+            const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24)); 
+            return diffDays <= 7;
+        }
 
         // --- Pagination ---
         function renderPaginationControls(totalItems) {
@@ -2654,21 +2516,13 @@ function isNewProject(project) {
         window.resetFilters = function() { currentFilters = { status: 'all', categories: [] }; document.getElementById('searchInput').value = ''; applyFilters(); };
         
         window.sortProjects = function(by) {
-    localStorage.setItem('sortProjects', by);
-    if (by === 'name') projects.sort(function(a, b) { return a.name.localeCompare(b.name); });
-    else if (by === 'priority') projects.sort(function(a, b) { return (b.priority === 'high' ? 1 : 0) - (a.priority === 'high' ? 1 : 0); });
-    else if (by === 'updated') projects.sort(function(a, b) { 
-        const dateA = new Date(getLatestActivityDate(a) || 0);
-        const dateB = new Date(getLatestActivityDate(b) || 0);
-        return dateB - dateA;
-    });
-    else if (by === 'newest') projects.sort(function(a, b) { 
-        const dateA = new Date(getLatestActivityDate(a) || 0);
-        const dateB = new Date(getLatestActivityDate(b) || 0);
-        return dateB - dateA;
-    });
-    applyFilters();
-};
+            localStorage.setItem('sortProjects', by);
+            if (by === 'name') projects.sort(function(a, b) { return a.name.localeCompare(b.name); });
+            else if (by === 'priority') projects.sort(function(a, b) { return (b.priority === 'high' ? 1 : 0) - (a.priority === 'high' ? 1 : 0); });
+            else if (by === 'updated') projects.sort(function(a, b) { return new Date(b.lastUpdated || 0) - new Date(a.lastUpdated || 0); });
+            else if (by === 'newest') projects.sort(function(a, b) { return new Date(b.createdAt || 0) - new Date(a.createdAt || 0); });
+            applyFilters();
+        };
 
         function parseRichContent(text) {
             if (!text) return '';
@@ -2712,7 +2566,7 @@ function isNewProject(project) {
             statusEl.textContent = project.status === 'active' ? 'Active' : project.status === 'soon' ? 'Soon' : 'Ended';
             statusEl.className = 'px-2 py-1 rounded-full text-xs font-medium status-' + project.status;
             
-            const isNew = isNewProject(project);
+            const isNew = isNewProject(project.createdAt);
             document.getElementById('detailNewBadge').classList.toggle('hidden', !isNew);
             
             const img = document.getElementById('detailImage');
@@ -3054,19 +2908,18 @@ document.getElementById('generalFeedbackPanel').classList.remove('hidden');
         };
 
         window.openAddModal = function() {
-    if (!isAdminMode) return;
-    editingId = null;
-    document.getElementById('addProjectForm').reset();
-    document.getElementById('modalTitle').textContent = 'Добавить проект';
-    document.getElementById('deleteBtn').classList.add('hidden');
-    document.getElementById('projLastUpdated').valueAsDate = new Date();
-    renderCategoryOptions();
-    currentEditingActivities = [];
-    renderActivitiesAdminList();
-    updateLastUpdatedDisplay(); // ✅ ПОКАЗЫВАЕМ ДАТУ
-    isEditModalOpen = true;
+            if (!isAdminMode) return;
+            editingId = null;
+            document.getElementById('addProjectForm').reset();
+            document.getElementById('modalTitle').textContent = 'Добавить проект';
+            document.getElementById('deleteBtn').classList.add('hidden');
+            document.getElementById('projLastUpdated').valueAsDate = new Date();
+            renderCategoryOptions();
+            currentEditingActivities = [];
+            renderActivitiesAdminList();
+            isEditModalOpen = true; // БЛОКИРУЕМ ОБНОВЛЕНИЕ
     document.getElementById('addModal').classList.add('active');
-};
+        };
         
         window.closeAddModal = function() { 
     document.getElementById('addModal').classList.remove('active'); 
@@ -3074,96 +2927,78 @@ document.getElementById('generalFeedbackPanel').classList.remove('hidden');
 };
         
         window.editProject = function(id) {
-    if (!isAdminMode) return;
-    const project = projects.find(function(p) { return p.id === id; });
-    if (!project) return;
-    editingId = id;
-    document.getElementById('projId').value = id;
-    document.getElementById('projName').value = project.name;
-    document.getElementById('projImage').value = project.image || '';
-    document.getElementById('projGuideUrl').value = project.guideUrl || '';
-    document.getElementById('projCryptoRank').value = project.cryptoRankUrl || '';
-    document.getElementById('projTwitter').value = project.twitterUrl || '';
-    document.getElementById('projRef').value = project.referralLink || '';
-    document.getElementById('projDesc').value = project.description || '';
-    document.getElementById('projStatus').value = project.status || 'active';
-    document.getElementById('projLastUpdated').value = project.lastUpdated || '';
-    document.getElementById('projDaily').checked = project.hasDaily || false;
-    document.getElementById('projPriority').checked = project.priority === 'high';
-    setSelectedCategories(project.categories || []);
-    
-    currentEditingActivities = project.activities || [];
-    renderActivitiesAdminList();
-    
-    // ✅ ОБНОВЛЯЕМ ОТОБРАЖЕНИЕ ДАТЫ
-    updateLastUpdatedDisplay();
+            if (!isAdminMode) return;
+            const project = projects.find(function(p) { return p.id === id; });
+            if (!project) return;
+            editingId = id;
+            document.getElementById('projId').value = id;
+            document.getElementById('projName').value = project.name;
+            document.getElementById('projImage').value = project.image || '';
+            document.getElementById('projGuideUrl').value = project.guideUrl || '';
+            document.getElementById('projCryptoRank').value = project.cryptoRankUrl || '';
+            document.getElementById('projTwitter').value = project.twitterUrl || '';
+            document.getElementById('projRef').value = project.referralLink || '';
+            document.getElementById('projDesc').value = project.description || '';
+            document.getElementById('projStatus').value = project.status || 'active';
+            document.getElementById('projLastUpdated').value = project.lastUpdated || '';
+            document.getElementById('projDaily').checked = project.hasDaily || false;
+            document.getElementById('projPriority').checked = project.priority === 'high';
+            setSelectedCategories(project.categories || []);
+            
+            currentEditingActivities = project.activities || [];
+            renderActivitiesAdminList();
 
-    document.getElementById('modalTitle').textContent = 'Редактировать проект';
-    document.getElementById('deleteBtn').classList.remove('hidden');
-    isEditModalOpen = true;
+            document.getElementById('modalTitle').textContent = 'Редактировать проект';
+            document.getElementById('deleteBtn').classList.remove('hidden');
+            isEditModalOpen = true; // БЛОКИРУЕМ
     document.getElementById('addModal').classList.add('active');
     window.closeDetailModal();
-};
+        };
         
         window.editCurrentProject = function() { if(currentDetailId) window.editProject(currentDetailId); };
 
         window.saveProject = async function(e) {
-    e.preventDefault();
-    if (!isAdminMode) return;
-    const now = new Date().toISOString();
-    
-    const projName = document.getElementById('projName').value;
-    const slugName = projName.toLowerCase()
-        .replace(/[^a-zа-яё0-9\s-]/g, '')
-        .replace(/\s+/g, '-')
-        .substring(0, 50);
-    
-    const id = editingId || 'proj_' + slugName + '_' + Date.now();
-    
-    const selectedCats = getSelectedCategories();
+            e.preventDefault();
+            if (!isAdminMode) return;
+            const now = new Date().toISOString();
+            
+            const projName = document.getElementById('projName').value;
+            const slugName = projName.toLowerCase()
+                .replace(/[^a-zа-яё0-9\s-]/g, '')
+                .replace(/\s+/g, '-')
+                .substring(0, 50);
+            
+            const id = editingId || 'proj_' + slugName + '_' + Date.now();
+            
+            const selectedCats = getSelectedCategories();
 
-    // ✅ АВТОМАТИЧЕСКИЙ РАСЧЁТ ДАТЫ ОБНОВЛЕНИЯ
-    let calculatedLastUpdated = now.split('T')[0]; // По умолчанию - сегодня
-    
-    if (currentEditingActivities && currentEditingActivities.length > 0) {
-        // Берём последнюю дату активности
-        const latestActivityDate = currentEditingActivities
-            .filter(a => a.date)
-            .map(a => new Date(a.date))
-            .sort((a, b) => b - a)[0];
-        
-        if (latestActivityDate) {
-            calculatedLastUpdated = latestActivityDate.toISOString().split('T')[0];
-        }
-    }
-
-    const projectData = {
-        id: id,
-        name: projName,
-        categories: selectedCats,
-        status: document.getElementById('projStatus').value,
-        description: document.getElementById('projDesc').value,
-        image: document.getElementById('projImage').value || '',
-        guideUrl: document.getElementById('projGuideUrl').value || '',
-        cryptoRankUrl: document.getElementById('projCryptoRank').value,
-        twitterUrl: document.getElementById('projTwitter').value,
-        referralLink: document.getElementById('projRef').value,
-        hasDaily: document.getElementById('projDaily').checked,
-        priority: document.getElementById('projPriority').checked ? 'high' : 'normal',
-        lastUpdated: calculatedLastUpdated, // ✅ АВТОМАТИЧЕСКАЯ ДАТА
-        createdAt: editingId ? (projects.find(function(p) { return p.id === editingId; }).createdAt || now) : now,
-        activities: currentEditingActivities
-    };
-    
-    try { 
-        await setDoc(doc(db, "projects", id), projectData, { merge: true }); 
-        showToast('Сохранено в облако!'); 
-        window.closeAddModal(); 
-    } catch (err) { 
-        console.error(err); 
-        showToast('Ошибка сохранения: ' + err.message); 
-    }
-};
+            const projectData = {
+                id: id,
+                name: projName,
+                categories: selectedCats,
+                status: document.getElementById('projStatus').value,
+                description: document.getElementById('projDesc').value,
+                image: document.getElementById('projImage').value || '',
+                guideUrl: document.getElementById('projGuideUrl').value || '',
+                cryptoRankUrl: document.getElementById('projCryptoRank').value,
+                twitterUrl: document.getElementById('projTwitter').value,
+                referralLink: document.getElementById('projRef').value,
+                hasDaily: document.getElementById('projDaily').checked,
+                priority: document.getElementById('projPriority').checked ? 'high' : 'normal',
+                lastUpdated: document.getElementById('projLastUpdated').value || now.split('T')[0],
+                createdAt: editingId ? (projects.find(function(p) { return p.id === editingId; }).createdAt || now) : now,
+                activities: currentEditingActivities
+            };
+            
+            try { 
+                await setDoc(doc(db, "projects", id), projectData, { merge: true }); 
+                showToast('Сохранено в облако!'); 
+                window.closeAddModal(); 
+            } catch (err) { 
+                console.error(err); 
+                showToast('Ошибка сохранения: ' + err.message); 
+            }
+        };
         
         window.deleteProject = async function() {
             if(!editingId || !confirm('Удалить проект?')) return;
@@ -3311,40 +3146,6 @@ document.getElementById('generalFeedbackPanel').classList.remove('hidden');
             if (currentUser.uid !== "SAkz4mdW9reDaIsvqigCNZhEKJR2") { showToast('Нет доступа к статистике'); return; }
             window.open('stats.html', '_blank');
         };
-        // ✅ ОБНОВИТЬ ДИСПЛЕЙ ДАТЫ ОБНОВЛЕНИЯ
-function updateLastUpdatedDisplay() {
-    let displayDate = '—';
-    
-    if (currentEditingActivities && currentEditingActivities.length > 0) {
-        // Берём последнюю дату активности
-        const latestActivity = currentEditingActivities
-            .filter(a => a.date)
-            .sort((a, b) => new Date(b.date) - new Date(a.date))[0];
-        
-        if (latestActivity && latestActivity.date) {
-            displayDate = formatDateForDisplay(latestActivity.date);
-        }
-    }
-    
-    const displayEl = document.getElementById('projLastUpdatedDisplay');
-    if (displayEl) {
-        displayEl.textContent = displayDate;
-    }
-}
-
-// ПЕРЕОПРЕДЕЛЯЕМ renderActivitiesAdminList, чтобы обновлять дату при изменении активностей
-const originalRenderActivitiesAdminList = window.renderActivitiesAdminList;
-window.renderActivitiesAdminList = function() {
-    originalRenderActivitiesAdminList.call(this);
-    updateLastUpdatedDisplay(); // ✅ ОБНОВЛЯЕМ ДАТУ ПОСЛЕ КАЖДОГО ИЗМЕНЕНИЯ
-};
-        // ✅ Экспортируем все функции в global scope для onclick
-window.openDetail = window.openDetail || openDetail;
-window.toggleComplete = window.toggleComplete || toggleComplete;
-window.toggleFavorite = window.toggleFavorite || toggleFavorite;
-window.openAddModal = window.openAddModal || openAddModal;
-window.trackGuideClick = window.trackGuideClick || trackGuideClick;
-window.openFeedbackModal = window.openFeedbackModal || openFeedbackModal;
     </script>
 </body>
 </html>
