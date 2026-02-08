@@ -976,16 +976,25 @@
                         <div><label class="block text-sm font-medium text-slate-300 mb-2">Краткое описание</label><textarea id="projDesc" rows="2" class="w-full bg-slate-800 border border-slate-700 rounded-lg px-4 py-2 text-sm focus:border-blue-500 outline-none" placeholder="Краткое описание для карточки"></textarea></div>
                         
                         <div class="grid grid-cols-2 gap-4">
-                            <div>
-                                <label class="block text-sm font-medium text-slate-300 mb-2">Статус</label>
-                                <select id="projStatus" class="w-full bg-slate-800 border border-slate-700 rounded-lg px-4 py-2 text-sm focus:border-blue-500 outline-none">
-                                    <option value="active">🟢 Active</option>
-                                    <option value="soon">🟡 Soon</option>
-                                    <option value="ended">🔴 Ended</option>
-                                </select>
-                            </div>
-                            <div><label class="block text-sm font-medium text-slate-300 mb-2">Дата обновления проекта</label><input type="date" id="projLastUpdated" class="w-full bg-slate-800 border border-slate-700 rounded-lg px-4 py-2 text-sm focus:border-blue-500 outline-none"></div>
-                        </div>
+   <div class="grid grid-cols-2 gap-4">
+    <div>
+        <label class="block text-sm font-medium text-slate-300 mb-2">Статус</label>
+        <select id="projStatus" class="w-full bg-slate-800 border border-slate-700 rounded-lg px-4 py-2 text-sm focus:border-blue-500 outline-none">
+            <option value="active">🟢 Active</option>
+            <option value="soon">🟡 Soon</option>
+            <option value="ended">🔴 Ended</option>
+        </select>
+    </div>
+    <div class="flex items-end">
+        <div class="w-full p-3 bg-slate-800/50 border border-slate-700 rounded-lg">
+            <div class="text-xs text-slate-500 mb-1">Дата обновления</div>
+            <div class="text-sm font-bold text-blue-400" id="projLastUpdatedDisplay">—</div>
+            <div class="text-xs text-slate-600 mt-1">ℹ️ Устанавливается автоматически</div>
+        </div>
+    </div>
+    <!-- Hidden input for backward compatibility -->
+    <input type="hidden" id="projLastUpdated">
+</div>
                         <div class="flex gap-6">
                             <label class="flex items-center gap-2 text-sm text-slate-300 cursor-pointer"><input type="checkbox" id="projDaily" class="rounded bg-slate-800 border-slate-700 text-blue-600"><span>Есть ежедневные квесты</span></label>
                             <label class="flex items-center gap-2 text-sm text-slate-300 cursor-pointer"><input type="checkbox" id="projPriority" class="rounded bg-slate-800 border-slate-700 text-blue-600"><span>Высокий приоритет</span></label>
@@ -2930,18 +2939,19 @@ document.getElementById('generalFeedbackPanel').classList.remove('hidden');
         };
 
         window.openAddModal = function() {
-            if (!isAdminMode) return;
-            editingId = null;
-            document.getElementById('addProjectForm').reset();
-            document.getElementById('modalTitle').textContent = 'Добавить проект';
-            document.getElementById('deleteBtn').classList.add('hidden');
-            document.getElementById('projLastUpdated').valueAsDate = new Date();
-            renderCategoryOptions();
-            currentEditingActivities = [];
-            renderActivitiesAdminList();
-            isEditModalOpen = true; // БЛОКИРУЕМ ОБНОВЛЕНИЕ
+    if (!isAdminMode) return;
+    editingId = null;
+    document.getElementById('addProjectForm').reset();
+    document.getElementById('modalTitle').textContent = 'Добавить проект';
+    document.getElementById('deleteBtn').classList.add('hidden');
+    document.getElementById('projLastUpdated').valueAsDate = new Date();
+    renderCategoryOptions();
+    currentEditingActivities = [];
+    renderActivitiesAdminList();
+    updateLastUpdatedDisplay(); // ✅ ПОКАЗЫВАЕМ ДАТУ
+    isEditModalOpen = true;
     document.getElementById('addModal').classList.add('active');
-        };
+};
         
         window.closeAddModal = function() { 
     document.getElementById('addModal').classList.remove('active'); 
@@ -2949,78 +2959,96 @@ document.getElementById('generalFeedbackPanel').classList.remove('hidden');
 };
         
         window.editProject = function(id) {
-            if (!isAdminMode) return;
-            const project = projects.find(function(p) { return p.id === id; });
-            if (!project) return;
-            editingId = id;
-            document.getElementById('projId').value = id;
-            document.getElementById('projName').value = project.name;
-            document.getElementById('projImage').value = project.image || '';
-            document.getElementById('projGuideUrl').value = project.guideUrl || '';
-            document.getElementById('projCryptoRank').value = project.cryptoRankUrl || '';
-            document.getElementById('projTwitter').value = project.twitterUrl || '';
-            document.getElementById('projRef').value = project.referralLink || '';
-            document.getElementById('projDesc').value = project.description || '';
-            document.getElementById('projStatus').value = project.status || 'active';
-            document.getElementById('projLastUpdated').value = project.lastUpdated || '';
-            document.getElementById('projDaily').checked = project.hasDaily || false;
-            document.getElementById('projPriority').checked = project.priority === 'high';
-            setSelectedCategories(project.categories || []);
-            
-            currentEditingActivities = project.activities || [];
-            renderActivitiesAdminList();
+    if (!isAdminMode) return;
+    const project = projects.find(function(p) { return p.id === id; });
+    if (!project) return;
+    editingId = id;
+    document.getElementById('projId').value = id;
+    document.getElementById('projName').value = project.name;
+    document.getElementById('projImage').value = project.image || '';
+    document.getElementById('projGuideUrl').value = project.guideUrl || '';
+    document.getElementById('projCryptoRank').value = project.cryptoRankUrl || '';
+    document.getElementById('projTwitter').value = project.twitterUrl || '';
+    document.getElementById('projRef').value = project.referralLink || '';
+    document.getElementById('projDesc').value = project.description || '';
+    document.getElementById('projStatus').value = project.status || 'active';
+    document.getElementById('projLastUpdated').value = project.lastUpdated || '';
+    document.getElementById('projDaily').checked = project.hasDaily || false;
+    document.getElementById('projPriority').checked = project.priority === 'high';
+    setSelectedCategories(project.categories || []);
+    
+    currentEditingActivities = project.activities || [];
+    renderActivitiesAdminList();
+    
+    // ✅ ОБНОВЛЯЕМ ОТОБРАЖЕНИЕ ДАТЫ
+    updateLastUpdatedDisplay();
 
-            document.getElementById('modalTitle').textContent = 'Редактировать проект';
-            document.getElementById('deleteBtn').classList.remove('hidden');
-            isEditModalOpen = true; // БЛОКИРУЕМ
+    document.getElementById('modalTitle').textContent = 'Редактировать проект';
+    document.getElementById('deleteBtn').classList.remove('hidden');
+    isEditModalOpen = true;
     document.getElementById('addModal').classList.add('active');
     window.closeDetailModal();
-        };
+};
         
         window.editCurrentProject = function() { if(currentDetailId) window.editProject(currentDetailId); };
 
         window.saveProject = async function(e) {
-            e.preventDefault();
-            if (!isAdminMode) return;
-            const now = new Date().toISOString();
-            
-            const projName = document.getElementById('projName').value;
-            const slugName = projName.toLowerCase()
-                .replace(/[^a-zа-яё0-9\s-]/g, '')
-                .replace(/\s+/g, '-')
-                .substring(0, 50);
-            
-            const id = editingId || 'proj_' + slugName + '_' + Date.now();
-            
-            const selectedCats = getSelectedCategories();
+    e.preventDefault();
+    if (!isAdminMode) return;
+    const now = new Date().toISOString();
+    
+    const projName = document.getElementById('projName').value;
+    const slugName = projName.toLowerCase()
+        .replace(/[^a-zа-яё0-9\s-]/g, '')
+        .replace(/\s+/g, '-')
+        .substring(0, 50);
+    
+    const id = editingId || 'proj_' + slugName + '_' + Date.now();
+    
+    const selectedCats = getSelectedCategories();
 
-            const projectData = {
-                id: id,
-                name: projName,
-                categories: selectedCats,
-                status: document.getElementById('projStatus').value,
-                description: document.getElementById('projDesc').value,
-                image: document.getElementById('projImage').value || '',
-                guideUrl: document.getElementById('projGuideUrl').value || '',
-                cryptoRankUrl: document.getElementById('projCryptoRank').value,
-                twitterUrl: document.getElementById('projTwitter').value,
-                referralLink: document.getElementById('projRef').value,
-                hasDaily: document.getElementById('projDaily').checked,
-                priority: document.getElementById('projPriority').checked ? 'high' : 'normal',
-                lastUpdated: document.getElementById('projLastUpdated').value || now.split('T')[0],
-                createdAt: editingId ? (projects.find(function(p) { return p.id === editingId; }).createdAt || now) : now,
-                activities: currentEditingActivities
-            };
-            
-            try { 
-                await setDoc(doc(db, "projects", id), projectData, { merge: true }); 
-                showToast('Сохранено в облако!'); 
-                window.closeAddModal(); 
-            } catch (err) { 
-                console.error(err); 
-                showToast('Ошибка сохранения: ' + err.message); 
-            }
-        };
+    // ✅ АВТОМАТИЧЕСКИЙ РАСЧЁТ ДАТЫ ОБНОВЛЕНИЯ
+    let calculatedLastUpdated = now.split('T')[0]; // По умолчанию - сегодня
+    
+    if (currentEditingActivities && currentEditingActivities.length > 0) {
+        // Берём последнюю дату активности
+        const latestActivityDate = currentEditingActivities
+            .filter(a => a.date)
+            .map(a => new Date(a.date))
+            .sort((a, b) => b - a)[0];
+        
+        if (latestActivityDate) {
+            calculatedLastUpdated = latestActivityDate.toISOString().split('T')[0];
+        }
+    }
+
+    const projectData = {
+        id: id,
+        name: projName,
+        categories: selectedCats,
+        status: document.getElementById('projStatus').value,
+        description: document.getElementById('projDesc').value,
+        image: document.getElementById('projImage').value || '',
+        guideUrl: document.getElementById('projGuideUrl').value || '',
+        cryptoRankUrl: document.getElementById('projCryptoRank').value,
+        twitterUrl: document.getElementById('projTwitter').value,
+        referralLink: document.getElementById('projRef').value,
+        hasDaily: document.getElementById('projDaily').checked,
+        priority: document.getElementById('projPriority').checked ? 'high' : 'normal',
+        lastUpdated: calculatedLastUpdated, // ✅ АВТОМАТИЧЕСКАЯ ДАТА
+        createdAt: editingId ? (projects.find(function(p) { return p.id === editingId; }).createdAt || now) : now,
+        activities: currentEditingActivities
+    };
+    
+    try { 
+        await setDoc(doc(db, "projects", id), projectData, { merge: true }); 
+        showToast('Сохранено в облако!'); 
+        window.closeAddModal(); 
+    } catch (err) { 
+        console.error(err); 
+        showToast('Ошибка сохранения: ' + err.message); 
+    }
+};
         
         window.deleteProject = async function() {
             if(!editingId || !confirm('Удалить проект?')) return;
@@ -3168,6 +3196,33 @@ document.getElementById('generalFeedbackPanel').classList.remove('hidden');
             if (currentUser.uid !== "SAkz4mdW9reDaIsvqigCNZhEKJR2") { showToast('Нет доступа к статистике'); return; }
             window.open('stats.html', '_blank');
         };
+        // ✅ ОБНОВИТЬ ДИСПЛЕЙ ДАТЫ ОБНОВЛЕНИЯ
+function updateLastUpdatedDisplay() {
+    let displayDate = '—';
+    
+    if (currentEditingActivities && currentEditingActivities.length > 0) {
+        // Берём последнюю дату активности
+        const latestActivity = currentEditingActivities
+            .filter(a => a.date)
+            .sort((a, b) => new Date(b.date) - new Date(a.date))[0];
+        
+        if (latestActivity && latestActivity.date) {
+            displayDate = formatDateForDisplay(latestActivity.date);
+        }
+    }
+    
+    const displayEl = document.getElementById('projLastUpdatedDisplay');
+    if (displayEl) {
+        displayEl.textContent = displayDate;
+    }
+}
+
+// ПЕРЕОПРЕДЕЛЯЕМ renderActivitiesAdminList, чтобы обновлять дату при изменении активностей
+const originalRenderActivitiesAdminList = window.renderActivitiesAdminList;
+window.renderActivitiesAdminList = function() {
+    originalRenderActivitiesAdminList.call(this);
+    updateLastUpdatedDisplay(); // ✅ ОБНОВЛЯЕМ ДАТУ ПОСЛЕ КАЖДОГО ИЗМЕНЕНИЯ
+};
     </script>
 </body>
 </html>
