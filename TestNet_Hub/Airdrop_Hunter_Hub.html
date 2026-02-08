@@ -1456,21 +1456,26 @@ function initFeedbacksListener(uid) {
 
                 data.id = doc.id;
                 
-                // --- ЛОГИКА СЧЕТЧИКА ---
+                // --- ЛОГИКА СЧЕТЧИКА (ИСПРАВЛЕНО) ---
                 if (isAdmin) {
-                    // Админ видит непрочитанные сообщения от пользователей
-                    if (!data.read) unreadCount++;
+                    // Админ видит непрочитанные сообщения ОТ ПОЛЬЗОВАТЕЛЕЙ
+                    if (data.read === false) unreadCount++;
                 } else {
-                    // Пользователь видит непрочитанные ответы от админа
-                    if (!data.userRead) unreadCount++;
+                    // Пользователь видит непрочитанные ОТВЕТЫ ОТ АДМИНА
+                    if (data.userRead === false) unreadCount++;
                 }
                 
                 adminFeedbacks.push(data);
             });
             
-            console.log('📨 Feedbacks:', { count: adminFeedbacks.length, unread: unreadCount, isAdmin });
+            console.log('📨 Feedbacks Update:', { 
+                count: adminFeedbacks.length, 
+                unread: unreadCount, 
+                isAdmin,
+                uid: uid.substring(0, 8) + '...'
+            });
             
-            // ✅ ОБНОВЛЯЕМ БЕЙДЖ
+            // ✅ ОБНОВЛЯЕМ БЕЙДЖ ДЛЯ ОБОИХ
             updateFeedbackBadgeUI(unreadCount);
             
             // Если список открыт - перерисовываем
@@ -1487,7 +1492,7 @@ function initFeedbacksListener(uid) {
     }
 }
 
-// ✅ НОВАЯ функция для обновления бейджа
+// ✅ УЛУЧШЕННАЯ функция обновления бейджа
 function updateFeedbackBadgeUI(unreadCount) {
     const badge = document.getElementById('feedbackBadge');
     if (!badge) {
@@ -1495,17 +1500,116 @@ function updateFeedbackBadgeUI(unreadCount) {
         return;
     }
     
+    console.log('🔔 Updating badge:', unreadCount);
+    
     if (unreadCount > 0) {
         badge.textContent = unreadCount > 9 ? '9+' : unreadCount;
         badge.classList.remove('hidden');
         badge.classList.add('animate-pulse');
-        console.log('✅ Badge updated:', unreadCount);
     } else {
         badge.classList.add('hidden');
         badge.classList.remove('animate-pulse');
         badge.textContent = '0';
     }
 }
+
+// ✅ УЛУЧШЕННАЯ функция отправки отзыва пользователем
+window.sendUserFeedback = async function() {
+    if (!currentUser) return showToast('Войдите в аккаунт');
+    
+    const projId = document.getElementById('feedbackProjectId').value;
+    const category = document.getElementById('feedbackCategory').value;
+    const message = document.getElementById('feedbackText').value.trim();
+
+    if (!message) return showToast('Введите сообщение');
+
+    try {
+        await addDoc(collection(db, "feedbacks"), {
+            projectId: projId,
+            category: category,
+            userId: currentUser.uid,
+            userName: currentUser.displayName || currentUser.email,
+            userPhoto: currentUser.photoURL || '',
+            status: 'open',
+            read: false,           // Администратор не видел
+            userRead: true,        // Пользователь видел свое сообщение
+            deleted: false,
+            userDeleted: false,
+            createdAt: serverTimestamp(),
+            messages: [{
+                sender: 'user',
+                text: message,
+                timestamp: new Date()
+            }]
+        });
+
+        showToast('Сообщение отправлено!');
+        document.getElementById('feedbackText').value = '';
+        
+        // ✅ Принудительное обновление после отправки
+        setTimeout(() => {
+            if (currentUser) {
+                initFeedbacksListener(currentUser.uid);
+            }
+        }, 500);
+        
+    } catch (e) {
+        console.error(e);
+        showToast('Ошибка: ' + e.message);
+    }
+};
+
+// ✅ УЛУЧШЕННАЯ функция ответа администратора
+window.sendAdminReply = async function(feedbackId) {
+    const inp = document.getElementById('feedbackUserReplyText');
+    const text = inp.value.trim();
+    if (!text) return showToast('Введите ответ');
+
+    try {
+        await updateDoc(doc(db, "feedbacks", feedbackId), {
+            messages: arrayUnion({
+                sender: 'admin',
+                text: text,
+                timestamp: new Date()
+            }),
+            read: true,           // Администратор прочитал
+            userRead: false       // ✅ Пользователь не видел ответ (ВАЖНО!)
+        });
+        inp.value = '';
+        showToast('Ответ отправлен!');
+        
+    } catch (e) {
+        console.error(e);
+        showToast('Ошибка: ' + e.message);
+    }
+};
+
+// ✅ УЛУЧШЕННАЯ функция ответа пользователя
+window.sendUserFeedbackReply = async function() {
+    const docId = document.getElementById('feedbackDocId').value;
+    const text = document.getElementById('feedbackUserReplyText').value.trim();
+
+    if (!text || !docId) return;
+
+    try {
+        await updateDoc(doc(db, "feedbacks", docId), {
+            messages: arrayUnion({
+                sender: 'user',
+                text: text,
+                timestamp: new Date()
+            }),
+            userRead: true,       // Пользователь прочитал свой ответ
+            read: false           // ✅ Администратор не видел ответ (ВАЖНО!)
+        });
+        document.getElementById('feedbackUserReplyText').value = '';
+        showToast('Ответ отправлен!');
+        
+    } catch (e) {
+        console.error(e);
+        showToast('Ошибка отправки: ' + e.message);
+    }
+};
+
 
 // --- ПОЛЬЗОВАТЕЛЬ: ОТКРЫТЬ ЧАТ ---
 window.openFeedbackModal = function(projId, projName) {
@@ -1604,69 +1708,7 @@ function loadFeedbackChat(docId, projId) {
     });
     window.currentFeedbackUnsub = unsub;
 }
-window.sendUserFeedback = async function() {
-    if (!currentUser) return showToast('Войдите в аккаунт');
-    
-    const projId = document.getElementById('feedbackProjectId').value;
-    const category = document.getElementById('feedbackCategory').value;
-    const message = document.getElementById('feedbackText').value.trim();
-
-    if (!message) return showToast('Введите сообщение');
-
-    try {
-        await addDoc(collection(db, "feedbacks"), {
-            projectId: projId,
-            category: category,
-            userId: currentUser.uid,
-            userName: currentUser.displayName || currentUser.email,
-            userPhoto: currentUser.photoURL || '',
-            status: 'open',
-            read: false,
-            userRead: true,
-            deleted: false,
-            userDeleted: false,
-            createdAt: serverTimestamp(),
-            // ИЗМЕНЕНО: new Date() вместо serverTimestamp()
-            messages: [{
-                sender: 'user',
-                text: message,
-                timestamp: new Date()
-            }]
-        });
-
-        showToast('Сообщение отправлено!');
-        document.getElementById('feedbackText').value = '';
-    } catch (e) {
-        console.error(e);
-        showToast('Ошибка: ' + e.message);
-    }
-};
-
-// --- ПОЛЬЗОВАТЕЛЬ: ОТВЕТИТЬ НА СООБЩЕНИЕ АДМИНА ---
-window.sendUserFeedbackReply = async function() {
-    const docId = document.getElementById('feedbackDocId').value;
-    const text = document.getElementById('feedbackUserReplyText').value.trim();
-
-    if (!text || !docId) return;
-
-    try {
-        await updateDoc(doc(db, "feedbacks", docId), {
-            messages: arrayUnion({
-                sender: 'user',  // ✅ ВАЖНО: указываем что это от пользователя
-                text: text,
-                timestamp: new Date()
-            }),
-            userRead: true,  // Пользователь прочитал свое сообщение
-            read: false      // ✅ Отмечаем для админа как непрочитанное
-        });
-        document.getElementById('feedbackUserReplyText').value = '';
-        showToast('Сообщение отправлено!');
-    } catch (e) {
-        console.error(e);
-        showToast('Ошибка отправки: ' + e.message);
-    }
-};
-
+;
 // --- ПОЛЬЗОВАТЕЛЬ: УДАЛИТЬ ПЕРЕПИСКУ (мягкое удаление) ---
 window.deleteUserFeedback = async function() {
     if (!confirm('Удалить эту переписку?')) return;
@@ -1875,30 +1917,6 @@ window.openAdminFeedbackChat = function (feedbackId) {
 
     chatModal.classList.add('active');
     markFeedbackRead(feedbackId);
-};
-
-// --- АДМИН: ОТПРАВИТЬ ОТВЕТ ---
-window.sendAdminReply = async function(feedbackId) {
-    const inp = document.getElementById('feedbackUserReplyText');
-    const text = inp.value.trim();
-    if (!text) return showToast('Введите ответ');
-
-    try {
-        await updateDoc(doc(db, "feedbacks", feedbackId), {
-            messages: arrayUnion({
-                sender: 'admin',
-                text: text,
-                timestamp: new Date()
-            }),
-            read: true,
-            userRead: false  // ✅ Отмечаем для пользователя как непрочитанное
-        });
-        inp.value = '';
-        showToast('Ответ отправлен!');
-    } catch (e) {
-        console.error(e);
-        showToast('Ошибка: ' + e.message);
-    }
 };
 
 // --- АДМИН: ОТМЕТИТЬ ПРОЧИТАННЫМ ---
