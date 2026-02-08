@@ -903,6 +903,9 @@
         0 0 60px rgba(0, 0, 0, 0.9),
         0 0 120px rgba(59, 130, 246, 0.15);
 }
+        /* Стиль для кнопки экспорта */
+.bg-green-600 { background-color: #16a34a; }
+.bg-green-600:hover { background-color: #15803d; }
     </style>
 </head>
 <body class="antialiased">
@@ -976,6 +979,10 @@
 <button onclick="openDeletedProjects()" class="bg-gray-600 hover:bg-gray-500 px-4 py-2 rounded-lg text-sm font-medium transition-colors flex items-center gap-2">
     <i class="fas fa-trash-restore"></i>
     <span class="hidden sm:inline">Удаленные</span>
+</button>
+                        <button onclick="exportAllData()" class="bg-green-600 hover:bg-green-500 px-4 py-2 rounded-lg text-sm font-medium transition-colors flex items-center gap-2" title="Экспорт всех данных в файл">
+    <i class="fas fa-download"></i>
+    <span class="hidden sm:inline">Экспорт данных</span>
 </button>
                     </div>
                     
@@ -3473,7 +3480,83 @@ window.sortProjects = function(by) {
             }
             showToast('Загружено ' + count + ' проектов в базу');
         };
-
+// ✅ ЭКСПОРТ ВСЕХ ДАННЫХ (только для админа)
+window.exportAllData = async function() {
+    if (!currentUser || currentUser.uid !== "SAkz4mdW9reDaIsvqigCNZhEKJR2") {
+        showToast('Только администратор может экспортировать данные', 'warning');
+        return;
+    }
+    
+    if (!confirm('Экспортировать все проекты с активностями в файл?\n\nЭто создаст резервную копию текущих данных.')) {
+        return;
+    }
+    
+    const btn = event.target.closest('button');
+    const originalHtml = btn.innerHTML;
+    btn.disabled = true;
+    btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Экспорт...';
+    
+    try {
+        showToast('Начинаю экспорт данных...', 'info');
+        console.log('📥 Начало экспорта данных...');
+        
+        // Получаем все проекты из Firestore
+        const projectsSnapshot = await getDocs(collection(db, "projects"));
+        const allProjects = [];
+        
+        projectsSnapshot.forEach((doc) => {
+            const project = { id: doc.id, ...doc.data() };
+            allProjects.push(project);
+        });
+        
+        // Формируем данные для экспорта
+        const exportData = {
+            exportDate: new Date().toISOString(),
+            totalProjects: allProjects.length,
+            projects: allProjects,
+            // Дополнительная информация
+            metadata: {
+                exportedBy: currentUser.email,
+                userId: currentUser.uid,
+                timestamp: serverTimestamp(),
+                version: 'testnet-hub-backup-v1'
+            }
+        };
+        
+        // Конвертируем в JSON с отступами для читаемости
+        const jsonData = JSON.stringify(exportData, null, 2);
+        
+        // Создаем файл для скачивания
+        const blob = new Blob([jsonData], { type: 'application/json' });
+        const url = URL.createObjectURL(blob);
+        
+        // Генерируем имя файла с датой
+        const date = new Date();
+        const dateStr = date.toISOString().slice(0, 19).replace(/:/g, '-');
+        const filename = `testnet-hub-backup-${dateStr}.json`;
+        
+        // Создаем временную ссылку для скачивания
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = filename;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        
+        // Освобождаем память
+        URL.revokeObjectURL(url);
+        
+        showToast(`✅ Экспортировано ${allProjects.length} проектов`, 'success');
+        console.log(`✅ Экспорт завершен: ${allProjects.length} проектов в файл ${filename}`);
+        
+    } catch (error) {
+        console.error('❌ Ошибка экспорта:', error);
+        showToast('Ошибка экспорта: ' + error.message, 'error');
+    } finally {
+        btn.disabled = false;
+        btn.innerHTML = originalHtml;
+    }
+};
         function getCategoriesWithCounts(allProjects) {
             const catCounts = {};
             allProjects.forEach(function(p) {
