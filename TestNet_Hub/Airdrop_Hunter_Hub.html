@@ -1420,8 +1420,8 @@ let adminFeedbacksUnsubscribe = null;
 // =====================
 
 // Инициализация для админа
+// ✅ УЛУЧШЕННАЯ функция инициализации слушателя фидбеков
 function initFeedbacksListener(uid) {
-    // Сбрасываем старую подписку
     if (adminFeedbacksUnsubscribe) {
         adminFeedbacksUnsubscribe();
         adminFeedbacksUnsubscribe = null;
@@ -1431,13 +1431,11 @@ function initFeedbacksListener(uid) {
     const isAdmin = uid === "SAkz4mdW9reDaIsvqigCNZhEKJR2";
 
     if (isAdmin) {
-        // АДМИН: Видит все чаты, даже удаленные (но не помеченные как deleted)
         q = query(
             collection(db, "feedbacks"), 
             orderBy("createdAt", "desc")
         );
     } else {
-        // ЮЗЕР: Видит только свои чаты
         q = query(
             collection(db, "feedbacks"), 
             where("userId", "==", uid),
@@ -1453,7 +1451,6 @@ function initFeedbacksListener(uid) {
             snapshot.forEach((doc) => {
                 const data = doc.data();
                 
-                // Фильтрация удаленных
                 if (isAdmin && data.deleted) return;
                 if (!isAdmin && data.userDeleted) return;
 
@@ -1461,28 +1458,20 @@ function initFeedbacksListener(uid) {
                 
                 // --- ЛОГИКА СЧЕТЧИКА ---
                 if (isAdmin) {
+                    // Админ видит непрочитанные сообщения от пользователей
                     if (!data.read) unreadCount++;
                 } else {
+                    // Пользователь видит непрочитанные ответы от админа
                     if (!data.userRead) unreadCount++;
                 }
                 
                 adminFeedbacks.push(data);
             });
             
-            console.log('Feedbacks loaded:', { count: adminFeedbacks.length, unread: unreadCount, isAdmin });
+            console.log('📨 Feedbacks:', { count: adminFeedbacks.length, unread: unreadCount, isAdmin });
             
-            // Обновляем бейдж
-            const badge = document.getElementById('feedbackBadge');
-            if (badge) {
-                badge.textContent = unreadCount > 9 ? '9+' : unreadCount;
-                if (unreadCount > 0) {
-                    badge.classList.remove('hidden');
-                    badge.classList.add('animate-pulse');
-                } else {
-                    badge.classList.add('hidden');
-                    badge.classList.remove('animate-pulse');
-                }
-            }
+            // ✅ ОБНОВЛЯЕМ БЕЙДЖ
+            updateFeedbackBadgeUI(unreadCount);
             
             // Если список открыт - перерисовываем
             const listModal = document.getElementById('feedbackListModal');
@@ -1491,18 +1480,30 @@ function initFeedbacksListener(uid) {
             }
 
         }, (error) => {
-            console.error("Listener error:", error);
+            console.error("❌ Listener error:", error);
         });
     } catch (e) {
-        console.error("Error init listener:", e);
+        console.error("❌ Error init listener:", e);
     }
 }
 
-function updateFeedbackBadge(count) {
+// ✅ НОВАЯ функция для обновления бейджа
+function updateFeedbackBadgeUI(unreadCount) {
     const badge = document.getElementById('feedbackBadge');
-    if (badge) {
-        badge.textContent = count > 9 ? '9+' : (count > 0 ? count : '');
-        badge.classList.toggle('hidden', count <= 0);
+    if (!badge) {
+        console.warn('⚠️ feedbackBadge element not found');
+        return;
+    }
+    
+    if (unreadCount > 0) {
+        badge.textContent = unreadCount > 9 ? '9+' : unreadCount;
+        badge.classList.remove('hidden');
+        badge.classList.add('animate-pulse');
+        console.log('✅ Badge updated:', unreadCount);
+    } else {
+        badge.classList.add('hidden');
+        badge.classList.remove('animate-pulse');
+        badge.textContent = '0';
     }
 }
 
@@ -1650,15 +1651,16 @@ window.sendUserFeedbackReply = async function() {
 
     try {
         await updateDoc(doc(db, "feedbacks", docId), {
-            // ИЗМЕНЕНО: new Date() вместо serverTimestamp()
             messages: arrayUnion({
-                sender: 'user',
+                sender: 'user',  // ✅ ВАЖНО: указываем что это от пользователя
                 text: text,
                 timestamp: new Date()
             }),
-            userRead: true
+            userRead: true,  // Пользователь прочитал свое сообщение
+            read: false      // ✅ Отмечаем для админа как непрочитанное
         });
         document.getElementById('feedbackUserReplyText').value = '';
+        showToast('Сообщение отправлено!');
     } catch (e) {
         console.error(e);
         showToast('Ошибка отправки: ' + e.message);
@@ -1789,38 +1791,32 @@ window.openFeedbackFromList = function(docId, projectId) {
 
 // --- АДМИН: ОТКРЫТЬ ЧАТ КОНКРЕТНОГО ОТЗЫВА ---
 // --- АДМИН: ОТКРЫТЬ ЧАТ КОНКРЕТНОГО ОТЗЫВА ---
+// --- АДМИН: ОТКРЫТЬ ЧАТ КОНКРЕТНОГО ОТЗЫВА ---
 window.openAdminFeedbackChat = function (feedbackId) {
     const fb = adminFeedbacks.find(f => f.id === feedbackId);
     if (!fb) return;
 
-    // 1. ПРИНУДИТЕЛЬНО ЗАКРЫВАЕМ ОКНО СПИСКА ОТЗЫВОВ ПРЯМО ЗДЕСЬ
     const listModal = document.getElementById('feedbackListModal');
     if (listModal) {
-        listModal.classList.remove('active'); // Убираем класс активности, окно исчезнет
+        listModal.classList.remove('active');
     }
 
-    // 2. ОТКРЫВАЕМ ОКНО ЧАТА
     const chatModal = document.getElementById('feedbackModal');
     
-    // Заполняем данными
     document.getElementById('feedbackProjectId').value = fb.projectId;
     document.getElementById('feedbackProjectName').textContent = `${fb.projectId} (от ${fb.userName || 'Пользователь'})`;
     document.getElementById('feedbackDocId').value = fb.id;
-
     document.getElementById('feedbackModalTitle').textContent = 'Чат с пользователем';
     
-    // Переключаем форму в режим ответа
     document.getElementById('feedbackFormNew').classList.add('hidden');
     document.getElementById('feedbackFormReply').classList.remove('hidden');
     document.getElementById('feedbackSendBtn').classList.add('hidden');
 
-    // Очищаем старую подписку
     if (window.currentFeedbackUnsub) {
         window.currentFeedbackUnsub();
         window.currentFeedbackUnsub = null;
     }
 
-    // Подписываемся на сообщения
     const unsub = onSnapshot(doc(db, "feedbacks", feedbackId), (snap) => {
         if (!snap.exists()) return;
 
@@ -1829,15 +1825,14 @@ window.openAdminFeedbackChat = function (feedbackId) {
         messages.sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp));
 
         const html = messages.map(msg => {
-            const fromAdmin = msg.sender === 'admin';
-            const bubbleSide = fromAdmin ? 'user' : 'admin';
-            const senderName = fromAdmin ? 'Вы' : (d.userName || 'Пользователь');
+            // ✅ ИСПРАВЛЕНО: используем msg.sender напрямую
+            const bubbleSide = msg.sender; // 'user' или 'admin'
+            const senderName = msg.sender === 'admin' ? 'Вы' : (d.userName || 'Пользователь');
             
-            const avatar = fromAdmin
+            const avatar = msg.sender === 'admin'
                 ? `<div class="chat-avatar"><i class="fas fa-user-shield"></i></div>`
                 : `<img src="${d.userPhoto || 'https://ui-avatars.com/api/?name=P'}" class="chat-avatar" alt>`;
 
-            // Форматирование времени (безопасная проверка)
             let timeStr = '';
             if (msg.timestamp) {
                 const dateObj = msg.timestamp.toDate ? msg.timestamp.toDate() : new Date(msg.timestamp);
@@ -1862,12 +1857,10 @@ window.openAdminFeedbackChat = function (feedbackId) {
     
     window.currentFeedbackUnsub = unsub;
 
-    // Настраиваем поле ввода
     const inp = document.getElementById('feedbackUserReplyText');
     inp.value = '';
     inp.placeholder = 'Ответ пользователю...';
     
-    // Кнопка отправки
     const replyBtn = inp.parentElement.querySelector('button');
     if (replyBtn) {
         replyBtn.onclick = function() { sendAdminReply(feedbackId); };
@@ -1880,10 +1873,7 @@ window.openAdminFeedbackChat = function (feedbackId) {
         } 
     };
 
-    // Показываем окно чата
     chatModal.classList.add('active');
-    
-    // Помечаем как прочитанное
     markFeedbackRead(feedbackId);
 };
 
@@ -1901,9 +1891,10 @@ window.sendAdminReply = async function(feedbackId) {
                 timestamp: new Date()
             }),
             read: true,
-            userRead: false
+            userRead: false  // ✅ Отмечаем для пользователя как непрочитанное
         });
         inp.value = '';
+        showToast('Ответ отправлен!');
     } catch (e) {
         console.error(e);
         showToast('Ошибка: ' + e.message);
