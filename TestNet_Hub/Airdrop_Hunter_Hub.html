@@ -2467,11 +2467,23 @@ window.loadData = async function() {
 };
 
         function normalizeData(project) {
-            if (!project.categories) project.categories = project.category ? [project.category] : ['Other'];
-            if (!project.activities) project.activities = [];
-            if (project.deleted === undefined) project.deleted = false;
-            return project;
+    if (!project.categories) project.categories = project.category ? [project.category] : ['Other'];
+    if (!project.activities) project.activities = [];
+    
+    // ✅ ИСПРАВЛЕНИЕ: Принудительно присваиваем ID всем активностям
+    project.activities = project.activities.map((act, index) => {
+        // Если ID отсутствует или является пустой строкой, создаём новый
+        if (!act.id) {
+            const safeTitle = act.title ? act.title.toLowerCase().replace(/\s+/g, '_').replace(/[^a-z0-9_]/g, '') : 'act';
+            // Используем project.id + index для гарантированной уникальности
+            act.id = 'act_' + safeTitle + '_' + (project.id || 'proj') + '_' + index;
         }
+        return act;
+    });
+    
+    if (project.deleted === undefined) project.deleted = false;
+    return project;
+}
 
         window.trackGuideClick = async function(id, url) {
             if(url) window.open(url, '_blank');
