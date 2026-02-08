@@ -1602,42 +1602,28 @@ function loadFeedbackChat(docId, projId) {
         messages.sort((a,b) => new Date(a.timestamp) - new Date(b.timestamp));
 
         const html = messages.map((msg) => {
-    const fromUser = msg.sender === 'user'; 
-    
-    // ✅ НОВОЕ: Меняем заголовок сообщения (Название проекта сверху)
-    const projectObj = projects.find(p => p.id === projId);
-    const title = projectObj ? projectObj.name : 'Unknown';
-    
-    const bubbleSide = fromUser ? 'user' : 'admin'; 
-    const senderName = projectObj && fromUser ? title : 'Support'; // Если пользователь - имя проекта
-    
-    // ✅ НОВОЕ: Аватар пользователя
-    const avatar = fromUser
-        ? `
-            <div class="flex flex-col items-center gap-1">
-                <img src="${projectObj?.image || currentUser?.photoURL || ''}" class="w-10 h-10 rounded-full object-cover border border-slate-600 mb-1" onerror="this.src='https://ui-avatars.com/api/?name=${title}';">
-                <div class="font-bold text-xs">${senderName}</div>
-            </div>
-          ` 
-        : `
-            <div class="chat-avatar" style="background: linear-gradient(135deg, #8b5cf6, #6d28d9);">
-                <i class="fas fa-user-shield"></i>
-            </div>
-          `;
-    
-    // Убираем заголовок имени пользователя из самого сообщения, так как он теперь в аватаре
-    const timeStr = msg.timestamp ? formatTimeAgo(msg.timestamp.toDate ? msg.timestamp.toDate() : new Date(msg.timestamp)) : '';
-    
-    return `
-    <div class="chat-bubble ${bubbleSide}">
-        ${avatar}
-        <div class="chat-bubble-wrapper">
-            ${!fromUser ? `<span class="chat-sender">Поддержка</span>` : ''} 
-            <div class="chat-content">${msg.text}</div>
-            <span class="chat-time">${timeStr}</span>
-        </div>
-    </div>`;
-}).join('');
+            const fromUser = msg.sender === 'user'; // Пользователь (тот, кто открыл модал) писал
+            
+            // ПОЛЬЗОВАТЕЛЬ: 'user' всегда справа, 'admin' всегда слева
+            const bubbleSide = fromUser ? 'user' : 'admin'; 
+            const senderName = fromUser ? 'Вы' : 'Поддержка';
+            
+            const avatar = fromUser
+                ? `<img src="${currentUser?.photoURL || 'https://ui-avatars.com/api/?name=U'}" class="chat-avatar" alt>` 
+                : `<div class="chat-avatar"><i class="fas fa-user-shield"></i></div>`;
+
+            const t = msg.timestamp ? formatTimeAgo(msg.timestamp.toDate ? msg.timestamp.toDate() : new Date(msg.timestamp)) : '';
+
+            return `
+            <div class="chat-bubble ${bubbleSide}">
+                ${avatar}
+                <div class="chat-bubble-wrapper">
+                    <span class="chat-sender">${senderName}</span>
+                    <div class="chat-content">${msg.text}</div>
+                    <span class="chat-time">${t}</span>
+                </div>
+            </div>`;
+        }).join('');
 
         const history = document.getElementById("feedbackChatHistory");
         history.innerHTML = html || `<p class="text-center text-slate-500 py-4">Нет сообщений</p>`;
@@ -1772,25 +1758,11 @@ window.renderFeedbackList = function() {
         const isUnread = isAdmin ? !item.read : !item.userRead;
         
         let titleHtml = '';
-// Получаем имя проекта из списка projects по его ID (item.projectId)
-const projectObj = projects.find(p => p.id === item.projectId);
-const projectName = projectObj ? projectObj.name : item.projectId;
-
-if (isAdmin) {
-    titleHtml = `
-        <div class="flex items-center gap-2">
-            <span class="font-bold text-white">${item.userName || 'User'}</span>
-            <span class="text-xs text-slate-500 ml-1">в проекте</span>
-            <span class="text-xs text-blue-400 hover:underline">${projectName}</span>
-        </div>
-    `;
-} else {
-    titleHtml = `
-        <div class="flex items-center gap-2">
-            <span class="font-bold text-white text-lg">${projectName}</span>
-        </div>
-    `;
-}
+        if (isAdmin) {
+            titleHtml = `<span class="font-bold text-white">${item.userName || 'User'}</span> <span class="text-xs text-slate-500 ml-1">(${item.projectId})</span>`;
+        } else {
+            titleHtml = `<span class="font-bold text-white text-lg">${item.projectId}</span>`;
+        }
 
         let msgPreview = lastMsg.text || 'Нет сообщений';
         if (!isAdmin && lastMsg.sender === 'admin') {
@@ -3058,12 +3030,12 @@ const lastUpdatedDate = lastActivityDate ? formatDateForDisplay(lastActivityDate
             const now = new Date().toISOString();
             
             const projName = document.getElementById('projName').value;
-// Формируем ID полностью на основе названия: заменяем пробелы на _, удаляем спецсимволы, транслит если нужно
-let cleanName = projName.trim()
-    .toLowerCase()
-    .replace(/\s+/g, '-')           // Все пробелы -> дефисы
-    .replace(/[^a-z0-9-]/g, '');    // Удаляем всё кроме букв, цифр и дефисов
-const id = editingId || cleanName;
+            const slugName = projName.toLowerCase()
+                .replace(/[^a-zа-яё0-9\s-]/g, '')
+                .replace(/\s+/g, '-')
+                .substring(0, 50);
+            
+            const id = editingId || 'proj_' + slugName + '_' + Date.now();
             
             const selectedCats = getSelectedCategories();
 
