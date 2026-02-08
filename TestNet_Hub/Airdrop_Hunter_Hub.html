@@ -2988,12 +2988,14 @@ document.getElementById('generalFeedbackPanel').classList.remove('hidden');
     document.getElementById('projDesc').value = project.description || '';
     document.getElementById('projStatus').value = project.status || 'active';
     
-    // ✅ НОВОЕ: Автоматически заполняем дату последней активности
     const latestActivityDate = getLatestActivityDate(project);
     document.getElementById('projLastUpdated').value = latestActivityDate ? latestActivityDate.split('T')[0] : '';
     
     document.getElementById('projDaily').checked = project.hasDaily || false;
     document.getElementById('projPriority').checked = project.priority === 'high';
+    
+    // ✅ ИСПРАВЛЕНО: Загружаем категории ПЕРЕД openAddModal
+    renderCategoryOptions();
     setSelectedCategories(project.categories || []);
     
     currentEditingActivities = project.activities || [];
@@ -3004,12 +3006,7 @@ document.getElementById('generalFeedbackPanel').classList.remove('hidden');
     isEditModalOpen = true;
     document.getElementById('addModal').classList.add('active');
     window.closeDetailModal();
-            
-            isEditModalOpen = true; // БЛОКИРУЕМ
-    document.getElementById('addModal').classList.add('active');
-    window.closeDetailModal();
-        };
-        
+};
         window.editCurrentProject = function() { if(currentDetailId) window.editProject(currentDetailId); };
 
         window.saveProject = async function(e) {
@@ -3093,16 +3090,26 @@ document.getElementById('generalFeedbackPanel').classList.remove('hidden');
         }
 
         function renderCategoryOptions() {
-            const allCatsSet = new Set([...categories, ...getAllCategoriesFromProjects()]);
-            categories = Array.from(allCatsSet).sort();
-            const container = document.getElementById('categoryCheckboxes');
-            const selectedCats = editingId ? (projects.find(function(p) { return p.id === editingId; }).categories || []) : [];
-            container.innerHTML = categories.map(function(cat) {
-                return '<label class="flex items-center gap-2 px-3 py-2 bg-slate-800 border border-slate-700 rounded-lg cursor-pointer"><input type="checkbox" value="' + cat + '" class="category-checkbox rounded bg-slate-700" ' + (selectedCats.includes(cat) ? 'checked' : '') + '><span class="text-sm text-slate-300">' + cat + '</span></label>';
-            }).join('');
-            tempCustomCategories = [];
-            renderTempCategories();
-        }
+    const allCatsSet = new Set([...categories, ...getAllCategoriesFromProjects()]);
+    const sortedCategories = Array.from(allCatsSet).sort();
+    categories = sortedCategories; // Обновляем глобальный массив
+    
+    const container = document.getElementById('categoryCheckboxes');
+    const selectedCats = editingId ? (projects.find(function(p) { return p.id === editingId; }).categories || []) : [];
+    
+    // ✅ УЛУЧШЕННЫЙ ДИЗАЙН: Более удобный список с лучшей визуализацией
+    container.innerHTML = sortedCategories.map(function(cat) {
+        const isSelected = selectedCats.includes(cat);
+        return `<label class="flex items-center gap-2 px-3 py-2 bg-slate-800 border border-slate-700 rounded-lg cursor-pointer hover:border-blue-500 transition-all ${isSelected ? 'bg-blue-600/20 border-blue-500' : 'hover:bg-slate-700'}">
+            <input type="checkbox" value="${cat}" class="category-checkbox rounded bg-slate-700 cursor-pointer" ${isSelected ? 'checked' : ''}>
+            <span class="text-sm text-slate-300 flex-1">${cat}</span>
+            ${isSelected ? '<i class="fas fa-check text-blue-400 text-xs"></i>' : ''}
+        </label>`;
+    }).join('');
+    
+    tempCustomCategories = [];
+    renderTempCategories();
+}
         
         window.addCustomCategory = function() { 
             const val = document.getElementById('newCategoryInput').value.trim(); 
@@ -3136,14 +3143,22 @@ document.getElementById('generalFeedbackPanel').classList.remove('hidden');
         }
         
         function setSelectedCategories(cats) { 
-            tempCustomCategories = []; 
-            renderTempCategories(); 
-            document.querySelectorAll('.category-checkbox').forEach(function(cb) { cb.checked = cats.includes(cb.value); }); 
-            cats.forEach(function(cat) { 
-                if(categories.indexOf(cat) === -1) tempCustomCategories.push(cat); 
-            }); 
-            renderTempCategories(); 
+    tempCustomCategories = []; 
+    renderTempCategories();
+    
+    // ✅ ИСПРАВЛЕНО: Проверяем наличие элементов перед установкой checked
+    document.querySelectorAll('.category-checkbox').forEach(function(cb) { 
+        cb.checked = cats.includes(cb.value);
+    }); 
+    
+    // Добавляем недостающие категории в временные
+    cats.forEach(function(cat) { 
+        if(categories.indexOf(cat) === -1 && tempCustomCategories.indexOf(cat) === -1) {
+            tempCustomCategories.push(cat); 
         }
+    }); 
+    renderTempCategories(); 
+}
         
         function updateSidebarActive() { 
             document.querySelectorAll('.sidebar-link').forEach(function(btn) { 
