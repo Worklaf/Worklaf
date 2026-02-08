@@ -903,9 +903,6 @@
         0 0 60px rgba(0, 0, 0, 0.9),
         0 0 120px rgba(59, 130, 246, 0.15);
 }
-        /* Стиль для кнопки экспорта */
-.bg-green-600 { background-color: #16a34a; }
-.bg-green-600:hover { background-color: #15803d; }
     </style>
 </head>
 <body class="antialiased">
@@ -971,6 +968,10 @@
                         <button onclick="migrateToFirestore()" class="bg-purple-600 hover:bg-purple-500 px-4 py-2 rounded-lg text-sm font-medium transition-colors" title="Загрузить данные в базу">
                             <i class="fas fa-cloud-upload-alt"></i>
                         </button>
+                        <button onclick="exportAllData()" class="bg-emerald-600 hover:bg-emerald-500 px-4 py-2 rounded-lg text-sm font-medium transition-colors flex items-center gap-2" title="Экспорт всех данных">
+        <i class="fas fa-file-export"></i>
+        <span class="hidden sm:inline">Экспорт</span>
+    </button>
                         <button onclick="openAddModal()" class="bg-blue-600 hover:bg-blue-500 px-4 py-2 rounded-lg text-sm font-medium transition-colors flex items-center gap-2">
                             <i class="fas fa-plus"></i>
                             <span class="hidden sm:inline">Добавить</span>
@@ -979,10 +980,6 @@
 <button onclick="openDeletedProjects()" class="bg-gray-600 hover:bg-gray-500 px-4 py-2 rounded-lg text-sm font-medium transition-colors flex items-center gap-2">
     <i class="fas fa-trash-restore"></i>
     <span class="hidden sm:inline">Удаленные</span>
-</button>
-                        <button onclick="exportAllData()" class="bg-green-600 hover:bg-green-500 px-4 py-2 rounded-lg text-sm font-medium transition-colors flex items-center gap-2" title="Экспорт всех данных в файл">
-    <i class="fas fa-download"></i>
-    <span class="hidden sm:inline">Экспорт данных</span>
 </button>
                     </div>
                     
@@ -1538,18 +1535,17 @@ let adminFeedbacksUnsubscribe = null;
 let currentSortType = 'latest';
         
         document.addEventListener('DOMContentLoaded', function() {
-    // Поиск в удаленных проектах
-    const searchDeletedInput = document.getElementById('searchDeletedInput');
-    if (searchDeletedInput) {
-        let searchTimeout;
-        searchDeletedInput.addEventListener('input', function() {
-            clearTimeout(searchTimeout);
-            searchTimeout = setTimeout(() => {
-                loadDeletedProjects(this.value);
-            }, 300);
-        });
-    }
-    
+            // Поиск в удаленных проектах
+const searchDeletedInput = document.getElementById('searchDeletedInput');
+if (searchDeletedInput) {
+    let searchTimeout;
+    searchDeletedInput.addEventListener('input', function() {
+        clearTimeout(searchTimeout);
+        searchTimeout = setTimeout(() => {
+            loadDeletedProjects(this.value);
+        }, 300);
+    });
+}
     const select = document.getElementById('itemsPerPageSelect');
     if(select) select.value = itemsPerPage;
     
@@ -1573,32 +1569,6 @@ let currentSortType = 'latest';
             }, 50);
         });
     }
-
-    // ✅ НОВОЕ: Закрытие модалок по клику вне области
-    const modalConfigs = [
-        { id: 'detailModal', closeFn: window.closeDetailModal },
-        { id: 'loginModal', closeFn: window.closeLoginModal },
-        { id: 'addModal', closeFn: window.closeAddModal },
-        { id: 'activityModal', closeFn: window.closeActivityModal },
-        { id: 'notificationsModal', closeFn: window.closeNotificationsModal },
-        { id: 'feedbackModal', closeFn: window.closeFeedbackModal },
-        { id: 'feedbackListModal', closeFn: window.closeFeedbackListModal },
-        { id: 'promptModal', closeFn: window.closePromptModal },
-        { id: 'deletedProjectsModal', closeFn: window.closeDeletedProjectsModal },
-        { id: 'imageModal', closeFn: window.closeImageModal }
-    ];
-
-    modalConfigs.forEach(config => {
-        const modalElement = document.getElementById(config.id);
-        if (modalElement) {
-            modalElement.addEventListener('click', function(e) {
-                // Проверяем, что клик был именно по фону, а не по содержимому
-                if (e.target === this) {
-                    config.closeFn();
-                }
-            });
-        }
-    });
 });
 
         function formatClickDate(dateString) {
@@ -3480,83 +3450,7 @@ window.sortProjects = function(by) {
             }
             showToast('Загружено ' + count + ' проектов в базу');
         };
-// ✅ ЭКСПОРТ ВСЕХ ДАННЫХ (только для админа)
-window.exportAllData = async function() {
-    if (!currentUser || currentUser.uid !== "SAkz4mdW9reDaIsvqigCNZhEKJR2") {
-        showToast('Только администратор может экспортировать данные', 'warning');
-        return;
-    }
-    
-    if (!confirm('Экспортировать все проекты с активностями в файл?\n\nЭто создаст резервную копию текущих данных.')) {
-        return;
-    }
-    
-    const btn = event.target.closest('button');
-    const originalHtml = btn.innerHTML;
-    btn.disabled = true;
-    btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Экспорт...';
-    
-    try {
-        showToast('Начинаю экспорт данных...', 'info');
-        console.log('📥 Начало экспорта данных...');
-        
-        // Получаем все проекты из Firestore
-        const projectsSnapshot = await getDocs(collection(db, "projects"));
-        const allProjects = [];
-        
-        projectsSnapshot.forEach((doc) => {
-            const project = { id: doc.id, ...doc.data() };
-            allProjects.push(project);
-        });
-        
-        // Формируем данные для экспорта
-        const exportData = {
-            exportDate: new Date().toISOString(),
-            totalProjects: allProjects.length,
-            projects: allProjects,
-            // Дополнительная информация
-            metadata: {
-                exportedBy: currentUser.email,
-                userId: currentUser.uid,
-                timestamp: serverTimestamp(),
-                version: 'testnet-hub-backup-v1'
-            }
-        };
-        
-        // Конвертируем в JSON с отступами для читаемости
-        const jsonData = JSON.stringify(exportData, null, 2);
-        
-        // Создаем файл для скачивания
-        const blob = new Blob([jsonData], { type: 'application/json' });
-        const url = URL.createObjectURL(blob);
-        
-        // Генерируем имя файла с датой
-        const date = new Date();
-        const dateStr = date.toISOString().slice(0, 19).replace(/:/g, '-');
-        const filename = `testnet-hub-backup-${dateStr}.json`;
-        
-        // Создаем временную ссылку для скачивания
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = filename;
-        document.body.appendChild(a);
-        a.click();
-        document.body.removeChild(a);
-        
-        // Освобождаем память
-        URL.revokeObjectURL(url);
-        
-        showToast(`✅ Экспортировано ${allProjects.length} проектов`, 'success');
-        console.log(`✅ Экспорт завершен: ${allProjects.length} проектов в файл ${filename}`);
-        
-    } catch (error) {
-        console.error('❌ Ошибка экспорта:', error);
-        showToast('Ошибка экспорта: ' + error.message, 'error');
-    } finally {
-        btn.disabled = false;
-        btn.innerHTML = originalHtml;
-    }
-};
+
         function getCategoriesWithCounts(allProjects) {
             const catCounts = {};
             allProjects.forEach(function(p) {
@@ -3957,6 +3851,217 @@ document.addEventListener('keydown', function(e) {
             break;
     }
 });
+        // ✅ ИСПРАВЛЕННЫЙ ЭКСПОРТ ВСЕХ ДАННЫХ (только для админа)
+window.exportAllData = async function() {
+    if (!currentUser || currentUser.uid !== "SAkz4mdW9reDaIsvqigCNZhEKJR2") {
+        showToast('Только администратор может экспортировать данные');
+        return;
+    }
+    
+    if (!confirm('Экспортировать все проекты в файл?\nЭто создаст резервную копию текущих данных.')) {
+        return;
+    }
+    
+    // Находим и блокируем кнопку
+    const btn = event.target.closest('button') || document.querySelector('button[onclick="exportAllData()"]');
+    const originalHtml = btn ? btn.innerHTML : '';
+    if(btn) {
+        btn.disabled = true;
+        btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Экспорт...';
+    }
+    
+    try {
+        showToast('Начинаю экспорт...');
+        console.log('📥 Начало экспорта данных...');
+        
+        // Проверяем доступ к Firestore
+        console.log('🔍 Проверяем доступ к Firestore...');
+        
+        // Используем тот же метод загрузки, что и в основном коде
+        // Сначала пробуем через fetch внешних данных
+        let allProjects = [];
+        
+        // Метод 1: Пробуем получить из Firestore с упрощенным запросом
+        try {
+            console.log('📡 Загружаем из Firestore...');
+            const firestoreProjects = [];
+            const snapshot = await getDocs(query(collection(db, "projects")));
+            
+            console.log(`📊 Найдено документов в Firestore: ${snapshot.size}`);
+            
+            if (snapshot.size > 0) {
+                snapshot.forEach((doc) => {
+                    firestoreProjects.push({
+                        id: doc.id,
+                        ...doc.data()
+                    });
+                });
+                allProjects = firestoreProjects;
+                console.log(`✅ Загружено из Firestore: ${allProjects.length} проектов`);
+            }
+        } catch (firestoreError) {
+            console.error('❌ Ошибка Firestore:', firestoreError);
+        }
+        
+        // Метод 2: Если Firestore пустой, используем локальный массив projects
+        if (allProjects.length === 0 && projects.length > 0) {
+            console.log('📦 Используем локальные данные projects:', projects.length);
+            allProjects = projects.map(p => ({
+                id: p.id,
+                ...p
+            }));
+        }
+        
+        // Если все еще пусто, пробуем получить из localStorage
+        if (allProjects.length === 0) {
+            try {
+                const storageData = localStorage.getItem('testnet_hub_local_backup');
+                if (storageData) {
+                    const parsed = JSON.parse(storageData);
+                    if (parsed && parsed.projects && parsed.projects.length > 0) {
+                        allProjects = parsed.projects;
+                        console.log('💾 Загружено из localStorage:', allProjects.length);
+                    }
+                }
+            } catch (e) {
+                console.error('Ошибка localStorage:', e);
+            }
+        }
+        
+        // Метод 3: Загружаем из GitHub если есть
+        if (allProjects.length === 0) {
+            try {
+                console.log('📥 Пробуем загрузить из GitHub...');
+                const response = await fetch(EXTERNAL_DATA_URL);
+                if (response.ok) {
+                    const externalData = await response.json();
+                    if (externalData.projects && externalData.projects.length > 0) {
+                        allProjects = externalData.projects.map(normalizeData);
+                        console.log('🌐 Загружено с GitHub:', allProjects.length);
+                    }
+                }
+            } catch (e) {
+                console.error('Ошибка GitHub:', e);
+            }
+        }
+        
+        // Итоговая проверка
+        console.log('📊 Итого проектов для экспорта:', allProjects.length);
+        
+        if (allProjects.length === 0) {
+            // Если ничего не найдено, показываем диагностику
+            console.log('🔍 Диагностика:');
+            console.log('- Локальный массив projects:', projects.length);
+            console.log('- Проверка структуры Firestore...');
+            
+            // Пробуем получить только ID документов
+            const testSnapshot = await getDocs(query(collection(db, "projects"), limit(1)));
+            console.log('- Тестовый запрос Firestore (limit 1):', testSnapshot.size, 'документов');
+            
+            // Показываем пользователю информацию
+            const diagnosis = `Не найдено проектов для экспорта!\n\n` +
+                `Локальные данные: ${projects.length} проектов\n` +
+                `Firestore: ${testSnapshot.size} документов\n\n` +
+                `Проверьте:\n` +
+                `1. Состояние базы данных Firestore\n` +
+                `2. Права доступа к коллекции "projects"\n` +
+                `3. Console браузера для деталей`;
+            
+            alert(diagnosis);
+            showToast('Не найдено данных для экспорта');
+        } else {
+            // Формируем данные для экспорта
+            const exportData = {
+                exportDate: new Date().toISOString(),
+                exportVersion: '1.0',
+                totalProjects: allProjects.length,
+                projects: allProjects,
+                metadata: {
+                    exportedBy: currentUser.email,
+                    exportedByUid: currentUser.uid,
+                    source: 'testnet-hub-firestore-export',
+                    generatedAt: new Date().toISOString()
+                }
+            };
+            
+            // Конвертируем в JSON
+            const jsonData = JSON.stringify(exportData, null, 2);
+            
+            // Создаем Blob и скачиваем
+            const blob = new Blob([jsonData], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            
+            // Имя файла с датой
+            const date = new Date();
+            const dateStr = date.toISOString().slice(0, 19).replace(/:/g, '-');
+            const filename = `testnet-hub-backup-${dateStr}.json`;
+            
+            // Скачивание
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = filename;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+            
+            showToast(`✅ Экспортировано ${allProjects.length} проектов`);
+            console.log(`✅ Экспорт завершен: ${filename} (${allProjects.length} проектов)`);
+        }
+        
+    } catch (error) {
+        console.error('❌ Критическая ошибка экспорта:', error);
+        showToast('Ошибка экспорта: ' + error.message);
+        
+        // Показываем более подробную информацию об ошибке
+        alert(`Ошибка экспорта:\n\n${error.message}\n\nПроверьте консоль браузера (F12) для деталей.`);
+        
+    } finally {
+        // Разблокируем кнопку
+        if(btn) {
+            btn.disabled = false;
+            btn.innerHTML = originalHtml || '<i class="fas fa-download"></i> Экспорт данных';
+        }
+    }
+};
+        // Функция для создания резервной копии в localStorage
+async function createLocalBackup() {
+    try {
+        // Получаем все проекты
+        let allProjects = [];
+        
+        if (projects.length > 0) {
+            allProjects = projects.map(p => ({ ...p }));
+        } else {
+            const snapshot = await getDocs(collection(db, "projects"));
+            snapshot.forEach((doc) => {
+                allProjects.push({ id: doc.id, ...doc.data() });
+            });
+        }
+        
+        if (allProjects.length > 0) {
+            const backupData = {
+                timestamp: new Date().toISOString(),
+                totalProjects: allProjects.length,
+                projects: allProjects
+            };
+            localStorage.setItem('testnet_hub_local_backup', JSON.stringify(backupData));
+            console.log('💾 Создана резервная копия в localStorage:', allProjects.length, 'проектов');
+        }
+    } catch (e) {
+        console.error('Ошибка создания backup:', e);
+    }
+}
+
+// Автоматически создаем backup каждый раз когда админ сохраняет проект
+const originalSaveProject = window.saveProject;
+window.saveProject = async function(e) {
+    await originalSaveProject(e);
+    // После успешного сохранения создаем backup
+    if (currentUser && currentUser.uid === "SAkz4mdW9reDaIsvqigCNZhEKJR2") {
+        await createLocalBackup();
+    }
+};
     </script>
     <!-- Модальное окно удаленных проектов -->
 <div id="deletedProjectsModal" class="modal">
