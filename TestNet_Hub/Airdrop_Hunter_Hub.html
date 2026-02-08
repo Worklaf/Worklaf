@@ -1421,6 +1421,7 @@ let adminFeedbacksUnsubscribe = null;
 
 // Инициализация для админа
 // ✅ УЛУЧШЕННАЯ функция инициализации слушателя фидбеков
+// ✅ ИСПРАВЛЕННАЯ функция инициализации слушателя для ОБОИХ
 function initFeedbacksListener(uid) {
     if (adminFeedbacksUnsubscribe) {
         adminFeedbacksUnsubscribe();
@@ -1451,31 +1452,38 @@ function initFeedbacksListener(uid) {
             snapshot.forEach((doc) => {
                 const data = doc.data();
                 
+                // Фильтруем удаленные
                 if (isAdmin && data.deleted) return;
                 if (!isAdmin && data.userDeleted) return;
 
                 data.id = doc.id;
                 
-                // --- ЛОГИКА СЧЕТЧИКА (ИСПРАВЛЕНО) ---
+                // --- ЛОГИКА СЧЕТЧИКА (КРИТИЧНАЯ) ---
                 if (isAdmin) {
                     // Админ видит непрочитанные сообщения ОТ ПОЛЬЗОВАТЕЛЕЙ
-                    if (data.read === false) unreadCount++;
+                    if (data.read === false) {
+                        unreadCount++;
+                        console.log('📨 Admin unread:', data.id, data.userName);
+                    }
                 } else {
                     // Пользователь видит непрочитанные ОТВЕТЫ ОТ АДМИНА
-                    if (data.userRead === false) unreadCount++;
+                    if (data.userRead === false) {
+                        unreadCount++;
+                        console.log('📨 User unread:', data.id, 'projectId:', data.projectId);
+                    }
                 }
                 
                 adminFeedbacks.push(data);
             });
             
-            console.log('📨 Feedbacks Update:', { 
+            console.log('✅ Feedbacks loaded:', { 
                 count: adminFeedbacks.length, 
                 unread: unreadCount, 
-                isAdmin,
-                uid: uid.substring(0, 8) + '...'
+                isAdmin: isAdmin,
+                uid: uid.substring(0, 8)
             });
             
-            // ✅ ОБНОВЛЯЕМ БЕЙДЖ ДЛЯ ОБОИХ
+            // ✅ ВСЕГДА обновляем бейдж
             updateFeedbackBadgeUI(unreadCount);
             
             // Если список открыт - перерисовываем
@@ -1492,124 +1500,35 @@ function initFeedbacksListener(uid) {
     }
 }
 
-// ✅ УЛУЧШЕННАЯ функция обновления бейджа
+// ✅ УЛУЧШЕННАЯ функция обновления бейджа (с визуальной обратной связью)
 function updateFeedbackBadgeUI(unreadCount) {
     const badge = document.getElementById('feedbackBadge');
     if (!badge) {
-        console.warn('⚠️ feedbackBadge element not found');
+        console.warn('⚠️ feedbackBadge не найден в DOM');
         return;
     }
     
-    console.log('🔔 Updating badge:', unreadCount);
+    console.log('🔔 updateFeedbackBadgeUI вызвана:', unreadCount);
     
     if (unreadCount > 0) {
         badge.textContent = unreadCount > 9 ? '9+' : unreadCount;
         badge.classList.remove('hidden');
         badge.classList.add('animate-pulse');
+        
+        // Добавляем визуальную анимацию
+        badge.style.transform = 'scale(1.2)';
+        setTimeout(() => {
+            badge.style.transform = 'scale(1)';
+        }, 300);
+        
+        console.log('✅ Badge показан:', unreadCount);
     } else {
         badge.classList.add('hidden');
         badge.classList.remove('animate-pulse');
         badge.textContent = '0';
+        console.log('✅ Badge скрыт');
     }
 }
-
-// ✅ УЛУЧШЕННАЯ функция отправки отзыва пользователем
-window.sendUserFeedback = async function() {
-    if (!currentUser) return showToast('Войдите в аккаунт');
-    
-    const projId = document.getElementById('feedbackProjectId').value;
-    const category = document.getElementById('feedbackCategory').value;
-    const message = document.getElementById('feedbackText').value.trim();
-
-    if (!message) return showToast('Введите сообщение');
-
-    try {
-        await addDoc(collection(db, "feedbacks"), {
-            projectId: projId,
-            category: category,
-            userId: currentUser.uid,
-            userName: currentUser.displayName || currentUser.email,
-            userPhoto: currentUser.photoURL || '',
-            status: 'open',
-            read: false,           // Администратор не видел
-            userRead: true,        // Пользователь видел свое сообщение
-            deleted: false,
-            userDeleted: false,
-            createdAt: serverTimestamp(),
-            messages: [{
-                sender: 'user',
-                text: message,
-                timestamp: new Date()
-            }]
-        });
-
-        showToast('Сообщение отправлено!');
-        document.getElementById('feedbackText').value = '';
-        
-        // ✅ Принудительное обновление после отправки
-        setTimeout(() => {
-            if (currentUser) {
-                initFeedbacksListener(currentUser.uid);
-            }
-        }, 500);
-        
-    } catch (e) {
-        console.error(e);
-        showToast('Ошибка: ' + e.message);
-    }
-};
-
-// ✅ УЛУЧШЕННАЯ функция ответа администратора
-window.sendAdminReply = async function(feedbackId) {
-    const inp = document.getElementById('feedbackUserReplyText');
-    const text = inp.value.trim();
-    if (!text) return showToast('Введите ответ');
-
-    try {
-        await updateDoc(doc(db, "feedbacks", feedbackId), {
-            messages: arrayUnion({
-                sender: 'admin',
-                text: text,
-                timestamp: new Date()
-            }),
-            read: true,           // Администратор прочитал
-            userRead: false       // ✅ Пользователь не видел ответ (ВАЖНО!)
-        });
-        inp.value = '';
-        showToast('Ответ отправлен!');
-        
-    } catch (e) {
-        console.error(e);
-        showToast('Ошибка: ' + e.message);
-    }
-};
-
-// ✅ УЛУЧШЕННАЯ функция ответа пользователя
-window.sendUserFeedbackReply = async function() {
-    const docId = document.getElementById('feedbackDocId').value;
-    const text = document.getElementById('feedbackUserReplyText').value.trim();
-
-    if (!text || !docId) return;
-
-    try {
-        await updateDoc(doc(db, "feedbacks", docId), {
-            messages: arrayUnion({
-                sender: 'user',
-                text: text,
-                timestamp: new Date()
-            }),
-            userRead: true,       // Пользователь прочитал свой ответ
-            read: false           // ✅ Администратор не видел ответ (ВАЖНО!)
-        });
-        document.getElementById('feedbackUserReplyText').value = '';
-        showToast('Ответ отправлен!');
-        
-    } catch (e) {
-        console.error(e);
-        showToast('Ошибка отправки: ' + e.message);
-    }
-};
-
 
 // --- ПОЛЬЗОВАТЕЛЬ: ОТКРЫТЬ ЧАТ ---
 window.openFeedbackModal = function(projId, projName) {
@@ -1708,7 +1627,74 @@ function loadFeedbackChat(docId, projId) {
     });
     window.currentFeedbackUnsub = unsub;
 }
-;
+// ✅ ИСПРАВЛЕННАЯ функция отправки отзыва пользователем
+window.sendUserFeedback = async function() {
+    if (!currentUser) return showToast('Войдите в аккаунт');
+    
+    const projId = document.getElementById('feedbackProjectId').value;
+    const category = document.getElementById('feedbackCategory').value;
+    const message = document.getElementById('feedbackText').value.trim();
+
+    if (!message) return showToast('Введите сообщение');
+
+    try {
+        const docRef = await addDoc(collection(db, "feedbacks"), {
+            projectId: projId,
+            category: category,
+            userId: currentUser.uid,
+            userName: currentUser.displayName || currentUser.email,
+            userPhoto: currentUser.photoURL || '',
+            status: 'open',
+            read: false,              // Администратор не видел
+            userRead: true,           // Пользователь видел свое сообщение
+            deleted: false,
+            userDeleted: false,
+            createdAt: serverTimestamp(),
+            messages: [{
+                sender: 'user',
+                text: message,
+                timestamp: new Date()
+            }]
+        });
+
+        console.log('✅ Feedback создан:', docRef.id);
+        showToast('Сообщение отправлено!');
+        document.getElementById('feedbackText').value = '';
+        
+    } catch (e) {
+        console.error(e);
+        showToast('Ошибка: ' + e.message);
+    }
+};
+
+// ✅ ИСПРАВЛЕННАЯ функция ответа пользователя
+window.sendUserFeedbackReply = async function() {
+    const docId = document.getElementById('feedbackDocId').value;
+    const text = document.getElementById('feedbackUserReplyText').value.trim();
+
+    if (!text || !docId) return;
+
+    try {
+        await updateDoc(doc(db, "feedbacks", docId), {
+            messages: arrayUnion({
+                sender: 'user',
+                text: text,
+                timestamp: new Date()
+            }),
+            userRead: true,       // Пользователь видел свой ответ
+            read: false           // ✅ Администратор НЕ видел ответ
+        });
+        
+        console.log('✅ User reply отправлен, read установлен в false для админа');
+        document.getElementById('feedbackUserReplyText').value = '';
+        showToast('Ответ отправлен!');
+        
+    } catch (e) {
+        console.error(e);
+        showToast('Ошибка отправки: ' + e.message);
+    }
+};
+
 // --- ПОЛЬЗОВАТЕЛЬ: УДАЛИТЬ ПЕРЕПИСКУ (мягкое удаление) ---
 window.deleteUserFeedback = async function() {
     if (!confirm('Удалить эту переписку?')) return;
@@ -1919,6 +1905,33 @@ window.openAdminFeedbackChat = function (feedbackId) {
     markFeedbackRead(feedbackId);
 };
 
+// ✅ ИСПРАВЛЕННАЯ функция ответа администратора
+window.sendAdminReply = async function(feedbackId) {
+    const inp = document.getElementById('feedbackUserReplyText');
+    const text = inp.value.trim();
+    if (!text) return showToast('Введите ответ');
+
+    try {
+        await updateDoc(doc(db, "feedbacks", feedbackId), {
+            messages: arrayUnion({
+                sender: 'admin',
+                text: text,
+                timestamp: new Date()
+            }),
+            read: true,           // Администратор прочитал
+            userRead: false       // ✅ КЛЮЧЕВАЯ СТРОКА: Пользователь НЕ видел ответ
+        });
+        
+        console.log('✅ Admin reply отправлен, userRead установлен в false');
+        inp.value = '';
+        showToast('Ответ отправлен!');
+        
+    } catch (e) {
+        console.error(e);
+        showToast('Ошибка: ' + e.message);
+    }
+};
+
 // --- АДМИН: ОТМЕТИТЬ ПРОЧИТАННЫМ ---
 window.markFeedbackRead = async function(id) {
     try {
@@ -2058,7 +2071,8 @@ onAuthStateChanged(auth, async function(user) {
         // --- Показываем кнопку фидбека всем авторизованным ---
         document.getElementById('generalFeedbackPanel').classList.remove('hidden');
 
-        // --- Инициализируем слушатель фидбеков ---
+        // --- ИНИЦИАЛИЗИРУЕМ СЛУШАТЕЛЬ ДЛЯ ВСЕХ (и админа, и пользователя) ---
+        console.log('👤 User logged in:', user.uid.substring(0, 8));
         initFeedbacksListener(user.uid);
 
         // --- Автоматический админ ---
@@ -2157,6 +2171,7 @@ onAuthStateChanged(auth, async function(user) {
         applyFilters();
     }
 });
+
 
         function initUserSync(uid) {
             const userRef = doc(db, "users", uid);
