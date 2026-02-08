@@ -1557,17 +1557,18 @@ let adminFeedbacksUnsubscribe = null;
 let currentSortType = 'latest';
         
         document.addEventListener('DOMContentLoaded', function() {
-            // Поиск в удаленных проектах
-const searchDeletedInput = document.getElementById('searchDeletedInput');
-if (searchDeletedInput) {
-    let searchTimeout;
-    searchDeletedInput.addEventListener('input', function() {
-        clearTimeout(searchTimeout);
-        searchTimeout = setTimeout(() => {
-            loadDeletedProjects(this.value);
-        }, 300);
-    });
-}
+    // Поиск в удаленных проектах
+    const searchDeletedInput = document.getElementById('searchDeletedInput');
+    if (searchDeletedInput) {
+        let searchTimeout;
+        searchDeletedInput.addEventListener('input', function() {
+            clearTimeout(searchTimeout);
+            searchTimeout = setTimeout(() => {
+                loadDeletedProjects(this.value);
+            }, 300);
+        });
+    }
+    
     const select = document.getElementById('itemsPerPageSelect');
     if(select) select.value = itemsPerPage;
     
@@ -1591,8 +1592,33 @@ if (searchDeletedInput) {
             }, 50);
         });
     }
-});
 
+    // ✅ НОВОЕ: Закрытие модалок по клику вне области
+    const modalConfigs = [
+        { id: 'detailModal', closeFn: window.closeDetailModal },
+        { id: 'loginModal', closeFn: window.closeLoginModal },
+        { id: 'addModal', closeFn: window.closeAddModal },
+        { id: 'activityModal', closeFn: window.closeActivityModal },
+        { id: 'notificationsModal', closeFn: window.closeNotificationsModal },
+        { id: 'feedbackModal', closeFn: window.closeFeedbackModal },
+        { id: 'feedbackListModal', closeFn: window.closeFeedbackListModal },
+        { id: 'promptModal', closeFn: window.closePromptModal },
+        { id: 'deletedProjectsModal', closeFn: window.closeDeletedProjectsModal },
+        { id: 'imageModal', closeFn: window.closeImageModal }
+    ];
+
+    modalConfigs.forEach(config => {
+        const modalElement = document.getElementById(config.id);
+        if (modalElement) {
+            modalElement.addEventListener('click', function(e) {
+                // Проверяем, что клик был именно по фону, а не по содержимому
+                if (e.target === this) {
+                    config.closeFn();
+                }
+            });
+        }
+    });
+});
         function formatClickDate(dateString) {
             if (!dateString) return null;
             const date = new Date(dateString);
