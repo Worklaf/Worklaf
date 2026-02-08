@@ -20,7 +20,6 @@
             --daily-active: #22c55e;
             --visited: #475569;
             --new-flag: #34d399;
-            --new-flag-dark: #059669;
             --new-flag-text: #022c22;
             --alert-red: #ef4444;
             --alert-red-dark: #b91c1c;
@@ -434,8 +433,7 @@
 
         footer { text-align: center; padding: 28px 10px 0; color: var(--text-muted); border-top: 1px solid var(--border); font-size: 0.85rem; }
 
-           /* УДАЛИТЕ первый блок .floating-tooltip, оставьте только этот: */
-        
+        /* ========== TOOLTIP STYLES ========== */
         .floating-tooltip {
             position: fixed;
             z-index: 9999;
@@ -449,27 +447,23 @@
             line-height: 1.5;
             pointer-events: none;
             max-width: min(320px, calc(100vw - 24px));
-            opacity: 0 !important;
+            opacity: 0;
             transform: translateY(10px) scale(0.95);
-            transition: opacity 0.2s ease, transform 0.2s ease, visibility 0.2s !important;
-            visibility: hidden;
+            transition: opacity 0.2s ease, transform 0.2s ease;
+            visibility: visible; /* Всегда visible для getBoundingClientRect */
         }
 
         .floating-tooltip.visible {
-            opacity: 1 !important;
+            opacity: 1;
             transform: translateY(0) scale(1);
-            visibility: visible !important;
         }
 
-        /* Остальные стили для has-image оставьте как есть */
         .floating-tooltip.has-image {
             max-width: 280px;
             padding: 0;
             background: transparent;
             border: none;
             box-shadow: none;
-            visibility: visible !important;
-            pointer-events: none;
         }
 
         .floating-tooltip.has-image .tooltip-image-container {
@@ -499,6 +493,7 @@
             text-align: center;
             padding: 0 4px;
         }
+
         @media (min-width: 700px) {
             .page-shell { gap: 28px; }
             .resource-item.resource-inline { flex-direction: row; align-items: center; justify-content: space-between; }
@@ -742,8 +737,7 @@
                 </div>
             </div>
         </section>
-
-        <section class="collapsible-section" data-section-id="dapps">
+<section class="collapsible-section" data-section-id="dapps">
             <div class="section-header">
                 <h2>4. dApps и Активности</h2>
                 <span class="section-status" aria-live="polite"></span>
@@ -855,7 +849,6 @@
                 </table>
             </div>
         </section>
-
         <footer><p>Данный сайт является агрегатором ссылок. DYOR.</p></footer>
     </div>
 
@@ -892,7 +885,6 @@
     let favoritesState = {}; 
     let favoritesOrder = []; 
 
-    // Ключи LocalStorage
     const STORAGE_KEY = 'arc_tracker_v3';
     const BADGE_VISIBILITY_KEY = 'arc_tracker_badges_hidden';
     const SECTION_COLLAPSE_KEY = 'arc_tracker_sections';
@@ -902,168 +894,8 @@
     const LEGEND_COLLAPSE_KEY = 'arc_tracker_legend_collapsed';
     const FAVORITES_KEY = 'arc_tracker_favorites_v1';
     const FAVORITES_ORDER_KEY = 'arc_tracker_favorites_order_v1';
-    const FAVORITES_TIMESTAMP_KEY = 'arc_tracker_favorites_timestamp_v1'; // 👈 НОВЫЙ КЛЮЧ ДЛЯ ВРЕМЕНИ
+    const FAVORITES_TIMESTAMP_KEY = 'arc_tracker_favorites_timestamp_v1';
     const PAGE_VERSION = '2026-02-01-v3';
-
-    // === ЗАГРУЗКА ДАННЫХ ===
-    
-    async function loadAllData() {
-        // Считываем локальные данные
-        const localStatsRaw = localStorage.getItem(STORAGE_KEY);
-        const localFavRaw = localStorage.getItem(FAVORITES_KEY);
-        const localOrderRaw = localStorage.getItem(FAVORITES_ORDER_KEY);
-        const localTimestampRaw = localStorage.getItem(FAVORITES_TIMESTAMP_KEY);
-
-        const localStats = JSON.parse(localStatsRaw || '{}');
-        const localFavorites = JSON.parse(localFavRaw || '{}');
-        const localOrder = JSON.parse(localOrderRaw || '[]');
-        const localTimestamp = parseInt(localTimestampRaw || '0', 10);
-
-        // Сразу применяем локальные данные (по умолчанию)
-        arcData = localStats;
-        favoritesState = localFavorites;
-        favoritesOrder = localOrder;
-
-        if (currentUser) {
-            try {
-                const docRef = doc(db, "users", currentUser.uid);
-                const docSnap = await getDoc(docRef);
-
-                if (docSnap.exists()) {
-                    const cloudData = docSnap.data();
-                    
-                    // 👇 ИЗБРАННОЕ: СИНХРОНИЗАЦИЯ ПО ВРЕМЕНИ
-                    
-                    // Получаем облачные данные
-                    const cloudFavorites = cloudData.favoritesState || {};
-                    const cloudOrder = cloudData.favoritesOrder || [];
-                    const cloudTimestamp = parseInt(cloudData.favoritesTimestamp || '0', 10);
-                    
-                    // Проверяем, есть ли вообще данные в избранном
-                    const localHasFavorites = Object.keys(localFavorites).length > 0 || localOrder.length > 0;
-                    const cloudHasFavorites = Object.keys(cloudFavorites).length > 0 || cloudOrder.length > 0;
-                    
-                    if (cloudHasFavorites) {
-                        // Сравниваем по времени
-                        if (cloudTimestamp > localTimestamp) {
-                            // 👉 ОБЛАКО НОВЕЕ → загружаем из облака в локальное хранилище
-                            console.log('📥 Загружаем избранное из облака (данные новее)');
-                            favoritesState = cloudFavorites;
-                            favoritesOrder = cloudOrder;
-                            
-                            // Сохраняем в localStorage с облачным временем
-                            localStorage.setItem(FAVORITES_KEY, JSON.stringify(favoritesState));
-                            localStorage.setItem(FAVORITES_ORDER_KEY, JSON.stringify(favoritesOrder));
-                            localStorage.setItem(FAVORITES_TIMESTAMP_KEY, String(cloudTimestamp));
-                        } else {
-                            // 👉 ЛОКАЛЬНОЕ НОВЕЕ → записываем локальное в облако
-                            console.log('📤 Записываем избранное в облако (локальные данные новее)');
-                            await saveToCloud({
-                                favoritesState: localFavorites,
-                                favoritesOrder: localOrder,
-                                favoritesTimestamp: localTimestamp
-                            });
-                        }
-                    } else if (localHasFavorites) {
-                        // В облаке пусто, но есть локальные → заливаем в облако
-                        console.log('📤 Записываем избранное в облако (облако пустое)');
-                        await saveToCloud({
-                            favoritesState: localFavorites,
-                            favoritesOrder: localOrder,
-                            favoritesTimestamp: localTimestamp
-                        });
-                    }
-                    
-                    // Статистика (оставляем как было - приоритет облака)
-                    if (cloudData.arcGuideStats && Object.keys(cloudData.arcGuideStats).length > 0) {
-                        arcData = cloudData.arcGuideStats;
-                        localStorage.setItem(STORAGE_KEY, JSON.stringify(arcData));
-                    }
-                } else if (Object.keys(localFavorites).length > 0 || localOrder.length > 0) {
-                    // Документ в облаке не существует, но есть локальные данные → создаём
-                    console.log('📤 Создаём документ в облаке с локальными данными');
-                    await saveToCloud({
-                        favoritesState: localFavorites,
-                        favoritesOrder: localOrder,
-                        favoritesTimestamp: localTimestamp
-                    });
-                }
-            } catch (e) {
-                console.error("Ошибка загрузки из облака:", e);
-            }
-        }
-
-        refreshAllVisuals();
-    }
-
-    // === СОХРАНЕНИЕ ДАННЫХ ===
-    
-    async function saveToCloud(dataToSave) {
-        if (!currentUser) return;
-        
-        try {
-            const docRef = doc(db, "users", currentUser.uid);
-            await setDoc(docRef, dataToSave, { merge: true });
-        } catch (e) {
-            console.error("Ошибка сохранения в облако:", e);
-        }
-    }
-
-    async function saveStats() {
-        localStorage.setItem(STORAGE_KEY, JSON.stringify(arcData));
-        if (currentUser) {
-            await saveToCloud({ arcGuideStats: arcData });
-        }
-    }
-
-    async function saveFavorites() {
-        // Генерируем НОВЫЙ timestamp
-        const newTimestamp = Date.now();
-        
-        // Сохраняем локально
-        localStorage.setItem(FAVORITES_KEY, JSON.stringify(favoritesState));
-        localStorage.setItem(FAVORITES_ORDER_KEY, JSON.stringify(favoritesOrder));
-        localStorage.setItem(FAVORITES_TIMESTAMP_KEY, String(newTimestamp));
-        
-        // Сохраняем в облако С НОВЫМ ВРЕМЕНЕМ
-        if (currentUser) {
-            await saveToCloud({
-                favoritesState: favoritesState,
-                favoritesOrder: favoritesOrder,
-                favoritesTimestamp: newTimestamp
-            });
-        }
-    }
-
-    // === АВТОРИЗАЦИЯ ===
-    
-    window.loginGoogle = async () => {
-        try { await signInWithPopup(auth, new GoogleAuthProvider()); } 
-        catch (e) { console.error("Ошибка входа", e); }
-    };
-    
-    window.logout = () => { signOut(auth); };
-
-    onAuthStateChanged(auth, async (user) => {
-        currentUser = user;
-        
-        const loggedOutView = document.getElementById('arcLoggedOutView');
-        const loggedInView = document.getElementById('arcLoggedInView');
-        const userNameEl = document.getElementById('arcUserName');
-
-        if (user) {
-            loggedOutView.style.display = 'none';
-            loggedInView.style.display = 'block';
-            userNameEl.textContent = user.displayName || user.email.split('@')[0];
-        } else {
-            loggedOutView.style.display = 'block';
-            loggedInView.style.display = 'none';
-        }
-        
-        await loadAllData();
-    });
-
-    // === UI ЛОГИКА ===
 
     let newLinksSet = new Set();
     let knownLinksSet = new Set();
@@ -1082,44 +914,44 @@
     }
     
     function positionTooltip(target) {
-        if (!tooltipEl || !target) return;
-        
-        const rect = target.getBoundingClientRect();
-        const spacing = 15;
-        
-        // Сначала показываем в скрытом месте чтобы узнать размеры
-        tooltipEl.style.left = '-9999px';
-        tooltipEl.style.top = '-9999px';
-        tooltipEl.style.visibility = 'hidden';
-        document.body.appendChild(tooltipEl);
-        
-        const tooltipRect = tooltipEl.getBoundingClientRect();
-        const tooltipWidth = Math.min(tooltipRect.width, 320);
-        const tooltipHeight = tooltipRect.height;
-        
-        // Вычисляем позицию
-        let top = rect.top - tooltipHeight - spacing;
-        let left = rect.left + (rect.width / 2) - (tooltipWidth / 2);
-        
-        // Если не помещается сверху, показываем снизу
-        if (top < spacing) {
-            top = rect.bottom + spacing;
-        }
-        
-        // Проверяем границы по горизонтали
-        const margin = spacing;
-        if (left < margin) left = margin;
-        if (left + tooltipWidth > window.innerWidth - margin) {
-            left = window.innerWidth - tooltipWidth - margin;
-        }
-        
-        // Применяем позицию
-        tooltipEl.style.left = left + 'px';
-        tooltipEl.style.top = top + 'px';
+    if (!tooltipEl || !target) return;
+    
+    const rect = target.getBoundingClientRect();
+    const spacing = 15;
+    
+    // Сначала показываем чтобы узнать размеры
+    tooltipEl.style.left = '0';
+    tooltipEl.style.top = '0';
+    
+    const tooltipRect = tooltipEl.getBoundingClientRect();
+    const tooltipWidth = Math.min(tooltipRect.width, 320);
+    const tooltipHeight = tooltipRect.height;
+    
+    // Позиционируем СЛЕВА от элемента (не перекрывает)
+    let left = rect.left - tooltipWidth - spacing;
+    
+    // Если слева не помещается - справа
+    if (left < spacing) {
+        left = rect.right + spacing;
     }
     
-    let activeTooltipTarget = null;
-
+    // Центрируем по вертикали относительно элемента
+    let top = rect.top + (rect.height / 2) - (tooltipHeight / 2);
+    
+    // Проверяем границы
+    if (top < spacing) top = spacing;
+    if (top + tooltipHeight > window.innerHeight - spacing) {
+        top = window.innerHeight - tooltipHeight - spacing;
+    }
+    if (left < spacing) left = spacing;
+    if (left + tooltipWidth > window.innerWidth - spacing) {
+        left = window.innerWidth - tooltipWidth - spacing;
+    }
+    
+    tooltipEl.style.left = left + 'px';
+    tooltipEl.style.top = top + 'px';
+}
+    
     function showTooltip(e) {
         const target = e.target.closest('[data-tooltip]');
         if (!target) return;
@@ -1132,7 +964,7 @@
         ensureTooltipElement();
         activeTooltipTarget = target;
         
-        // Подготавливаем контент
+        // Показываем контейнер для картинки или текст
         if (imageUrl) {
             tooltipEl.classList.add('has-image');
             tooltipEl.innerHTML = `
@@ -1146,53 +978,167 @@
             tooltipEl.textContent = text;
         }
         
-        // Позиционируем и ПОКАЗЫВАЕМ через КЛАСС
+        // Позиционируем и показываем
         positionTooltip(target);
         tooltipEl.classList.add('visible');
-        
-        // Обработчики чтобы тултип не исчезал при наведении на него
-        tooltipEl.onmouseenter = function() {
-            tooltipEl.classList.add('visible');
-        };
-        tooltipEl.onmouseleave = function() {
-            hideTooltip();
-        };
     }
     
     function hideTooltip() {
-        if (!tooltipEl) return;
-        tooltipEl.classList.remove('visible');
         activeTooltipTarget = null;
+        if (tooltipEl) {
+            tooltipEl.classList.remove('visible');
+        }
     }
     
     function initializeTooltips() {
         document.querySelectorAll('[data-tooltip]').forEach(el => {
             if (el.dataset.tooltipBound === 'true') return;
+            
             el.addEventListener('mouseenter', showTooltip);
             el.addEventListener('mouseleave', hideTooltip);
             el.addEventListener('focus', showTooltip);
             el.addEventListener('blur', hideTooltip);
+            el.addEventListener('mousemove', (e) => {
+                if (activeTooltipTarget === e.target.closest('[data-tooltip]')) {
+                    // Обновляем позицию только если курсор движется
+                    // positionTooltip(activeTooltipTarget);
+                }
+            });
+            
             el.dataset.tooltipBound = 'true';
         });
     }
     
-    // Обновляем позицию при скролле/ресайзе
-    document.addEventListener('scroll', () => {
-        if (activeTooltipTarget && tooltipEl && tooltipEl.classList.contains('visible')) {
-            positionTooltip(activeTooltipTarget);
-        }
-    }, true);
-    
-    window.addEventListener('resize', () => {
-        if (activeTooltipTarget && tooltipEl && tooltipEl.classList.contains('visible')) {
-            positionTooltip(activeTooltipTarget);
-        }
-    });
-    
     document.addEventListener('scroll', () => { if (activeTooltipTarget) positionTooltip(activeTooltipTarget); }, true);
     window.addEventListener('resize', () => { if (activeTooltipTarget) positionTooltip(activeTooltipTarget); });
 
-    // === ИЗБРАННОЕ ===
+    // ========== ОСТАЛЬНОЙ КОД (БЕЗ ИЗМЕНЕНИЙ) ==========
+    
+    async function loadAllData() {
+        const localStatsRaw = localStorage.getItem(STORAGE_KEY);
+        const localFavRaw = localStorage.getItem(FAVORITES_KEY);
+        const localOrderRaw = localStorage.getItem(FAVORITES_ORDER_KEY);
+        const localTimestampRaw = localStorage.getItem(FAVORITES_TIMESTAMP_KEY);
+
+        const localStats = JSON.parse(localStatsRaw || '{}');
+        const localFavorites = JSON.parse(localFavRaw || '{}');
+        const localOrder = JSON.parse(localOrderRaw || '[]');
+        const localTimestamp = parseInt(localTimestampRaw || '0', 10);
+
+        arcData = localStats;
+        favoritesState = localFavorites;
+        favoritesOrder = localOrder;
+
+        if (currentUser) {
+            try {
+                const docRef = doc(db, "users", currentUser.uid);
+                const docSnap = await getDoc(docRef);
+
+                if (docSnap.exists()) {
+                    const cloudData = docSnap.data();
+                    const cloudFavorites = cloudData.favoritesState || {};
+                    const cloudOrder = cloudData.favoritesOrder || [];
+                    const cloudTimestamp = parseInt(cloudData.favoritesTimestamp || '0', 10);
+                    
+                    const localHasFavorites = Object.keys(localFavorites).length > 0 || localOrder.length > 0;
+                    const cloudHasFavorites = Object.keys(cloudFavorites).length > 0 || cloudOrder.length > 0;
+                    
+                    if (cloudHasFavorites) {
+                        if (cloudTimestamp > localTimestamp) {
+                            favoritesState = cloudFavorites;
+                            favoritesOrder = cloudOrder;
+                            localStorage.setItem(FAVORITES_KEY, JSON.stringify(favoritesState));
+                            localStorage.setItem(FAVORITES_ORDER_KEY, JSON.stringify(favoritesOrder));
+                            localStorage.setItem(FAVORITES_TIMESTAMP_KEY, String(cloudTimestamp));
+                        } else {
+                            await saveToCloud({
+                                favoritesState: localFavorites,
+                                favoritesOrder: localOrder,
+                                favoritesTimestamp: localTimestamp
+                            });
+                        }
+                    } else if (localHasFavorites) {
+                        await saveToCloud({
+                            favoritesState: localFavorites,
+                            favoritesOrder: localOrder,
+                            favoritesTimestamp: localTimestamp
+                        });
+                    }
+                    
+                    if (cloudData.arcGuideStats && Object.keys(cloudData.arcGuideStats).length > 0) {
+                        arcData = cloudData.arcGuideStats;
+                        localStorage.setItem(STORAGE_KEY, JSON.stringify(arcData));
+                    }
+                } else if (Object.keys(localFavorites).length > 0 || localOrder.length > 0) {
+                    await saveToCloud({
+                        favoritesState: localFavorites,
+                        favoritesOrder: localOrder,
+                        favoritesTimestamp: localTimestamp
+                    });
+                }
+            } catch (e) {
+                console.error("Ошибка загрузки из облака:", e);
+            }
+        }
+
+        refreshAllVisuals();
+    }
+    
+    async function saveToCloud(dataToSave) {
+        if (!currentUser) return;
+        try {
+            const docRef = doc(db, "users", currentUser.uid);
+            await setDoc(docRef, dataToSave, { merge: true });
+        } catch (e) {
+            console.error("Ошибка сохранения в облако:", e);
+        }
+    }
+
+    async function saveStats() {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(arcData));
+        if (currentUser) {
+            await saveToCloud({ arcGuideStats: arcData });
+        }
+    }
+
+    async function saveFavorites() {
+        const newTimestamp = Date.now();
+        localStorage.setItem(FAVORITES_KEY, JSON.stringify(favoritesState));
+        localStorage.setItem(FAVORITES_ORDER_KEY, JSON.stringify(favoritesOrder));
+        localStorage.setItem(FAVORITES_TIMESTAMP_KEY, String(newTimestamp));
+        if (currentUser) {
+            await saveToCloud({
+                favoritesState: favoritesState,
+                favoritesOrder: favoritesOrder,
+                favoritesTimestamp: newTimestamp
+            });
+        }
+    }
+
+    window.loginGoogle = async () => {
+        try { await signInWithPopup(auth, new GoogleAuthProvider()); } 
+        catch (e) { console.error("Ошибка входа", e); }
+    };
+    
+    window.logout = () => { signOut(auth); };
+
+    onAuthStateChanged(auth, async (user) => {
+        currentUser = user;
+        const loggedOutView = document.getElementById('arcLoggedOutView');
+        const loggedInView = document.getElementById('arcLoggedInView');
+        const userNameEl = document.getElementById('arcUserName');
+
+        if (user) {
+            loggedOutView.style.display = 'none';
+            loggedInView.style.display = 'block';
+            userNameEl.textContent = user.displayName || user.email.split('@')[0];
+        } else {
+            loggedOutView.style.display = 'block';
+            loggedInView.style.display = 'none';
+        }
+        
+        await loadAllData();
+    });
 
     function getBaseClasses(link) {
         if (!link) return ['link-inline'];
@@ -1240,11 +1186,9 @@
             event.stopPropagation();
             
             if (favoritesState[id]) {
-                // УДАЛЯЕМ из избранного
                 delete favoritesState[id];
                 favoritesOrder = favoritesOrder.filter(item => item !== id);
             } else {
-                // ДОБАВЛЯЕМ в избранное
                 const control = favoriteControls.get(id);
                 if (control) {
                     favoritesState[id] = extractLinkInfo(control.link);
@@ -1252,7 +1196,6 @@
                 }
             }
             
-            // Сохраняем и обновляем UI
             await saveFavorites();
             refreshAllVisuals();
         });
@@ -1260,7 +1203,6 @@
     }
 
     function refreshAllVisuals() {
-        // Обновляем звездочки на ссылках
         favoriteControls.forEach((control, id) => {
             const isFav = Boolean(favoritesState[id]);
             const button = control.button;
@@ -1270,10 +1212,7 @@
             button.title = isFav ? 'Убрать из избранного' : 'Добавить в избранное';
         });
         
-        // Перерисовываем список избранного
         renderFavoritesList();
-        
-        // Обновляем статистику кликов
         updateUI();
     }
 
@@ -1306,7 +1245,6 @@
 
         listEl.innerHTML = '';
         
-        // Очищаем порядок от несуществующих элементов
         favoritesOrder = favoritesOrder.filter(id => favoritesState[id]);
         Object.keys(favoritesState).forEach(id => {
             if (!favoritesOrder.includes(id)) favoritesOrder.push(id);
@@ -1329,13 +1267,11 @@
             const linkEl = document.querySelector(`a[data-id="${id}"]`);
             const liveInfo = linkEl ? extractLinkInfo(linkEl) : info;
             
-            // Обновляем информацию если изменилась
             if (linkEl) {
                 const storedKey = classesToKey(info.classes);
                 const currentKey = classesToKey(liveInfo.classes);
                 if (info.title !== liveInfo.title || info.url !== liveInfo.url || storedKey !== currentKey) {
                     favoritesState[id] = liveInfo;
-                    // Сохраняем обновления тихо (без повторного рендера)
                     localStorage.setItem(FAVORITES_KEY, JSON.stringify(favoritesState));
                 }
             }
@@ -1384,12 +1320,8 @@
             removeBtn.title = 'Удалить из избранного';
             removeBtn.onclick = async (e) => {
                 e.stopPropagation();
-                
-                // Удаляем из избранного
                 delete favoritesState[id];
                 favoritesOrder = favoritesOrder.filter(item => item !== id);
-                
-                // Сохраняем и обновляем
                 await saveFavorites();
                 refreshAllVisuals();
             };
@@ -1420,8 +1352,6 @@
             }
         });
     }
-
-    // === TRACKING ЛОГИКА ===
 
     function formatDate(isoString) {
         if (!isoString) return '';
@@ -1518,8 +1448,6 @@
             updateUI();
         }
     }
-
-    // === НАСТРОЙКИ ИНТЕРФЕЙСА ===
 
     function getBadgeHiddenState() { return localStorage.getItem(BADGE_VISIBILITY_KEY) === 'true'; }
     function setBadgeHiddenState(hidden) { localStorage.setItem(BADGE_VISIBILITY_KEY, hidden ? 'true' : 'false'); }
@@ -1700,6 +1628,5 @@
         updateBadgeVisibility();
     });
 </script>
-
 </body>
 </html>
