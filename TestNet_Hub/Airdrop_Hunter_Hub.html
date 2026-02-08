@@ -884,11 +884,10 @@
                     </div>
 
                     <select onchange="sortProjects(this.value)" id="sortSelect" class="bg-slate-800/50 border border-slate-700 rounded-xl px-4 text-sm focus:border-blue-500 outline-none cursor-pointer">
-                        <option value="newest">Сначала новые</option>
-                        <option value="priority">По приоритету</option>
-                        <option value="name">По названию</option>
-                        <option value="updated">По обновлению</option>
-                    </select>
+    <option value="latest">Сначала новые</option>
+    <option value="priority">По приоритету</option>
+    <option value="name">По названию</option>
+</select>
                 </div>
             </div>
 
@@ -1321,27 +1320,30 @@ let adminFeedbacksUnsubscribe = null;
         let currentEditingActivities = [];
         let editingActivityId = null;
         let mainProjectCategories = []; 
-
+let currentSortType = 'latest';
+        
         document.addEventListener('DOMContentLoaded', function() {
-            const select = document.getElementById('itemsPerPageSelect');
-            if(select) select.value = itemsPerPage;
-            
-            const promptInput = document.getElementById('promptInput');
-            if(promptInput) {
-                promptInput.addEventListener('keydown', function(e) {
-                    if (e.key === 'Enter') {
-                        e.preventDefault();
-                        window.confirmLinkInsert();
-                    }
-                });
+    const select = document.getElementById('itemsPerPageSelect');
+    if(select) select.value = itemsPerPage;
+    
+    const promptInput = document.getElementById('promptInput');
+    if(promptInput) {
+        promptInput.addEventListener('keydown', function(e) {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                window.confirmLinkInsert();
             }
-            const savedSort = localStorage.getItem('sortProjects') || 'newest';
-            const sortSelect = document.getElementById('sortSelect');
-            if (sortSelect) {
-                sortSelect.value = savedSort;
-            }
-            sortProjects(savedSort);
         });
+    }
+    
+    // ✅ ИСПРАВЛЕНО: Восстанавливаем сортировку при загрузке
+    const savedSort = localStorage.getItem('lastSortType') || 'latest';
+    const sortSelect = document.getElementById('sortSelect');
+    if (sortSelect) {
+        sortSelect.value = savedSort;
+    }
+    sortProjects(savedSort);
+});
 
         function formatClickDate(dateString) {
             if (!dateString) return null;
@@ -2356,30 +2358,13 @@ onAuthStateChanged(auth, async function(user) {
         }
 // ✅ Получить дату последней активности проекта
 function getLatestActivityDate(project) {
-    if (!project || !project.activities || project.activities.length === 0) {
-        return project.lastUpdated || null;
+    if (!project.activities || project.activities.length === 0) {
+        return project.lastUpdated || project.createdAt;
     }
-    
-    // Находим самую позднюю дату среди активностей
-    let latestDate = null;
-    project.activities.forEach(activity => {
-        if (activity.date) {
-            const activityDate = new Date(activity.date + 'T23:59:59'); // Конец дня
-            if (!latestDate || activityDate > latestDate) {
-                latestDate = activityDate;
-            }
-        }
-    });
-    
-    // Если есть дата в lastUpdated - сравниваем с последней активностью
-    if (project.lastUpdated) {
-        const lastUpdatedDate = new Date(project.lastUpdated + 'T23:59:59');
-        if (!latestDate || lastUpdatedDate > latestDate) {
-            latestDate = lastUpdatedDate;
-        }
-    }
-    
-    return latestDate ? latestDate.toISOString().split('T')[0] : null;
+    const latestActivity = project.activities
+        .filter(a => a.date)
+        .sort((a, b) => new Date(b.date) - new Date(a.date))[0];
+    return latestActivity && latestActivity.date ? latestActivity.date : (project.lastUpdated || project.createdAt);
 }
 
 // Check if project is new (within 7 days) - ✅ ПО ПОСЛЕДНЕЙ АКТИВНОСТИ
@@ -2547,191 +2532,30 @@ const lastUpdatedDate = lastActivityDate ? formatDateForDisplay(lastActivityDate
         window.resetFilters = function() { currentFilters = { status: 'all', categories: [] }; document.getElementById('searchInput').value = ''; applyFilters(); };
         
         window.sortProjects = function(by) {
-    const btn = event.target.closest('.sort-btn');
-    if (!btn) return;
+    localStorage.setItem('lastSortType', by);
     
-    // Убираем активный класс у всех кнопок
-    document.querySelectorAll('.sort-btn').forEach(b => b.classList.remove('active'));
-    // Добавляем активный класс текущей кнопке
-    btn.classList.add('active');
-    
-    currentSort = by;
-    
-    // ✅ Сохраняем сортировку в localStorage
-    localStorage.setItem('stakepulse_sort', by);
-    
-    // Обновляем кнопку главной сортировки
-    const mainSortBtn = document.getElementById('sortBtn');
-    const sortIcon = mainSortBtn.querySelector('.sort-icon');
-    const sortName = document.getElementById('sortName');
-    
-    let sortText = '';
-    switch(by) {
-        case 'priority':
-            sortText = 'По приоритету';
-            sortName.textContent = '✳️';
-            break;
-        case 'name_asc':
-            sortText = 'По названию (A-Z)';
-            sortName.textContent = 'A-Z';
-            break;
-        case 'name_desc':
-            sortText = 'По названию (Z-A)';
-            sortName.textContent = 'Z-A';
-            break;
-        case 'newest':
-            sortText = 'Сначала новые';
-            sortName.textContent = '🆕';
-            break;
-        case 'oldest':
-            sortText = 'Сначала старые';
-            sortName.textContent = '🕐';
-            break;
-        default:
-            sortText = 'Сортировка';
-            sortName.textContent = '⚙️';
-    }
-    mainSortBtn.querySelector('span:not(#sortName)').textContent = sortText;
-    
-    // Сортируем проекты
-    let sortedProjects = [...projects];
-    
-    switch(by) {
-        case 'priority':
-            sortedProjects.sort(function(a, b) {
-                if (a.priority === 'high' && b.priority !== 'high') return -1;
-                if (a.priority !== 'high' && b.priority === 'high') return 1;
-                return 0;
-            });
-            break;
+    if (by === 'name') {
+        projects.sort(function(a, b) { return a.name.localeCompare(b.name); });
+    } 
+    else if (by === 'priority') {
+        projects.sort(function(a, b) { return (b.priority === 'high' ? 1 : 0) - (a.priority === 'high' ? 1 : 0); });
+    } 
+    else if (by === 'latest') {
+        // ✅ Оба варианта теперь используют getLatestActivityDate
+        projects.sort(function(a, b) {
+            const aDate = getLatestActivityDate(a);
+            const bDate = getLatestActivityDate(b);
             
-        case 'name_asc':
-            sortedProjects.sort(function(a, b) {
-                return a.name.localeCompare(b.name);
-            });
-            break;
+            const aTime = aDate ? new Date(aDate).getTime() : 0;
+            const bTime = bDate ? new Date(bDate).getTime() : 0;
             
-        case 'name_desc':
-            sortedProjects.sort(function(a, b) {
-                return b.name.localeCompare(a.name);
-            });
-            break;
-            
-        case 'newest':
-            // ✅ Сортируем по дате последней активности (новые сверху)
-            sortedProjects.sort(function(a, b) {
-                const dateA = getLatestActivityDate(a);
-                const dateB = getLatestActivityDate(b);
-                
-                if (!dateA && !dateB) return 0;
-                if (!dateA) return 1; // Проекты без активности вниз
-                if (!dateB) return -1; // Проекты без активности вниз
-                
-                return new Date(dateB) - new Date(dateA); // Новые сверху
-            });
-            break;
-            
-        case 'oldest':
-            // ✅ Сортируем по дате последней активности (старые сверху)
-            sortedProjects.sort(function(a, b) {
-                const dateA = getLatestActivityDate(a);
-                const dateB = getLatestActivityDate(b);
-                
-                if (!dateA && !dateB) return 0;
-                if (!dateA) return 1; // Проекты без активности вниз
-                if (!dateB) return -1; // Проекты без активности вниз
-                
-                return new Date(dateA) - new Date(dateB); // Старые сверху
-            });
-            break;
-    }
-    
-    // Если есть поиск - фильтруем
-    if (searchQuery.trim() !== '') {
-        sortedProjects = sortedProjects.filter(function(p) {
-            return p.name.toLowerCase().includes(searchQuery.toLowerCase());
+            return bTime - aTime; // От новых к старым
         });
     }
     
-    renderProjects(sortedProjects);
-    
-    // Закрываем меню сортировки
-    document.getElementById('sortDropdown').classList.remove('show');
+    applyFilters();
 };
-window.initializePage = function() {
-    // ✅ Загружаем сохраненную сортировку из localStorage
-    const savedSort = localStorage.getItem('stakepulse_sort');
-    if (savedSort) {
-        currentSort = savedSort;
-        
-        // Активируем соответствующую кнопку
-        const sortBtns = document.querySelectorAll('.sort-btn');
-        sortBtns.forEach(btn => {
-            if (btn.getAttribute('onclick').includes(savedSort)) {
-                btn.classList.add('active');
-            }
-        });
-        
-        // Обновляем текст на главной кнопке
-        const mainSortBtn = document.getElementById('sortBtn');
-        const sortIcon = mainSortBtn.querySelector('.sort-icon');
-        const sortName = document.getElementById('sortName');
-        
-        let sortText = '';
-        switch(savedSort) {
-            case 'priority':
-                sortText = 'По приоритету';
-                sortName.textContent = '✳️';
-                break;
-            case 'name_asc':
-                sortText = 'По названию (A-Z)';
-                sortName.textContent = 'A-Z';
-                break;
-            case 'name_desc':
-                sortText = 'По названию (Z-A)';
-                sortName.textContent = 'Z-A';
-                break;
-            case 'newest':
-                sortText = 'Сначала новые';
-                sortName.textContent = '🆕';
-                break;
-            case 'oldest':
-                sortText = 'Сначала старые';
-                sortName.textContent = '🕐';
-                break;
-            default:
-                sortText = 'Сортировка';
-                sortName.textContent = '⚙️';
-        }
-        mainSortBtn.querySelector('span:not(#sortName)').textContent = sortText;
-    }
-    
-    // ... остальной код функции initializePage
-    // ... (загрузка проектов из localStorage и т.д.)
-    
-    // Вызываем сортировку с сохраненным значением
-    if (savedSort) {
-        setTimeout(function() {
-            const event = { target: document.querySelector(`.sort-btn[onclick*="${savedSort}"]`) };
-            if (event.target) {
-                window.sortProjects(savedSort);
-            }
-        }, 100);
-    } else {
-        // По умолчанию сортировка "сначала новые"
-        currentSort = 'newest';
-        setTimeout(function() {
-            const btn = document.querySelector('.sort-btn[onclick*="newest"]');
-            if (btn) {
-                btn.classList.add('active');
-                const mainSortBtn = document.getElementById('sortBtn');
-                const sortName = document.getElementById('sortName');
-                mainSortBtn.querySelector('span:not(#sortName)').textContent = 'Сначала новые';
-                sortName.textContent = '🆕';
-            }
-        }, 100);
-    }
-};
+
         function parseRichContent(text) {
             if (!text) return '';
             let html = text;
