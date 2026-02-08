@@ -2404,7 +2404,9 @@ function isNewProject(dateString) {
 const isNew = isNewProject(getLatestActivityDate(project));
                 const lastClickRecord = arcData[project.id];
                 const lastClickDate = lastClickRecord && lastClickRecord.lastClick ? formatClickDate(lastClickRecord.lastClick) : null;
-                const lastUpdatedDate = project.lastUpdated ? formatDateForDisplay(project.lastUpdated) : null;
+                // СТАЛО:
+const lastActivityDate = getLatestActivityDate(project);
+const lastUpdatedDate = lastActivityDate ? formatDateForDisplay(lastActivityDate) : null;
 
                 const categoriesHtml = (project.categories || ['Other']).map(function(cat) {
                     return '<span class="bg-slate-800 px-2 py-1 rounded cursor-pointer hover:bg-slate-700 transition-colors" onclick="event.stopPropagation(); toggleCategoryFilter(\'' + cat + '\')">' + cat + '</span>';
@@ -2763,39 +2765,54 @@ document.getElementById('generalFeedbackPanel').classList.remove('hidden');
         window.closeActivityModal = function() { document.getElementById('activityModal').classList.remove('active'); editingActivityId = null; };
 
         window.saveActivityData = function() {
-            const title = document.getElementById('actName').value;
-            if (!title) { showToast('Введите название'); return; }
-            
-            const selectedCats = Array.from(document.querySelectorAll('.act-cat-checkbox:checked')).map(cb => cb.value);
-            const actData = {
-                id: editingActivityId || 'act_' + Date.now(),
-                title: title,
-                date: document.getElementById('actDate').value,
-                categories: selectedCats.length > 0 ? selectedCats : mainProjectCategories,
-                description: document.getElementById('actRichDesc').value,
-                status: 'active'
-            };
+    const title = document.getElementById('actName').value;
+    if (!title) { showToast('Введите название'); return; }
+    
+    const selectedCats = Array.from(document.querySelectorAll('.act-cat-checkbox:checked')).map(cb => cb.value);
+    const actData = {
+        id: editingActivityId || 'act_' + Date.now(),
+        title: title,
+        date: document.getElementById('actDate').value,
+        categories: selectedCats.length > 0 ? selectedCats : mainProjectCategories,
+        description: document.getElementById('actRichDesc').value,
+        status: 'active'
+    };
 
-            if (editingActivityId) {
-                const idx = currentEditingActivities.findIndex(a => a.id === editingActivityId);
-                if (idx !== -1) currentEditingActivities[idx] = actData;
-            } else {
-                currentEditingActivities.push(actData);
-            }
-            
-            renderActivitiesAdminList();
-            closeActivityModal();
-            showToast('Активность сохранена');
-        };
+    if (editingActivityId) {
+        const idx = currentEditingActivities.findIndex(a => a.id === editingActivityId);
+        if (idx !== -1) currentEditingActivities[idx] = actData;
+    } else {
+        currentEditingActivities.push(actData);
+    }
+    
+    // ✅ НОВОЕ: Автоматически обновляем дату в поле "Дата обновления проекта"
+    const latestDate = getLatestActivityDate({ activities: currentEditingActivities });
+    if (latestDate) {
+        document.getElementById('projLastUpdated').value = latestDate.split('T')[0];
+    }
+    
+    renderActivitiesAdminList();
+    closeActivityModal();
+    showToast('Активность сохранена');
+};
 
         window.deleteActivity = function() {
-            if (editingActivityId && confirm('Удалить эту активность?')) {
-                currentEditingActivities = currentEditingActivities.filter(a => a.id !== editingActivityId);
-                renderActivitiesAdminList();
-                closeActivityModal();
-                showToast('Активность удалена');
-            }
-        };
+    if (editingActivityId && confirm('Удалить эту активность?')) {
+        currentEditingActivities = currentEditingActivities.filter(a => a.id !== editingActivityId);
+        
+        // ✅ НОВОЕ: Обновляем дату после удаления активности
+        const latestDate = getLatestActivityDate({ activities: currentEditingActivities });
+        if (latestDate) {
+            document.getElementById('projLastUpdated').value = latestDate.split('T')[0];
+        } else {
+            document.getElementById('projLastUpdated').value = '';
+        }
+        
+        renderActivitiesAdminList();
+        closeActivityModal();
+        showToast('Активность удалена');
+    }
+};
 
         function renderActivitiesAdminList() {
             const container = document.getElementById('activitiesListAdmin');
@@ -2939,29 +2956,37 @@ document.getElementById('generalFeedbackPanel').classList.remove('hidden');
 };
         
         window.editProject = function(id) {
-            if (!isAdminMode) return;
-            const project = projects.find(function(p) { return p.id === id; });
-            if (!project) return;
-            editingId = id;
-            document.getElementById('projId').value = id;
-            document.getElementById('projName').value = project.name;
-            document.getElementById('projImage').value = project.image || '';
-            document.getElementById('projGuideUrl').value = project.guideUrl || '';
-            document.getElementById('projCryptoRank').value = project.cryptoRankUrl || '';
-            document.getElementById('projTwitter').value = project.twitterUrl || '';
-            document.getElementById('projRef').value = project.referralLink || '';
-            document.getElementById('projDesc').value = project.description || '';
-            document.getElementById('projStatus').value = project.status || 'active';
-            document.getElementById('projLastUpdated').value = project.lastUpdated || '';
-            document.getElementById('projDaily').checked = project.hasDaily || false;
-            document.getElementById('projPriority').checked = project.priority === 'high';
-            setSelectedCategories(project.categories || []);
-            
-            currentEditingActivities = project.activities || [];
-            renderActivitiesAdminList();
+    if (!isAdminMode) return;
+    const project = projects.find(function(p) { return p.id === id; });
+    if (!project) return;
+    editingId = id;
+    document.getElementById('projId').value = id;
+    document.getElementById('projName').value = project.name;
+    document.getElementById('projImage').value = project.image || '';
+    document.getElementById('projGuideUrl').value = project.guideUrl || '';
+    document.getElementById('projCryptoRank').value = project.cryptoRankUrl || '';
+    document.getElementById('projTwitter').value = project.twitterUrl || '';
+    document.getElementById('projRef').value = project.referralLink || '';
+    document.getElementById('projDesc').value = project.description || '';
+    document.getElementById('projStatus').value = project.status || 'active';
+    
+    // ✅ НОВОЕ: Автоматически заполняем дату последней активности
+    const latestActivityDate = getLatestActivityDate(project);
+    document.getElementById('projLastUpdated').value = latestActivityDate ? latestActivityDate.split('T')[0] : '';
+    
+    document.getElementById('projDaily').checked = project.hasDaily || false;
+    document.getElementById('projPriority').checked = project.priority === 'high';
+    setSelectedCategories(project.categories || []);
+    
+    currentEditingActivities = project.activities || [];
+    renderActivitiesAdminList();
 
-            document.getElementById('modalTitle').textContent = 'Редактировать проект';
-            document.getElementById('deleteBtn').classList.remove('hidden');
+    document.getElementById('modalTitle').textContent = 'Редактировать проект';
+    document.getElementById('deleteBtn').classList.remove('hidden');
+    isEditModalOpen = true;
+    document.getElementById('addModal').classList.add('active');
+    window.closeDetailModal();
+            
             isEditModalOpen = true; // БЛОКИРУЕМ
     document.getElementById('addModal').classList.add('active');
     window.closeDetailModal();
