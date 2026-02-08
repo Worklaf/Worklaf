@@ -396,24 +396,48 @@
         let projectStats = {};
         let notificationStats = { total: 0, viewed: 0 };
         let allProjectsMap = new Map();
-
+// Глобальный обработчик ошибок
+window.addEventListener('error', (event) => {
+    console.error('Global error:', event.error);
+    showToast('Критическая ошибка: ' + event.error.message);
+});
         // Проверка доступа
         onAuthStateChanged(auth, async (user) => {
-            document.getElementById('loading').classList.add('hidden');
+    try {
+        console.log('Auth state changed:', user ? user.uid : 'null');
+        
+        const loadingEl = document.getElementById('loading');
+        if (!loadingEl) {
+            console.error('Element #loading not found!');
+            return;
+        }
+        
+        loadingEl.classList.add('hidden');
 
-            if (!user) {
-                showLoginButton();
-                return;
-            }
+        if (!user) {
+            showLoginButton();
+            return;
+        }
 
-            if (user.uid !== ALLOWED_ADMIN_ID) {
-                document.getElementById('accessDenied').classList.remove('hidden');
-                return;
-            }
+        if (user.uid !== ALLOWED_ADMIN_ID) {
+            document.getElementById('accessDenied')?.classList.remove('hidden');
+            return;
+        }
 
-            document.getElementById('adminContent').classList.remove('hidden');
-            await loadAllData();
-        });
+        const adminContent = document.getElementById('adminContent');
+        if (!adminContent) {
+            console.error('Element #adminContent not found!');
+            return;
+        }
+        
+        adminContent.classList.remove('hidden');
+        await loadAllData();
+        
+    } catch (error) {
+        console.error('Critical error in auth handler:', error);
+        showToast('Ошибка загрузки: ' + error.message);
+    }
+});
 
         function showLoginButton() {
             const content = document.getElementById('loading');
@@ -460,73 +484,109 @@
         }
 
         async function loadUsers() {
+    const tbody = document.getElementById('usersTableBody');
+    if (!tbody) {
+        console.error('Element #usersTableBody not found!');
+        return;
+    }
+
+    try {
+        console.log('Loading users...');
+        const usersSnapshot = await getDocs(collection(db, "users"));
+        console.log('Users snapshot loaded:', usersSnapshot.docs.length);
+        
+        allUsers = [];
+        const now = new Date();
+        const thirtyMinAgo = new Date(now.getTime() - 30 * 60 * 1000);
+
+        for (const docSnap of usersSnapshot.docs) {
             try {
-                const usersSnapshot = await getDocs(collection(db, "users"));
-                allUsers = [];
-                const now = new Date();
-                const thirtyMinAgo = new Date(now.getTime() - 30 * 60 * 1000);
+                const userData = docSnap.data();
+                const userId = docSnap.id;
 
-                for (const docSnap of usersSnapshot.docs) {
-                    const userData = docSnap.data();
-                    const userId = docSnap.id;
-
-                    const lastLoginDate = userData.lastLogin ? new Date(userData.lastLogin) : null;
-                    const firstLoginDate = userData.firstLogin ? new Date(userData.firstLogin) : null;
-                    const isOnline = lastLoginDate && lastLoginDate >= thirtyMinAgo;
-                    
-                    // === КЛЮЧЕВОЕ: читаем arcGuideStats из Firestore ===
-                    const arcGuideStats = userData.arcGuideStats || {};
-                    
-                    // Подсчитываем клики: суммируем totalClicks по всем проектам
-                    let totalClicks = 0;
-                    let topProject = null;
-                    let topProjectClicks = 0;
-                    const projectClicks = {};
-
-                    Object.entries(arcGuideStats).forEach(([projectId, stats]) => {
-                        // stats = { totalClicks: N, lastClick: "..." }
-                        const clicks = stats.totalClicks || 0;
-                        projectClicks[projectId] = clicks;
-                        totalClicks += clicks;
-                        
-                        if (clicks > topProjectClicks) {
-                            topProjectClicks = clicks;
-                            topProject = projectId;
-                        }
-                    });
-
-                    allUsers.push({
-                        id: userId,
-                        email: userData.email || '—',
-                        displayName: userData.displayName || 'Аноним',
-                        photoURL: userData.photoURL || null,
-                        firstLogin: firstLoginDate,
-                        lastLogin: lastLoginDate,
-                        totalClicks: totalClicks,        // Всего кликов по гайдам
-                        projectClicks: projectClicks,
-                        topProject: topProject,
-                        topProjectClicks: topProjectClicks,
-                        completedCount: userData.completed ? userData.completed.length : 0,
-                        favoritesCount: userData.favorites ? userData.favorites.length : 0,
-                        isOnline: isOnline
-                    });
+                // Проверяем обязательные поля
+                if (!userData) {
+                    console.warn('Empty user data for ID:', userId);
+                    continue;
                 }
 
-                allUsers.sort((a, b) => (b.lastLogin || 0) - (a.lastLogin || 0));
-                filteredUsers = [...allUsers];
+                const lastLoginDate = userData.lastLogin ? new Date(userData.lastLogin) : null;
+                const firstLoginDate = userData.firstLogin ? new Date(userData.firstLogin) : null;
+                const isOnline = lastLoginDate && lastLoginDate >= thirtyMinAgo;
+                
+                const arcGuideStats = userData.arcGuideStats || {};
+                
+                let totalClicks = 0;
+                let topProject = null;
+                let topProjectClicks = 0;
+                const projectClicks = {};
 
-                const onlineCount = allUsers.filter(u => u.isOnline).length;
-                document.getElementById('onlineNow').textContent = onlineCount;
+                // Безопасная обработка статистики
+                Object.entries(arcGuideStats).forEach(([projectId, stats]) => {
+                    if (stats && typeof stats === 'object') {
+                        const clicks = Number(stats.totalClicks) || 0;
+                        if (clicks > 0) {
+                            projectClicks[projectId] = clicks;
+                            totalClicks += clicks;
+                            
+                            if (clicks > topProjectClicks) {
+                                topProjectClicks = clicks;
+                                topProject = projectId;
+                            }
+                        }
+                    }
+                });
 
-                renderStats();
-                renderUsersTable();
-                updateLastUpdateTime();
-
-            } catch (e) {
-                console.error('Ошибка загрузки пользователей:', e);
+                allUsers.push({
+                    id: userId,
+                    email: userData.email || '—',
+                    displayName: userData.displayName || 'Аноним',
+                    photoURL: userData.photoURL || null,
+                    firstLogin: firstLoginDate,
+                    lastLogin: lastLoginDate,
+                    totalClicks: totalClicks,
+                    projectClicks: projectClicks,
+                    topProject: topProject,
+                    topProjectClicks: topProjectClicks,
+                    completedCount: Array.isArray(userData.completed) ? userData.completed.length : 0,
+                    favoritesCount: Array.isArray(userData.favorites) ? userData.favorites.length : 0,
+                    isOnline: isOnline
+                });
+            } catch (userError) {
+                console.error('Error processing user', docSnap.id, userError);
             }
         }
 
+        if (allUsers.length === 0) {
+            console.warn('No users found in database');
+            tbody.innerHTML = '<tr><td colspan="8" class="py-8 text-center text-slate-500">Нет пользователей в базе</td></tr>';
+            return;
+        }
+
+        allUsers.sort((a, b) => (b.lastLogin || 0) - (a.lastLogin || 0));
+        filteredUsers = [...allUsers];
+
+        const onlineCount = allUsers.filter(u => u.isOnline).length;
+        document.getElementById('onlineNow').textContent = onlineCount;
+
+        renderStats();
+        renderUsersTable();
+        updateLastUpdateTime();
+
+        console.log('Users loaded successfully:', allUsers.length);
+
+    } catch (e) {
+        console.error('Ошибка загрузки пользователей:', e);
+        tbody.innerHTML = `<tr><td colspan="8" class="py-8 text-center text-red-400">Ошибка загрузки: ${e.message}</td></tr>`;
+    }
+}
+function showToast(message) {
+    const toast = document.createElement('div');
+    toast.className = 'fixed bottom-4 right-4 bg-slate-800 border border-slate-700 text-white px-6 py-3 rounded-xl shadow-2xl z-50';
+    toast.textContent = message;
+    document.body.appendChild(toast);
+    setTimeout(() => toast.remove(), 3000);
+}
         async function loadProjectStats() {
             try {
                 // Агрегируем клики по проектам из всех пользователей
@@ -804,9 +864,13 @@
                 const topProjectName = topProjectData ? topProjectData.name : '—';
                 const topProjectImage = topProjectData?.image || `https://ui-avatars.com/api/?name=${encodeURIComponent(topProjectName === '—' ? '?' : topProjectName.charAt(0))}&background=333&color=fff`;
 
-                const topProjectDisplay = user.topProject 
-                    ? `<div class="flex items-center gap-2"><img src="${topProjectImage}" class="w-5 h-5 rounded-full object-cover" title="${topProjectName}"> <span class="truncate max-w-[120px]">${topProjectName}</span> <span class="text-xs text-slate-500">(${user.topProjectClicks})</span></div>`
-                    : '—';
+                const topProjectDisplay = user.topProject && allProjectsMap.has(user.topProject) 
+    ? `<div class="flex items-center gap-2">
+          <img src="${topProjectImage}" class="w-5 h-5 rounded-full object-cover" title="${topProjectName}"> 
+          <span class="truncate max-w-[120px]">${topProjectName}</span> 
+          <span class="text-xs text-slate-500">(${user.topProjectClicks})</span>
+       </div>`
+    : '—';
 
                 return `
                     <tr class="user-row border-b border-slate-800/50 transition-colors ${isSelected ? 'bg-blue-900/20' : ''}">
