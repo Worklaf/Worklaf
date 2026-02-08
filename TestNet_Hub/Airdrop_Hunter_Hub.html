@@ -2387,72 +2387,187 @@ onAuthStateChanged(auth, async function(user) {
             const totalUnvisited = projects.filter(p => !arcData[p.id]).length;
             document.getElementById('countUnvisited').textContent = totalUnvisited;
 
-            grid.innerHTML = projectsToShow.map(function(project) {
-                const isFav = userFavorites.includes(project.id);
-                // Changed logic: New is within 7 days
-                const isNew = isNewProject(project.createdAt); 
-                const lastClickRecord = arcData[project.id];
-                const lastClickDate = lastClickRecord && lastClickRecord.lastClick ? formatClickDate(lastClickRecord.lastClick) : null;
-                const latestActivityDate = getLatestActivityDate(project);
-const lastUpdatedDate = latestActivityDate ? formatDateForDisplay(latestActivityDate) : null;
+           grid.innerHTML = projectsToShow.map(function(project) {
+    const isFav = userFavorites.includes(project.id);
 
-                const categoriesHtml = (project.categories || ['Other']).map(function(cat) {
-                    return '<span class="bg-slate-800 px-2 py-1 rounded cursor-pointer hover:bg-slate-700 transition-colors" onclick="event.stopPropagation(); toggleCategoryFilter(\'' + cat + '\')">' + cat + '</span>';
-                }).join('');
+    // NEW logic — передаём весь объект
+    const isNew = isNewProject(project);
 
-                return '<div class="glass-card rounded-2xl p-4 relative group project-card-wrapper ' + (isNew ? 'border-pink-500/30' : '') + '">' +
-                    (isNew ? '<div class="absolute -top-2 -right-2 z-20"><span class="new-badge"><i class="fas fa-star mr-1"></i>NEW</span></div>' : '') +
-                    
-                    // Feedback Button (Hidden by default, visible on hover)
-                    '<button onclick="openFeedbackModal(\'' + project.id + '\', \'' + (project.name.replace(/'/g, "\\'")) + '\'); event.stopPropagation();" class="feedback-trigger-btn text-slate-300 hover:text-blue-400 rounded-lg text-xs font-bold flex items-center gap-1 shadow-lg" title="Оставить отзыв">' +
-                    '   <i class="fas fa-comment-dots"></i> <span>Отзыв</span>' +
-                    '</button>' +
+    const lastClickRecord = arcData[project.id];
+    const lastClickDate = lastClickRecord && lastClickRecord.lastClick
+        ? formatClickDate(lastClickRecord.lastClick)
+        : null;
 
-                    (isFav ? '<div class="user-completed-icon"><i class="fas fa-heart fill-current"></i></div>' : '') +
+    const latestActivityDate = getLatestActivityDate(project);
+    const lastUpdatedDate = latestActivityDate
+        ? formatDateForDisplay(latestActivityDate)
+        : null;
 
-                    '<div class="flex items-start gap-4 pt-2">' +
-                    '<div class="shrink-0">' +
-                    (project.image ? '<img src="' + project.image + '" alt="' + project.name + '" class="w-12 h-12 rounded-lg object-cover border border-slate-700">' : '<div class="w-12 h-12 rounded-lg bg-slate-800 border border-slate-700 flex items-center justify-center text-xl">' + project.name.charAt(0).toUpperCase() + '</div>') +
-                    '</div>' +
-                    '<div class="flex-1 min-w-0 flex flex-col">' + // Added flex-col to fit button logic
-                    '<div class="flex items-start justify-between gap-2">' +
-                    '<div class="flex-1">' +
-                    '<div class="flex items-center gap-2 flex-wrap">' +
-                    '<h3 class="font-bold text-lg leading-tight text-white cursor-pointer hover:text-blue-400" onclick="openDetail(\'' + project.id + '\')">' + project.name + '</h3>' +
-                    (lastUpdatedDate ? '<span class="last-updated-date" title="Дата последней активности">🔄 ' + lastUpdatedDate + '</span>' : '') +
-                    (isAdminMode ? '<button onclick="event.stopPropagation(); editProject(\'' + project.id + '\')" class="text-slate-500 hover:text-blue-400 text-xs edit-btn"><i class="fas fa-pencil-alt"></i></button>' : '') +
-                    '</div>' +
-                    '<div class="flex flex-wrap gap-2 items-center text-xs text-slate-400 mb-2">' +
-                    '<div class="flex flex-wrap gap-1">' + categoriesHtml + '</div>' +
-                    '<span class="status-' + project.status + ' px-2 py-1 rounded font-medium">' + (project.status === 'active' ? 'Active' : project.status === 'soon' ? 'Soon' : 'Ended') + '</span>' +
-                    (project.hasDaily ? '<span class="text-orange-400"><i class="fas fa-fire mr-1"></i>Daily</span>' : '') +
-                    (project.priority === 'high' ? '<span class="text-red-400"><i class="fas fa-star mr-1"></i>High</span>' : '') +
-                    '</div></div>' +
-                    '<div class="flex items-center gap-2 flex-wrap shrink-0">' +
-                    (lastClickDate ? '<span class="last-click-date ' + lastClickDate.class + '" title="Последний клик">' + lastClickDate.text + '</span>' : '') +
-                    '<button onclick="trackGuideClick(\'' + project.id + '\', \'' + (project.guideUrl || '') + '\')" class="guide-btn-small text-white rounded-lg text-sm font-medium transition-colors flex items-center justify-center gap-2">' +
-                    '<i class="fas fa-book-open"></i><span>Гайд</span></button>' +
-                    '<button onclick="event.stopPropagation(); toggleComplete(\'' + project.id + '\', \'project\')" class="complete-btn ' + (userCompleted.includes(project.id + '_project') ? 'text-emerald-500' : 'text-slate-500 hover:text-emerald-500') + ' p-2 transition-colors w-10 h-10 flex items-center justify-center rounded-lg hover:bg-slate-800" title="Отметить как завершённое">' +
-                    '<i class="fas ' + (userCompleted.includes(project.id + '_project') ? 'fa-check-square' : 'fa-square') + ' text-lg"></i></button>' +
-                    '<button onclick="event.stopPropagation(); toggleFavorite(\'' + project.id + '\')" class="favorite-btn ' + (isFav ? 'active' : 'text-slate-500') + ' p-2 hover:text-red-500 transition-colors w-10 h-10 flex items-center justify-center rounded-lg hover:bg-slate-800"><i class="fas fa-heart ' + (isFav ? 'fill-current' : '') + ' text-lg"></i></button>' +
-                    '</div></div>' +
-                    '<p class="text-slate-400 text-sm mt-2 line-clamp-2">' + (project.description || 'Нет описания') + '</p></div></div>' +
-                    
-    '<div class="mt-4 pt-3 border-t border-slate-700/50 flex gap-2">' +
-                    
-        '<button onclick="trackGuideClick(\'' + project.id + '\', \'' + (project.referralLink || project.cryptoRankUrl || '') + '\'); event.stopPropagation();" ' +
+    const categoriesHtml = (project.categories || ['Other'])
+        .map(function(cat) {
+            return (
+                '<span class="bg-slate-800 px-2 py-1 rounded cursor-pointer hover:bg-slate-700 transition-colors" ' +
+                'onclick="event.stopPropagation(); toggleCategoryFilter(\'' + cat + '\')">' +
+                cat +
+                '</span>'
+            );
+        })
+        .join('');
+
+    return (
+        '<div class="glass-card rounded-2xl p-4 relative group project-card-wrapper ' +
+        (isNew ? 'border-pink-500/30' : '') +
+        '">' +
+
+        // NEW badge
+        (isNew
+            ? '<div class="absolute -top-2 -right-2 z-20"><span class="new-badge"><i class="fas fa-star mr-1"></i>NEW</span></div>'
+            : '') +
+
+        // Feedback button
+        '<button onclick="openFeedbackModal(\'' +
+        project.id +
+        '\', \'' +
+        project.name.replace(/'/g, "\\'") +
+        '\'); event.stopPropagation();" ' +
+        'class="feedback-trigger-btn text-slate-300 hover:text-blue-400 rounded-lg text-xs font-bold flex items-center gap-1 shadow-lg" title="Оставить отзыв">' +
+        '<i class="fas fa-comment-dots"></i> <span>Отзыв</span>' +
+        '</button>' +
+
+        // Favorite heart
+        (isFav ? '<div class="user-completed-icon"><i class="fas fa-heart fill-current"></i></div>' : '') +
+
+        '<div class="flex items-start gap-4 pt-2">' +
+        '<div class="shrink-0">' +
+        (project.image
+            ? '<img src="' +
+              project.image +
+              '" alt="' +
+              project.name +
+              '" class="w-12 h-12 rounded-lg object-cover border border-slate-700">'
+            : '<div class="w-12 h-12 rounded-lg bg-slate-800 border border-slate-700 flex items-center justify-center text-xl">' +
+              project.name.charAt(0).toUpperCase() +
+              '</div>') +
+        '</div>' +
+
+        '<div class="flex-1 min-w-0 flex flex-col">' +
+        '<div class="flex items-start justify-between gap-2">' +
+        '<div class="flex-1">' +
+
+        '<div class="flex items-center gap-2 flex-wrap">' +
+        // FIXED: data-project-id + openDetail
+        '<h3 class="font-bold text-lg leading-tight text-white cursor-pointer hover:text-blue-400" ' +
+        'data-project-id="' +
+        project.id +
+        '" onclick="openDetail(this.dataset.projectId)">' +
+        project.name +
+        '</h3>' +
+
+        (lastUpdatedDate
+            ? '<span class="last-updated-date" title="Дата последней активности">🔄 ' +
+              lastUpdatedDate +
+              '</span>'
+            : '') +
+
+        (isAdminMode
+            ? '<button onclick="event.stopPropagation(); editProject(\'' +
+              project.id +
+              '\')" class="text-slate-500 hover:text-blue-400 text-xs edit-btn"><i class="fas fa-pencil-alt"></i></button>'
+            : '') +
+        '</div>' +
+
+        '<div class="flex flex-wrap gap-2 items-center text-xs text-slate-400 mb-2">' +
+        '<div class="flex flex-wrap gap-1">' +
+        categoriesHtml +
+        '</div>' +
+        '<span class="status-' +
+        project.status +
+        ' px-2 py-1 rounded font-medium">' +
+        (project.status === 'active'
+            ? 'Active'
+            : project.status === 'soon'
+            ? 'Soon'
+            : 'Ended') +
+        '</span>' +
+        (project.hasDaily ? '<span class="text-orange-400"><i class="fas fa-fire mr-1"></i>Daily</span>' : '') +
+        (project.priority === 'high' ? '<span class="text-red-400"><i class="fas fa-star mr-1"></i>High</span>' : '') +
+        '</div>' +
+        '</div>' +
+
+        '<div class="flex items-center gap-2 flex-wrap shrink-0">' +
+        (lastClickDate
+            ? '<span class="last-click-date ' +
+              lastClickDate.class +
+              '" title="Последний клик">' +
+              lastClickDate.text +
+              '</span>'
+            : '') +
+
+        '<button onclick="trackGuideClick(\'' +
+        project.id +
+        '\', \'' +
+        (project.guideUrl || '') +
+        '\')" class="guide-btn-small text-white rounded-lg text-sm font-medium transition-colors flex items-center justify-center gap-2">' +
+        '<i class="fas fa-book-open"></i><span>Гайд</span></button>' +
+
+        '<button onclick="event.stopPropagation(); toggleComplete(\'' +
+        project.id +
+        '\', \'project\')" class="complete-btn ' +
+        (userCompleted.includes(project.id + '_project')
+            ? 'text-emerald-500'
+            : 'text-slate-500 hover:text-emerald-500') +
+        ' p-2 transition-colors w-10 h-10 flex items-center justify-center rounded-lg hover:bg-slate-800" title="Отметить как завершённое">' +
+        '<i class="fas ' +
+        (userCompleted.includes(project.id + '_project') ? 'fa-check-square' : 'fa-square') +
+        ' text-lg"></i></button>' +
+
+        '<button onclick="event.stopPropagation(); toggleFavorite(\'' +
+        project.id +
+        '\')" class="favorite-btn ' +
+        (isFav ? 'active' : 'text-slate-500') +
+        ' p-2 hover:text-red-500 transition-colors w-10 h-10 flex items-center justify-center rounded-lg hover:bg-slate-800">' +
+        '<i class="fas fa-heart ' +
+        (isFav ? 'fill-current' : '') +
+        ' text-lg"></i></button>' +
+        '</div>' +
+        '</div>' +
+
+        '<p class="text-slate-400 text-sm mt-2 line-clamp-2">' +
+        (project.description || 'Нет описания') +
+        '</p>' +
+        '</div>' +
+        '</div>' +
+
+        // Footer buttons
+        '<div class="mt-4 pt-3 border-t border-slate-700/50 flex gap-2">' +
+        '<button onclick="trackGuideClick(\'' +
+        project.id +
+        '\', \'' +
+        (project.referralLink || project.cryptoRankUrl || '') +
+        '\'); event.stopPropagation();" ' +
         'class="flex-1 bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-300 py-2 rounded-lg text-sm font-medium transition-colors flex items-center justify-center gap-2">' +
         '<i class="fas fa-globe"></i> Website</button>' +
 
-        '<button onclick="trackGuideClick(\'' + project.id + '\', \'' + (project.twitterUrl || '') + '\'); event.stopPropagation();" ' +
+        '<button onclick="trackGuideClick(\'' +
+        project.id +
+        '\', \'' +
+        (project.twitterUrl || '') +
+        '\'); event.stopPropagation();" ' +
         'class="flex-1 bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-300 py-2 rounded-lg text-sm font-medium transition-colors flex items-center justify-center gap-2">' +
         '<i class="fab fa-twitter"></i> Twitter</button>' +
 
-        '<button onclick="trackGuideClick(\'' + project.id + '\', \'' + (project.cryptoRankUrl || '') + '\'); event.stopPropagation();" ' +
+        '<button onclick="trackGuideClick(\'' +
+        project.id +
+        '\', \'' +
+        (project.cryptoRankUrl || '') +
+        '\'); event.stopPropagation();" ' +
         'class="flex-1 bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-300 py-2 rounded-lg text-sm font-medium transition-colors flex items-center justify-center gap-2">' +
         '<i class="fas fa-chart-line"></i> CR</button>' +
-'</div></div>';
-            }).join('');
+        '</div>' +
+        '</div>'
+    );
+}).join('');
+
         }
 
         // ✅ Получить дату последней активности проекта
