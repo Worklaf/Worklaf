@@ -1420,7 +1420,8 @@ let adminFeedbacksUnsubscribe = null;
 // =====================
 
 // Инициализация для админа
-// ✅ ИСПРАВЛЕННАЯ функция инициализации (БЕЗ orderBy в запросе)
+// ✅ УЛУЧШЕННАЯ функция инициализации слушателя фидбеков
+// ✅ ИСПРАВЛЕННАЯ функция инициализации слушателя фидбеков (БЕЗ orderBy в запросе)
 function initFeedbacksListener(uid) {
     if (adminFeedbacksUnsubscribe) {
         adminFeedbacksUnsubscribe();
@@ -1432,10 +1433,10 @@ function initFeedbacksListener(uid) {
 
     try {
         if (isAdmin) {
-            // Админ видит ВСЕ отзывы (без фильтра)
+            // Админ видит ВСЕ отзывы - БЕЗ WHERE, сортируем на клиенте
             q = query(collection(db, "feedbacks"));
         } else {
-            // Пользователь видит ТОЛЬКО свои
+            // Пользователь видит ТОЛЬКО свои - ТОЛЬКО WHERE, БЕЗ orderBy
             q = query(
                 collection(db, "feedbacks"), 
                 where("userId", "==", uid)
@@ -1458,12 +1459,12 @@ function initFeedbacksListener(uid) {
                 // --- ЛОГИКА СЧЕТЧИКА ---
                 if (isAdmin) {
                     // Админ видит непрочитанные сообщения ОТ ПОЛЬЗОВАТЕЛЕЙ
-                    if (data.read === false) {
+                    if (!data.read) {
                         unreadCount++;
                     }
                 } else {
                     // Пользователь видит непрочитанные ОТВЕТЫ ОТ АДМИНА
-                    if (data.userRead === false) {
+                    if (!data.userRead) {
                         unreadCount++;
                     }
                 }
@@ -1471,7 +1472,7 @@ function initFeedbacksListener(uid) {
                 adminFeedbacks.push(data);
             });
             
-            // СОРТИРУЕМ НА КЛИЕНТЕ (вместо в БД)
+            // ✅ СОРТИРУЕМ НА КЛИЕНТЕ (вместо в БД)
             adminFeedbacks.sort((a, b) => {
                 const dateA = a.createdAt && a.createdAt.toDate ? a.createdAt.toDate() : new Date(a.createdAt || 0);
                 const dateB = b.createdAt && b.createdAt.toDate ? b.createdAt.toDate() : new Date(b.createdAt || 0);
@@ -1495,10 +1496,6 @@ function initFeedbacksListener(uid) {
 
         }, (error) => {
             console.error("❌ Listener error:", error.message);
-            // Если нужен индекс - показываем ссылку
-            if (error.message.includes('requires an index')) {
-                console.warn('⚠️ Нужно создать индекс в Firebase Console или отключить where+orderBy');
-            }
         });
     } catch (e) {
         console.error("❌ Error init listener:", e);
@@ -1513,7 +1510,7 @@ function updateFeedbackBadgeUI(unreadCount) {
         return;
     }
     
-    console.log('🔔 Unread count:', unreadCount);
+    console.log('🔔 Обновляем бейдж:', unreadCount);
     
     if (unreadCount > 0) {
         badge.textContent = unreadCount > 9 ? '9+' : unreadCount;
@@ -1521,11 +1518,12 @@ function updateFeedbackBadgeUI(unreadCount) {
         badge.classList.add('animate-pulse');
     } else {
         badge.classList.add('hidden');
+        badge.classList.remove('animate-pulse');
         badge.textContent = '0';
     }
 }
 
-// ✅ ИСПРАВЛЕННАЯ функция открытия чата
+// ✅ ИСПРАВЛЕННАЯ функция открытия чата (без getDocs)
 window.openFeedbackModal = function(projId, projName) {
     if (!currentUser) {
         showToast('Войдите, чтобы отправлять отзывы');
@@ -1534,16 +1532,11 @@ window.openFeedbackModal = function(projId, projName) {
     }
 
     const modal = document.getElementById('feedbackModal');
-    if (!modal) {
-        console.error('❌ feedbackModal не найден в HTML');
-        return;
-    }
-
     document.getElementById('feedbackProjectId').value = projId;
     document.getElementById('feedbackProjectName').textContent = projName || 'Unknown';
-    document.getElementById('feedbackChatHistory').innerHTML = '<div class="text-center py-8"><i class="fas fa-spinner fa-spin text-blue-400"></i> Загрузка...</div>';
+    document.getElementById('feedbackChatHistory').innerHTML = '<div class="text-center py-8"><i class="fas fa-spinner fa-spin text-blue-400"></i></div>';
 
-    // Поиск СВОЕГО отзыва по проекту
+    // Ищем в памяти (adminFeedbacks уже загружен слушателем)
     const userFeedback = adminFeedbacks.find(fb => 
         fb.userId === currentUser.uid && 
         fb.projectId === projId
@@ -1560,7 +1553,6 @@ window.openFeedbackModal = function(projId, projName) {
     }
 
     modal.classList.add('active');
-    console.log('✅ Feedback modal открыт');
 };
 
 function showNewFeedbackForm() {
@@ -1574,35 +1566,31 @@ function showNewFeedbackForm() {
     document.getElementById('feedbackFormNew').classList.remove('hidden');
     document.getElementById('feedbackFormReply').classList.add('hidden');
     document.getElementById('feedbackSendBtn').classList.remove('hidden');
+    document.getElementById('feedbackSendBtn').textContent = 'Отправить';
+    document.getElementById('feedbackSendBtn').onclick = window.sendUserFeedback;
     document.getElementById('feedbackText').value = '';
-    console.log('✅ Показана форма нового отзыва');
 }
 
 function loadFeedbackChat(docId, projId) {
-    console.log('📧 Loading chat:', docId);
-    
     const unsub = onSnapshot(doc(db, "feedbacks", docId), (snap) => {
-        if (!snap.exists()) {
-            console.warn('⚠️ Document не найден');
-            return showNewFeedbackForm();
-        }
+        if (!snap.exists()) return showNewFeedbackForm();
 
         const d = snap.data();
         const messages = d.messages || [];
-        messages.sort((a, b) => new Date(a.timestamp || 0) - new Date(b.timestamp || 0));
+        messages.sort((a,b) => new Date(a.timestamp) - new Date(b.timestamp));
 
         const html = messages.map((msg) => {
-            const fromUser = msg.sender === 'user';
-            const bubbleSide = fromUser ? 'user' : 'admin';
+            const fromUser = msg.sender === 'user'; // Пользователь (тот, кто открыл модал) писал
+            
+            // ПОЛЬЗОВАТЕЛЬ: 'user' всегда справа, 'admin' всегда слева
+            const bubbleSide = fromUser ? 'user' : 'admin'; 
             const senderName = fromUser ? 'Вы' : 'Поддержка';
             
             const avatar = fromUser
                 ? `<img src="${currentUser?.photoURL || 'https://ui-avatars.com/api/?name=U'}" class="chat-avatar" alt>` 
                 : `<div class="chat-avatar"><i class="fas fa-user-shield"></i></div>`;
 
-            const timeStr = msg.timestamp 
-                ? formatTimeAgo(msg.timestamp.toDate ? msg.timestamp.toDate() : new Date(msg.timestamp))
-                : '';
+            const t = msg.timestamp ? formatTimeAgo(msg.timestamp.toDate ? msg.timestamp.toDate() : new Date(msg.timestamp)) : '';
 
             return `
             <div class="chat-bubble ${bubbleSide}">
@@ -1610,37 +1598,28 @@ function loadFeedbackChat(docId, projId) {
                 <div class="chat-bubble-wrapper">
                     <span class="chat-sender">${senderName}</span>
                     <div class="chat-content">${msg.text}</div>
-                    <span class="chat-time">${timeStr}</span>
+                    <span class="chat-time">${t}</span>
                 </div>
             </div>`;
         }).join('');
 
         const history = document.getElementById("feedbackChatHistory");
-        if (history) {
-            history.innerHTML = html || `<p class="text-center text-slate-500 py-4">Нет сообщений</p>`;
-            history.scrollTop = history.scrollHeight;
-        }
-        
+        history.innerHTML = html || `<p class="text-center text-slate-500 py-4">Нет сообщений</p>`;
         document.getElementById('feedbackFormNew').classList.add('hidden');
         document.getElementById('feedbackFormReply').classList.remove('hidden');
         document.getElementById('feedbackSendBtn').classList.add('hidden');
+        history.scrollTop = history.scrollHeight;
 
-        // Отметить как прочитанное
-        if (!d.userRead && !currentUser.uid.includes('admin')) {
-            updateDoc(doc(db, "feedbacks", docId), { userRead: true })
-                .catch(e => console.error('Error marking as read:', e));
-        }
-    }, (error) => {
-        console.error('❌ Listener error in loadFeedbackChat:', error);
+        // отметить как прочитанное
+        if (!d.userRead) updateDoc(doc(db, "feedbacks", docId), { userRead: true });
     });
-    
     window.currentFeedbackUnsub = unsub;
 }
-// ✅ ИСПРАВЛЕННАЯ отправка отзыва
 window.sendUserFeedback = async function() {
     if (!currentUser) return showToast('Войдите в аккаунт');
     
     const projId = document.getElementById('feedbackProjectId').value;
+    const category = document.getElementById('feedbackCategory').value;
     const message = document.getElementById('feedbackText').value.trim();
 
     if (!message) return showToast('Введите сообщение');
@@ -1648,34 +1627,32 @@ window.sendUserFeedback = async function() {
     try {
         await addDoc(collection(db, "feedbacks"), {
             projectId: projId,
+            category: category,
             userId: currentUser.uid,
             userName: currentUser.displayName || currentUser.email,
             userPhoto: currentUser.photoURL || '',
+            status: 'open',
             read: false,
             userRead: true,
             deleted: false,
             userDeleted: false,
             createdAt: serverTimestamp(),
+            // ИЗМЕНЕНО: new Date() вместо serverTimestamp()
             messages: [{
                 sender: 'user',
                 text: message,
-                timestamp: serverTimestamp()
+                timestamp: new Date()
             }]
         });
 
         showToast('Сообщение отправлено!');
         document.getElementById('feedbackText').value = '';
-        
-        // Перезагружаем список
-        setTimeout(() => {
-            initFeedbacksListener(currentUser.uid);
-        }, 500);
-        
     } catch (e) {
         console.error(e);
         showToast('Ошибка: ' + e.message);
     }
 };
+
 // --- ПОЛЬЗОВАТЕЛЬ: ОТВЕТИТЬ НА СООБЩЕНИЕ АДМИНА ---
 window.sendUserFeedbackReply = async function() {
     const docId = document.getElementById('feedbackDocId').value;
@@ -1730,16 +1707,14 @@ window.closeFeedbackModal = function() {
 // --- АДМИН: ОТКРЫТЬ СПИСОК ОТЗЫВОВ ---
 
 
-// --- АДМИН: ОТРИСОВАТЬ СПИСОК ОТЗЫВОВ ---
-// ✅ ИСПРАВЛЕННЫЙ renderFeedbackList
+// ✅ УПРОЩЕННЫЙ renderFeedbackList
 window.renderFeedbackList = function() {
     const container = document.getElementById('feedbacksContainer');
     const isAdmin = currentUser && currentUser.uid === "SAkz4mdW9reDaIsvqigCNZhEKJR2";
     
     console.log('📋 renderFeedbackList:', {
         isAdmin,
-        feedbacksCount: adminFeedbacks.length,
-        currentUserId: currentUser?.uid
+        feedbacksCount: adminFeedbacks.length
     });
     
     if (!adminFeedbacks || adminFeedbacks.length === 0) {
@@ -1756,7 +1731,7 @@ window.renderFeedbackList = function() {
     container.innerHTML = adminFeedbacks.map((item) => {
         const messages = item.messages || [];
         const lastMsg = messages[messages.length - 1] || { text: '...', sender: 'unknown' };
-        const date = item.createdAt && item.createdAt.toDate ? item.createdAt.toDate() : new Date(item.createdAt);
+        const date = item.createdAt && item.createdAt.toDate ? item.createdAt.toDate() : new Date(item.createdAt || 0);
         
         const isUnread = isAdmin ? !item.read : !item.userRead;
         
@@ -1769,16 +1744,20 @@ window.renderFeedbackList = function() {
 
         let msgPreview = lastMsg.text || 'Нет сообщений';
         if (!isAdmin && lastMsg.sender === 'admin') {
-            msgPreview = `<span class="text-purple-400 font-bold mr-1">🔔 Ответ:</span> ${lastMsg.text}`;
+            msgPreview = `<span class="text-purple-400 font-bold mr-1">🔔 Новый ответ:</span> ${lastMsg.text}`;
+        } else if (isAdmin && lastMsg.sender === 'user') {
+            msgPreview = `<span class="text-blue-400 font-bold mr-1">User:</span> ${lastMsg.text}`;
+        } else {
+            msgPreview = `<span class="text-slate-500 mr-1">Вы:</span> ${lastMsg.text}`;
         }
 
         return `
             <div onclick="${isAdmin ? `openAdminFeedbackChat('${item.id}')` : `openFeedbackFromList('${item.id}', '${item.projectId}')`}" 
-                 class="cursor-pointer group relative bg-slate-800/40 border border-slate-700/50 hover:bg-slate-800 hover:border-slate-600 rounded-xl p-4 transition-all">
+                 class="cursor-pointer group relative bg-slate-800/40 border border-slate-700/50 hover:bg-slate-800 hover:border-slate-600 rounded-xl p-4 transition-all duration-200">
                 
-                ${isUnread ? `<div class="absolute top-4 right-4 w-3 h-3 bg-purple-500 rounded-full shadow-lg animate-pulse"></div>` : ''}
+                ${isUnread ? `<div class="absolute top-4 right-4 w-3 h-3 bg-purple-500 rounded-full shadow-[0_0_10px_rgba(168,85,247,0.5)] animate-pulse"></div>` : ''}
                 
-                <div class="flex justify-between items-start mb-2">
+                <div class="flex justify-between items-start mb-2 pr-6">
                     <div>
                         ${titleHtml}
                         <span class="text-xs text-slate-500 mt-0.5 block">${formatTimeAgo(date)}</span>
@@ -1786,14 +1765,13 @@ window.renderFeedbackList = function() {
                     ${isUnread ? `<span class="bg-purple-600 text-white text-xs px-2 py-1 rounded-full font-bold">NEW</span>` : ''}
                 </div>
 
-                <div class="text-sm text-slate-300 line-clamp-2">
+                <div class="text-sm text-slate-300 line-clamp-2 pr-8">
                     ${msgPreview}
                 </div>
             </div>
         `;
     }).join('');
 };
-
 // Хелпер для открытия чата юзером из списка
 window.openFeedbackFromList = function(docId, projectId) {
     document.getElementById('feedbackListModal').classList.remove('active'); // Закрыть список
@@ -1814,9 +1792,7 @@ window.openFeedbackFromList = function(docId, projectId) {
     modal.classList.add('active');
 };
 
-// --- АДМИН: ОТКРЫТЬ ЧАТ КОНКРЕТНОГО ОТЗЫВА ---
-// --- АДМИН: ОТКРЫТЬ ЧАТ КОНКРЕТНОГО ОТЗЫВА ---
-// --- АДМИН: ОТКРЫТЬ ЧАТ КОНКРЕТНОГО ОТЗЫВА ---
+// ✅ Упрощенный openAdminFeedbackChat (без лишних query)
 window.openAdminFeedbackChat = function (feedbackId) {
     const fb = adminFeedbacks.find(f => f.id === feedbackId);
     if (!fb) return;
@@ -1847,10 +1823,9 @@ window.openAdminFeedbackChat = function (feedbackId) {
 
         const d = snap.data();
         const messages = d.messages || [];
-        messages.sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp));
+        messages.sort((a, b) => new Date(a.timestamp || 0) - new Date(b.timestamp || 0));
 
         const html = messages.map(msg => {
-            // ✅ ИСПРАВЛЕНО: используем msg.sender напрямую
             const bubbleSide = msg.sender; // 'user' или 'admin'
             const senderName = msg.sender === 'admin' ? 'Вы' : (d.userName || 'Пользователь');
             
@@ -1999,8 +1974,7 @@ window.deleteAdminFeedback = async function(id) {
 
         window.closeNotificationsModal = function() { document.getElementById('notificationsModal').classList.remove('active'); };
         // --- Admin Feedback List Modal Functions (MISSING IN YOUR CODE) ---
-      // ✅ ИСПРАВЛЕННАЯ админ-панель открытия списка
-window.openFeedbackListModal = function() {
+       window.openFeedbackListModal = function() {
     if (!currentUser) {
         showToast('Войдите в аккаунт');
         openLoginModal();
@@ -2008,18 +1982,17 @@ window.openFeedbackListModal = function() {
     }
     
     const isAdmin = currentUser.uid === "SAkz4mdW9reDaIsvqigCNZhEKJR2";
-    const titleEl = document.querySelector('#feedbackListModal h2');
+    const titleContainer = document.querySelector('#feedbackListModal h2');
     
-    if (titleEl) {
+    if(titleContainer) {
         if (isAdmin) {
-            titleEl.innerHTML = '<i class="fas fa-shield-alt text-purple-400 mr-2"></i>Все обращения (Админ)';
+            titleContainer.innerHTML = '<i class="fas fa-shield-alt text-purple-400 mr-2"></i>Все обращения (Админ)';
         } else {
-            titleEl.innerHTML = '<i class="fas fa-comments text-purple-400 mr-2"></i>Мои сообщения';
+            titleContainer.innerHTML = '<i class="fas fa-comments text-purple-400 mr-2"></i>Мои сообщения';
         }
     }
 
     document.getElementById('feedbackListModal').classList.add('active');
-    console.log('✅ Feedback list modal открыт');
     
     setTimeout(() => {
         renderFeedbackList();
