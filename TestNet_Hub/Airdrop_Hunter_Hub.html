@@ -1431,8 +1431,11 @@ function initFeedbacksListener(uid) {
     const isAdmin = uid === "SAkz4mdW9reDaIsvqigCNZhEKJR2";
 
     if (isAdmin) {
-        // АДМИН: Видит все чаты
-        q = query(collection(db, "feedbacks"), orderBy("createdAt", "desc"));
+        // АДМИН: Видит все чаты, даже удаленные (но не помеченные как deleted)
+        q = query(
+            collection(db, "feedbacks"), 
+            orderBy("createdAt", "desc")
+        );
     } else {
         // ЮЗЕР: Видит только свои чаты
         q = query(
@@ -1450,7 +1453,7 @@ function initFeedbacksListener(uid) {
             snapshot.forEach((doc) => {
                 const data = doc.data();
                 
-                // Фильтрация удаленных (мягкое удаление)
+                // Фильтрация удаленных
                 if (isAdmin && data.deleted) return;
                 if (!isAdmin && data.userDeleted) return;
 
@@ -1458,23 +1461,22 @@ function initFeedbacksListener(uid) {
                 
                 // --- ЛОГИКА СЧЕТЧИКА ---
                 if (isAdmin) {
-                    // Для админа: если тикет не помечен как read
                     if (!data.read) unreadCount++;
                 } else {
-                    // Для юзера: если тикет не readUser (значит админ ответил)
                     if (!data.userRead) unreadCount++;
                 }
                 
                 adminFeedbacks.push(data);
             });
             
-            // Обновляем тот самый единственный бейдж
+            console.log('Feedbacks loaded:', { count: adminFeedbacks.length, unread: unreadCount, isAdmin });
+            
+            // Обновляем бейдж
             const badge = document.getElementById('feedbackBadge');
             if (badge) {
                 badge.textContent = unreadCount > 9 ? '9+' : unreadCount;
                 if (unreadCount > 0) {
                     badge.classList.remove('hidden');
-                    // Добавим анимацию, если есть новые
                     badge.classList.add('animate-pulse');
                 } else {
                     badge.classList.add('hidden');
@@ -1482,7 +1484,7 @@ function initFeedbacksListener(uid) {
                 }
             }
             
-            // Если список прямо сейчас открыт - перерисовываем его
+            // Если список открыт - перерисовываем
             const listModal = document.getElementById('feedbackListModal');
             if (listModal && listModal.classList.contains('active')) {
                 renderFeedbackList();
@@ -1690,34 +1692,18 @@ window.closeFeedbackModal = function() {
 };
 
 // --- АДМИН: ОТКРЫТЬ СПИСОК ОТЗЫВОВ ---
-window.openFeedbackListModal = function() {
-    if (!currentUser) {
-        showToast('Войдите в аккаунт');
-        return;
-    }
-    
-    // Меняем заголовок в модалке
-    const titleContainer = document.querySelector('#feedbackListModal h2');
-    const isAdmin = currentUser.uid === "SAkz4mdW9reDaIsvqigCNZhEKJR2";
-    
-    if(titleContainer) {
-        titleContainer.innerHTML = isAdmin 
-            ? '<i class="fas fa-shield-alt text-purple-400 mr-2"></i>Все обращения (Админ)'
-            : '<i class="fas fa-comments text-purple-400 mr-2"></i>Мои сообщения';
-    }
 
-    document.getElementById('feedbackListModal').classList.add('active');
-    renderFeedbackList();
-};
-
-window.closeFeedbackListModal = function() {
-    document.getElementById('feedbackListModal').classList.remove('active');
-};
 
 // --- АДМИН: ОТРИСОВАТЬ СПИСОК ОТЗЫВОВ ---
 window.renderFeedbackList = function() {
     const container = document.getElementById('feedbacksContainer');
     const isAdmin = currentUser && currentUser.uid === "SAkz4mdW9reDaIsvqigCNZhEKJR2";
+    
+    console.log('renderFeedbackList:', {
+        isAdmin: isAdmin,
+        feedbacksCount: adminFeedbacks.length,
+        feedbacks: adminFeedbacks
+    });
     
     if (!adminFeedbacks || adminFeedbacks.length === 0) {
         container.innerHTML = `
@@ -1734,26 +1720,25 @@ window.renderFeedbackList = function() {
         // Данные сообщений
         const messages = item.messages || [];
         const lastMsg = messages[messages.length - 1] || { text: '...', sender: 'unknown' };
-        const date = item.createdAt && item.createdAt.toDate ? item.createdAt.toDate() : new Date();
+        const date = item.createdAt && item.createdAt.toDate ? item.createdAt.toDate() : new Date(item.createdAt);
         
-        // Статус "Непрочитано"
+        // Статус "Непрочитано" - ИСПРАВЛЕНО
         const isUnread = isAdmin ? !item.read : !item.userRead;
         
+        console.log('Item:', { id: item.id, isUnread, read: item.read, userRead: item.userRead });
+        
         // Основной текст заголовка
-        // Админ видит: Имя юзера (Проект)
-        // Юзер видит: Название Проекта
         let titleHtml = '';
         if (isAdmin) {
-            titleHtml = `<span class="font-bold text-white">${item.userName || 'User'}</span> <span class="text-xs text-slate-500 ml-1">${item.projectId}</span>`;
+            titleHtml = `<span class="font-bold text-white">${item.userName || 'User'}</span> <span class="text-xs text-slate-500 ml-1">(${item.projectId})</span>`;
         } else {
             titleHtml = `<span class="font-bold text-white text-lg">${item.projectId}</span>`;
         }
 
         // Текст последнего сообщения
-        // Если юзер видит, что последнее от админа -> пишем "Поддержка: ..."
-        let msgPreview = lastMsg.text;
+        let msgPreview = lastMsg.text || 'Нет сообщений';
         if (!isAdmin && lastMsg.sender === 'admin') {
-            msgPreview = `<span class="text-purple-400 font-bold mr-1">Поддержка:</span> ${lastMsg.text}`;
+            msgPreview = `<span class="text-purple-400 font-bold mr-1">🔔 Новый ответ:</span> ${lastMsg.text}`;
         } else if (isAdmin && lastMsg.sender === 'user') {
              msgPreview = `<span class="text-blue-400 font-bold mr-1">User:</span> ${lastMsg.text}`;
         } else {
@@ -1764,13 +1749,14 @@ window.renderFeedbackList = function() {
             <div onclick="${isAdmin ? `openAdminFeedbackChat('${item.id}')` : `openFeedbackFromList('${item.id}', '${item.projectId}')`}" 
                  class="cursor-pointer group relative bg-slate-800/40 border border-slate-700/50 hover:bg-slate-800 hover:border-slate-600 rounded-xl p-4 transition-all duration-200">
                 
-                ${isUnread ? `<div class="absolute top-4 right-4 w-2.5 h-2.5 bg-purple-500 rounded-full shadow-[0_0_10px_rgba(168,85,247,0.5)]"></div>` : ''}
+                ${isUnread ? `<div class="absolute top-4 right-4 w-3 h-3 bg-purple-500 rounded-full shadow-[0_0_10px_rgba(168,85,247,0.5)] animate-pulse"></div>` : ''}
                 
-                <div class="flex justify-between items-start mb-2 pr-4">
+                <div class="flex justify-between items-start mb-2 pr-6">
                     <div class="flex flex-col">
                         ${titleHtml}
                         <span class="text-xs text-slate-500 mt-0.5">${formatTimeAgo(date)}</span>
                     </div>
+                    ${isUnread ? `<span class="bg-purple-600 text-white text-xs px-2 py-1 rounded-full font-bold">NEW</span>` : ''}
                 </div>
 
                 <div class="text-sm text-slate-300 line-clamp-2 pr-8 opacity-90 group-hover:opacity-100">
@@ -1998,15 +1984,34 @@ window.deleteAdminFeedback = async function(id) {
         window.closeNotificationsModal = function() { document.getElementById('notificationsModal').classList.remove('active'); };
         // --- Admin Feedback List Modal Functions (MISSING IN YOUR CODE) ---
         window.openFeedbackListModal = function() {
-            // Проверка, что пользователь админ
-            if (!currentUser || currentUser.uid !== "SAkz4mdW9reDaIsvqigCNZhEKJR2") {
-                showToast('Доступ только для админа');
-                return;
-            }
-            document.getElementById('feedbackListModal').classList.add('active');
-            // Принудительно перерисовываем список, чтобы данные были свежими
-            renderFeedbackList();
-        };
+    if (!currentUser) {
+        showToast('Войдите в аккаунт');
+        openLoginModal();
+        return;
+    }
+    
+    const isAdmin = currentUser.uid === "SAkz4mdW9reDaIsvqigCNZhEKJR2";
+    const titleContainer = document.querySelector('#feedbackListModal h2');
+    
+    if(titleContainer) {
+        if (isAdmin) {
+            titleContainer.innerHTML = '<i class="fas fa-shield-alt text-purple-400 mr-2"></i>Все обращения (Админ)';
+        } else {
+            titleContainer.innerHTML = '<i class="fas fa-comments text-purple-400 mr-2"></i>Мои сообщения';
+        }
+    }
+
+    document.getElementById('feedbackListModal').classList.add('active');
+    
+    // ВАЖНО: Перезагружаем данные перед отрисовкой
+    setTimeout(() => {
+        renderFeedbackList();
+    }, 100);
+};
+
+window.closeFeedbackListModal = function() {
+    document.getElementById('feedbackListModal').classList.remove('active');
+};
 
         window.closeFeedbackListModal = function() {
             document.getElementById('feedbackListModal').classList.remove('active');
