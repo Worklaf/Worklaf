@@ -434,24 +434,8 @@
 
         footer { text-align: center; padding: 28px 10px 0; color: var(--text-muted); border-top: 1px solid var(--border); font-size: 0.85rem; }
 
-        .floating-tooltip {
-            position: fixed;
-            z-index: 9999;
-            background: rgba(15, 23, 42, 0.95);
-            color: #f8fafc;
-            padding: 10px 14px;
-            border-radius: 10px;
-            border: 1px solid rgba(59, 130, 246, 0.45);
-            box-shadow: 0 12px 32px rgba(15, 23, 42, 0.45);
-            font-size: 0.83rem;
-            line-height: 1.45;
-            pointer-events: none;
-            max-width: min(360px, calc(100vw - 32px));
-            opacity: 0;
-            transform: translateY(6px);
-            transition: opacity 0.15s ease, transform 0.15s ease;
-        }
-
+           /* УДАЛИТЕ первый блок .floating-tooltip, оставьте только этот: */
+        
         .floating-tooltip {
             position: fixed;
             z-index: 9999;
@@ -477,6 +461,7 @@
             visibility: visible !important;
         }
 
+        /* Остальные стили для has-image оставьте как есть */
         .floating-tooltip.has-image {
             max-width: 280px;
             padding: 0;
@@ -1089,14 +1074,14 @@
     let activeTooltipTarget = null;
 
     function ensureTooltipElement() {
-    if (!tooltipEl) {
-        tooltipEl = document.createElement('div');
-        tooltipEl.className = 'floating-tooltip';
-        document.body.appendChild(tooltipEl);
+        if (!tooltipEl) {
+            tooltipEl = document.createElement('div');
+            tooltipEl.className = 'floating-tooltip';
+            document.body.appendChild(tooltipEl);
+        }
     }
-}
     
-        function positionTooltip(target) {
+    function positionTooltip(target) {
         if (!tooltipEl || !target) return;
         
         const rect = target.getBoundingClientRect();
@@ -1106,7 +1091,6 @@
         tooltipEl.style.left = '-9999px';
         tooltipEl.style.top = '-9999px';
         tooltipEl.style.visibility = 'hidden';
-        tooltipEl.style.opacity = '0';
         document.body.appendChild(tooltipEl);
         
         const tooltipRect = tooltipEl.getBoundingClientRect();
@@ -1132,10 +1116,11 @@
         // Применяем позицию
         tooltipEl.style.left = left + 'px';
         tooltipEl.style.top = top + 'px';
-        tooltipEl.style.visibility = 'visible';
     }
     
-        function showTooltip(e) {
+    let activeTooltipTarget = null;
+
+    function showTooltip(e) {
         const target = e.target.closest('[data-tooltip]');
         if (!target) return;
         
@@ -1145,12 +1130,9 @@
         if (!text && !imageUrl) return;
         
         ensureTooltipElement();
+        activeTooltipTarget = target;
         
-        // Удаляем обработчики если уже были добавлены
-        tooltipEl.onmouseenter = null;
-        tooltipEl.onmouseleave = null;
-        
-        // Показываем контейнер для картинки или текст
+        // Подготавливаем контент
         if (imageUrl) {
             tooltipEl.classList.add('has-image');
             tooltipEl.innerHTML = `
@@ -1164,18 +1146,13 @@
             tooltipEl.textContent = text;
         }
         
-        // Позиционируем и показываем
+        // Позиционируем и ПОКАЗЫВАЕМ через КЛАСС
         positionTooltip(target);
-        tooltipEl.style.left = '0';
-        tooltipEl.style.top = '0';
-        tooltipEl.style.opacity = '1';
-        tooltipEl.style.transform = 'translateY(0)';
-        tooltipEl.style.visibility = 'visible';
+        tooltipEl.classList.add('visible');
         
-        // Добавляем обработчики чтобы тултип не исчезал при наведении на него
+        // Обработчики чтобы тултип не исчезал при наведении на него
         tooltipEl.onmouseenter = function() {
-            tooltipEl.style.opacity = '1';
-            tooltipEl.style.transform = 'translateY(0)';
+            tooltipEl.classList.add('visible');
         };
         tooltipEl.onmouseleave = function() {
             hideTooltip();
@@ -1184,11 +1161,8 @@
     
     function hideTooltip() {
         if (!tooltipEl) return;
-        tooltipEl.style.opacity = '0';
-        tooltipEl.style.transform = 'translateY(10px)';
-        tooltipEl.style.visibility = 'hidden';
-        tooltipEl.style.left = '-9999px';
-        tooltipEl.style.top = '-9999px';
+        tooltipEl.classList.remove('visible');
+        activeTooltipTarget = null;
     }
     
     function initializeTooltips() {
@@ -1198,10 +1172,22 @@
             el.addEventListener('mouseleave', hideTooltip);
             el.addEventListener('focus', showTooltip);
             el.addEventListener('blur', hideTooltip);
-            el.addEventListener('mousemove', () => { if (activeTooltipTarget === el) positionTooltip(el); });
             el.dataset.tooltipBound = 'true';
         });
     }
+    
+    // Обновляем позицию при скролле/ресайзе
+    document.addEventListener('scroll', () => {
+        if (activeTooltipTarget && tooltipEl && tooltipEl.classList.contains('visible')) {
+            positionTooltip(activeTooltipTarget);
+        }
+    }, true);
+    
+    window.addEventListener('resize', () => {
+        if (activeTooltipTarget && tooltipEl && tooltipEl.classList.contains('visible')) {
+            positionTooltip(activeTooltipTarget);
+        }
+    });
     
     document.addEventListener('scroll', () => { if (activeTooltipTarget) positionTooltip(activeTooltipTarget); }, true);
     window.addEventListener('resize', () => { if (activeTooltipTarget) positionTooltip(activeTooltipTarget); });
