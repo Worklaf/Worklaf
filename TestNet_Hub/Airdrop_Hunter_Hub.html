@@ -2315,7 +2315,6 @@ window.loadData = async function() {
     } catch (e) { console.log('JSON load error', e); }
     
     onSnapshot(collection(db, "projects"), function(snapshot) {
-        // ЕСЛИ ОТКРЫТА МОДАЛКА РЕДАКТИРОВАНИЯ, НЕ ОБНОВЛЯЕМ ДАННЫЕ
         if (isEditModalOpen) return; 
 
         snapshot.forEach(function(docSnap) {
@@ -2325,12 +2324,12 @@ window.loadData = async function() {
             else projects.push(normalizeData(fireProject));
         });
         
-        // ✅ ПЕРВЫЙ РАЗ ПОСЛЕ ЗАГРУЗКИ - ПРИМЕНЯЕМ СОРТИРОВКУ
         if (!firstDataLoadComplete) {
             firstDataLoadComplete = true;
             sortProjects('latest');
         } else {
-            applyFilters();
+            // ✅ Используем текущую сортировку вместо фиксированной
+            sortProjects(currentSortType);
         }
     });
 };
@@ -2728,7 +2727,9 @@ function isNewProject(dateString) {
         window.filterProjects = function(status) { currentFilters.status = status; applyFilters(); };
         window.resetFilters = function() { currentFilters = { status: 'all', categories: [] }; document.getElementById('searchInput').value = ''; applyFilters(); };
         
-        window.sortProjects = function(by) {
+        // Обновите функцию sortProjects
+window.sortProjects = function(by) {
+    currentSortType = by; // Сохраняем текущий тип сортировки
     
     if (by === 'name') {
         projects.sort(function(a, b) { return a.name.localeCompare(b.name); });
@@ -2737,7 +2738,6 @@ function isNewProject(dateString) {
         projects.sort(function(a, b) { return (b.priority === 'high' ? 1 : 0) - (a.priority === 'high' ? 1 : 0); });
     } 
     else if (by === 'latest') {
-        // ✅ Оба варианта теперь используют getLatestActivityDate
         projects.sort(function(a, b) {
             const aDate = getLatestActivityDate(a);
             const bDate = getLatestActivityDate(b);
@@ -2745,7 +2745,7 @@ function isNewProject(dateString) {
             const aTime = aDate ? new Date(aDate).getTime() : 0;
             const bTime = bDate ? new Date(bDate).getTime() : 0;
             
-            return bTime - aTime; // От новых к старым
+            return bTime - aTime;
         });
     }
     
@@ -3199,50 +3199,88 @@ function isNewProject(dateString) {
         window.editCurrentProject = function() { if(currentDetailId) window.editProject(currentDetailId); };
 
         window.saveProject = async function(e) {
-            e.preventDefault();
-            if (!isAdminMode) return;
-            const now = new Date().toISOString();
-            
-            const projName = document.getElementById('projName').value.trim();
+    e.preventDefault();
+    if (!isAdminMode) return;
+    const now = new Date().toISOString();
+    
+    const projName = document.getElementById('projName').value.trim();
 
-// формируем id: пробелы → "_", латиница/цифры/нижнее подчёркивание
-const idSlug = projName
-      .toLowerCase()
-      .replace(/\s+/g, '_')          // пробелы -> _
-      .replace(/[^a-z0-9_]+/g, '')   // убираем лишние символы
-      .substring(0, 60);             // безопасная длина
+    // Проверяем, что название не пустое
+    if (!projName) {
+        showToast('Введите название проекта');
+        return;
+    }
 
-const id = editingId || idSlug;      // без префиксов/дат
-            
-            const selectedCats = getSelectedCategories();
+    // Формируем ID
+    let id;
+    if (editingId) {
+        id = editingId;
+    } else {
+        id = projName
+            .toLowerCase()
+            .replace(/\s+/g, '_')
+            .replace(/[^a-z0-9_]+/g, '')
+            .substring(0, 50);
+        
+        id = id + '_' + Date.now().toString().slice(-6);
+        
+        const existingProject = projects.find(p => p.id === id);
+        if (existingProject) {
+            id = id + '_' + Math.random().toString(36).substring(2, 5);
+        }
+    }
+    
+    const selectedCats = getSelectedCategories();
 
-            const projectData = {
-                id: id,
-                name: projName,
-                categories: selectedCats,
-                status: document.getElementById('projStatus').value,
-                description: document.getElementById('projDesc').value,
-                image: document.getElementById('projImage').value || '',
-                guideUrl: document.getElementById('projGuideUrl').value || '',
-                cryptoRankUrl: document.getElementById('projCryptoRank').value,
-                twitterUrl: document.getElementById('projTwitter').value,
-                referralLink: document.getElementById('projRef').value,
-                hasDaily: document.getElementById('projDaily').checked,
-                priority: document.getElementById('projPriority').checked ? 'high' : 'normal',
-                lastUpdated: document.getElementById('projLastUpdated').value || now.split('T')[0],
-                createdAt: editingId ? (projects.find(function(p) { return p.id === editingId; }).createdAt || now) : now,
-                activities: currentEditingActivities
-            };
-            
-            try { 
-                await setDoc(doc(db, "projects", id), projectData, { merge: true }); 
-                showToast('Сохранено в облако!'); 
-                window.closeAddModal(); 
-            } catch (err) { 
-                console.error(err); 
-                showToast('Ошибка сохранения: ' + err.message); 
+    const projectData = {
+        id: id,
+        name: projName,
+        categories: selectedCats,
+        status: document.getElementById('projStatus').value,
+        description: document.getElementById('projDesc').value,
+        image: document.getElementById('projImage').value || '',
+        guideUrl: document.getElementById('projGuideUrl').value || '',
+        cryptoRankUrl: document.getElementById('projCryptoRank').value,
+        twitterUrl: document.getElementById('projTwitter').value,
+        referralLink: document.getElementById('projRef').value,
+        hasDaily: document.getElementById('projDaily').checked,
+        priority: document.getElementById('projPriority').checked ? 'high' : 'normal',
+        lastUpdated: document.getElementById('projLastUpdated').value || now.split('T')[0],
+        createdAt: editingId ? (projects.find(function(p) { return p.id === editingId; })?.createdAt || now) : now,
+        activities: currentEditingActivities,
+        deleted: false
+    };
+    
+    try { 
+        if (!id || id.trim() === '') {
+            throw new Error('Неверный ID проекта');
+        }
+        
+        await setDoc(doc(db, "projects", id), projectData, { merge: true }); 
+        
+        // ✅ ВАЖНОЕ ИСПРАВЛЕНИЕ: Обновляем локальные данные сразу после сохранения
+        if (editingId) {
+            // Обновляем существующий проект
+            const index = projects.findIndex(p => p.id === editingId);
+            if (index !== -1) {
+                projects[index] = { ...projects[index], ...projectData };
             }
-        };
+        } else {
+            // Добавляем новый проект в начало массива
+            projects.unshift(projectData);
+        }
+        
+        // ✅ ПРИМЕНЯЕМ СОРТИРОВКУ И ФИЛЬТРЫ
+        sortProjects(currentSortType);
+        applyFilters();
+        
+        showToast('Сохранено в облако!'); 
+        window.closeAddModal(); 
+    } catch (err) { 
+        console.error('Ошибка сохранения:', err); 
+        showToast('Ошибка сохранения: ' + err.message); 
+    }
+};
         
         window.deleteProject = async function() {
             if(!editingId || !confirm('Удалить проект?')) return;
