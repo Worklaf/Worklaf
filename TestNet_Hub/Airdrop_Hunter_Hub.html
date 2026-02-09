@@ -1107,6 +1107,62 @@ main {
         display: none;
     }
 }
+/* Hero Section Collapse */
+.hero-section {
+    transition: all 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+    overflow: hidden;
+}
+
+.hero-section.collapsed {
+    max-height: 80px;
+    padding-top: 1rem;
+    padding-bottom: 1rem;
+}
+
+.hero-section.collapsed .hero-content {
+    opacity: 0;
+    transform: translateY(-20px);
+    pointer-events: none;
+}
+
+.hero-content {
+    transition: all 0.4s ease;
+}
+
+.hero-collapse-btn {
+    position: absolute;
+    bottom: 1rem;
+    left: 50%;
+    transform: translateX(-50%);
+    background: rgba(30, 37, 56, 0.8);
+    backdrop-filter: blur(8px);
+    border: 1px solid rgba(59, 130, 246, 0.3);
+    padding: 0.5rem 1.5rem;
+    border-radius: 999px;
+    color: #94a3b8;
+    font-size: 0.875rem;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    z-index: 10;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.hero-collapse-btn:hover {
+    background: rgba(59, 130, 246, 0.2);
+    border-color: #3b82f6;
+    color: white;
+    transform: translateX(-50%) translateY(-2px);
+}
+
+.hero-collapse-btn i {
+    transition: transform 0.3s ease;
+}
+
+.hero-section.collapsed .hero-collapse-btn i {
+    transform: rotate(180deg);
+}
     </style>
 </head>
 <body class="antialiased">
@@ -1408,19 +1464,19 @@ main {
     </div>
 </header>
               <!-- ========== HERO SECTION ========== -->
-<main class="relative isolate overflow-hidden bg-slate-900">
+<main class="hero-section relative isolate overflow-hidden bg-slate-900" id="heroSection">
     <!-- Фон с сеткой и градиентами -->
     <div class="absolute inset-0 bg-gradient-to-b from-slate-900 via-slate-900/50 to-slate-900 -z-10"></div>
     <div class="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNDAiIGhlaWdodD0iNDAiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+PHJlY3Qgd2lkdGg9IjQwIiBoZWlnaHQ9IjQwIiBmaWxsPSJub25lIi8+PHBhdGggZD0iTSAwIDIwIEwgNDAgMjAgTSAyMCAwIEwgMjAgNDAiIHN0cm9rZT0icmdiYSgyMiwyMTAsMjM4LDAuMDUpIiBzdHJva2Utd2lkdGg9IjEiLz48L3N2Zz4=')] opacity-50 -z-10"></div>
     <div class="absolute inset-x-0 top-0 h-[500px] bg-gradient-to-b from-cyan-900/30 to-transparent -z-10"></div>
     
-    <div class="max-w-4xl mx-auto px-4 py-24 sm:py-32 lg:py-40 text-center">
+    <div class="hero-content max-w-4xl mx-auto px-4 py-24 sm:py-32 lg:py-40 text-center">
         <!-- Большая иконка лаборатории с подсветкой -->
         <div class="relative w-24 h-24 mx-auto mb-8 group">
             <div class="absolute -inset-2 bg-gradient-to-r from-cyan-500 to-blue-600 rounded-3xl blur-xl opacity-50 group-hover:opacity-75 transition-opacity animate-pulse"></div>
             <div class="relative w-full h-full rounded-3xl bg-slate-800/80 border-2 border-cyan-400/50 flex items-center justify-center shadow-2xl shadow-cyan-500/20">
                 <svg class="w-16 h-16 text-cyan-400">
-                    <use href="#lab-logo"/> <!-- Используем наш SVG-символ из предыдущего ответа -->
+                    <use href="#lab-logo"/>
                 </svg>
             </div>
         </div>
@@ -1440,11 +1496,17 @@ main {
         <!-- Кнопка действия -->
         <div class="mt-10">
             <a href="#projects" class="inline-flex items-center px-8 py-4 bg-gradient-to-r from-cyan-500 to-blue-600 rounded-xl text-base font-bold text-white shadow-lg shadow-cyan-500/40 hover:shadow-cyan-500/60 transition-all transform hover:scale-105">
-    <svg class="w-5 h-5 mr-2"><use href="#icon-search"></use></svg> <!-- <<-- ЗАМЕНА -->
-    <span>Начать исследование</span>
-</a>
+                <svg class="w-5 h-5 mr-2"><use href="#icon-search"></use></svg>
+                <span>Начать исследование</span>
+            </a>
         </div>
     </div>
+    
+    <!-- Кнопка сворачивания -->
+    <button onclick="toggleHeroSection()" class="hero-collapse-btn">
+        <span id="heroCollapseText">Свернуть приветствие</span>
+        <i class="fas fa-chevron-down"></i>
+    </button>
 </main>
 <!-- ========== END HERO SECTION ========== -->
 			  <!-- Крипто-виджет (закреплённый) -->
@@ -2173,7 +2235,18 @@ let currentSortType = 'latest';
                 showToast('Аккаунт создан!'); 
             } catch(e) { showToast(e.message); } 
         };
-        window.logout = function() { signOut(auth).then(() => showToast('Вы вышли из системы')); };
+        window.logout = function() { 
+    signOut(auth).then(() => {
+        showToast('Вы вышли из системы');
+        // Очищаем локальный бэкап при выходе
+        localStorage.removeItem('favorites_backup');
+        localStorage.removeItem(STORAGE_KEY);
+        // Сбрасываем массивы для логики без авторизации
+        userFavorites = [];
+        userCompleted = [];
+        arcData = {};
+    }); 
+};
 
         // =====================
 // FEEDBACK SYSTEM (USER + ADMIN CHAT)
@@ -2841,7 +2914,7 @@ onAuthStateChanged(auth, async function(user) {
                 photoURL: user.photoURL,
                 lastLogin: now
             };
-
+await loadHeroStateFromFirestore(user.uid);
             if (userSnap.exists()) {
                 await updateDoc(userRef, userData);
             } else {
@@ -2923,23 +2996,56 @@ onAuthStateChanged(auth, async function(user) {
 });
 
         function initUserSync(uid) {
-            const userRef = doc(db, "users", uid);
-            onSnapshot(userRef, function(docSnap) {
-                if (docSnap.exists()) {
-                    const data = docSnap.data();
-                    userFavorites = data.favorites || [];
-                    if (data.completed && Array.isArray(data.completed)) {
-                        userCompleted = data.completed;
-                        localStorage.setItem(COMPLETED_KEY, JSON.stringify(userCompleted));
-                    }
-                    if (data.arcGuideStats) {
-                        arcData = data.arcGuideStats;
-                        localStorage.setItem(STORAGE_KEY, JSON.stringify(arcData));
-                    }
-                    applyFilters();
-                }
-            });
+    const userRef = doc(db, "users", uid);
+    onSnapshot(userRef, function(docSnap) {
+        if (docSnap.exists()) {
+            const data = docSnap.data();
+            
+            // 🔧 ИСПРАВЛЕНИЕ: Интеллектуальная синхронизация
+            // 1. Получаем избранное из Firestore
+            let cloudFavorites = data.favorites || [];
+            
+            // 2. Получаем избранное из localStorage (если есть)
+            // Мы не будем перезаписывать cloudFavorites напрямую
+            // Вместо этого, мы добавим то, чего нет в облаке
+            let localStorageFavorites = JSON.parse(localStorage.getItem('favorites_backup')) || [];
+            
+            // Объединяем (удаляем дубликаты)
+            let mergedFavorites = [...new Set([...cloudFavorites, ...localStorageFavorites])];
+            
+            // Если в Firebase были изменения, сохраняем обратно в локальное хранилище
+            if (JSON.stringify(cloudFavorites) !== JSON.stringify(mergedFavorites)) {
+                localStorage.setItem('favorites_backup', JSON.stringify(mergedFavorites));
+            }
+            
+            userFavorites = mergedFavorites;
+            
+            // 3. Тот же самый процесс для "Выполненных заданий"
+            let cloudCompleted = data.completed || [];
+            let localStorageCompleted = JSON.parse(localStorage.getItem(COMPLETED_KEY)) || [];
+            let mergedCompleted = [...new Set([...cloudCompleted, ...localStorageCompleted])];
+            
+            if (JSON.stringify(cloudCompleted) !== JSON.stringify(mergedCompleted)) {
+                localStorage.setItem(COMPLETED_KEY, JSON.stringify(mergedCompleted));
+            }
+            
+            userCompleted = mergedCompleted;
+            
+            // 4. Синхронизация статистики гайдов (arcData)
+            if (data.arcGuideStats) {
+                let cloudArcData = data.arcGuideStats;
+                let localArcData = JSON.parse(localStorage.getItem(STORAGE_KEY)) || {};
+                
+                // Сливаем статистику кликов
+                let mergedArcData = { ...localArcData, ...cloudArcData };
+                localStorage.setItem(STORAGE_KEY, JSON.stringify(mergedArcData));
+                arcData = mergedArcData;
+            }
+
+            applyFilters();
         }
+    });
+}
 
         window.toggleComplete = async function(uid, aid) {
             const uniqueId = uid + '_' + aid;
@@ -3046,15 +3152,22 @@ window.loadData = async function() {
         };
 
         window.toggleFavorite = async function(id) {
-            if (!currentUser) { showToast('Войдите, чтобы сохранить'); return; }
-            const idx = userFavorites.indexOf(id);
-            let newFavs = [...userFavorites];
-            if (idx > -1) newFavs.splice(idx, 1); else newFavs.push(id);
-            userFavorites = newFavs;
-            applyFilters();
-            const userRef = doc(db, "users", currentUser.uid);
-            await setDoc(userRef, { favorites: newFavs }, { merge: true });
-        };
+    if (!currentUser) { showToast('Войдите, чтобы сохранить'); return; }
+    const idx = userFavorites.indexOf(id);
+    let newFavs = [...userFavorites];
+    if (idx > -1) newFavs.splice(idx, 1); else newFavs.push(id);
+    userFavorites = newFavs;
+    applyFilters();
+    
+    // 🔧 ИСПРАВЛЕНИЕ: Сохраняем в облако
+    const userRef = doc(db, "users", currentUser.uid);
+    
+    // 🔧 ИСПРАВЛЕНИЕ: Добавляем "бэкап" в localStorage сразу
+    localStorage.setItem('favorites_backup', JSON.stringify(newFavs));
+    
+    // 🔧 ВАЖНО: Используем merge=true, чтобы не стереть другие поля пользователя
+    await setDoc(userRef, { favorites: newFavs }, { merge: true });
+};
 
         window.toggleFavoriteFromDetail = async function() {
             if (!currentDetailId) return;
@@ -4651,6 +4764,104 @@ window.saveProject = async function(e) {
             }, 500); // 500ms - это duration-500 в Tailwind
         }
     });
+	// Hero Section Collapse
+let isHeroCollapsed = false;
+
+// Инициализация состояния Hero при загрузке
+function initHeroState() {
+    // Проверяем localStorage для всех пользователей
+    const savedState = localStorage.getItem('heroCollapsed');
+    
+    if (savedState === 'true') {
+        // Пользователь уже сворачивал - показываем свернутым
+        collapseHero(false); // false = без анимации
+    }
+    // Если savedState === null или 'false', оставляем развернутым (для новых пользователей)
+}
+
+window.toggleHeroSection = function() {
+    const heroSection = document.getElementById('heroSection');
+    const collapseText = document.getElementById('heroCollapseText');
+    
+    if (isHeroCollapsed) {
+        // Разворачиваем
+        heroSection.classList.remove('collapsed');
+        collapseText.textContent = 'Свернуть приветствие';
+        isHeroCollapsed = false;
+        saveHeroState(false);
+    } else {
+        // Сворачиваем
+        collapseHero(true);
+    }
+};
+
+function collapseHero(withAnimation = true) {
+    const heroSection = document.getElementById('heroSection');
+    const collapseText = document.getElementById('heroCollapseText');
+    
+    if (!withAnimation) {
+        heroSection.style.transition = 'none';
+    }
+    
+    heroSection.classList.add('collapsed');
+    collapseText.textContent = 'Развернуть приветствие';
+    isHeroCollapsed = true;
+    
+    if (!withAnimation) {
+        // Возвращаем анимацию после небольшой задержки
+        setTimeout(() => {
+            heroSection.style.transition = '';
+        }, 50);
+    }
+    
+    saveHeroState(true);
+}
+
+function saveHeroState(collapsed) {
+    // Сохраняем в localStorage для всех пользователей
+    localStorage.setItem('heroCollapsed', collapsed);
+    
+    // Если пользователь авторизован - сохраняем в Firestore
+    if (currentUser) {
+        try {
+            const userRef = doc(db, "users", currentUser.uid);
+            setDoc(userRef, { 
+                heroCollapsed: collapsed 
+            }, { merge: true });
+        } catch (e) {
+            console.log('Ошибка сохранения состояния Hero:', e);
+        }
+    }
+}
+
+// Загрузка состояния Hero из Firestore при авторизации
+async function loadHeroStateFromFirestore(uid) {
+    try {
+        const userRef = doc(db, "users", uid);
+        const userDoc = await getDoc(userRef);
+        
+        if (userDoc.exists()) {
+            const data = userDoc.data();
+            if (data.heroCollapsed !== undefined) {
+                // Синхронизируем с localStorage
+                localStorage.setItem('heroCollapsed', data.heroCollapsed);
+                
+                if (data.heroCollapsed) {
+                    collapseHero(false);
+                }
+            }
+        }
+    } catch (e) {
+        console.log('Ошибка загрузки состояния Hero:', e);
+    }
+}
+
+// Вызываем инициализацию при загрузке страницы
+document.addEventListener('DOMContentLoaded', function() {
+    initHeroState();
+    
+    // ... остальной ваш код DOMContentLoaded ...
+});
 </script>
 </body>
 </body>
