@@ -1107,28 +1107,63 @@ main {
         display: none;
     }
 }
-/* Hero Section Collapse */
+/* ========== HERO SECTION - УЛУЧШЕННАЯ АНИМАЦИЯ ========== */
 .hero-section {
     transition: all 0.5s cubic-bezier(0.4, 0, 0.2, 1);
     overflow: hidden;
+    position: relative;
 }
 
 .hero-section.collapsed {
-    max-height: 80px;
-    padding-top: 1rem;
-    padding-bottom: 1rem;
-}
-
-.hero-section.collapsed .hero-content {
+    max-height: 0 !important;
+    padding: 0 !important;
+    margin: 0 !important;
     opacity: 0;
-    transform: translateY(-20px);
-    pointer-events: none;
+    transform: translateY(-10px);
 }
 
-.hero-content {
-    transition: all 0.4s ease;
+/* НЕВИДИМАЯ КНОПКА в свернутом состоянии */
+.hero-section.collapsed .hero-content,
+.hero-section.collapsed .hero-collapse-btn {
+    display: none !important;
 }
 
+/* ✅ НОВАЯ КНОПКА - ЛЕВЫЙ УГОЛОК */
+.hero-expand-btn {
+    position: fixed;
+    left: 20px;
+    top: 100px; /* Под header */
+    z-index: 100;
+    width: 50px;
+    height: 50px;
+    background: linear-gradient(135deg, #3b82f6, #2563eb);
+    border-radius: 12px;
+    border: 2px solid rgba(255,255,255,0.2);
+    backdrop-filter: blur(10px);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    font-size: 1.2rem;
+    cursor: pointer;
+    box-shadow: 0 8px 25px rgba(59, 130, 246, 0.4);
+    opacity: 0;
+    transform: translateX(-20px);
+    transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.hero-expand-btn:hover {
+    transform: translateX(0) scale(1.05);
+    box-shadow: 0 12px 35px rgba(59, 130, 246, 0.6);
+    border-color: rgba(255,255,255,0.4);
+}
+
+.hero-expand-btn.visible {
+    opacity: 1;
+    transform: translateX(0);
+}
+
+/* ОРИГИНАЛЬНАЯ КНОПКА */
 .hero-collapse-btn {
     position: absolute;
     bottom: 1rem;
@@ -1154,14 +1189,6 @@ main {
     border-color: #3b82f6;
     color: white;
     transform: translateX(-50%) translateY(-2px);
-}
-
-.hero-collapse-btn i {
-    transition: transform 0.3s ease;
-}
-
-.hero-section.collapsed .hero-collapse-btn i {
-    transform: rotate(180deg);
 }
     </style>
 </head>
@@ -1268,11 +1295,7 @@ main {
 </svg>
 
 <!-- Используйте логотип так: -->
-<div class="w-14 h-14 rounded-2xl bg-gradient-to-br from-slate-800 to-slate-900 border-2 border-cyan-400/50 flex items-center justify-center">
-    <svg class="w-10 h-10">
-        <use href="#lab-logo"/>
-    </svg>
-</div>
+
     <!-- Header -->
     <header class="sticky top-0 z-50 relative overflow-hidden">
 
@@ -1463,6 +1486,9 @@ main {
         </div>
     </div>
 </header>
+<button onclick="toggleHeroSection()" class="hero-expand-btn" id="heroExpandBtn">
+    <i class="fas fa-expand-arrows-alt"></i>
+</button>
               <!-- ========== HERO SECTION ========== -->
 <main class="hero-section relative isolate overflow-hidden bg-slate-900" id="heroSection">
     <!-- Фон с сеткой и градиентами -->
@@ -4764,39 +4790,37 @@ window.saveProject = async function(e) {
             }, 500); // 500ms - это duration-500 в Tailwind
         }
     });
-	// Hero Section Collapse
+	// Hero Section - УЛУЧШЕННАЯ ЛОГИКА
 let isHeroCollapsed = false;
 
-// Инициализация состояния Hero при загрузке
 function initHeroState() {
-    // Проверяем localStorage для всех пользователей
     const savedState = localStorage.getItem('heroCollapsed');
-    
     if (savedState === 'true') {
-        // Пользователь уже сворачивал - показываем свернутым
-        collapseHero(false); // false = без анимации
+        collapseHero(false);
     }
-    // Если savedState === null или 'false', оставляем развернутым (для новых пользователей)
 }
 
 window.toggleHeroSection = function() {
     const heroSection = document.getElementById('heroSection');
+    const expandBtn = document.getElementById('heroExpandBtn');
     const collapseText = document.getElementById('heroCollapseText');
     
     if (isHeroCollapsed) {
-        // Разворачиваем
+        // ✅ РАЗВЁРНУТЬ
         heroSection.classList.remove('collapsed');
-        collapseText.textContent = 'Свернуть приветствие';
+        expandBtn.classList.remove('visible');
+        if (collapseText) collapseText.textContent = 'Свернуть приветствие';
         isHeroCollapsed = false;
         saveHeroState(false);
     } else {
-        // Сворачиваем
+        // ✅ СВЁРНУТЬ
         collapseHero(true);
     }
 };
 
 function collapseHero(withAnimation = true) {
     const heroSection = document.getElementById('heroSection');
+    const expandBtn = document.getElementById('heroExpandBtn');
     const collapseText = document.getElementById('heroCollapseText');
     
     if (!withAnimation) {
@@ -4804,11 +4828,12 @@ function collapseHero(withAnimation = true) {
     }
     
     heroSection.classList.add('collapsed');
-    collapseText.textContent = 'Развернуть приветствие';
+    expandBtn.classList.add('visible');
+    
+    if (collapseText) collapseText.textContent = 'Развернуть приветствие';
     isHeroCollapsed = true;
     
     if (!withAnimation) {
-        // Возвращаем анимацию после небольшой задержки
         setTimeout(() => {
             heroSection.style.transition = '';
         }, 50);
@@ -4818,21 +4843,22 @@ function collapseHero(withAnimation = true) {
 }
 
 function saveHeroState(collapsed) {
-    // Сохраняем в localStorage для всех пользователей
     localStorage.setItem('heroCollapsed', collapsed);
     
-    // Если пользователь авторизован - сохраняем в Firestore
     if (currentUser) {
         try {
             const userRef = doc(db, "users", currentUser.uid);
-            setDoc(userRef, { 
-                heroCollapsed: collapsed 
-            }, { merge: true });
+            setDoc(userRef, { heroCollapsed: collapsed }, { merge: true });
         } catch (e) {
-            console.log('Ошибка сохранения состояния Hero:', e);
+            console.log('Ошибка сохранения Hero:', e);
         }
     }
 }
+
+// ✅ ИНИЦИАЛИЗАЦИЯ ПРИ ЗАГРУЗКЕ
+document.addEventListener('DOMContentLoaded', function() {
+    initHeroState();
+});
 
 // Загрузка состояния Hero из Firestore при авторизации
 async function loadHeroStateFromFirestore(uid) {
