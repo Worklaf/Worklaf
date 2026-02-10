@@ -1,0 +1,366 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>OCR: MAX QR</title>
+    <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrious/4.0.2/qrious.min.js"></script>
+    <style>
+        body {
+            font-family: 'Segoe UI', sans-serif;
+            background: #121212;
+            color: #eee;
+            margin: 0;
+            padding: 0;
+            height: 100vh;
+            overflow: hidden;
+            position: relative;
+        }
+
+        /* --- СТАРТОВЫЙ ЭКРАН (ЦЕНТР) --- */
+        #startScreen {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: #1f1f1f;
+            padding: 40px;
+            border-radius: 20px;
+            box-shadow: 0 20px 50px rgba(0,0,0,0.7);
+            text-align: center;
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+            z-index: 100;
+        }
+
+        h1 { margin: 0 0 10px 0; font-size: 24px; color: #fff; }
+        p { margin: 0 0 20px 0; color: #888; }
+
+        .btn-big {
+            padding: 15px 30px;
+            font-size: 18px;
+            cursor: pointer;
+            border: none;
+            border-radius: 8px;
+            font-weight: bold;
+            color: white;
+            transition: transform 0.1s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+        }
+        .btn-big:active { transform: scale(0.98); }
+        .btn-blue { background: #2563eb; }
+        .btn-blue:hover { background: #1d4ed8; }
+        
+        /* --- КНОПКИ УПРАВЛЕНИЯ ПОСЛЕ ЗАХВАТА --- */
+        #workControls {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            display: none; /* Скрыто в начале */
+            z-index: 50;
+            gap: 10px;
+        }
+        
+        .btn-small {
+            padding: 8px 15px;
+            cursor: pointer;
+            border: none;
+            border-radius: 4px;
+            background: #dc2626;
+            color: white;
+            font-weight: bold;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.5);
+        }
+
+        /* --- РАБОЧАЯ ОБЛАСТЬ --- */
+        .canvas-container {
+            width: 100%;
+            height: 100%;
+            overflow: auto; /* Скролл если картинка большая */
+            background: #000;
+            display: flex;
+            justify-content: center; /* Центрируем картинку */
+            align-items: center;
+        }
+        
+        #mainCanvas { 
+            box-shadow: 0 0 50px #000; 
+            cursor: crosshair;
+        }
+        
+        /* Статус бар внизу (опционально) */
+        #statusBar {
+            position: fixed;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(0,0,0,0.7);
+            padding: 10px 20px;
+            border-radius: 20px;
+            pointer-events: none;
+            display: none;
+        }
+
+        /* --- ОВЕРЛЕЙ (QR) --- */
+        #qrOverlay {
+            display: none;
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0, 0, 0, 0.95);
+            z-index: 9999;
+            justify-content: center;
+            align-items: center;
+            flex-direction: column;
+            cursor: pointer;
+        }
+        .qr-box {
+            background: white;
+            padding: 20px;
+            border-radius: 15px;
+            text-align: center;
+            box-shadow: 0 0 50px rgba(255, 255, 255, 0.2);
+        }
+        #overlayText {
+            margin-top: 15px;
+            font-size: 60px;
+            font-family: 'Courier New', monospace;
+            font-weight: bold;
+            color: #000;
+            letter-spacing: 2px;
+        }
+        #hint { margin-top: 20px; color: #888; font-size: 18px; }
+        
+        #hiddenPreview { display: none; }
+    </style>
+</head>
+<body>
+
+    <!-- СТАРТОВЫЙ ЭКРАН (ЦЕНТР) -->
+    <div id="startScreen">
+        <h1>MAX QR READER</h1>
+        <p>Выберите источник изображения</p>
+        
+        <button class="btn-big btn-blue" onclick="startCapture()">
+            📸 ЗАХВАТИТЬ ОКНО
+        </button>
+        
+        <button class="btn-big btn-blue" style="background:#4b5563" onclick="document.getElementById('fileIn').click()">
+            📂 ОТКРЫТЬ ФАЙЛ
+        </button>
+        
+        <input type="file" id="fileIn" hidden onchange="handleFile(event)">
+    </div>
+
+    <!-- КНОПКИ ВОЗВРАТА (ПОЯВЛЯЮТСЯ ПОСЛЕ) -->
+    <div id="workControls">
+        <span id="statusText" style="margin-right:15px; font-weight:bold; text-shadow: 1px 1px 2px black;">Выделите область</span>
+        <button class="btn-small" onclick="location.reload()">🔄 СБРОС</button>
+    </div>
+
+    <!-- РАБОЧАЯ ОБЛАСТЬ -->
+    <div class="canvas-container">
+        <canvas id="mainCanvas"></canvas>
+    </div>
+
+    <!-- ВСПЛЫВАЮЩЕЕ ОКНО (QR) -->
+    <div id="qrOverlay" onclick="closeOverlay()">
+        <div class="qr-box">
+            <canvas id="bigQrCanvas"></canvas>
+            <div id="overlayText">000000</div>
+        </div>
+        <div id="hint">Нажми куда угодно, чтобы закрыть</div>
+    </div>
+    
+    <canvas id="hiddenPreview"></canvas>
+
+<script>
+    const mainCanvas = document.getElementById('mainCanvas');
+    const ctx = mainCanvas.getContext('2d');
+    const previewCanvas = document.getElementById('hiddenPreview');
+    const pCtx = previewCanvas.getContext('2d');
+    
+    // Элементы UI
+    const startScreen = document.getElementById('startScreen');
+    const workControls = document.getElementById('workControls');
+    const statusText = document.getElementById('statusText');
+    
+    let isDrawing = false;
+    let startX, startY;
+    let imgDataSnapshot;
+    const HARDCODED_THRESHOLD = 210; 
+
+    // --- ФУНКЦИИ ИНТЕРФЕЙСА ---
+    
+    function enterWorkMode() {
+        // Скрываем стартовое меню
+        startScreen.style.display = 'none';
+        // Показываем кнопку сброса и статус
+        workControls.style.display = 'flex';
+        statusText.innerText = "Выделите цифры мышкой";
+    }
+
+    function showOverlay(text) {
+        new QRious({
+            element: document.getElementById('bigQrCanvas'),
+            value: text,
+            size: 400
+        });
+        document.getElementById('overlayText').innerText = text;
+        document.getElementById('qrOverlay').style.display = 'flex';
+    }
+
+    function closeOverlay() {
+        document.getElementById('qrOverlay').style.display = 'none';
+        statusText.innerText = "Готов к следующему выделению";
+    }
+
+    document.addEventListener('keydown', (e) => {
+        if (document.getElementById('qrOverlay').style.display === 'flex') {
+            if(e.code === 'Space' || e.code === 'Enter' || e.code === 'Escape') {
+                closeOverlay();
+            }
+        }
+    });
+
+    // --- ЗАХВАТ ---
+    async function startCapture() {
+        try {
+            const opts = { video: { cursor: "always" }, audio: false };
+            if ("CaptureController" in window) {
+                const controller = new CaptureController();
+                controller.setFocusBehavior("no-focus-change"); 
+                opts.controller = controller;
+            }
+            const stream = await navigator.mediaDevices.getDisplayMedia(opts);
+            
+            // Фолбек фокуса
+            setTimeout(() => { window.focus(); }, 500);
+
+            const video = document.createElement('video');
+            video.srcObject = stream;
+            await video.play();
+            await new Promise(r => setTimeout(r, 200));
+
+            // Установка размеров и отрисовка
+            mainCanvas.width = video.videoWidth;
+            mainCanvas.height = video.videoHeight;
+            ctx.drawImage(video, 0, 0);
+            
+            stream.getTracks().forEach(t => t.stop());
+            
+            // ПЕРЕХОДИМ В РЕЖИМ РАБОТЫ (СКРЫВАЕМ МЕНЮ)
+            enterWorkMode();
+            
+        } catch(e) { console.error(e); }
+    }
+
+    function handleFile(e) {
+        if(!e.target.files[0]) return;
+        const img = new Image();
+        img.onload = () => {
+            mainCanvas.width = img.width;
+            mainCanvas.height = img.height;
+            ctx.drawImage(img, 0, 0);
+            // ПЕРЕХОДИМ В РЕЖИМ РАБОТЫ
+            enterWorkMode();
+        };
+        img.src = URL.createObjectURL(e.target.files[0]);
+    }
+
+    // --- РИСОВАНИЕ ---
+    mainCanvas.addEventListener('mousedown', e => {
+        const rect = mainCanvas.getBoundingClientRect();
+        // Учитываем масштаб отображения (если картинка ужата css)
+        const scaleX = mainCanvas.width / rect.width; 
+        const scaleY = mainCanvas.height / rect.height;
+        
+        startX = (e.clientX - rect.left) * scaleX;
+        startY = (e.clientY - rect.top) * scaleY;
+        isDrawing = true;
+        imgDataSnapshot = ctx.getImageData(0,0, mainCanvas.width, mainCanvas.height);
+    });
+
+    mainCanvas.addEventListener('mousemove', e => {
+        if(!isDrawing) return;
+        const rect = mainCanvas.getBoundingClientRect();
+        const scaleX = mainCanvas.width / rect.width;
+        const scaleY = mainCanvas.height / rect.height;
+        
+        const currentX = (e.clientX - rect.left) * scaleX;
+        const currentY = (e.clientY - rect.top) * scaleY;
+        
+        ctx.putImageData(imgDataSnapshot, 0, 0);
+        ctx.strokeStyle = '#facc15';
+        ctx.lineWidth = 5;
+        ctx.strokeRect(startX, startY, currentX - startX, currentY - startY);
+    });
+
+    mainCanvas.addEventListener('mouseup', async e => {
+        if(!isDrawing) return;
+        isDrawing = false;
+        
+        const rect = mainCanvas.getBoundingClientRect();
+        const scaleX = mainCanvas.width / rect.width;
+        const scaleY = mainCanvas.height / rect.height;
+        
+        const endX = (e.clientX - rect.left) * scaleX;
+        const endY = (e.clientY - rect.top) * scaleY;
+        
+        const w = Math.abs(endX - startX);
+        const h = Math.abs(endY - startY);
+        
+        if (w > 5 && h > 5) {
+            const region = { x: Math.min(startX, endX), y: Math.min(startY, endY), w, h };
+            processAndRecognize(region);
+        }
+    });
+
+    // --- ОБРАБОТКА ---
+    async function processAndRecognize(region) {
+        statusText.innerText = "⚡ Обработка...";
+        
+        const SCALE = 3; 
+        previewCanvas.width = region.w * SCALE;
+        previewCanvas.height = region.h * SCALE;
+        
+        pCtx.imageSmoothingEnabled = true;
+        pCtx.drawImage(mainCanvas, region.x, region.y, region.w, region.h, 0, 0, previewCanvas.width, previewCanvas.height);
+        
+        const imageData = pCtx.getImageData(0, 0, previewCanvas.width, previewCanvas.height);
+        const data = imageData.data;
+        for (let i = 0; i < data.length; i += 4) {
+            const brightness = (data[i] + data[i+1] + data[i+2]) / 3;
+            const val = brightness < HARDCODED_THRESHOLD ? 0 : 255;
+            data[i] = val; data[i+1] = val; data[i+2] = val;
+        }
+        pCtx.putImageData(imageData, 0, 0);
+
+        try {
+            const result = await Tesseract.recognize(
+                previewCanvas, 'eng', 
+                { tessedit_char_whitelist: '0123456789' }
+            );
+            
+            const cleanText = result.data.text.replace(/\D/g, '').trim();
+            
+            if(cleanText.length > 0) {
+                statusText.innerText = "Готово!";
+                showOverlay(cleanText);
+            } else {
+                statusText.innerText = "Не найдено. Попробуйте еще раз.";
+            }
+
+        } catch (err) {
+            statusText.innerText = "Ошибка распознавания";
+            console.error(err);
+        }
+    }
+</script>
+
+</body>
+</html>
