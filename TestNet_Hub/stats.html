@@ -342,6 +342,7 @@
                                 <th class="pb-3 text-center">Завершено активностей</th>
                                 <th class="pb-3 text-center">Избранное ❤️</th>
                                 <th class="pb-3">Любимый проект</th>
+								<th class="pb-3">Способ входа</th>
                             </tr>
                         </thead>
                         <tbody id="usersTableBody">
@@ -373,8 +374,7 @@
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
         import { getAuth, signInWithPopup, GoogleAuthProvider, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
-        import { getFirestore, collection, doc, getDocs, query, orderBy, limit, getDoc, addDoc, setDoc, where, writeBatch, serverTimestamp, increment, deleteDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
-
+		import { getFirestore, collection, doc, getDocs, query, orderBy, limit, getDoc, addDoc, setDoc, where, writeBatch, serverTimestamp, increment, deleteDoc, updateDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
         const firebaseConfig = {
             apiKey: "AIzaSyBdXGYg2t8DJBrQHCC80-pFerZU9PWmSCk",
             authDomain: "testnet-hub.firebaseapp.com",
@@ -398,22 +398,65 @@
         let allProjectsMap = new Map();
 
         // Проверка доступа
-        onAuthStateChanged(auth, async (user) => {
-            document.getElementById('loading').classList.add('hidden');
+        // Проверка доступа
+onAuthStateChanged(auth, async (user) => {
+    document.getElementById('loading').classList.add('hidden');
 
-            if (!user) {
-                showLoginButton();
-                return;
+    if (!user) {
+        showLoginButton();
+        return;
+    }
+
+    if (user.uid !== ALLOWED_ADMIN_ID) {
+        document.getElementById('accessDenied').classList.remove('hidden');
+        return;
+    }
+
+    document.getElementById('adminContent').classList.remove('hidden');
+    
+    // === НОВОЕ: Сохраняем firstLogin и provider для всех пользователей ===
+    await ensureUserData(user);
+    
+    await loadAllData();
+});
+
+// === НОВАЯ ФУНКЦИЯ: Сохраняет firstLogin и provider если их нет ===
+async function ensureUserData(user) {
+    try {
+        const userRef = doc(db, "users", user.uid);
+        const userSnap = await getDoc(userRef);
+        
+        if (!userSnap.exists()) {
+            // Новый пользователь - создаем запись с firstLogin и provider
+            await setDoc(userRef, {
+                email: user.email,
+                displayName: user.displayName,
+                photoURL: user.photoURL,
+                firstLogin: serverTimestamp(),
+                provider: user.providerData[0]?.providerId || "unknown",
+                lastLogin: serverTimestamp()
+            });
+        } else {
+            // Существующий пользователь - проверяем firstLogin и provider
+            const userData = userSnap.data();
+            const updates = {};
+            
+            if (!userData.firstLogin) {
+                updates.firstLogin = serverTimestamp();
             }
-
-            if (user.uid !== ALLOWED_ADMIN_ID) {
-                document.getElementById('accessDenied').classList.remove('hidden');
-                return;
+            
+            if (!userData.provider && user.providerData[0]) {
+                updates.provider = user.providerData[0].providerId;
             }
-
-            document.getElementById('adminContent').classList.remove('hidden');
-            await loadAllData();
-        });
+            
+            if (Object.keys(updates).length > 0) {
+                await updateDoc(userRef, updates);
+            }
+        }
+    } catch (e) {
+        console.error('Ошибка при сохранении данных пользователя:', e);
+    }
+}
 
         function showLoginButton() {
             const content = document.getElementById('loading');
@@ -502,6 +545,7 @@
                         photoURL: userData.photoURL || null,
                         firstLogin: firstLoginDate,
                         lastLogin: lastLoginDate,
+						provider: userData.provider || '—', // НОВОЕ: способ входа
                         totalClicks: totalClicks,        // Всего кликов по гайдам
                         projectClicks: projectClicks,
                         topProject: topProject,
@@ -844,6 +888,9 @@
                         <td class="py-3 text-sm text-slate-300">
                             ${topProjectDisplay}
                         </td>
+						<td class="py-3 text-sm text-slate-300">
+            ${getProviderIcon(user.provider)}
+        </td>
                     </tr>
                 `;
             }).join('');
@@ -1099,6 +1146,16 @@
         window.loadStats = async function() {
             await loadAllData();
         };
+		function getProviderIcon(provider) {
+    const providerIcons = {
+        'google.com': '<i class="fab fa-google text-red-400"></i>',
+        'twitter.com': '<i class="fab fa-twitter text-blue-400"></i>',
+        'password': '<i class="fas fa-envelope text-yellow-400"></i>',
+        'unknown': '<i class="fas fa-question text-slate-500"></i>'
+    };
+    
+    return providerIcons[provider] || providerIcons['unknown'];
+}
     </script>
 </body>
 </html>
