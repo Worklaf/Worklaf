@@ -2639,7 +2639,14 @@ import { getFirestore, collection, doc, setDoc, getDoc, getDocs, updateDoc, dele
 let currentImages = [];
 
         let itemsPerPage = parseInt(localStorage.getItem('itemsPerPage')) || 10;
-        let currentPage = 1;
+        let currentPage = parseInt(localStorage.getItem('currentPage'), 10) || 1;
+		if (
+    currentFilters.statuses.length === 0 && // "Все проекты"
+    currentPage > 1
+) {
+    currentPage = 1;
+    localStorage.setItem('currentPage', 1); // Обновляем localStorage
+}
         let currentFilteredList = [];
 
         let pendingLinkInsert = null;
@@ -2654,6 +2661,7 @@ let adminFeedbacksUnsubscribe = null;
 let currentSortType = 'latest';
         
         document.addEventListener('DOMContentLoaded', function() {
+		
     // Поиск в удаленных проектах
     const searchDeletedInput = document.getElementById('searchDeletedInput');
     if (searchDeletedInput) {
@@ -3876,23 +3884,32 @@ window.loadData = async function() {
         }
 
         window.changeItemsPerPage = function(val) {
-            itemsPerPage = parseInt(val);
-            localStorage.setItem('itemsPerPage', itemsPerPage);
-            currentPage = 1;
-            applyFilters();
-        };
+    itemsPerPage = parseInt(val);
+    localStorage.setItem('currentPage', currentPage);
+    applyFilters(null, true); // ✅ сбрасываем
+};
 
-        window.applyFilters = function(search) {
-            if(!search) search = document.getElementById('searchInput').value;
-            currentPage = 1;
-            currentFilteredList = getFilteredProjects(search);
-            updateCategoryUI();
-            renderProjects(currentFilteredList);
-            renderPaginationControls(currentFilteredList.length);
-            updateSidebarActive();
-            updateCounts(currentFilteredList);
-            updateStats(currentFilteredList);
-        };
+        window.applyFilters = function(search, resetPage = false) {
+
+    if (!search) {
+        search = document.getElementById('searchInput').value;
+    }
+
+    // ✅ СБРАСЫВАЕМ СТРАНИЦУ ТОЛЬКО ЕСЛИ НУЖНО
+    if (resetPage) {
+        currentPage = 1;
+        localStorage.removeItem('currentPage');
+    }
+
+    currentFilteredList = getFilteredProjects(search);
+
+    updateCategoryUI();
+    renderProjects(currentFilteredList);
+    renderPaginationControls(currentFilteredList.length);
+    updateSidebarActive();
+    updateCounts(currentFilteredList);
+    updateStats(currentFilteredList);
+};
 
         function getFilteredProjects(search) {
     return projects.filter(function(p) {
@@ -4197,18 +4214,15 @@ ${isCompleted ? `
             document.getElementById('projectsGrid').scrollIntoView({ behavior: 'smooth', block: 'start' });
         };
 
-        window.filterProjects = function(status) { 
+        window.filterProjects = function(status) {
     if (status === 'all') {
-        currentFilters.statuses = []; // Сброс всех фильтров
+        currentFilters.statuses = [];
     } else {
         const index = currentFilters.statuses.indexOf(status);
-        if (index !== -1) {
-            currentFilters.statuses.splice(index, 1); // Удалить если есть
-        } else {
-            currentFilters.statuses.push(status); // Добавить если нет
-        }
+        if (index !== -1) currentFilters.statuses.splice(index, 1);
+        else currentFilters.statuses.push(status);
     }
-    applyFilters(); 
+    applyFilters(null, true); // ✅ сбрасываем
 };
         window.resetFilters = function() { currentFilters = { status: 'all', categories: [] }; document.getElementById('searchInput').value = ''; applyFilters(); };
         
@@ -4417,8 +4431,8 @@ window.sortProjects = function(by) {
         function setupSearchListener() {
     const searchInput = document.getElementById('searchInput');
     searchInput.addEventListener('keyup', function() {
-        applyFilters();
-    });
+    applyFilters(null, true);
+});
 }
 
         // --- Activity Editor Functions ---
