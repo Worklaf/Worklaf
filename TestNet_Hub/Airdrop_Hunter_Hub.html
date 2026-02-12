@@ -2618,7 +2618,7 @@ import { getFirestore, collection, doc, setDoc, getDoc, getDocs, updateDoc, dele
         
         let projects = [];
         let categories = ['DeFi', 'Gaming', 'Infra', 'L1/L2', 'NFT', 'Social', 'Other'];
-        let currentFilters = { status: 'all', categories: [] };
+        let currentFilters = { statuses: [], categories: [] };
         let editingId = null;
         let isEditModalOpen = false; // Для предотвращения перезаписи данных в модалке
         let currentDetailId = null;
@@ -3898,31 +3898,47 @@ window.loadData = async function() {
     return projects.filter(function(p) {
         // СКРЫВАЕМ УДАЛЕННЫЕ ПРОЕКТЫ ОТ ОБЫЧНЫХ ПОЛЬЗОВАТЕЛЕЙ
         if (p.deleted && !isAdminMode) return false;
-        
-        if (currentFilters.status === 'active') return p.status === 'active' && !p.deleted;
-        if (currentFilters.status === 'ended') return p.status === 'ended' && !p.deleted;
-        if (currentFilters.status === 'daily') return p.hasDaily && p.status === 'active' && !p.deleted;
-        if (currentFilters.status === 'favorites') return userFavorites.includes(p.id) && !p.deleted;
-        if (currentFilters.status === 'completed') {
-            return p.activities && p.activities.some(a => userCompleted.includes(p.id + '_' + a.id)) && !p.deleted;
+
+        // Проверяем все выбранные статус-фильтры
+        if (currentFilters.statuses.length > 0) {
+            let matchesAllFilters = true;
+
+            for (const status of currentFilters.statuses) {
+                if (status === 'active') {
+                    if (p.status !== 'active') matchesAllFilters = false;
+                } else if (status === 'ended') {
+                    if (p.status !== 'ended') matchesAllFilters = false;
+                } else if (status === 'daily') {
+                    if (!p.hasDaily || p.status !== 'active') matchesAllFilters = false;
+                } else if (status === 'favorites') {
+                    if (!userFavorites.includes(p.id)) matchesAllFilters = false;
+                } else if (status === 'completed') {
+                    if (!(p.activities && p.activities.some(a => userCompleted.includes(p.id + '_' + a.id)))) matchesAllFilters = false;
+                } else if (status === 'unvisited') {
+                    if (arcData[p.id]) matchesAllFilters = false;
+                } else if (status === 'today') {
+                    if (!isToday(p.createdAt)) matchesAllFilters = false;
+                }
+            }
+
+            if (!matchesAllFilters) return false;
         }
-        if (currentFilters.status === 'unvisited') {
-            return !arcData[p.id] && !p.deleted;
-        }
-        if (currentFilters.status === 'today') return isToday(p.createdAt) && !p.deleted;
-        
-        return !p.deleted; // По умолчанию скрываем удаленные
-    }).filter(function(p) {
-        // остальная логика фильтрации без изменений
+
+        // Фильтр по категориям
         if (currentFilters.categories.length > 0) {
             if (!p.categories) return false;
-            return p.categories.some(function(c) { return currentFilters.categories.includes(c); });
+            if (!p.categories.some(function(c) { return currentFilters.categories.includes(c); })) return false;
         }
+
+        // Фильтр по поиску
+        if (search) {
+            if (!p.name.toLowerCase().includes(search.toLowerCase()) && 
+                !(p.description && p.description.toLowerCase().includes(search.toLowerCase()))) {
+                return false;
+            }
+        }
+
         return true;
-    }).filter(function(p) {
-        if (!search) return true;
-        return p.name.toLowerCase().includes(search.toLowerCase()) || 
-               (p.description && p.description.toLowerCase().includes(search.toLowerCase()));
     });
 }
 // ✅ Получить дату последней активности проекта
@@ -4181,7 +4197,19 @@ ${isCompleted ? `
             document.getElementById('projectsGrid').scrollIntoView({ behavior: 'smooth', block: 'start' });
         };
 
-        window.filterProjects = function(status) { currentFilters.status = status; applyFilters(); };
+        window.filterProjects = function(status) { 
+    if (status === 'all') {
+        currentFilters.statuses = []; // Сброс всех фильтров
+    } else {
+        const index = currentFilters.statuses.indexOf(status);
+        if (index !== -1) {
+            currentFilters.statuses.splice(index, 1); // Удалить если есть
+        } else {
+            currentFilters.statuses.push(status); // Добавить если нет
+        }
+    }
+    applyFilters(); 
+};
         window.resetFilters = function() { currentFilters = { status: 'all', categories: [] }; document.getElementById('searchInput').value = ''; applyFilters(); };
         
         // Обновите функцию sortProjects
@@ -4848,11 +4876,21 @@ window.sortProjects = function(by) {
 }
         
         function updateSidebarActive() { 
-            document.querySelectorAll('.sidebar-link').forEach(function(btn) { 
-                btn.classList.remove('active'); 
-                if (btn.dataset.filter === currentFilters.status) btn.classList.add('active'); 
-            }); 
+    document.querySelectorAll('.sidebar-link').forEach(function(btn) { 
+        const filter = btn.dataset.filter;
+        btn.classList.remove('active');
+        
+        if (filter === 'all') {
+            if (currentFilters.statuses.length === 0) {
+                btn.classList.add('active');
+            }
+        } else {
+            if (currentFilters.statuses.includes(filter)) {
+                btn.classList.add('active');
+            }
         }
+    }); 
+}
         
         function updateCounts(filtered) {
             document.getElementById('countAll').textContent = filtered.length;
@@ -4867,11 +4905,13 @@ window.sortProjects = function(by) {
         }
         
         function updateStats(filtered) {
-            document.getElementById('statActive').textContent = filtered.filter(function(p) { return p.status === 'active'; }).length;
-            document.getElementById('statToday').textContent = filtered.filter(function(p) { return isToday(p.createdAt); }).length;
-            document.getElementById('statFavorites').textContent = filtered.filter(function(p) { return userFavorites.includes(p.id); }).length;
-            document.getElementById('statCompleted').textContent = userCompleted.length;
-        }
+    document.getElementById('statActive').textContent = filtered.filter(function(p) { return p.status === 'active'; }).length;
+    document.getElementById('statToday').textContent = filtered.filter(function(p) { return isToday(p.createdAt); }).length;
+    document.getElementById('statFavorites').textContent = filtered.filter(function(p) { return userFavorites.includes(p.id); }).length;
+    document.getElementById('statCompleted').textContent = filtered.filter(function(p) { 
+        return p.activities && p.activities.some(a => userCompleted.includes(p.id + '_' + a.id));
+    }).length;
+}
         
         function isToday(dateString) { 
             if (!dateString) return false; 
