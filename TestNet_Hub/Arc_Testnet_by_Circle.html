@@ -623,18 +623,21 @@ body.edit-mode .page-shell { padding-top: 110px; }
 
 <div class="page-shell">
     <aside class="sidebar">
-        <div id="authPanelArc" class="auth-panel-arc">
-            <div id="arcLoggedOutView">
-                <button onclick="loginGoogle()" class="auth-btn-arc auth-btn-google"><i class="fab fa-google"></i> Войти через Google</button>
-                <p style="font-size:0.7rem;color:var(--text-muted);margin:8px 0 0 0;">Синхронизируйте прогресс с облаком</p>
-            </div>
-            <div id="arcLoggedInView" style="display:none;">
-                <div class="user-info-arc" id="arcUserName">User</div>
-                <div id="adminBadgeContainer"></div>
-                <div class="sync-status"><i class="fas fa-check-circle"></i> Данные синхронизированы</div>
-                <button onclick="logout()" class="auth-btn-arc auth-btn-logout">Выйти</button>
-            </div>
-        </div>
+        <!-- Вставь куда-то в header справа -->
+<div id="authSection">
+  <div id="loggedOutView">
+    <button onclick="openLoginModal()" style="background:linear-gradient(135deg,#3b82f6,#2563eb); color:#fff; padding:8px 16px; border-radius:10px; border:none; cursor:pointer; font-weight:bold; font-size:13px;">
+      <i class="fas fa-sign-in-alt"></i> Вход
+    </button>
+  </div>
+  <div id="loggedInView" style="display:none; align-items:center; gap:8px;">
+    <span id="userName" style="color:#f1f5f9; font-size:12px; font-weight:600;"></span>
+    <img id="userAvatar" src="" style="width:32px; height:32px; border-radius:50%; border:2px solid #3b82f6; object-fit:cover;">
+    <button onclick="logout()" style="background:none; border:none; color:#94a3b8; cursor:pointer; font-size:14px;" title="Выход">
+      <i class="fas fa-sign-out-alt"></i>
+    </button>
+  </div>
+</div>
 
         <div class="sidebar-controls">
             <button class="theme-toggle-btn" id="themeToggleBtn" type="button"><i class="fas fa-sun"></i> Светлая тема</button>
@@ -701,16 +704,16 @@ body.edit-mode .page-shell { padding-top: 110px; }
                     <div class="resource-item" data-zone="deploy_basic">
                         <div class="resource-header"><span class="resource-title">Базовый деплой</span></div>
                         <div class="link-collection">
-                            <a href="https://onchaingm.com?ref=0xc021F43DABfB021705646f412B8c9c3912219922" target="_blank" class="link-inline link-compact track-once track-once-info" data-id="dep_gm" data-tooltip="Шаблонный деплой GM-контрактов в сети Arc.">OnchainGM (GM)</a>
-                            <a href="https://www.memebridge.xyz/deploy" target="_blank" class="link-inline link-compact track-once track-once-info" data-id="dep_meme" data-tooltip="Конструктор MemeBridge для развёртывания контрактов.">MemeBridge</a>
-                            <a href="https://zkcodex.com/onchain/deploy" target="_blank" class="link-inline link-compact track-once track-once-info" data-id="dep_zk" data-tooltip="zkCodex: деплой смарт-контрактов и автоматизация.">zkCodex</a>
+                            <a href="https://onchaingm.com?ref=0xc021F43DABfB021705646f412B8c9c3912219922" target="_blank" class="link-inline link-compact track-daily"" data-id="dep_gm" data-tooltip="Шаблонный деплой GM-контрактов в сети Arc.">OnchainGM (GM)</a>
+                            <a href="https://www.memebridge.xyz/deploy" target="_blank" class="link-inline link-compact track-daily"" data-id="dep_meme" data-tooltip="Конструктор MemeBridge для развёртывания контрактов.">MemeBridge</a>
+                            <a href="https://zkcodex.com/onchain/deploy" target="_blank" class="link-inline link-compact track-daily"" data-id="dep_zk" data-tooltip="zkCodex: деплой смарт-контрактов и автоматизация.">zkCodex</a>
                         </div>
                     </div>
                     <div class="resource-item" data-zone="deploy_advanced">
                         <div class="resource-header"><span class="resource-title">Продвинутый деплой</span></div>
                         <div class="link-collection">
-                            <a href="https://arccontractwiz.xyz/" target="_blank" class="link-inline link-compact track-once track-once-info" data-id="dep_wiz" data-tooltip="ArcContractWiz — продвинутые контракты со встроенными настройками.">ArcContractWiz</a>
-                            <a href="https://watchoor.xyz/deploy" target="_blank" class="link-inline link-compact track-once track-once-info" data-id="dep_watch" data-tooltip="Watchoor — панель деплоя с визуальным редактором.">Watchoor</a>
+                            <a href="https://arccontractwiz.xyz/" target="_blank" class="link-inline link-compact track-daily"" data-id="dep_wiz" data-tooltip="ArcContractWiz — продвинутые контракты со встроенными настройками.">ArcContractWiz</a>
+                            <a href="https://watchoor.xyz/deploy" target="_blank" class="link-inline link-compact track-daily"" data-id="dep_watch" data-tooltip="Watchoor — панель деплоя с визуальным редактором.">Watchoor</a>
                         </div>
                     </div>
                 </div>
@@ -952,8 +955,14 @@ body.edit-mode .page-shell { padding-top: 110px; }
 
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
-import { getAuth, signInWithPopup, GoogleAuthProvider, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
-import { getFirestore, doc, setDoc, getDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+import {
+  getAuth, signInWithPopup, GoogleAuthProvider, TwitterAuthProvider,
+  signInWithEmailAndPassword, createUserWithEmailAndPassword,
+  signOut, onAuthStateChanged
+} from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
+import {
+  getFirestore, doc, setDoc, getDoc
+} from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
 const firebaseConfig = {
     apiKey: "AIzaSyBdXGYg2t8DJBrQHCC80-pFerZU9PWmSCk",
@@ -1050,13 +1059,11 @@ function openLightbox(imageUrl, title, tooltip, linkUrl) {
     const titleEl = document.getElementById('lightboxTitle');
     const captionEl = document.getElementById('lightboxCaption');
     const linkEl = document.getElementById('lightboxLink');
-
     img.src = imageUrl;
     img.alt = title;
     titleEl.textContent = title;
     captionEl.textContent = tooltip || '';
     linkEl.href = linkUrl;
-
     overlay.classList.add('open');
     document.body.style.overflow = 'hidden';
 }
@@ -1073,8 +1080,6 @@ function initLightbox() {
         if (e.target === e.currentTarget) closeLightbox();
     });
     document.addEventListener('keydown', (e) => { if (e.key === 'Escape') closeLightbox(); });
-
-    // Click on NFT links with images to open lightbox
     document.querySelectorAll('.link-inline[data-image]').forEach(link => {
         if (link.dataset.lightboxBound) return;
         link.addEventListener('contextmenu', (e) => {
@@ -1089,19 +1094,16 @@ function initLightbox() {
     });
 }
 
-// ===== CARD ANIMATIONS (IntersectionObserver) =====
+// ===== CARD ANIMATIONS =====
 function initCardAnimations() {
     const observer = new IntersectionObserver((entries) => {
         entries.forEach((entry, index) => {
             if (entry.isIntersecting) {
-                setTimeout(() => {
-                    entry.target.classList.add('anim-visible');
-                }, index * 80);
+                setTimeout(() => { entry.target.classList.add('anim-visible'); }, index * 80);
                 observer.unobserve(entry.target);
             }
         });
     }, { threshold: 0.1, rootMargin: '0px 0px -40px 0px' });
-
     document.querySelectorAll('.resource-item').forEach(card => observer.observe(card));
 }
 
@@ -1111,33 +1113,24 @@ function initLazyLoading() {
         entries.forEach(entry => {
             if (entry.isIntersecting) {
                 const img = entry.target;
-                if (img.dataset.lazySrc) {
-                    img.src = img.dataset.lazySrc;
-                    img.removeAttribute('data-lazy-src');
-                }
+                if (img.dataset.lazySrc) { img.src = img.dataset.lazySrc; img.removeAttribute('data-lazy-src'); }
                 imgObserver.unobserve(img);
             }
         });
     }, { rootMargin: '200px' });
-
     document.querySelectorAll('img[loading="lazy"]').forEach(img => imgObserver.observe(img));
 }
 
 // ===== TOOLTIP =====
 function ensureTooltipElement() {
-    if (!tooltipEl) {
-        tooltipEl = document.createElement('div');
-        tooltipEl.className = 'floating-tooltip';
-        document.body.appendChild(tooltipEl);
-    }
+    if (!tooltipEl) { tooltipEl = document.createElement('div'); tooltipEl.className = 'floating-tooltip'; document.body.appendChild(tooltipEl); }
 }
 
 function positionTooltip(target) {
     if (!tooltipEl || !target) return;
     const rect = target.getBoundingClientRect();
     const spacing = 15;
-    tooltipEl.style.left = '0';
-    tooltipEl.style.top = '0';
+    tooltipEl.style.left = '0'; tooltipEl.style.top = '0';
     const tooltipRect = tooltipEl.getBoundingClientRect();
     const tooltipWidth = Math.min(tooltipRect.width, 320);
     const tooltipHeight = tooltipRect.height;
@@ -1148,8 +1141,7 @@ function positionTooltip(target) {
     if (top + tooltipHeight > window.innerHeight - spacing) top = window.innerHeight - tooltipHeight - spacing;
     if (left < spacing) left = spacing;
     if (left + tooltipWidth > window.innerWidth - spacing) left = window.innerWidth - tooltipWidth - spacing;
-    tooltipEl.style.left = left + 'px';
-    tooltipEl.style.top = top + 'px';
+    tooltipEl.style.left = left + 'px'; tooltipEl.style.top = top + 'px';
 }
 
 function showTooltip(e) {
@@ -1163,18 +1155,12 @@ function showTooltip(e) {
     if (imageUrl) {
         tooltipEl.classList.add('has-image');
         tooltipEl.innerHTML = `<div class="tooltip-image-container"><img src="${imageUrl}" alt="${text || 'Image'}" class="tooltip-image" loading="lazy" onerror="this.style.display='none'">${text ? `<div class="tooltip-text">${text}</div>` : ''}</div>`;
-    } else {
-        tooltipEl.classList.remove('has-image');
-        tooltipEl.textContent = text;
-    }
+    } else { tooltipEl.classList.remove('has-image'); tooltipEl.textContent = text; }
     positionTooltip(target);
     tooltipEl.classList.add('visible');
 }
 
-function hideTooltip() {
-    activeTooltipTarget = null;
-    if (tooltipEl) tooltipEl.classList.remove('visible');
-}
+function hideTooltip() { activeTooltipTarget = null; if (tooltipEl) tooltipEl.classList.remove('visible'); }
 
 function initializeTooltips() {
     document.querySelectorAll('[data-tooltip]').forEach(el => {
@@ -1193,23 +1179,16 @@ window.addEventListener('resize', () => { if (activeTooltipTarget) positionToolt
 // ===== EXPORT / IMPORT =====
 function exportJSON() {
     const exportData = {
-        version: PAGE_VERSION,
-        exportDate: new Date().toISOString(),
-        arcData,
-        favoritesState,
-        favoritesOrder,
+        version: PAGE_VERSION, exportDate: new Date().toISOString(), arcData, favoritesState, favoritesOrder,
         userItems: JSON.parse(localStorage.getItem('arc_user_items_v1') || '{}'),
         sections: JSON.parse(localStorage.getItem(SECTION_COLLAPSE_KEY) || '{}'),
-        badgesHidden: localStorage.getItem(BADGE_VISIBILITY_KEY),
-        theme: localStorage.getItem(THEME_KEY)
+        badgesHidden: localStorage.getItem(BADGE_VISIBILITY_KEY), theme: localStorage.getItem(THEME_KEY)
     };
     const blob = new Blob([JSON.stringify(exportData, null, 2)], { type: 'application/json' });
     const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
+    const a = document.createElement('a'); a.href = url;
     a.download = `arc-tracker-backup-${new Date().toISOString().slice(0, 10)}.json`;
-    a.click();
-    URL.revokeObjectURL(url);
+    a.click(); URL.revokeObjectURL(url);
     showToast('Данные экспортированы!', 'success');
 }
 
@@ -1226,13 +1205,10 @@ function importJSON(file) {
             if (data.sections) { localStorage.setItem(SECTION_COLLAPSE_KEY, JSON.stringify(data.sections)); }
             if (data.badgesHidden != null) localStorage.setItem(BADGE_VISIBILITY_KEY, data.badgesHidden);
             if (data.theme) { localStorage.setItem(THEME_KEY, data.theme); if (data.theme === 'light') document.body.classList.add('light-theme'); else document.body.classList.remove('light-theme'); updateThemeBtn(); }
-            await saveStats();
-            await saveFavorites();
+            await saveStats(); await saveFavorites();
             showToast('Данные импортированы! Страница обновится.', 'success');
             setTimeout(() => location.reload(), 1500);
-        } catch (err) {
-            showToast('Ошибка импорта: ' + err.message, 'error');
-        }
+        } catch (err) { showToast('Ошибка импорта: ' + err.message, 'error'); }
     };
     reader.readAsText(file);
 }
@@ -1243,11 +1219,7 @@ async function loadAllData() {
     const localFav = JSON.parse(localStorage.getItem(FAVORITES_KEY) || '{}');
     const localOrder = JSON.parse(localStorage.getItem(FAVORITES_ORDER_KEY) || '[]');
     const localTimestamp = parseInt(localStorage.getItem(FAVORITES_TIMESTAMP_KEY) || '0', 10);
-
-    arcData = localStats;
-    favoritesState = localFav;
-    favoritesOrder = localOrder;
-
+    arcData = localStats; favoritesState = localFav; favoritesOrder = localOrder;
     if (currentUser) {
         try {
             const docRef = doc(db, "users", currentUser.uid);
@@ -1259,11 +1231,9 @@ async function loadAllData() {
                 const cloudTs = parseInt(cloudData.favoritesTimestamp || '0', 10);
                 const localHasFav = Object.keys(localFav).length > 0 || localOrder.length > 0;
                 const cloudHasFav = Object.keys(cloudFav).length > 0 || cloudOrder.length > 0;
-
                 if (cloudHasFav) {
                     if (cloudTs > localTimestamp) {
-                        favoritesState = cloudFav;
-                        favoritesOrder = cloudOrder;
+                        favoritesState = cloudFav; favoritesOrder = cloudOrder;
                         localStorage.setItem(FAVORITES_KEY, JSON.stringify(favoritesState));
                         localStorage.setItem(FAVORITES_ORDER_KEY, JSON.stringify(favoritesOrder));
                         localStorage.setItem(FAVORITES_TIMESTAMP_KEY, String(cloudTs));
@@ -1282,8 +1252,7 @@ async function loadAllData() {
             }
         } catch (e) { console.error("Cloud load error:", e); }
     }
-    refreshAllVisuals();
-    applyAllOverrides();
+    refreshAllVisuals(); applyAllOverrides();
 }
 
 async function saveToCloud(data) {
@@ -1306,29 +1275,60 @@ async function saveFavorites() {
 }
 
 // ===== AUTH =====
-window.loginGoogle = async () => {
-    try { await signInWithPopup(auth, new GoogleAuthProvider()); }
-    catch (e) { console.error("Login error", e); }
+window.openLoginModal = function() {
+    document.getElementById('loginModal').style.display = 'flex';
 };
-window.logout = () => { signOut(auth); };
+window.closeLoginModal = function() {
+    document.getElementById('loginModal').style.display = 'none';
+};
+window.loginGoogle = async function() {
+    try {
+        await signInWithPopup(auth, new GoogleAuthProvider());
+        closeLoginModal();
+    } catch(e) { alert('Ошибка: ' + e.message); }
+};
+window.loginTwitter = async function() {
+    try {
+        await signInWithPopup(auth, new TwitterAuthProvider());
+        closeLoginModal();
+    } catch(e) { alert('Ошибка: ' + e.message); }
+};
+window.handleEmailLogin = async function() {
+    const email = document.getElementById('emailInput').value;
+    const pass = document.getElementById('passInput').value;
+    try {
+        await signInWithEmailAndPassword(auth, email, pass);
+        closeLoginModal();
+    } catch(e) { alert('Ошибка: ' + e.message); }
+};
+window.handleRegister = async function() {
+    const email = document.getElementById('emailInput').value;
+    const pass = document.getElementById('passInput').value;
+    try {
+        await createUserWithEmailAndPassword(auth, email, pass);
+        closeLoginModal();
+    } catch(e) { alert('Ошибка: ' + e.message); }
+};
+window.logout = function() { signOut(auth); };
 
 onAuthStateChanged(auth, async (user) => {
     currentUser = user;
-    const loggedOut = document.getElementById('arcLoggedOutView');
-    const loggedIn = document.getElementById('arcLoggedInView');
-    const nameEl = document.getElementById('arcUserName');
+    const loggedOut = document.getElementById('loggedOutView');
+    const loggedIn = document.getElementById('loggedInView');
+    const nameEl = document.getElementById('userName');
+    const avatarEl = document.getElementById('userAvatar');
     if (user) {
         loggedOut.style.display = 'none';
-        loggedIn.style.display = 'block';
-        nameEl.textContent = user.displayName || user.email.split('@')[0];
+        loggedIn.style.display = 'flex';
+        nameEl.textContent = user.displayName || user.email?.split('@')[0] || 'User';
+        avatarEl.src = user.photoURL || 'https://ui-avatars.com/api/?name=U&background=random';
         checkAdmin(user);
     } else {
-        loggedOut.style.display = 'block';
+        loggedOut.style.display = '';
         loggedIn.style.display = 'none';
         checkAdmin(null);
     }
     await loadAllData();
-    // Delayed init for user items
     setTimeout(async () => {
         if (currentUser) await loadUserItemsFromCloud();
         renderAllUserItems();
@@ -1363,11 +1363,8 @@ function isToday(iso) {
 // ===== FAVORITES =====
 function ensureLinkWrapper(link) {
     if (link.parentElement && link.parentElement.classList.contains('link-with-favorite')) return link.parentElement;
-    const w = document.createElement('span');
-    w.className = 'link-with-favorite';
-    link.parentNode.insertBefore(w, link);
-    w.appendChild(link);
-    return w;
+    const w = document.createElement('span'); w.className = 'link-with-favorite';
+    link.parentNode.insertBefore(w, link); w.appendChild(link); return w;
 }
 
 function createFavoriteToggle(id) {
@@ -1378,14 +1375,12 @@ function createFavoriteToggle(id) {
     btn.addEventListener('click', async (e) => {
         e.preventDefault(); e.stopPropagation();
         if (favoritesState[id]) {
-            delete favoritesState[id];
-            favoritesOrder = favoritesOrder.filter(x => x !== id);
+            delete favoritesState[id]; favoritesOrder = favoritesOrder.filter(x => x !== id);
         } else {
             const ctrl = favoriteControls.get(id);
             if (ctrl) { favoritesState[id] = extractLinkInfo(ctrl.link); favoritesOrder.push(id); }
         }
-        await saveFavorites();
-        refreshAllVisuals();
+        await saveFavorites(); refreshAllVisuals();
     });
     return btn;
 }
@@ -1398,15 +1393,13 @@ function refreshAllVisuals() {
         ctrl.button.setAttribute('aria-label', isFav ? 'Убрать из избранного' : 'Добавить в избранное');
         ctrl.button.title = isFav ? 'Убрать из избранного' : 'Добавить в избранное';
     });
-    renderFavoritesList();
-    updateUI();
+    renderFavoritesList(); updateUI();
 }
 
 function attachFavoriteControls() {
     favoriteControls.clear();
     document.querySelectorAll('a.link-inline[data-id]').forEach(link => {
-        const id = link.dataset.id;
-        if (!id) return;
+        const id = link.dataset.id; if (!id) return;
         const wrapper = ensureLinkWrapper(link);
         let btn = wrapper.querySelector('.favorite-toggle');
         if (!btn) { btn = createFavoriteToggle(id); wrapper.appendChild(btn); }
@@ -1428,18 +1421,14 @@ function renderFavoritesList() {
     }
     emptyEl.style.display = 'none'; listEl.style.display = 'flex';
     favoritesOrder.forEach(id => {
-        const info = favoritesState[id];
-        if (!info) return;
+        const info = favoritesState[id]; if (!info) return;
         const linkEl = document.querySelector(`a[data-id="${id}"]`);
         const liveInfo = linkEl ? extractLinkInfo(linkEl) : info;
         if (linkEl && (info.title !== liveInfo.title || info.url !== liveInfo.url || classesToKey(info.classes) !== classesToKey(liveInfo.classes))) {
-            favoritesState[id] = liveInfo;
-            localStorage.setItem(FAVORITES_KEY, JSON.stringify(favoritesState));
+            favoritesState[id] = liveInfo; localStorage.setItem(FAVORITES_KEY, JSON.stringify(favoritesState));
         }
-        const li = document.createElement('li');
-        li.className = 'favorites-item'; li.dataset.id = id;
-        const handle = document.createElement('span');
-        handle.className = 'drag-handle'; handle.innerHTML = '⋮⋮'; handle.title = 'Перетащить';
+        const li = document.createElement('li'); li.className = 'favorites-item'; li.dataset.id = id;
+        const handle = document.createElement('span'); handle.className = 'drag-handle'; handle.innerHTML = '⋮⋮'; handle.title = 'Перетащить';
         li.appendChild(handle);
         const anchor = document.createElement('a');
         anchor.href = liveInfo.url; anchor.target = '_blank'; anchor.rel = 'noopener';
@@ -1451,21 +1440,18 @@ function renderFavoritesList() {
             if (record.visited) anchor.classList.add('visited-once');
             if (isToday(record.lastClick)) anchor.classList.add('daily-active');
             if (record.totalClicks > 0 || record.lastClick) {
-                const badge = document.createElement('span');
-                badge.className = 'click-info';
+                const badge = document.createElement('span'); badge.className = 'click-info';
                 badge.textContent = `${record.totalClicks || 0}р • ${formatDate(record.lastClick)}`;
                 anchor.appendChild(badge);
             }
         }
-        const titleSpan = document.createElement('span');
-        titleSpan.className = 'favorite-title'; titleSpan.textContent = liveInfo.title;
+        const titleSpan = document.createElement('span'); titleSpan.className = 'favorite-title'; titleSpan.textContent = liveInfo.title;
         anchor.appendChild(titleSpan); li.appendChild(anchor);
         const removeBtn = document.createElement('button');
         removeBtn.type = 'button'; removeBtn.className = 'remove-fav-btn';
         removeBtn.innerHTML = '×'; removeBtn.title = 'Удалить из избранного';
         removeBtn.onclick = async (e) => {
-            e.stopPropagation();
-            delete favoritesState[id];
+            e.stopPropagation(); delete favoritesState[id];
             favoritesOrder = favoritesOrder.filter(x => x !== id);
             await saveFavorites(); refreshAllVisuals();
         };
@@ -1498,8 +1484,7 @@ function updateBadge(el, count, time) {
 
 function updateUI() {
     document.querySelectorAll('.track-daily').forEach(btn => {
-        const id = btn.getAttribute('data-id');
-        const rec = arcData[id];
+        const id = btn.getAttribute('data-id'); const rec = arcData[id];
         btn.classList.remove('daily-active');
         if (rec) {
             if (isToday(rec.lastClick)) btn.classList.add('daily-active');
@@ -1507,8 +1492,7 @@ function updateUI() {
         }
     });
     document.querySelectorAll('.track-once').forEach(btn => {
-        const id = btn.getAttribute('data-id');
-        const rec = arcData[id];
+        const id = btn.getAttribute('data-id'); const rec = arcData[id];
         if (rec && rec.visited) btn.classList.add('visited-once');
         else btn.classList.remove('visited-once');
         if (btn.classList.contains('track-once-info') && rec && rec.lastClick) updateBadge(btn, rec.totalClicks || 0, rec.lastClick);
@@ -1518,15 +1502,13 @@ function updateUI() {
 function bindTrackingHandler(el) {
     if (!el || el.dataset.trackingBound === 'true') return;
     if (!(el.classList.contains('track-daily') || el.classList.contains('track-once'))) return;
-    el.addEventListener('click', handleClick);
-    el.dataset.trackingBound = 'true';
+    el.addEventListener('click', handleClick); el.dataset.trackingBound = 'true';
 }
 
 function bindTrackingHandlersToAll() { document.querySelectorAll('.track-daily, .track-once').forEach(bindTrackingHandler); }
 
 function handleClick(e) {
-    const btn = e.currentTarget;
-    const id = btn.getAttribute('data-id');
+    const btn = e.currentTarget; const id = btn.getAttribute('data-id');
     if (!id) return;
     if (newLinksSet.has(id)) clearNewLink(id);
     const now = new Date().toISOString();
@@ -1547,12 +1529,10 @@ function handleClick(e) {
 
 window.resetAll = async function() {
     if (confirm('Сбросить всю статистику?')) {
-        arcData = {};
-        await saveStats();
+        arcData = {}; await saveStats();
         document.querySelectorAll('.click-info').forEach(el => el.remove());
         document.querySelectorAll('.link-inline').forEach(l => { l.classList.remove('daily-active', 'visited-once'); });
-        updateUI();
-        showToast('Прогресс сброшен', 'info');
+        updateUI(); showToast('Прогресс сброшен', 'info');
     }
 };
 
@@ -1623,8 +1603,7 @@ function clearNewLink(id) { newLinksSet.delete(id); localStorage.setItem(NEW_LIN
 
 function updateSectionBadges() {
     document.querySelectorAll('.collapsible-section').forEach(sec => {
-        const st = sec.querySelector('.section-status');
-        if (!st) return;
+        const st = sec.querySelector('.section-status'); if (!st) return;
         const items = sec.querySelectorAll('[data-id][data-new="true"]');
         if (items.length > 0) { sec.classList.add('has-new'); st.innerHTML = `<span class="status-dot">${items.length}</span><span class="status-text">New!</span>`; }
         else { sec.classList.remove('has-new'); st.innerHTML = ''; }
@@ -1711,11 +1690,9 @@ function openModal(title, fields) {
 }
 function closeModal() {
     overlayEl().classList.remove('open');
-    currentAddContext = null;
-    currentEditTarget = null;
+    currentAddContext = null; currentEditTarget = null;
     const saveBtn = document.getElementById('addModalSave');
-    saveBtn.textContent = 'Добавить';
-    delete saveBtn.dataset.editMode;
+    saveBtn.textContent = 'Добавить'; delete saveBtn.dataset.editMode;
 }
 
 document.getElementById('addModalCancel').addEventListener('click', closeModal);
@@ -1738,54 +1715,35 @@ document.getElementById('addModalSave').addEventListener('click', async () => {
     const saveBtn = document.getElementById('addModalSave');
     const isEdit = saveBtn.dataset.editMode === 'true';
 
-    // ====== РЕЖИМ РЕДАКТИРОВАНИЯ ======
     if (isEdit && currentEditTarget) {
-        const id = currentEditTarget.id;
-        const link = currentEditTarget.link;
+        const id = currentEditTarget.id; const link = currentEditTarget.link;
         const newTitle = document.getElementById('addFieldTitle').value.trim();
         const newUrl = document.getElementById('addFieldUrl').value.trim();
         const newTooltip = document.getElementById('addFieldTooltip').value.trim();
         const newImage = normalizeImageUrl(document.getElementById('addFieldImage').value.trim());
         if (!newTitle || !newUrl) { alert('Название и URL обязательны!'); return; }
-
-        // Проверяем — это пользовательский элемент?
         let isUserItem = false;
         for (const zone in userItemsData.items) {
-            const items = userItemsData.items[zone];
-            if (!items) continue;
+            const items = userItemsData.items[zone]; if (!items) continue;
             const found = items.find(i => i.id === id);
             if (found) {
-                found.title = newTitle;
-                found.url = newUrl;
-                found.tooltip = newTooltip;
-                found.image = newImage;
-                isUserItem = true;
-                await saveUserItems();
-                break;
+                found.title = newTitle; found.url = newUrl; found.tooltip = newTooltip; found.image = newImage;
+                isUserItem = true; await saveUserItems(); break;
             }
         }
-        // Если статичный — сохраняем оверрайд
         if (!isUserItem) {
             editsOverride[id] = { title: newTitle, url: newUrl, tooltip: newTooltip, image: newImage };
             await saveEditsOverride();
         }
-        // Применяем к DOM
         applyOverrideToLink(link, { title: newTitle, url: newUrl, tooltip: newTooltip, image: newImage });
-        // Обновляем избранное если есть
         if (favoritesState[id]) {
-            favoritesState[id].title = newTitle;
-            favoritesState[id].url = newUrl;
-            favoritesState[id].tooltip = newTooltip;
-            await saveFavorites();
-            renderFavoritesList();
+            favoritesState[id].title = newTitle; favoritesState[id].url = newUrl; favoritesState[id].tooltip = newTooltip;
+            await saveFavorites(); renderFavoritesList();
         }
         showToast('Обновлено: ' + newTitle, 'success');
-        closeModal();
-        initializeTooltips(); initLightbox();
-        return;
+        closeModal(); initializeTooltips(); initLightbox(); return;
     }
 
-    // ====== РЕЖИМ ДОБАВЛЕНИЯ (старый код без изменений) ======
     if (!currentAddContext) return;
     const title = document.getElementById('addFieldTitle').value.trim();
     const url = document.getElementById('addFieldUrl').value.trim();
@@ -1797,13 +1755,11 @@ document.getElementById('addModalSave').addEventListener('click', async () => {
 
     if (currentAddContext.zone) {
         if (!title || !url) { alert('Название и URL обязательны!'); return; }
-        const config = currentAddContext.config;
-        const id = generateId();
+        const config = currentAddContext.config; const id = generateId();
         const item = { id, title, url, tooltip, image, trackType: config.trackType, addedAt: Date.now() };
         if (!userItemsData.items[currentAddContext.zone]) userItemsData.items[currentAddContext.zone] = [];
         userItemsData.items[currentAddContext.zone].push(item);
-        await saveUserItems();
-        renderUserItemInZone(currentAddContext.zone, item);
+        await saveUserItems(); renderUserItemInZone(currentAddContext.zone, item);
         showToast('Добавлено: ' + title, 'success');
     } else if (currentAddContext.sectionZone) {
         const sConfig = currentAddContext.config;
@@ -1866,8 +1822,7 @@ function createUserLink(item, zone) {
         }
         showToast(`Удалено: ${item.title}`, 'info');
     });
-    wrapper.appendChild(delBtn);
-    return wrapper;
+    wrapper.appendChild(delBtn); return wrapper;
 }
 
 function renderUserItemInZone(zone, item) {
@@ -1924,7 +1879,6 @@ function renderUserCollection(coll) {
     card.appendChild(linkColl); grid.appendChild(card);
     const items = userItemsData.items[coll.id] || [];
     items.forEach(item => renderUserItemInZone(coll.id, item));
-    // Trigger animation
     requestAnimationFrame(() => card.classList.add('anim-visible'));
 }
 
@@ -2003,10 +1957,8 @@ function renderUserDeployGroup(grp) {
 
 function injectAddButtons() {
     document.querySelectorAll('[data-zone]').forEach(container => {
-        const zone = container.dataset.zone;
-        const config = ZONE_CONFIG[zone];
+        const zone = container.dataset.zone; const config = ZONE_CONFIG[zone];
         if (!config) return;
-        // Check if already added
         if (container.querySelector('.add-item-btn')) return;
         const btn = document.createElement('button');
         btn.type = 'button'; btn.className = 'add-item-btn admin-only';
@@ -2027,7 +1979,6 @@ function injectAddButtons() {
             else { const lc = container.querySelector('.link-collection,.link-row'); if (lc) lc.appendChild(btn); }
         }
     });
-
     document.querySelectorAll('[data-section-zone]').forEach(sectionContent => {
         const sectionZone = sectionContent.dataset.sectionZone;
         const sConfig = SECTION_ZONE_CONFIG[sectionZone];
@@ -2148,31 +2099,19 @@ function toggleEditMode() {
     const btn = document.getElementById('editModeBtn');
     if (btn) {
         btn.classList.toggle('active', editModeActive);
-        btn.innerHTML = editModeActive
-            ? '<i class="fas fa-check"></i> Завершить'
-            : '<i class="fas fa-pen"></i> Редактирование';
+        btn.innerHTML = editModeActive ? '<i class="fas fa-check"></i> Завершить' : '<i class="fas fa-pen"></i> Редактирование';
     }
-    if (editModeActive) {
-        injectEditButtons();
-        showToast('Нажмите ✎ рядом со ссылкой для изменения', 'info');
-    } else {
-        removeEditButtons();
-        showToast('Редактирование завершено', 'info');
-    }
+    if (editModeActive) { injectEditButtons(); showToast('Нажмите ✎ рядом со ссылкой для изменения', 'info'); }
+    else { removeEditButtons(); showToast('Редактирование завершено', 'info'); }
 }
 
 function injectEditButtons() {
     document.querySelectorAll('a.link-inline[data-id]').forEach(link => {
         if (link.dataset.editBtnBound) return;
         const editBtn = document.createElement('button');
-        editBtn.type = 'button';
-        editBtn.className = 'edit-item-btn';
-        editBtn.title = 'Редактировать';
-        editBtn.innerHTML = '<i class="fas fa-pen"></i>';
-        editBtn.addEventListener('click', (e) => {
-            e.preventDefault(); e.stopPropagation();
-            openEditModal(link);
-        });
+        editBtn.type = 'button'; editBtn.className = 'edit-item-btn';
+        editBtn.title = 'Редактировать'; editBtn.innerHTML = '<i class="fas fa-pen"></i>';
+        editBtn.addEventListener('click', (e) => { e.preventDefault(); e.stopPropagation(); openEditModal(link); });
         const wrapper = link.closest('.link-with-favorite') || link.closest('.user-item-wrapper');
         if (wrapper) wrapper.appendChild(editBtn);
         else link.parentNode.insertBefore(editBtn, link.nextSibling);
@@ -2186,8 +2125,7 @@ function removeEditButtons() {
 }
 
 function openEditModal(link) {
-    const id = link.dataset.id;
-    const title = getLinkTitle(link);
+    const id = link.dataset.id; const title = getLinkTitle(link);
     currentEditTarget = { id, link };
     document.getElementById('addModalTitle').textContent = 'Редактировать: ' + title;
     showFields(['fieldTitle', 'fieldUrl', 'fieldTooltip', 'fieldImage']);
@@ -2196,43 +2134,28 @@ function openEditModal(link) {
     document.getElementById('addFieldTooltip').value = link.getAttribute('data-tooltip') || '';
     document.getElementById('addFieldImage').value = link.getAttribute('data-image') || '';
     const saveBtn = document.getElementById('addModalSave');
-    saveBtn.textContent = 'Сохранить';
-    saveBtn.dataset.editMode = 'true';
+    saveBtn.textContent = 'Сохранить'; saveBtn.dataset.editMode = 'true';
     overlayEl().classList.add('open');
 }
 
 // ===== DOM CONTENT LOADED =====
 document.addEventListener('DOMContentLoaded', () => {
-    loadTheme();
-    loadEditsOverride();
-    applyAllOverrides();
-    attachFavoriteControls();
-    bindTrackingHandlersToAll();
-    initLightbox();
-    initCardAnimations();
-    initLazyLoading();
+    loadTheme(); loadEditsOverride(); applyAllOverrides();
+    attachFavoriteControls(); bindTrackingHandlersToAll();
+    initLightbox(); initCardAnimations(); initLazyLoading();
 
-    // Theme toggle
     document.getElementById('themeToggleBtn').addEventListener('click', toggleTheme);
+    document.getElementById('toggleBadgesBtn').addEventListener('click', () => { setBadgeHiddenState(!getBadgeHiddenState()); updateBadgeVisibility(); });
 
-    // Badges toggle
-    document.getElementById('toggleBadgesBtn').addEventListener('click', () => {
-        setBadgeHiddenState(!getBadgeHiddenState());
-        updateBadgeVisibility();
-    });
-
-    // Edit mode (admin only)
     const editBtn = document.getElementById('editModeBtn');
     if (editBtn) editBtn.addEventListener('click', toggleEditMode);
 
-    // Export / Import
     document.getElementById('exportBtn').addEventListener('click', exportJSON);
     document.getElementById('importBtn').addEventListener('click', () => document.getElementById('importFileInput').click());
     document.getElementById('importFileInput').addEventListener('change', (e) => {
         if (e.target.files[0]) { importJSON(e.target.files[0]); e.target.value = ''; }
     });
 
-    // Section collapse
     const sectionState = getSectionCollapseState();
     document.querySelectorAll('.collapsible-section').forEach(sec => {
         const sid = sec.getAttribute('data-section-id');
@@ -2249,7 +2172,6 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
-    // Legend
     let isMobile = window.innerWidth <= 768;
     let storedLegend = localStorage.getItem(LEGEND_COLLAPSE_KEY);
     let isLegendCollapsed = storedLegend === 'true';
@@ -2272,10 +2194,38 @@ document.addEventListener('DOMContentLoaded', () => {
     });
     applyLegendState(isLegendCollapsed);
 
-    initializeTooltips();
-    detectNewLinks();
-    updateBadgeVisibility();
+    initializeTooltips(); detectNewLinks(); updateBadgeVisibility();
 });
 </script>
+<!-- ====== LOGIN MODAL ====== -->
+<div id="loginModal" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.8); backdrop-filter:blur(8px); z-index:1000; align-items:center; justify-content:center; padding:20px;">
+  <div style="background:#1e2538; border:1px solid rgba(255,255,255,0.1); border-radius:16px; max-width:400px; width:100%; padding:24px; position:relative;">
+    <button onclick="closeLoginModal()" style="position:absolute; top:12px; right:12px; background:none; border:none; color:#94a3b8; cursor:pointer; font-size:18px;">✕</button>
+    <h2 style="text-align:center; font-size:1.4rem; font-weight:bold; margin-bottom:20px; color:#f1f5f9;">Вход в систему</h2>
+    <div style="display:flex; flex-direction:column; gap:10px;">
+      <!-- Google -->
+      <button onclick="loginGoogle()" style="width:100%; background:#fff; color:#333; font-weight:bold; padding:12px; border-radius:12px; border:none; cursor:pointer; display:flex; align-items:center; justify-content:center; gap:10px; font-size:14px;">
+        <i class="fab fa-google" style="color:#ea4335;"></i> Войти через Google
+      </button>
+      <!-- Twitter -->
+      <button onclick="loginTwitter()" style="width:100%; background:#1DA1F2; color:#fff; font-weight:bold; padding:12px; border-radius:12px; border:none; cursor:pointer; display:flex; align-items:center; justify-content:center; gap:10px; font-size:14px;">
+        <i class="fab fa-twitter"></i> Войти через Twitter
+      </button>
+      <!-- Разделитель -->
+      <div style="display:flex; align-items:center; gap:8px; margin:8px 0;">
+        <div style="flex:1; height:1px; background:#334155;"></div>
+        <span style="color:#64748b; font-size:11px;">ИЛИ EMAIL</span>
+        <div style="flex:1; height:1px; background:#334155;"></div>
+      </div>
+      <!-- Email/Password -->
+      <input type="email" id="emailInput" placeholder="Email" style="width:100%; background:#0f172a; border:1px solid #334155; border-radius:8px; padding:10px 14px; color:#f1f5f9; font-size:14px; outline:none; box-sizing:border-box;">
+      <input type="password" id="passInput" placeholder="Пароль" style="width:100%; background:#0f172a; border:1px solid #334155; border-radius:8px; padding:10px 14px; color:#f1f5f9; font-size:14px; outline:none; box-sizing:border-box;">
+      <div style="display:flex; gap:8px;">
+        <button onclick="handleRegister()" style="flex:1; background:#334155; color:#f1f5f9; padding:10px; border-radius:8px; border:none; cursor:pointer; font-size:13px;">Регистрация</button>
+        <button onclick="handleEmailLogin()" style="flex:1; background:#3b82f6; color:#fff; padding:10px; border-radius:8px; border:none; cursor:pointer; font-size:13px; font-weight:bold;">Войти</button>
+      </div>
+    </div>
+  </div>
+</div>
 </body>
 </html>
