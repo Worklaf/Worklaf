@@ -1019,34 +1019,37 @@ const TWITTER_MONITOR_CONFIG = {
 
 // Функция запуска мониторинга
 async function runTwitterMonitor() {
-    const nitterBase = 'https://nitter.poast.org'; 
-    // ===========================================
+    if (!isAdmin) return;
 
-    console.log(`🚀 Запуск мониторинга Twitter RSS через ${nitterBase}...`);
+    console.log('🚀 Мониторинг Twitter через RSSHub...');
     
     for (const [key, config] of Object.entries(TWITTER_MONITOR_CONFIG)) {
         try {
-            // ИСПРАВЛЕННАЯ СТРОКА:
-            const rssUrl = `${nitterBase}/${config.username}/rss`;
+            // RSSHub — НАИЛУЧШИЙ сервис для Twitter RSS
+            const rssUrl = `https://rsshub.app/twitter/user/${config.username}`;
+            const response = await fetch(rssUrl);
             
-            // Добавляем t=${Date.now()}, чтобы сбросить кэш rss2json и получать свежие данные
-            const proxyUrl = `https://api.rss2json.com/v1/api.json?rss_url=${encodeURIComponent(rssUrl)}&t=${Date.now()}`;
+            if (!response.ok) throw new Error(`HTTP ${response.status}`);
             
-            const response = await fetch(proxyUrl);
-            const data = await response.json();
+            const text = await response.text();
+            const parser = new DOMParser();
+            const xmlDoc = parser.parseFromString(text, 'application/xml');
             
-            if (data.status === 'ok' && data.items) {
-                data.items.forEach(tweet => {
-                    // Проверяем наличие точного текста (регистронезависимо)
-                    if (tweet.title.toLowerCase().includes(config.triggerText.toLowerCase())) {
-                        autoAddNewNFT(key, config, tweet);
-                    }
-                });
-            } else {
-                console.warn(`Не удалось загрузить RSS для ${key}:`, data.message || 'Ошибка API');
-            }
+            const items = xmlDoc.querySelectorAll('item');
+            items.forEach(item => {
+                const title = item.querySelector('title')?.textContent || '';
+                if (title.toLowerCase().includes(config.triggerText.toLowerCase())) {
+                    console.log(`✅ НАЙДЕНО: ${key} - ${title}`);
+                    autoAddNewNFT(key, config, {
+                        title,
+                        link: item.querySelector('link')?.textContent || '',
+                        pubDate: item.querySelector('pubDate')?.textContent || Date.now().toISOString(),
+                        guid: item.querySelector('guid')?.textContent || ''
+                    });
+                }
+            });
         } catch (e) {
-            console.error(`Ошибка мониторинга ${key}:`, e);
+            console.warn(`⏭️ Пропуск ${key}:`, e.message);
         }
     }
 }
