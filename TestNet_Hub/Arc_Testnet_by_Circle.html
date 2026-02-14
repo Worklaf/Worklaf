@@ -1002,6 +1002,100 @@ const FAVORITES_TIMESTAMP_KEY = 'arc_tracker_favorites_timestamp_v1';
 const THEME_KEY = 'arc_tracker_theme';
 const PAGE_VERSION = '2026-02-14-v4';
 
+// ============================================================
+//  TWITTER RSS MONITOR (ADMIN ONLY)
+// ============================================================
+
+const TWITTER_MONITOR_CONFIG = {
+    morkie:   { username: '_morkie',     zone: 'nft_morkie',   triggerText: 'Mint Free NFT On Arc Testnet' },
+    clara:    { username: 'clarachainxyz', zone: 'nft_clara',    triggerText: 'Free Mint NFT on Arc Testnet' },
+    oku:      { username: 'OKUXYZ',       zone: 'nft_oku',      triggerText: 'NFT On Arc Testnet' },
+    mintaura: { username: 'MintAura',     zone: 'nft_mintaura', triggerText: 'Mint Free Nft on Arc Testnet' },
+    arkle:    { username: '0xarkle',      zone: 'nft_arkle',    triggerText: 'NFT On Arc Testnet' },
+    draze:    { username: 'DrazeLab',     zone: 'nft_draze',    triggerText: 'NFT On Arc Testnet' },
+    caset:    { username: 'casetnetwork', zone: 'nft_caset',    triggerText: 'Mint Free NFT On ARC Testnet' },
+    alze:     { username: '0xAlze',       zone: 'nft_alze',     triggerText: 'NFT on Arc Testnet' }
+};
+
+// Функция запуска мониторинга
+async function runTwitterMonitor() {
+    if (!isAdmin) return; // Работает только для админа
+
+    console.log("🚀 Запуск мониторинга Twitter RSS...");
+    
+    for (const [key, config] of Object.entries(TWITTER_MONITOR_CONFIG)) {
+        try {
+            // Используем Nitter как RSS-бридж для Twitter (бесплатно и без API)
+            const rssUrl = `https://nitter.net/${config.username}/rss`;
+            const proxyUrl = `https://api.rss2json.com/v1/api.json?rss_url=${encodeURIComponent(rssUrl)}`;
+            
+            const response = await fetch(proxyUrl);
+            const data = await response.json();
+            
+            if (data.items) {
+                data.items.forEach(tweet => {
+                    // Проверяем наличие точного текста (регистронезависимо)
+                    if (tweet.title.toLowerCase().includes(config.triggerText.toLowerCase())) {
+                        autoAddNewNFT(key, config, tweet);
+                    }
+                });
+            }
+        } catch (e) {
+            console.error(`Ошибка мониторинга ${key}:`, e);
+        }
+    }
+}
+
+async function autoAddNewNFT(projectKey, config, tweet) {
+    const tweetLink = tweet.link; // Прямая ссылка на твит
+    const tweetId = tweet.guid.split('/').pop(); // ID твита для уникальности
+    const internalId = `tw_${projectKey}_${tweetId}`;
+
+    // 1. Проверяем, нет ли уже такого ID в статистике или в списке
+    if (arcData[internalId] || isAlreadyInList(config.zone, tweetLink)) {
+        return; 
+    }
+
+    // 2. Создаем объект новой NFT
+    const newItem = {
+        id: internalId,
+        title: `NEW: ${config.triggerText.split(' on ')[0]}`, // Вырежет красивое название
+        url: tweetLink, // Ссылка ведет прямо на пост
+        tooltip: `Авто-обнаружение из Twitter ${projectKey} (${new Date(tweet.pubDate).toLocaleDateString()})`,
+        image: "", // Картинку можно будет добавить позже через карандаш
+        trackType: 'track-once',
+        addedAt: Date.now()
+    };
+
+    // 3. Добавляем в массив данных
+    if (!userItemsData.items[config.zone]) userItemsData.items[config.zone] = [];
+    
+    // Добавляем в начало списка
+    userItemsData.items[config.zone].unshift(newItem);
+    
+    // 4. Помечаем как "Новое" для подсветки бейджем
+    if (typeof newLinksSet !== 'undefined') {
+        newLinksSet.add(internalId);
+        localStorage.setItem('arc_tracker_new_links_v2', JSON.stringify([...newLinksSet]));
+    }
+
+    // 5. Сохраняем всё
+    await saveUserItems();
+    
+    // 6. Отрисовываем визуально без перезагрузки
+    renderUserItemInZone(config.zone, newItem);
+    
+    showToast(`🐦 Найдена новая NFT у ${projectKey}!`, 'success');
+}
+
+// Проверка на дубликаты по ссылке
+function isAlreadyInList(zone, url) {
+    const items = userItemsData.items[zone] || [];
+    return items.some(item => item.url === url);
+}
+
+// Запуск цикла мониторинга (каждые 15 минут)
+// Мы вызываем это внутри onAuthStateChanged, когда поймем, что юзер - админ
 let newLinksSet = new Set();
 let knownLinksSet = new Set();
 let favoritesSortable = null;
@@ -1355,17 +1449,26 @@ onAuthStateChanged(auth, async (user) => {
     const loggedOut = document.getElementById('arcLoggedOutView');
     const loggedIn = document.getElementById('arcLoggedInView');
     const nameEl = document.getElementById('arcUserName');
+    
     if (user) {
         loggedOut.style.display = 'none';
         loggedIn.style.display = '';
         nameEl.textContent = user.displayName || user.email?.split('@')[0] || 'User';
         checkAdmin(user);
+        
+        // --- ДОБАВЬТЕ ЭТИ СТРОКИ ТУТ ---
+        if (user.uid === ADMIN_UID) {
+            runTwitterMonitor(); // Запуск при входе
+            setInterval(runTwitterMonitor, 15 * 60 * 1000); // И далее каждые 15 мин
+        }
+        // ------------------------------
+        
     } else {
         loggedOut.style.display = '';
         loggedIn.style.display = 'none';
         checkAdmin(null);
     }
-    // Загружаем общие данные (админские элементы/правки) для ВСЕХ
+    
     await loadSharedData();
     await loadAllData();
     renderAllUserItems();
