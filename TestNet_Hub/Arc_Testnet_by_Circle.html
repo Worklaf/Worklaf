@@ -784,6 +784,210 @@ header h1 {
         padding-top: 70px;
     }
 }
+/* Кнопка добавления */
+.add-button {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 28px;
+    height: 28px;
+    margin-left: 12px;
+    background: rgba(34, 197, 94, 0.15);
+    border: 1px solid rgba(34, 197, 94, 0.4);
+    border-radius: 6px;
+    color: #22c55e;
+    font-size: 1.2rem;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.add-button:hover {
+    background: rgba(34, 197, 94, 0.25);
+    border-color: #22c55e;
+    transform: scale(1.1);
+}
+
+/* Модальное окно */
+.modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.75);
+    backdrop-filter: blur(4px);
+    z-index: 10000;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+}
+
+.modal-overlay.active {
+    display: flex;
+}
+
+.modal-content {
+    background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%);
+    border: 1px solid rgba(96, 165, 250, 0.4);
+    border-radius: 16px;
+    padding: 28px;
+    max-width: 600px;
+    width: 100%;
+    max-height: 90vh;
+    overflow-y: auto;
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+    position: relative;
+}
+
+.modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 24px;
+    padding-bottom: 16px;
+    border-bottom: 1px solid var(--border);
+}
+
+.modal-title {
+    font-size: 1.4rem;
+    color: #fff;
+    margin: 0;
+}
+
+.modal-close {
+    background: none;
+    border: none;
+    color: var(--text-muted);
+    font-size: 1.8rem;
+    cursor: pointer;
+    line-height: 1;
+    padding: 0;
+    width: 32px;
+    height: 32px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 6px;
+    transition: all 0.2s ease;
+}
+
+.modal-close:hover {
+    background: rgba(239, 68, 68, 0.2);
+    color: #ef4444;
+}
+
+.modal-form {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+}
+
+.form-group {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.form-label {
+    font-size: 0.9rem;
+    font-weight: 600;
+    color: var(--accent);
+}
+
+.form-input,
+.form-textarea,
+.form-select {
+    padding: 12px 16px;
+    background: rgba(15, 23, 42, 0.6);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    color: var(--text-main);
+    font-size: 0.95rem;
+    font-family: inherit;
+    transition: all 0.2s ease;
+}
+
+.form-input:focus,
+.form-textarea:focus,
+.form-select:focus {
+    outline: none;
+    border-color: var(--accent);
+    background: rgba(15, 23, 42, 0.8);
+}
+
+.form-textarea {
+    resize: vertical;
+    min-height: 80px;
+}
+
+.form-hint {
+    font-size: 0.8rem;
+    color: var(--text-muted);
+    margin-top: 4px;
+}
+
+.form-actions {
+    display: flex;
+    gap: 12px;
+    margin-top: 8px;
+}
+
+.btn {
+    padding: 12px 24px;
+    border: none;
+    border-radius: 8px;
+    font-size: 0.95rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    flex: 1;
+}
+
+.btn-primary {
+    background: var(--accent);
+    color: #fff;
+}
+
+.btn-primary:hover {
+    background: var(--accent-hover);
+    transform: translateY(-1px);
+}
+
+.btn-secondary {
+    background: transparent;
+    border: 1px solid var(--border);
+    color: var(--text-main);
+}
+
+.btn-secondary:hover {
+    background: rgba(255, 255, 255, 0.05);
+}
+
+/* Список пользовательских элементов */
+.user-added-item {
+    position: relative;
+    padding-right: 30px;
+}
+
+.delete-user-item {
+    position: absolute;
+    right: 0;
+    top: 50%;
+    transform: translateY(-50%);
+    background: none;
+    border: none;
+    color: rgba(239, 68, 68, 0.6);
+    font-size: 1rem;
+    cursor: pointer;
+    padding: 4px;
+    line-height: 1;
+}
+
+.delete-user-item:hover {
+    color: #ef4444;
+}
     </style>
 </head>
 <body>
@@ -1428,7 +1632,26 @@ header h1 {
                 console.error("Ошибка загрузки из облака:", e);
             }
         }
+// Загрузка пользовательских элементов
+if (currentUser) {
+    try {
+        const docRef = doc(db, "users", currentUser.uid);
+        const docSnap = await getDoc(docRef);
+        if (docSnap.exists()) {
+            const cloudData = docSnap.data();
+            if (cloudData.userItems) {
+                userItems = cloudData.userItems;
+                localStorage.setItem(USER_ITEMS_KEY, JSON.stringify(userItems));
+            }
+        }
+    } catch (e) {
+        console.error("Ошибка загрузки пользовательских элементов:", e);
+    }
+}
 
+loadUserItems();
+addPlusButtons();
+renderUserItems();
         refreshAllVisuals();
     }
     
@@ -1975,6 +2198,456 @@ header h1 {
         detectNewLinks();
         updateBadgeVisibility();
     });
+	// === СИСТЕМА ДОБАВЛЕНИЯ ПОЛЬЗОВАТЕЛЬСКИХ ЭЛЕМЕНТОВ ===
+
+const USER_ITEMS_KEY = 'arc_tracker_user_items_v1';
+let userItems = {};
+
+// Загрузка пользовательских элементов
+function loadUserItems() {
+    const stored = localStorage.getItem(USER_ITEMS_KEY);
+    userItems = stored ? JSON.parse(stored) : {};
+}
+
+// Сохранение пользовательских элементов
+async function saveUserItems() {
+    localStorage.setItem(USER_ITEMS_KEY, JSON.stringify(userItems));
+    if (currentUser) {
+        await saveToCloud({ userItems: userItems });
+    }
+}
+
+// Определение типов форм
+const FORM_TYPES = {
+    nft_collection: {
+        title: 'Добавить NFT коллекцию',
+        fields: [
+            { name: 'collectionName', label: 'Название коллекции', type: 'text', required: true, placeholder: 'Alze' },
+            { name: 'website', label: 'Ссылка на сайт', type: 'url', required: true, placeholder: 'https://alze.xyz' },
+            { name: 'twitter', label: 'Ссылка на Twitter', type: 'url', required: false, placeholder: 'https://x.com/0xAlze' }
+        ]
+    },
+    nft_item: {
+        title: 'Добавить NFT',
+        fields: [
+            { name: 'nftName', label: 'Название NFT', type: 'text', required: true, placeholder: 'NeoArc' },
+            { name: 'mintUrl', label: 'Ссылка на минт', type: 'url', required: true, placeholder: 'https://...' },
+            { name: 'description', label: 'Описание', type: 'textarea', required: true, placeholder: 'Описание NFT для подсказки' },
+            { name: 'imageUrl', label: 'Ссылка на картинку', type: 'url', required: false, placeholder: 'https://...' }
+        ]
+    },
+    deploy: {
+        title: 'Добавить платформу деплоя',
+        fields: [
+            { name: 'category', label: 'Категория', type: 'select', required: true, options: [
+                { value: 'basic', label: 'Базовый деплой' },
+                { value: 'advanced', label: 'Продвинутый деплой' }
+            ]},
+            { name: 'name', label: 'Название', type: 'text', required: true, placeholder: 'OnchainGM' },
+            { name: 'url', label: 'Ссылка', type: 'url', required: true, placeholder: 'https://...' },
+            { name: 'description', label: 'Описание', type: 'textarea', required: true, placeholder: 'Краткое описание сервиса' }
+        ]
+    },
+    dapp: {
+        title: 'Добавить dApp',
+        fields: [
+            { name: 'category', label: 'Категория', type: 'select', required: true, options: [
+                { value: 'bridges', label: 'Мосты (Bridges)' },
+                { value: 'dex', label: 'DEXs (Свопы)' },
+                { value: 'staking', label: 'Staking' },
+                { value: 'domains', label: 'Domains' },
+                { value: 'social', label: 'SocialFi' },
+                { value: 'predictions', label: 'Predictions' },
+                { value: 'nft_tools', label: 'NFT инструменты' },
+                { value: 'checkin', label: 'Check-In & Daily' },
+                { value: 'games', label: 'Games' },
+                { value: 'others', label: 'Others' }
+            ]},
+            { name: 'name', label: 'Название', type: 'text', required: true, placeholder: 'ArcFlow Finance' },
+            { name: 'url', label: 'Ссылка', type: 'url', required: true, placeholder: 'https://...' },
+            { name: 'description', label: 'Описание', type: 'textarea', required: true, placeholder: 'Краткое описание функционала' },
+            { name: 'trackType', label: 'Тип отслеживания', type: 'select', required: true, options: [
+                { value: 'daily', label: 'Ежедневное (track-daily)' },
+                { value: 'once', label: 'Однократное (track-once)' }
+            ]}
+        ]
+    }
+};
+
+// Открытие модального окна
+window.openAddModal = function(type, parentId = null) {
+    const modal = document.getElementById('addModal');
+    const form = document.getElementById('addForm');
+    const title = document.getElementById('modalTitle');
+    const fieldsContainer = document.getElementById('formFields');
+    
+    if (!FORM_TYPES[type]) {
+        console.error('Unknown form type:', type);
+        return;
+    }
+    
+    const formConfig = FORM_TYPES[type];
+    title.textContent = formConfig.title;
+    form.dataset.formType = type;
+    form.dataset.parentId = parentId || '';
+    
+    // Генерация полей формы
+    fieldsContainer.innerHTML = formConfig.fields.map(field => {
+        let inputHtml = '';
+        
+        if (field.type === 'select') {
+            inputHtml = `
+                <select class="form-select" name="${field.name}" ${field.required ? 'required' : ''}>
+                    <option value="">Выберите...</option>
+                    ${field.options.map(opt => `<option value="${opt.value}">${opt.label}</option>`).join('')}
+                </select>
+            `;
+        } else if (field.type === 'textarea') {
+            inputHtml = `<textarea class="form-textarea" name="${field.name}" ${field.required ? 'required' : ''} placeholder="${field.placeholder || ''}"></textarea>`;
+        } else {
+            inputHtml = `<input type="${field.type}" class="form-input" name="${field.name}" ${field.required ? 'required' : ''} placeholder="${field.placeholder || ''}">`;
+        }
+        
+        return `
+            <div class="form-group">
+                <label class="form-label">${field.label}${field.required ? ' *' : ''}</label>
+                ${inputHtml}
+            </div>
+        `;
+    }).join('');
+    
+    modal.classList.add('active');
+    document.body.style.overflow = 'hidden';
+}
+
+// Закрытие модального окна
+window.closeAddModal = function() {
+    const modal = document.getElementById('addModal');
+    modal.classList.remove('active');
+    document.body.style.overflow = '';
+    document.getElementById('addForm').reset();
+}
+
+// Обработка отправки формы
+window.handleAddSubmit = async function(e) {
+    e.preventDefault();
+    
+    const form = e.target;
+    const formData = new FormData(form);
+    const type = form.dataset.formType;
+    const parentId = form.dataset.parentId;
+    
+    const data = {};
+    formData.forEach((value, key) => {
+        data[key] = value;
+    });
+    
+    // Генерация уникального ID
+    const itemId = `user_${type}_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+    
+    // Сохранение данных
+    if (!userItems[type]) userItems[type] = {};
+    if (parentId && !userItems[type][parentId]) userItems[type][parentId] = [];
+    
+    if (parentId) {
+        userItems[type][parentId].push({ id: itemId, ...data });
+    } else {
+        userItems[type][itemId] = data;
+    }
+    
+    await saveUserItems();
+    closeAddModal();
+    renderUserItems();
+    
+    // Перерендер UI
+    attachFavoriteControls();
+    bindTrackingHandlersToAll();
+    detectNewLinks();
+    initializeTooltips();
+}
+
+// Удаление пользовательского элемента
+window.deleteUserItem = async function(type, itemId, parentId = null) {
+    if (!confirm('Удалить этот элемент?')) return;
+    
+    if (parentId) {
+        userItems[type][parentId] = userItems[type][parentId].filter(item => item.id !== itemId);
+        if (userItems[type][parentId].length === 0) {
+            delete userItems[type][parentId];
+        }
+    } else {
+        delete userItems[type][itemId];
+    }
+    
+    await saveUserItems();
+    renderUserItems();
+    attachFavoriteControls();
+    bindTrackingHandlersToAll();
+}
+
+// Рендеринг пользовательских элементов
+function renderUserItems() {
+    // NFT Коллекции
+    if (userItems.nft_collection) {
+        Object.entries(userItems.nft_collection).forEach(([collId, collData]) => {
+            renderNFTCollection(collId, collData);
+        });
+    }
+    
+    // NFT элементы внутри коллекций
+    if (userItems.nft_item) {
+        Object.entries(userItems.nft_item).forEach(([parentId, items]) => {
+            items.forEach(item => {
+                renderNFTItem(item, parentId);
+            });
+        });
+    }
+    
+    // Платформы деплоя
+    if (userItems.deploy) {
+        Object.entries(userItems.deploy).forEach(([itemId, itemData]) => {
+            renderDeployItem(itemId, itemData);
+        });
+    }
+    
+    // dApps
+    if (userItems.dapp) {
+        Object.entries(userItems.dapp).forEach(([itemId, itemData]) => {
+            renderDappItem(itemId, itemData);
+        });
+    }
+}
+
+// Рендеринг NFT коллекции
+function renderNFTCollection(collId, data) {
+    const container = document.querySelector('#nfts .resource-grid');
+    if (!container) return;
+    
+    // Проверяем, не добавлена ли уже
+    if (document.querySelector(`[data-user-collection="${collId}"]`)) return;
+    
+    const html = `
+        <div class="resource-item user-added-item" data-user-collection="${collId}">
+            <div class="resource-header">
+                <span class="resource-title">${data.collectionName}</span>
+                <span class="social-icons">
+                    ${data.website ? `<a href="${data.website}" target="_blank" class="site-icon" title="Официальный сайт ${data.collectionName}"><i class="fas fa-globe"></i></a>` : ''}
+                    ${data.twitter ? `<a href="${data.twitter}" target="_blank" class="collection-social-link" title="X (Twitter) проекта ${data.collectionName}"><i class="fab fa-brands fa-x-twitter"></i></a>` : ''}
+                </span>
+            </div>
+            <div class="link-collection" data-collection-id="${collId}">
+                <button type="button" class="add-button" onclick="openAddModal('nft_item', '${collId}')" title="Добавить NFT">+</button>
+            </div>
+            <button type="button" class="delete-user-item" onclick="deleteUserItem('nft_collection', '${collId}')" title="Удалить коллекцию">🗑️</button>
+        </div>
+    `;
+    
+    container.insertAdjacentHTML('beforeend', html);
+}
+
+// Рендеринг NFT элемента
+function renderNFTItem(item, parentId) {
+    const container = document.querySelector(`[data-collection-id="${parentId}"]`);
+    if (!container) return;
+    
+    // Проверяем, не добавлен ли уже
+    if (document.querySelector(`[data-id="${item.id}"]`)) return;
+    
+    const html = `
+        <a href="${item.mintUrl}" target="_blank" 
+           class="link-inline link-compact track-once user-added-item" 
+           data-id="${item.id}" 
+           data-tooltip="${item.description}"
+           ${item.imageUrl ? `data-image="${item.imageUrl}"` : ''}>
+            ${item.nftName}
+        </a>
+        <button type="button" class="delete-user-item" onclick="deleteUserItem('nft_item', '${item.id}', '${parentId}')" title="Удалить">×</button>
+    `;
+    
+    // Вставляем перед кнопкой добавления
+    const addBtn = container.querySelector('.add-button');
+    if (addBtn) {
+        addBtn.insertAdjacentHTML('beforebegin', html);
+    } else {
+        container.insertAdjacentHTML('beforeend', html);
+    }
+}
+
+// Рендеринг элемента деплоя
+function renderDeployItem(itemId, data) {
+    const categoryMap = {
+        'basic': 'Базовый деплой',
+        'advanced': 'Продвинутый деплой'
+    };
+    
+    const section = document.querySelector('#deploy .resource-grid');
+    if (!section) return;
+    
+    // Ищем нужную категорию
+    let targetCard = null;
+    section.querySelectorAll('.resource-item').forEach(card => {
+        const title = card.querySelector('.resource-title')?.textContent;
+        if (title === categoryMap[data.category]) {
+            targetCard = card;
+        }
+    });
+    
+    if (!targetCard) return;
+    
+    // Проверяем, не добавлен ли уже
+    if (document.querySelector(`[data-id="${itemId}"]`)) return;
+    
+    const linkCollection = targetCard.querySelector('.link-collection');
+    const html = `
+        <a href="${data.url}" target="_blank" 
+           class="link-inline link-compact track-once track-once-info user-added-item" 
+           data-id="${itemId}" 
+           data-tooltip="${data.description}">
+            ${data.name}
+        </a>
+        <button type="button" class="delete-user-item" onclick="deleteUserItem('deploy', '${itemId}')" title="Удалить">×</button>
+    `;
+    
+    linkCollection.insertAdjacentHTML('beforeend', html);
+}
+
+// Рендеринг dApp элемента
+function renderDappItem(itemId, data) {
+    const table = document.querySelector('.dapp-table tbody');
+    if (!table) return;
+    
+    // Проверяем, не добавлен ли уже
+    if (document.querySelector(`[data-dapp-id="${itemId}"]`)) return;
+    
+    const categoryNames = {
+        'bridges': 'Мосты (Bridges)',
+        'dex': 'DEXs (Свопы)',
+        'staking': 'Staking',
+        'domains': 'Domains',
+        'social': 'SocialFi',
+        'predictions': 'Predictions',
+        'nft_tools': 'NFT',
+        'checkin': 'Check-In & Daily',
+        'games': 'Games',
+        'others': 'Others'
+    };
+    
+    const trackClass = data.trackType === 'daily' ? 'track-daily' : 'track-once';
+    
+    // Находим строку с нужной категорией или создаем новую
+    let targetRow = null;
+    table.querySelectorAll('tr').forEach(row => {
+        const catCell = row.querySelector('td[data-label="Категория"]');
+        if (catCell && catCell.textContent.includes(categoryNames[data.category])) {
+            targetRow = row;
+        }
+    });
+    
+    if (targetRow) {
+        const linksCell = targetRow.querySelector('.dapp-links');
+        const html = `
+            <a href="${data.url}" target="_blank" 
+               class="link-inline link-compact ${trackClass} user-added-item" 
+               data-id="${itemId}" 
+               data-tooltip="${data.description}">
+                ${data.name}
+            </a>
+            <button type="button" class="delete-user-item" onclick="deleteUserItem('dapp', '${itemId}')" title="Удалить">×</button>
+        `;
+        linksCell.insertAdjacentHTML('beforeend', html);
+    } else {
+        // Создаем новую строку
+        const html = `
+            <tr data-dapp-id="${itemId}">
+                <td data-label="Категория"><strong>${categoryNames[data.category]}</strong></td>
+                <td data-label="Ссылки" class="dapp-links">
+                    <a href="${data.url}" target="_blank" 
+                       class="link-inline link-compact ${trackClass}" 
+                       data-id="${itemId}" 
+                       data-tooltip="${data.description}">
+                        ${data.name}
+                    </a>
+                </td>
+                <td data-label="Действие" class="task-desc">Добавлено пользователем</td>
+            </tr>
+        `;
+        table.insertAdjacentHTML('beforeend', html);
+    }
+}
+
+// Добавление кнопок "+" к заголовкам
+function addPlusButtons() {
+    // NFT секция - основной заголовок
+    const nftHeader = document.querySelector('#nfts .section-header h2');
+    if (nftHeader && !nftHeader.querySelector('.add-button')) {
+        nftHeader.insertAdjacentHTML('beforeend', '<button type="button" class="add-button" onclick="openAddModal(\'nft_collection\')" title="Добавить коллекцию">+</button>');
+    }
+    
+    // Deploy секция
+    const deployHeader = document.querySelector('#deploy .section-header h2');
+    if (deployHeader && !deployHeader.querySelector('.add-button')) {
+        deployHeader.insertAdjacentHTML('beforeend', '<button type="button" class="add-button" onclick="openAddModal(\'deploy\')" title="Добавить платформу">+</button>');
+    }
+    
+    // dApps секция
+    const dappsHeader = document.querySelector('#dapps .section-header h2');
+    if (dappsHeader && !dappsHeader.querySelector('.add-button')) {
+        dappsHeader.insertAdjacentHTML('beforeend', '<button type="button" class="add-button" onclick="openAddModal(\'dapp\')" title="Добавить dApp">+</button>');
+    }
+    
+    // Кнопки внутри NFT коллекций (для существующих)
+    document.querySelectorAll('#nfts .resource-item').forEach(item => {
+        if (item.classList.contains('user-added-item')) return;
+        const linkCollection = item.querySelector('.link-collection');
+        if (linkCollection && !linkCollection.querySelector('.add-button')) {
+            const title = item.querySelector('.resource-title')?.textContent;
+            if (title) {
+                const collectionId = title.toLowerCase().replace(/\s+/g, '_');
+                linkCollection.insertAdjacentHTML('beforeend', 
+                    `<button type="button" class="add-button" onclick="openAddModal('nft_item', '${collectionId}')" title="Добавить NFT">+</button>`
+                );
+            }
+        }
+    });
+}
+
+// Инициализация при загрузке
+document.addEventListener('DOMContentLoaded', () => {
+    loadUserItems();
+    addPlusButtons();
+    renderUserItems();
+});
+
+// Закрытие модалки по клику вне её
+document.addEventListener('click', (e) => {
+    const modal = document.getElementById('addModal');
+    if (e.target === modal) {
+        closeAddModal();
+    }
+});
+
+// Закрытие по Escape
+document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') {
+        closeAddModal();
+    }
+});
 </script>
+<!-- Модальное окно для добавления -->
+<div class="modal-overlay" id="addModal">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h3 class="modal-title" id="modalTitle">Добавить элемент</h3>
+            <button type="button" class="modal-close" onclick="closeAddModal()">×</button>
+        </div>
+        <form class="modal-form" id="addForm" onsubmit="handleAddSubmit(event)">
+            <div id="formFields"></div>
+            <div class="form-actions">
+                <button type="button" class="btn btn-secondary" onclick="closeAddModal()">Отмена</button>
+                <button type="submit" class="btn btn-primary">Добавить</button>
+            </div>
+        </form>
+    </div>
+</div>
 </body>
 </html>
