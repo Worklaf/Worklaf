@@ -3443,14 +3443,102 @@ window.deleteMyFeedback = window.deleteUserFeedback;
             if (diff < 604800000) return Math.floor(diff/86400000) + ' дн назад';
             return date.toLocaleDateString('ru-RU', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' });
         }
+async function saveUserData(user) {
+            try {
+                const userRef = doc(db, "users", user.uid);
+                const userSnap = await getDoc(userRef);
+                
+                if (!userSnap.exists()) {
+                    // 🆕 НОВЫЙ ПОЛЬЗОВАТЕЛЬ - создаём запись
+                    console.log('🆕 Создание нового пользователя:', user.email);
+                    await setDoc(userRef, {
+                        email: user.email,
+                        displayName: user.displayName || 'Аноним',
+                        photoURL: user.photoURL || null,
+                        firstLogin: serverTimestamp(), // ✅ ДАТА ПЕРВОГО ВХОДА
+                        provider: user.providerData[0]?.providerId || 'unknown', // ✅ СПОСОБ ВХОДА
+                        lastLogin: serverTimestamp(),
+                        favorites: [],
+                        completed: [],
+                        arcGuideStats: {} // ✅ Статистика кликов
+                    });
+                } else {
+                    // 📊 СУЩЕСТВУЮЩИЙ ПОЛЬЗОВАТЕЛЬ - обновляем только lastLogin
+                    const userData = userSnap.data();
+                    const updates = {
+                        lastLogin: serverTimestamp()
+                    };
+                    
+                    // Если firstLogin отсутствует - добавляем
+                    if (!userData.firstLogin) {
+                        console.log('⚠️ Добавление firstLogin для существующего пользователя');
+                        updates.firstLogin = serverTimestamp();
+                    }
+                    
+                    // Если provider отсутствует - добавляем
+                    if (!userData.provider && user.providerData[0]) {
+                        console.log('⚠️ Добавление provider:', user.providerData[0].providerId);
+                        updates.provider = user.providerData[0].providerId;
+                    }
+                    
+                    await updateDoc(userRef, updates);
+                }
+            } catch (e) {
+                console.error('❌ Ошибка сохранения данных пользователя:', e);
+            }
+        }
 
+        // 🔄 Синхронизирует localStorage с Firestore
+        async function syncLocalStorageToFirestore(userId) {
+            try {
+                const userRef = doc(db, "users", userId);
+                const userSnap = await getDoc(userRef);
+                
+                if (!userSnap.exists()) return;
+                
+                const updates = {};
+                
+                // === ИЗБРАННОЕ ===
+                const localFavorites = JSON.parse(localStorage.getItem('favorites_backup') || '[]');
+                if (localFavorites.length > 0) {
+                    console.log('💾 Синхронизация избранного:', localFavorites.length);
+                    updates.favorites = localFavorites;
+                }
+                
+                // === ЗАВЕРШЁННЫЕ АКТИВНОСТИ ===
+                const localCompleted = JSON.parse(localStorage.getItem(COMPLETED_KEY) || '[]');
+                if (localCompleted.length > 0) {
+                    console.log('💾 Синхронизация завершённых:', localCompleted.length);
+                    updates.completed = localCompleted;
+                }
+                
+                // === СТАТИСТИКА КЛИКОВ ПО ГАЙДАМ ===
+                const localGuideStats = JSON.parse(localStorage.getItem(STORAGE_KEY) || '{}');
+                if (Object.keys(localGuideStats).length > 0) {
+                    console.log('💾 Синхронизация статистики гайдов:', Object.keys(localGuideStats).length);
+                    updates.arcGuideStats = localGuideStats;
+                }
+                
+                // Обновляем, если есть изменения
+                if (Object.keys(updates).length > 0) {
+                    await updateDoc(userRef, updates);
+                    console.log('✅ Данные синхронизированы с Firestore');
+                }
+            } catch (e) {
+                console.error('❌ Ошибка синхронизации localStorage:', e);
+            }
+        }
         // --- User Sync ---
 onAuthStateChanged(auth, async function(user) {
     const now = new Date().toISOString();
 
     if (user) {
         currentUser = user;
-
+		/ === ✅ НОВОЕ: Сохраняем данные пользователя ===
+		await saveUserData(user);
+        
+        // === ✅ НОВОЕ: Синхронизируем localStorage с Firestore ===
+        await syncLocalStorageToFirestore(user.uid);
         // --- Показываем кнопку фидбека всем авторизованным ---
         document.getElementById('generalFeedbackPanel').classList.remove('hidden');
 
@@ -3766,29 +3854,35 @@ window.loadData = async function() {
 }
 
         window.trackGuideClick = async function(id, url) {
-            if(url) window.open(url, '_blank');
-            else openDetail(id);
+    if(url) window.open(url, '_blank');
+    else openDetail(id);
+    
+    const now = new Date().toISOString();
+    if (!arcData[id]) arcData[id] = { totalClicks: 0, lastClick: null };
+    arcData[id].totalClicks = (arcData[id].totalClicks || 0) + 1;
+    arcData[id].lastClick = now;
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(arcData));
+    
+    showToast('Задание засчитано! ✅');
+    
+    // ✅ ИСПРАВЛЕНО: Сохраняем правильно в Firestore
+    if (currentUser) {
+        try {
+            const userRef = doc(db, "users", currentUser.uid);
             
-            const now = new Date().toISOString();
-            if (!arcData[id]) arcData[id] = {};
-            arcData[id].totalClicks = (arcData[id].totalClicks || 0) + 1;
-            arcData[id].lastClick = now;
-            localStorage.setItem(STORAGE_KEY, JSON.stringify(arcData));
+            // ✅ Обновляем только конкретное поле arcGuideStats
+            await updateDoc(userRef, {
+                [`arcGuideStats.${id}.totalClicks`]: arcData[id].totalClicks,
+                [`arcGuideStats.${id}.lastClick`]: now
+            });
             
-            showToast('Задание засчитано! ✅');
-            
-            if (currentUser) {
-                try {
-                    const userRef = doc(db, "users", currentUser.uid);
-                    // We merge arcData into user doc to sync across devices
-                    // Note: This might overwrite other fields if not careful, but setDoc with merge:true overwrites the whole map
-                    // Better approach: update only if needed, but for simplicity:
-                    await setDoc(userRef, { favorites: userFavorites, completed: userCompleted, arcGuideStats: arcData }, { merge: true });
-                } catch(e) { console.error('Sync error', e); }
-            }
-            applyFilters();
-        };
-
+            console.log('📊 Статистика клика сохранена:', id, arcData[id].totalClicks);
+        } catch(e) { 
+            console.error('❌ Ошибка сохранения клика:', e); 
+        }
+    }
+    applyFilters();
+};
         window.toggleFavorite = async function(id) {
     if (!currentUser) { 
         showToast('Войдите, чтобы сохранить', 'warning'); 
@@ -3821,7 +3915,7 @@ window.loadData = async function() {
     localStorage.setItem('favorites_backup', JSON.stringify(newFavs));
     try {
         const userRef = doc(db, "users", currentUser.uid);
-        await setDoc(userRef, { favorites: newFavs }, { merge: true });
+        await updateDoc(userRef, { favorites: newFavs }); // ✅ ИСПРАВЛЕНО: updateDoc вместо setDoc
     } catch (error) {
         console.error('Ошибка сохранения:', error);
     }
@@ -5589,12 +5683,13 @@ function collapseHero(withAnimation = true) {
 function saveHeroState(collapsed) {
     localStorage.setItem('heroCollapsed', collapsed);
     
+        // Сохранение
     if (currentUser) {
         try {
             const userRef = doc(db, "users", currentUser.uid);
-            setDoc(userRef, { heroCollapsed: collapsed }, { merge: true });
-        } catch (e) {
-            console.log('Ошибка сохранения Hero:', e);
+            await updateDoc(userRef, { completed: userCompleted }); // ✅ ИСПРАВЛЕНО: updateDoc
+        } catch (error) {
+            console.error('Ошибка сохранения:', error);
         }
     }
 }
