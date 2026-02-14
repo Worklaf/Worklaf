@@ -4917,30 +4917,54 @@ window.sortProjects = function(by) {
 }
         
         function updateCounts(filtered) {
-            document.getElementById('countAll').textContent = filtered.length;
-            document.getElementById('countToday').textContent = filtered.filter(function(p) { return isToday(p.createdAt); }).length;
-            document.getElementById('countActive').textContent = filtered.filter(function(p) { return p.status === 'active'; }).length;
-            document.getElementById('countDaily').textContent = filtered.filter(function(p) { return p.hasDaily && p.status === 'active'; }).length;
-            document.getElementById('countFavoritesSidebar').textContent = filtered.filter(function(p) { return userFavorites.includes(p.id); }).length;
-            document.getElementById('countCompletedSidebar').textContent = filtered.filter(function(p) { 
-    const projectCompleted = userCompleted.includes(p.id + '_project');
-    const hasActivities = p.activities && p.activities.length > 0;
-    const allActivitiesCompleted = hasActivities && p.activities.every(a => userCompleted.includes(p.id + '_' + a.id));
-    return projectCompleted || allActivitiesCompleted;
-}).length;
-            document.getElementById('countEnded').textContent = filtered.filter(function(p) { return p.status === 'ended'; }).length;
-        }
+    // ✅ "Все проекты" = общее количество видимых (не удалённых) проектов
+    const allVisible = projects.filter(function(p) { return !p.deleted || isAdminMode; });
+    
+    document.getElementById('countAll').textContent = allVisible.length;
+    document.getElementById('countToday').textContent = allVisible.filter(function(p) { return isToday(p.createdAt); }).length;
+    
+    // ✅ "Активные" = все НЕ завершённые пользователем проекты (status !== 'ended' И не в completed)
+    document.getElementById('countActive').textContent = allVisible.filter(function(p) {
+        if (p.status !== 'active') return false;
+        // Исключаем завершённые пользователем
+        const projectCompleted = userCompleted.includes(p.id + '_project');
+        const hasActivities = p.activities && p.activities.length > 0;
+        const allActivitiesCompleted = hasActivities && p.activities.every(a => userCompleted.includes(p.id + '_' + a.id));
+        return !(projectCompleted || allActivitiesCompleted);
+    }).length;
+    
+    document.getElementById('countDaily').textContent = allVisible.filter(function(p) { return p.hasDaily && p.status === 'active'; }).length;
+    document.getElementById('countFavoritesSidebar').textContent = allVisible.filter(function(p) { return userFavorites.includes(p.id); }).length;
+    document.getElementById('countCompletedSidebar').textContent = allVisible.filter(function(p) { 
+        const projectCompleted = userCompleted.includes(p.id + '_project');
+        const hasActivities = p.activities && p.activities.length > 0;
+        const allActivitiesCompleted = hasActivities && p.activities.every(a => userCompleted.includes(p.id + '_' + a.id));
+        return projectCompleted || allActivitiesCompleted;
+    }).length;
+    document.getElementById('countEnded').textContent = allVisible.filter(function(p) { return p.status === 'ended'; }).length;
+}
         
         function updateStats(filtered) {
-    document.getElementById('statActive').textContent = filtered.filter(function(p) { return p.status === 'active'; }).length;
-    document.getElementById('statToday').textContent = filtered.filter(function(p) { return isToday(p.createdAt); }).length;
-    document.getElementById('statFavorites').textContent = filtered.filter(function(p) { return userFavorites.includes(p.id); }).length;
-    document.getElementById('statCompleted').textContent = filtered.filter(function(p) { 
-    const projectCompleted = userCompleted.includes(p.id + '_project');
-    const hasActivities = p.activities && p.activities.length > 0;
-    const allActivitiesCompleted = hasActivities && p.activities.every(a => userCompleted.includes(p.id + '_' + a.id));
-    return projectCompleted || allActivitiesCompleted;
-}).length;
+    // ✅ Считаем по ВСЕМ видимым проектам, а не по отфильтрованным
+    const allVisible = projects.filter(function(p) { return !p.deleted || isAdminMode; });
+    
+    // ✅ "Активных" = active статус МИНУС завершённые пользователем
+    document.getElementById('statActive').textContent = allVisible.filter(function(p) {
+        if (p.status !== 'active') return false;
+        const projectCompleted = userCompleted.includes(p.id + '_project');
+        const hasActivities = p.activities && p.activities.length > 0;
+        const allActivitiesCompleted = hasActivities && p.activities.every(a => userCompleted.includes(p.id + '_' + a.id));
+        return !(projectCompleted || allActivitiesCompleted);
+    }).length;
+    
+    document.getElementById('statToday').textContent = allVisible.filter(function(p) { return isToday(p.createdAt); }).length;
+    document.getElementById('statFavorites').textContent = allVisible.filter(function(p) { return userFavorites.includes(p.id); }).length;
+    document.getElementById('statCompleted').textContent = allVisible.filter(function(p) { 
+        const projectCompleted = userCompleted.includes(p.id + '_project');
+        const hasActivities = p.activities && p.activities.length > 0;
+        const allActivitiesCompleted = hasActivities && p.activities.every(a => userCompleted.includes(p.id + '_' + a.id));
+        return projectCompleted || allActivitiesCompleted;
+    }).length;
 }
         
         function isToday(dateString) { 
