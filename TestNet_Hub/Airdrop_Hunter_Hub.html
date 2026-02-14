@@ -3607,49 +3607,30 @@ await loadHeroStateFromFirestore(user.uid);
 }
 
         window.toggleComplete = async function(uid, aid) {
-    let uniqueId;
-    
-    // Определяем тип завершения (проект целиком или активность)
-    if (aid === 'project') {
-        uniqueId = uid + '_project';
-    } else {
-        uniqueId = uid + '_' + aid;
-        
-        // Проверяем, есть ли уже запись о завершении проекта целиком
-        if (userCompleted.includes(uid + '_project')) {
-            showToast('Проект уже завершен целиком', 'info');
-            return;
-        }
-    }
-
+    const uniqueId = uid + '_' + aid;
     const btn = event.currentTarget;
     const idx = userCompleted.indexOf(uniqueId);
     let newCompleted = [...userCompleted];
     
     if (idx > -1) {
-        // Удаление из завершенных
         newCompleted.splice(idx, 1);
         btn.classList.remove('active');
         showToast('Отмечено как незавершённое', 'info');
     } else {
-        // Добавление в завершенные
         newCompleted.push(uniqueId);
         btn.classList.add('active');
         
-        // Эффекты успешного завершения
+        // 🎉 Эффект успеха
         createSuccessRipple(btn);
-        const msg = aid === 'project' ? 'Проект завершен!' : 'Активность завершена!';
-        showToast('✨ ' + msg, 'success');
+        showToast('✨ Задача завершена!', 'success');
     }
     
     userCompleted = newCompleted;
     localStorage.setItem(COMPLETED_KEY, JSON.stringify(newCompleted));
-    
-    // Обновляем UI
     if (currentDetailId === uid) openDetail(uid);
     applyFilters();
     
-    // Синхронизация с Firestore
+    // Сохранение
     if (currentUser) {
         try {
             const userRef = doc(db, "users", currentUser.uid);
@@ -3932,6 +3913,7 @@ window.loadData = async function() {
 
         function getFilteredProjects(search) {
     return projects.filter(function(p) {
+        // СКРЫВАЕМ УДАЛЕННЫЕ ПРОЕКТЫ ОТ ОБЫЧНЫХ ПОЛЬЗОВАТЕЛЕЙ
         if (p.deleted && !isAdminMode) return false;
 
         // Проверяем все выбранные статус-фильтры
@@ -3941,30 +3923,27 @@ window.loadData = async function() {
             for (const status of currentFilters.statuses) {
                 if (status === 'active') {
                     if (p.status !== 'active') matchesAllFilters = false;
-                } 
-                else if (status === 'ended') {
+                } else if (status === 'ended') {
                     if (p.status !== 'ended') matchesAllFilters = false;
-                } 
-                else if (status === 'daily') {
+                } else if (status === 'daily') {
                     if (!p.hasDaily || p.status !== 'active') matchesAllFilters = false;
-                } 
-                else if (status === 'favorites') {
+                } else if (status === 'favorites') {
                     if (!userFavorites.includes(p.id)) matchesAllFilters = false;
-                } 
-                else if (status === 'completed') {
-                    // Проверяем завершение либо всего проекта, либо всех активностей
-                    const isProjectCompleted = userCompleted.includes(p.id + '_project');
-                    const allActivitiesCompleted = p.activities && p.activities.length > 0 && 
-                        p.activities.every(a => userCompleted.includes(p.id + '_' + a.id));
-                    
-                    if (!isProjectCompleted && !allActivitiesCompleted) {
-                        matchesAllFilters = false;
-                    }
-                }
-                else if (status === 'unvisited') {
+                } else if (status === 'completed') {
+    // Проект завершён если:
+    // 1) Нажата кнопка "Завершить проект" (id + '_project' в userCompleted)
+    // ИЛИ
+    // 2) У проекта есть активности И ВСЕ они завершены
+    const projectCompleted = userCompleted.includes(p.id + '_project');
+    const hasActivities = p.activities && p.activities.length > 0;
+    const allActivitiesCompleted = hasActivities && p.activities.every(a => userCompleted.includes(p.id + '_' + a.id));
+    
+    if (!(projectCompleted || allActivitiesCompleted)) {
+        matchesAllFilters = false;
+    }
+} else if (status === 'unvisited') {
                     if (arcData[p.id]) matchesAllFilters = false;
-                } 
-                else if (status === 'today') {
+                } else if (status === 'today') {
                     if (!isToday(p.createdAt)) matchesAllFilters = false;
                 }
             }
@@ -3972,16 +3951,16 @@ window.loadData = async function() {
             if (!matchesAllFilters) return false;
         }
 
-        // Остальные условия фильтрации (поиск, категории) остаются без изменений
+        // Фильтр по категориям
         if (currentFilters.categories.length > 0) {
             if (!p.categories) return false;
             if (!p.categories.some(function(c) { return currentFilters.categories.includes(c); })) return false;
         }
 
+        // Фильтр по поиску
         if (search) {
-            const searchLower = search.toLowerCase();
-            if (!p.name.toLowerCase().includes(searchLower) && 
-                !(p.description && p.description.toLowerCase().includes(searchLower))) {
+            if (!p.name.toLowerCase().includes(search.toLowerCase()) && 
+                !(p.description && p.description.toLowerCase().includes(search.toLowerCase()))) {
                 return false;
             }
         }
@@ -4140,18 +4119,14 @@ ${isCompleted ? `
                             </button>
 
                             <!-- ✅ НОВАЯ КНОПКА ЗАВЕРШИТЬ (лаборатория) -->
-                            // Внутри функции renderProjects, в шаблоне карточки проекта заменить кнопку на:
-`<button 
-    onclick="event.stopPropagation(); toggleComplete('${project.id}', 'project')"
-    class="lab-complete-btn ${
-        userCompleted.includes(project.id + '_project') || 
-        (project.activities && project.activities.length > 0 && 
-         project.activities.every(a => userCompleted.includes(project.id + '_' + a.id))) ? 'active' : ''}"
-    title="Отметить проект как завершённый">
-    <svg width="24" height="24">
-        <use href="#lab-check"/>
-    </svg>
-</button>`
+                            <button 
+                                onclick="event.stopPropagation(); toggleComplete('${project.id}', 'project')"
+                                class="lab-complete-btn ${isCompleted ? 'active' : ''}"
+                                title="Отметить как завершённое">
+                                <svg width="24" height="24">
+                                    <use href="#lab-check"/>
+                                </svg>
+                            </button>
 
                             <!-- ❤️ НОВАЯ КНОПКА ИЗБРАННОЕ (лаборатория) -->
                             <button 
@@ -4349,8 +4324,7 @@ window.sortProjects = function(by) {
                 });
 
                 actsContainer.innerHTML = sortedActivities.map(function(act) {
-                    const isActCompleted = userCompleted.includes(project.id + '_' + act.id) || 
-                      userCompleted.includes(project.id + '_project');
+                    const isActCompleted = userCompleted.includes(project.id + '_' + act.id);
                     const isActEnded = act.status === 'ended';
                     const actDate = act.date ? formatDateForDisplay(act.date) : '';
                     const actCats = act.categories ? act.categories.map(c => '<span class="text-xs bg-slate-700 px-1.5 py-0.5 rounded text-slate-300">' + c + '</span>').join('') : '';
@@ -4949,8 +4923,11 @@ window.sortProjects = function(by) {
             document.getElementById('countDaily').textContent = filtered.filter(function(p) { return p.hasDaily && p.status === 'active'; }).length;
             document.getElementById('countFavoritesSidebar').textContent = filtered.filter(function(p) { return userFavorites.includes(p.id); }).length;
             document.getElementById('countCompletedSidebar').textContent = filtered.filter(function(p) { 
-                return p.activities && p.activities.some(a => userCompleted.includes(p.id + '_' + a.id));
-            }).length;
+    const projectCompleted = userCompleted.includes(p.id + '_project');
+    const hasActivities = p.activities && p.activities.length > 0;
+    const allActivitiesCompleted = hasActivities && p.activities.every(a => userCompleted.includes(p.id + '_' + a.id));
+    return projectCompleted || allActivitiesCompleted;
+}).length;
             document.getElementById('countEnded').textContent = filtered.filter(function(p) { return p.status === 'ended'; }).length;
         }
         
@@ -4959,8 +4936,11 @@ window.sortProjects = function(by) {
     document.getElementById('statToday').textContent = filtered.filter(function(p) { return isToday(p.createdAt); }).length;
     document.getElementById('statFavorites').textContent = filtered.filter(function(p) { return userFavorites.includes(p.id); }).length;
     document.getElementById('statCompleted').textContent = filtered.filter(function(p) { 
-        return p.activities && p.activities.some(a => userCompleted.includes(p.id + '_' + a.id));
-    }).length;
+    const projectCompleted = userCompleted.includes(p.id + '_project');
+    const hasActivities = p.activities && p.activities.length > 0;
+    const allActivitiesCompleted = hasActivities && p.activities.every(a => userCompleted.includes(p.id + '_' + a.id));
+    return projectCompleted || allActivitiesCompleted;
+}).length;
 }
         
         function isToday(dateString) { 
