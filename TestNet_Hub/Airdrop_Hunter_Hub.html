@@ -3922,8 +3922,20 @@ window.loadData = async function() {
 
             for (const status of currentFilters.statuses) {
                 if (status === 'active') {
-                    if (p.status !== 'active') matchesAllFilters = false;
-                } else if (status === 'ended') {
+
+    // Завершён ли проект пользователем
+    const projectCompleted = userCompleted.includes(p.id + '_project');
+    const hasActivities = p.activities && p.activities.length > 0;
+    const allActivitiesCompleted =
+        hasActivities && p.activities.every(a => userCompleted.includes(p.id + '_' + a.id));
+
+    const userFinished = projectCompleted || allActivitiesCompleted;
+
+    // Активный = НЕ завершён пользователем И не ended
+    if (userFinished || p.status === 'ended') {
+        matchesAllFilters = false;
+    }
+} else if (status === 'ended') {
                     if (p.status !== 'ended') matchesAllFilters = false;
                 } else if (status === 'daily') {
                     if (!p.hasDaily || p.status !== 'active') matchesAllFilters = false;
