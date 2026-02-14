@@ -1017,34 +1017,108 @@ const TWITTER_MONITOR_CONFIG = {
     alze:     { username: '0xAlze',       zone: 'nft_alze',     triggerText: 'NFT on Arc Testnet' }
 };
 
-// Функция запуска мониторинга
-async function runTwitterMonitor() {
-    if (!isAdmin) return;
-
-    // === РАБОЧИЙ RSS прокси (замена rss2json) ===
-    const RSS_PROXY_URL = 'https://rss-bridge.example.com/?action=display&bridge=Twitter&context=User&username=';
-    // ============================================
-
-    console.log('🚀 Запуск мониторинга Twitter RSS...');
+/// --- ВСПОМОГАТЕЛЬНАЯ ФУНКЦИЯ ДЛЯ ПАРСИНГА XML ---
+function parseRSS(xmlText) {
+    const parser = new DOMParser();
+    const xmlDoc = parser.parseFromString(xmlText, "text/xml");
+    const items = Array.from(xmlDoc.querySelectorAll("item"));
     
+    return items.map(item => {
+        const title = item.querySelector("title")?.textContent || "";
+        const link = item.querySelector("link")?.textContent || "";
+        const pubDate = item.querySelector("pubDate")?.textContent || "";
+        // Nitter иногда кладет дату в dc:date
+        const dcDate = item.getElementsByTagNameNS("*", "date")[0]?.textContent;
+        
+        return {
+            title: title,
+            link: link,
+            pubDate: pubDate || dcDate || new Date().toISOString()
+        };
+    });
+}
+
+// --- ОСНОВНАЯ ФУНКЦИЯ МОНИТОРИНГА ---
+async function runTwitterMonitor() {
+    if (!isAdmin) return; 
+
+    // СПИСОК ЖИВЫХ ИНСТАНСОВ NITTER (Обновлен)
+    const nitterInstances = [
+        'https://nitter.privacydev.net',
+        'https://nitter.lucabased.xyz',
+        'https://nitter.poast.org',
+        'https://xcancel.com',       // Часто работает, когда другие лежат
+        'https://nitter.moomoo.me'
+    ];
+
+    // СПИСОК CORS ПРОКСИ (Чтобы обойти защиту браузера)
+    const corsProxies = [
+        (url) => `https://api.allorigins.win/raw?url=${encodeURIComponent(url)}`,
+        (url) => `https://corsproxy.io/?${encodeURIComponent(url)}`
+    ];
+
+    console.log("🚀 Запуск мониторинга Twitter (XML Mode)...");
+
     for (const [key, config] of Object.entries(TWITTER_MONITOR_CONFIG)) {
-        try {
-            // RSS-Bridge напрямую (работает стабильно)
-            const rssBridgeUrl = `https://rss-bridge.main.li/?action=display&bridge=Twitter&context=User&username=${config.username}&format=JSON`;
-            
-            const response = await fetch(rssBridgeUrl);
-            const data = await response.json();
-            
-            if (data.items && data.items.length > 0) {
-                data.items.forEach(tweet => {
-                    if (tweet.title && tweet.title.toLowerCase().includes(config.triggerText.toLowerCase())) {
-                        autoAddNewNFT(key, config, tweet);
+        let fetchedSuccessfully = false;
+
+        // 1. Перебор инстансов Nitter
+        instanceLoop: for (const instance of nitterInstances) {
+            const rssUrl = `${instance}/${config.username}/rss`;
+
+            // 2. Перебор CORS прокси для каждого инстанса
+            for (const proxyGen of corsProxies) {
+                try {
+                    const fetchUrl = proxyGen(rssUrl);
+                    // Тайм-аут 5 секунд, чтобы не висеть долго
+                    const controller = new AbortController();
+                    const timeoutId = setTimeout(() => controller.abort(), 5000);
+
+                    const response = await fetch(fetchUrl, { 
+                        signal: controller.signal,
+                        cache: "no-store" // Запрет кэширования
+                    });
+                    clearTimeout(timeoutId);
+
+                    if (!response.ok) throw new Error(`HTTP ${response.status}`);
+
+                    const textData = await response.text();
+
+                    // Проверяем, что пришел реальный XML, а не ошибка Cloudflare
+                    if (!textData.includes('<rss') && !textData.includes('<feed')) {
+                        throw new Error('Not an RSS feed');
                     }
-                });
+
+                    // Парсим XML вручную
+                    const tweets = parseRSS(textData);
+
+                    if (tweets.length > 0) {
+                        console.log(`✅ [${key}] Успех через ${instance}`);
+                        
+                        tweets.forEach(tweet => {
+                            if (tweet.title && tweet.title.toLowerCase().includes(config.triggerText.toLowerCase())) {
+                                // Адаптация под ваш существующий код
+                                autoAddNewNFT(key, config, tweet);
+                            }
+                        });
+
+                        fetchedSuccessfully = true;
+                        break instanceLoop; // Выход из всех циклов для этого юзера
+                    }
+
+                } catch (e) {
+                    // Ошибка прокси или инстанса - молча пробуем следующий вариант
+                    continue;
+                }
             }
-        } catch (e) {
-            console.error(`Ошибка мониторинга ${key}:`, e);
         }
+
+        if (!fetchedSuccessfully) {
+            console.warn(`⚠️ [${key}] Все зеркала недоступны.`);
+        }
+        
+        // Пауза 1.5 сек между юзерами
+        await new Promise(r => setTimeout(r, 1500));
     }
 }
 
