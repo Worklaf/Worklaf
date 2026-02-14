@@ -1018,42 +1018,32 @@ const TWITTER_MONITOR_CONFIG = {
 };
 
 // Функция запуска мониторинга
-// Функция запуска мониторинга с перебором зеркал
 async function runTwitterMonitor() {
     if (!isAdmin) return;
 
+    // === РАБОЧИЙ RSS прокси (замена rss2json) ===
+    const RSS_PROXY_URL = 'https://rss-bridge.example.com/?action=display&bridge=Twitter&context=User&username=';
+    // ============================================
+
     console.log('🚀 Запуск мониторинга Twitter RSS...');
     
-    const proxies = [
-        'https://api.rss.app/rss/8bf0f3f8-6a7a-4b1e-9c4d-2f8e7d5c3b1a', // RSS.app
-        'https://rss2json.com/v1/api.json?rss_url=', // Backup
-    ];
-
     for (const [key, config] of Object.entries(TWITTER_MONITOR_CONFIG)) {
         try {
-            // Прямой запрос к публичному RSS (без Nitter)
-            const directRss = `https://rsshub.app/twitter/user/${config.username}`;
+            // RSS-Bridge напрямую (работает стабильно)
+            const rssBridgeUrl = `https://rss-bridge.main.li/?action=display&bridge=Twitter&context=User&username=${config.username}&format=JSON`;
             
-            const response = await fetch(directRss);
-            const text = await response.text();
+            const response = await fetch(rssBridgeUrl);
+            const data = await response.json();
             
-            // Парсим XML вручную (простой парсер)
-            const parser = new DOMParser();
-            const xml = parser.parseFromString(text, 'text/xml');
-            const items = xml.querySelectorAll('item');
-            
-            items.forEach(item => {
-                const title = item.querySelector('title')?.textContent || '';
-                if (title.toLowerCase().includes(config.triggerText.toLowerCase())) {
-                    autoAddNewNFT(key, config, {
-                        title,
-                        link: item.querySelector('link')?.textContent || '',
-                        pubDate: item.querySelector('pubDate')?.textContent || ''
-                    });
-                }
-            });
+            if (data.items && data.items.length > 0) {
+                data.items.forEach(tweet => {
+                    if (tweet.title && tweet.title.toLowerCase().includes(config.triggerText.toLowerCase())) {
+                        autoAddNewNFT(key, config, tweet);
+                    }
+                });
+            }
         } catch (e) {
-            console.error(`Ошибка ${key}:`, e);
+            console.error(`Ошибка мониторинга ${key}:`, e);
         }
     }
 }
