@@ -624,19 +624,23 @@ body.edit-mode .page-shell { padding-top: 110px; }
 <div class="page-shell">
     <aside class="sidebar">
         <!-- Вставь куда-то в header справа -->
-<div id="authSection">
-  <div id="loggedOutView">
-    <button onclick="openLoginModal()" style="background:linear-gradient(135deg,#3b82f6,#2563eb); color:#fff; padding:8px 16px; border-radius:10px; border:none; cursor:pointer; font-weight:bold; font-size:13px;">
-      <i class="fas fa-sign-in-alt"></i> Вход
-    </button>
-  </div>
-  <div id="loggedInView" style="display:none; align-items:center; gap:8px;">
-    <span id="userName" style="color:#f1f5f9; font-size:12px; font-weight:600;"></span>
-    <img id="userAvatar" src="" style="width:32px; height:32px; border-radius:50%; border:2px solid #3b82f6; object-fit:cover;">
-    <button onclick="logout()" style="background:none; border:none; color:#94a3b8; cursor:pointer; font-size:14px;" title="Выход">
-      <i class="fas fa-sign-out-alt"></i>
-    </button>
-  </div>
+<div id="authPanelArc" class="auth-panel-arc">
+    <div id="arcLoggedOutView">
+        <button onclick="openLoginModal()" class="auth-btn-arc auth-btn-google">
+            <i class="fas fa-sign-in-alt"></i> Войти
+        </button>
+        <p style="font-size:0.7rem;color:var(--text-muted);margin:8px 0 0 0;">
+            Синхронизируйте прогресс с облаком
+        </p>
+    </div>
+    <div id="arcLoggedInView" style="display:none;">
+        <div class="user-info-arc" id="arcUserName">User</div>
+        <div id="adminBadgeContainer"></div>
+        <div class="sync-status">
+            <i class="fas fa-check-circle"></i> Данные синхронизированы
+        </div>
+        <button onclick="logout()" class="auth-btn-arc auth-btn-logout">Выйти</button>
+    </div>
 </div>
 
         <div class="sidebar-controls">
@@ -1310,29 +1314,57 @@ window.handleRegister = async function() {
     } catch(e) { alert('Ошибка: ' + e.message); }
 };
 window.logout = function() { signOut(auth); };
-
+// ===== SHARED DATA — админские элементы видны всем =====
+async function loadSharedData() {
+    try {
+        // Загрузка общих элементов (коллекции, ссылки, категории)
+        const itemsSnap = await getDoc(doc(db, "config", "sharedItems"));
+        if (itemsSnap.exists()) {
+            const data = itemsSnap.data();
+            if (data.userItems) {
+                userItemsData = {
+                    items: data.userItems.items || {},
+                    collections: data.userItems.collections || [],
+                    dappCategories: data.userItems.dappCategories || []
+                };
+                localStorage.setItem(USER_ITEMS_KEY, JSON.stringify(userItemsData));
+            }
+        }
+        // Загрузка общих правок (editsOverride)
+        const editsSnap = await getDoc(doc(db, "config", "sharedEdits"));
+        if (editsSnap.exists()) {
+            const data = editsSnap.data();
+            if (data.editsOverride) {
+                editsOverride = data.editsOverride;
+                localStorage.setItem(EDITS_OVERRIDE_KEY, JSON.stringify(editsOverride));
+            }
+        }
+    } catch (e) {
+        console.error("Load shared data error:", e);
+        // Фоллбэк на localStorage
+        loadUserItems();
+        loadEditsOverride();
+    }
+}
 onAuthStateChanged(auth, async (user) => {
     currentUser = user;
-    const loggedOut = document.getElementById('loggedOutView');
-    const loggedIn = document.getElementById('loggedInView');
-    const nameEl = document.getElementById('userName');
-    const avatarEl = document.getElementById('userAvatar');
+    const loggedOut = document.getElementById('arcLoggedOutView');
+    const loggedIn = document.getElementById('arcLoggedInView');
+    const nameEl = document.getElementById('arcUserName');
     if (user) {
         loggedOut.style.display = 'none';
-        loggedIn.style.display = 'flex';
+        loggedIn.style.display = '';
         nameEl.textContent = user.displayName || user.email?.split('@')[0] || 'User';
-        avatarEl.src = user.photoURL || 'https://ui-avatars.com/api/?name=U&background=random';
         checkAdmin(user);
     } else {
         loggedOut.style.display = '';
         loggedIn.style.display = 'none';
         checkAdmin(null);
     }
+    // Загружаем общие данные (админские элементы/правки) для ВСЕХ
+    await loadSharedData();
     await loadAllData();
-    setTimeout(async () => {
-        if (currentUser) await loadUserItemsFromCloud();
-        renderAllUserItems();
-    }, 300);
+    renderAllUserItems();
 });
 
 // ===== HELPERS =====
@@ -1667,7 +1699,11 @@ function loadUserItems() {
 
 async function saveUserItems() {
     localStorage.setItem(USER_ITEMS_KEY, JSON.stringify(userItemsData));
-    if (currentUser) await saveToCloud({ userItems: userItemsData });
+    if (isAdmin) {
+        try {
+            await setDoc(doc(db, "config", "sharedItems"), { userItems: userItemsData });
+        } catch (e) { console.error("Save shared items error:", e); }
+    }
 }
 
 function generateId() { return 'u_' + Date.now().toString(36) + '_' + Math.random().toString(36).substr(2, 5); }
@@ -2004,33 +2040,7 @@ function injectAddButtons() {
     });
 }
 
-async function loadUserItemsFromCloud() {
-    if (!currentUser) return;
-    try {
-        const docSnap = await getDoc(doc(db, "users", currentUser.uid));
-        if (docSnap.exists()) {
-            const cloud = docSnap.data().userItems;
-            if (cloud) {
-                if (cloud.items) {
-                    Object.keys(cloud.items).forEach(zone => {
-                        if (!userItemsData.items[zone]) userItemsData.items[zone] = [];
-                        const localIds = new Set(userItemsData.items[zone].map(i => i.id));
-                        cloud.items[zone].forEach(item => { if (!localIds.has(item.id)) userItemsData.items[zone].push(item); });
-                    });
-                }
-                if (cloud.collections) {
-                    const localIds = new Set(userItemsData.collections.map(c => c.id));
-                    cloud.collections.forEach(c => { if (!localIds.has(c.id)) userItemsData.collections.push(c); });
-                }
-                if (cloud.dappCategories) {
-                    const localIds = new Set(userItemsData.dappCategories.map(c => c.id));
-                    cloud.dappCategories.forEach(c => { if (!localIds.has(c.id)) userItemsData.dappCategories.push(c); });
-                }
-                localStorage.setItem(USER_ITEMS_KEY, JSON.stringify(userItemsData));
-            }
-        }
-    } catch(e) { console.error(e); }
-}
+
 
 function renderAllUserItems() {
     loadUserItems();
@@ -2065,7 +2075,11 @@ function loadEditsOverride() {
 
 async function saveEditsOverride() {
     localStorage.setItem(EDITS_OVERRIDE_KEY, JSON.stringify(editsOverride));
-    if (currentUser) await saveToCloud({ editsOverride });
+    if (isAdmin) {
+        try {
+            await setDoc(doc(db, "config", "sharedEdits"), { editsOverride });
+        } catch (e) { console.error("Save shared edits error:", e); }
+    }
 }
 
 function applyOverrideToLink(link, ov) {
