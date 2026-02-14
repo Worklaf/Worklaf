@@ -1019,26 +1019,31 @@ const TWITTER_MONITOR_CONFIG = {
 
 // Функция запуска мониторинга
 async function runTwitterMonitor() {
-    if (!isAdmin) return; // Работает только для админа
+    const nitterBase = 'https://nitter.poast.org'; 
+    // ===========================================
 
-    console.log("🚀 Запуск мониторинга Twitter RSS...");
+    console.log(`🚀 Запуск мониторинга Twitter RSS через ${nitterBase}...`);
     
     for (const [key, config] of Object.entries(TWITTER_MONITOR_CONFIG)) {
         try {
-            // Используем Nitter как RSS-бридж для Twitter (бесплатно и без API)
-            const rssUrl = `https://nitter.net/${config.username}/rss`;
-            const proxyUrl = `https://api.rss2json.com/v1/api.json?rss_url=${encodeURIComponent(rssUrl)}`;
+            // ИСПРАВЛЕННАЯ СТРОКА:
+            const rssUrl = `${nitterBase}/${config.username}/rss`;
+            
+            // Добавляем t=${Date.now()}, чтобы сбросить кэш rss2json и получать свежие данные
+            const proxyUrl = `https://api.rss2json.com/v1/api.json?rss_url=${encodeURIComponent(rssUrl)}&t=${Date.now()}`;
             
             const response = await fetch(proxyUrl);
             const data = await response.json();
             
-            if (data.items) {
+            if (data.status === 'ok' && data.items) {
                 data.items.forEach(tweet => {
                     // Проверяем наличие точного текста (регистронезависимо)
                     if (tweet.title.toLowerCase().includes(config.triggerText.toLowerCase())) {
                         autoAddNewNFT(key, config, tweet);
                     }
                 });
+            } else {
+                console.warn(`Не удалось загрузить RSS для ${key}:`, data.message || 'Ошибка API');
             }
         } catch (e) {
             console.error(`Ошибка мониторинга ${key}:`, e);
