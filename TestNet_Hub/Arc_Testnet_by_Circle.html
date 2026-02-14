@@ -1020,62 +1020,41 @@ const TWITTER_MONITOR_CONFIG = {
 // Функция запуска мониторинга
 // Функция запуска мониторинга с перебором зеркал
 async function runTwitterMonitor() {
-    if (!isAdmin) return; 
+    if (!isAdmin) return;
 
-    // СПИСОК ЗЕРКАЛ (Если одно упадет, скрипт возьмет следующее)
-    const nitterInstances = [
-        'https://nitter.privacydev.net',
-        'https://nitter.lucabased.xyz',
-        'https://nitter.poast.org',
-        'https://nitter.net'
+    console.log('🚀 Запуск мониторинга Twitter RSS...');
+    
+    const proxies = [
+        'https://api.rss.app/rss/8bf0f3f8-6a7a-4b1e-9c4d-2f8e7d5c3b1a', // RSS.app
+        'https://rss2json.com/v1/api.json?rss_url=', // Backup
     ];
 
-    console.log("🚀 Запуск мониторинга Twitter RSS...");
-
-    // Проходим по каждому проекту из конфига
     for (const [key, config] of Object.entries(TWITTER_MONITOR_CONFIG)) {
-        let fetchedSuccessfully = false;
-
-        // Пытаемся получить данные, перебирая зеркала
-        for (const instance of nitterInstances) {
-            try {
-                // Формируем URL
-                // Добавляем t=Date.now() чтобы избежать кэширования ошибок
-                const rssUrl = `${instance}/${config.username}/rss`;
-                const proxyUrl = `https://api.rss2json.com/v1/api.json?rss_url=${encodeURIComponent(rssUrl)}&api_key=AIzaSyBdXGYg2t8DJBrQHCC80&t=${Date.now()}`; 
-                // Примечание: api_key здесь не обязателен для бесплатного тарифа rss2json, но иногда помогает
-
-                const response = await fetch(proxyUrl);
-                const data = await response.json();
-
-                // Если статус OK и есть массив items
-                if (data.status === 'ok' && Array.isArray(data.items)) {
-                    console.log(`✅ [${key}] Успех через ${instance}`);
-                    
-                    data.items.forEach(tweet => {
-                        if (tweet.title && tweet.title.toLowerCase().includes(config.triggerText.toLowerCase())) {
-                            autoAddNewNFT(key, config, tweet);
-                        }
+        try {
+            // Прямой запрос к публичному RSS (без Nitter)
+            const directRss = `https://rsshub.app/twitter/user/${config.username}`;
+            
+            const response = await fetch(directRss);
+            const text = await response.text();
+            
+            // Парсим XML вручную (простой парсер)
+            const parser = new DOMParser();
+            const xml = parser.parseFromString(text, 'text/xml');
+            const items = xml.querySelectorAll('item');
+            
+            items.forEach(item => {
+                const title = item.querySelector('title')?.textContent || '';
+                if (title.toLowerCase().includes(config.triggerText.toLowerCase())) {
+                    autoAddNewNFT(key, config, {
+                        title,
+                        link: item.querySelector('link')?.textContent || '',
+                        pubDate: item.querySelector('pubDate')?.textContent || ''
                     });
-
-                    fetchedSuccessfully = true;
-                    break; // Прерываем цикл зеркал, так как данные получены
-                } else {
-                    // Если rss2json вернул ошибку, пробуем следующее зеркало молча
-                    continue;
                 }
-            } catch (e) {
-                // Ошибка сети, пробуем следующее
-                continue;
-            }
+            });
+        } catch (e) {
+            console.error(`Ошибка ${key}:`, e);
         }
-
-        if (!fetchedSuccessfully) {
-            console.warn(`⚠️ [${key}] Не удалось получить данные ни с одного зеркала.`);
-        }
-        
-        // Небольшая пауза между проектами, чтобы не спамить API
-        await new Promise(r => setTimeout(r, 1000));
     }
 }
 
