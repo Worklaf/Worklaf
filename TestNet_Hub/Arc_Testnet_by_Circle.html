@@ -1057,7 +1057,7 @@ function updateThemeBtn() {
 }
 
 // ===== LIGHTBOX =====
-function openLightbox(imageUrl, title, tooltip, linkUrl) {
+function openLightbox(imageUrl, title, tooltip, linkUrl, linkLabel, linkIcon) {
     const overlay = document.getElementById('lightboxOverlay');
     const img = document.getElementById('lightboxImage');
     const titleEl = document.getElementById('lightboxTitle');
@@ -1068,6 +1068,7 @@ function openLightbox(imageUrl, title, tooltip, linkUrl) {
     titleEl.textContent = title;
     captionEl.textContent = tooltip || '';
     linkEl.href = linkUrl;
+    linkEl.innerHTML = `<i class="fas fa-${linkIcon || 'external-link-alt'}"></i> ${linkLabel || 'Перейти к минту'}`;
     overlay.classList.add('open');
     document.body.style.overflow = 'hidden';
 }
@@ -1087,13 +1088,16 @@ function initLightbox() {
     document.querySelectorAll('.link-inline[data-image]').forEach(link => {
         if (link.dataset.lightboxBound) return;
         link.addEventListener('contextmenu', (e) => {
-            const imageUrl = link.getAttribute('data-image');
-            if (!imageUrl) return;
-            e.preventDefault();
-            const title = getLinkTitle(link);
-            const tooltip = link.getAttribute('data-tooltip') || '';
-            openLightbox(imageUrl, title, tooltip, link.href);
-        });
+    const imageUrl = link.getAttribute('data-image');
+    if (!imageUrl) return;
+    e.preventDefault();
+    const title = getLinkTitle(link);
+    const tooltip = link.getAttribute('data-tooltip') || '';
+    const isNftMint = link.classList.contains('track-once') && !link.classList.contains('track-once-info') && !link.classList.contains('track-daily');
+    const linkLabel = isNftMint ? 'Перейти к минту' : 'Перейти на Website';
+    const linkIcon = isNftMint ? 'external-link-alt' : 'globe';
+    openLightbox(imageUrl, title, tooltip, link.href, linkLabel, linkIcon);
+});
         link.dataset.lightboxBound = 'true';
     });
 }
@@ -1945,7 +1949,7 @@ function renderUserDappCategory(cat) {
     addBtn.addEventListener('click', (e) => {
         e.stopPropagation();
         currentAddContext = { zone: cat.id, config: ZONE_CONFIG[cat.id] || { type:'link-item', label: cat.title, trackType:'track-daily' } };
-        openModal(`Добавить: ${cat.title}`, ['fieldTitle','fieldUrl','fieldTooltip']);
+        openModal(`Добавить: ${cat.title}`, ['fieldTitle','fieldUrl','fieldImage','fieldTooltip']);
     });
     tdLinks.appendChild(addBtn); tr.appendChild(tdLinks);
     const tdDesc = document.createElement('td'); tdDesc.setAttribute('data-label', 'Действие'); tdDesc.className = 'task-desc';
@@ -2003,8 +2007,7 @@ function injectAddButtons() {
         btn.addEventListener('click', (e) => {
             e.stopPropagation();
             currentAddContext = { zone, config };
-            const isNft = config.type === 'nft-item';
-            openModal(`Добавить: ${config.label}`, isNft ? ['fieldTitle','fieldUrl','fieldImage','fieldTooltip'] : ['fieldTitle','fieldUrl','fieldTooltip']);
+            openModal(`Добавить: ${config.label}`, ['fieldTitle','fieldUrl','fieldImage','fieldTooltip']);
         });
         if (container.tagName === 'TR') {
             const linksCell = container.querySelector('.dapp-links');
