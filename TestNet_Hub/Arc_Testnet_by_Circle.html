@@ -2574,85 +2574,23 @@ document.addEventListener('DOMContentLoaded', () => {
 
     initializeTooltips(); detectNewLinks(); updateBadgeVisibility();
 });
-    // ===== TWITTER MONITOR UI =====
-function loadMonitorData() {
-    try {
-        const raw = localStorage.getItem(TWITTER_MONITOR_STORAGE);
-        if (raw) twitterMonitorData = JSON.parse(raw);
-    } catch(e) { twitterMonitorData = []; }
-}
-
-function updateMonitorUI() {
-    const badge = document.getElementById('monitorBadge');
-    const list = document.getElementById('monitorList');
-    
-    if (!badge || !list) return;
-    
-    const count = twitterMonitorData.length;
-    badge.textContent = count;
-    badge.classList.toggle('empty', count === 0);
-    
-    list.innerHTML = '';
-    
-    twitterMonitorData.forEach(item => {
-        const li = document.createElement('li');
-        li.className = 'monitor-item';
-        
-        const timeStr = new Date(item.timestamp).toLocaleString('ru', {
-            day: '2-digit',
-            month: '2-digit',
-            hour: '2-digit',
-            minute: '2-digit'
-        });
-        
-        li.innerHTML = `
-            <div class="monitor-item-header">
-                <span class="monitor-item-project">${item.project}</span>
-                <span class="monitor-item-time">${timeStr}</span>
-            </div>
-            <div class="monitor-item-text">${item.text}</div>
-            <a href="${item.link}" target="_blank" rel="noopener" class="monitor-item-link">
-                <i class="fab fa-twitter"></i> Открыть твит
-            </a>
-        `;
-        
-        list.appendChild(li);
-    });
-}
-
+   // ============================================================
+//  TWITTER MONITOR (Загрузка из JSON)
 // ============================================================
-//  TWITTER MONITOR (Ручной запуск)
-// ============================================================
-
-function initTwitterMonitor() {
-    if (!isAdmin) return;
-    
-    const list = document.getElementById('monitorList');
-    const status = document.getElementById('monitorStatus');
-    const badge = document.getElementById('monitorBadge');
-    const refreshBtn = document.getElementById('monitorRefreshBtn');
-    
-    if (!list || !status || !badge || !refreshBtn) return;
-    
-    // Загружаем сохранённые результаты
-    loadTwitterResults();
-    
-    // Кнопка запуска парсинга
-    refreshBtn.innerHTML = '<i class="fas fa-search"></i> Проверить новые NFT';
-    refreshBtn.addEventListener('click', startManualCheck);
-}
 
 async function loadTwitterResults() {
     const list = document.getElementById('monitorList');
     const status = document.getElementById('monitorStatus');
     const badge = document.getElementById('monitorBadge');
     
+    if (!list || !status || !badge) return;
+    
     try {
+        // 🔥 Добавляем timestamp чтобы избежать кэширования
         const response = await fetch('twitter_results.json?' + Date.now());
         
         if (!response.ok) {
-            showEmptyState();
-            return;
+            throw new Error(`HTTP ${response.status}`);
         }
         
         const data = await response.json();
@@ -2660,36 +2598,104 @@ async function loadTwitterResults() {
         if (data.nfts && data.nfts.length > 0) {
             list.innerHTML = '';
             
-            data.nfts.forEach(nft => {
+            // 🔥 Сортируем по времени (новые первые)
+            const sortedNfts = [...data.nfts].sort((a, b) => {
+                const timeA = new Date(a.datetime || 0).getTime();
+                const timeB = new Date(b.datetime || 0).getTime();
+                return timeB - timeA; // Новые сверху
+            });
+            
+            sortedNfts.forEach(nft => {
                 const li = document.createElement('li');
                 li.className = 'monitor-item';
                 
-                const date = new Date(nft.timestamp);
-                const timeAgo = getTimeAgo(date);
+                // 🔥 Безопасное получение времени
+                let timeAgo = 'недавно';
+                try {
+                    if (nft.time_ago) {
+                        // Используем готовое значение из Python
+                        timeAgo = nft.time_ago;
+                    } else if (nft.datetime) {
+                        const date = new Date(nft.datetime);
+                        if (!isNaN(date.getTime())) {
+                            timeAgo = getTimeAgo(date);
+                        }
+                    }
+                } catch (e) {
+                    console.error('Time parsing error:', e);
+                }
+                
+                // 🔥 Безопасное получение ссылки
+                const tweetUrl = nft.url || `https://twitter.com/${nft.twitter}`;
+                
+                // 🔥 Безопасное получение текста
+                const tweetText = (nft.text || 'NFT пост').substring(0, 120);
+                const truncated = (nft.text || '').length > 120 ? '...' : '';
+                
+                // 🔥 Название проекта с эмодзи
+                const projectEmoji = {
+                    'morkie': '🐾',
+                    'clara': '✨',
+                    'oku': '🌸',
+                    'mintaura': '💫',
+                    'arkle': '🎨',
+                    'draze': '🌙',
+                    'caset': '🎵',
+                    'alze': '⚡'
+                };
+                const emoji = projectEmoji[nft.project] || '🆕';
+                const projectName = nft.project.charAt(0).toUpperCase() + nft.project.slice(1);
                 
                 li.innerHTML = `
                     <div class="monitor-item-header">
-                        <span class="monitor-item-project">${nft.project}</span>
+                        <span class="monitor-item-project">${emoji} ${projectName}</span>
                         <span class="monitor-item-time">${timeAgo}</span>
                     </div>
-                    <div class="monitor-item-text">${nft.text}</div>
-                    <a href="${nft.link}" target="_blank" rel="noopener" class="monitor-item-link">
-                        <i class="fab fa-twitter"></i> Открыть твит
-                    </a>
+                    <div class="monitor-item-text">${tweetText}${truncated}</div>
+                    <div style="display: flex; gap: 12px; margin-top: 8px; align-items: center;">
+                        <a href="${tweetUrl}" target="_blank" rel="noopener" class="monitor-item-link">
+                            <i class="fab fa-twitter"></i> Открыть твит
+                        </a>
+                        ${nft.likes ? `<span style="font-size: 0.75rem; color: #64748b;">❤️ ${nft.likes}</span>` : ''}
+                        ${nft.retweets ? `<span style="font-size: 0.75rem; color: #64748b;">🔁 ${nft.retweets}</span>` : ''}
+                    </div>
                 `;
                 
                 list.appendChild(li);
             });
             
-            badge.textContent = data.nfts.length;
-            const lastCheck = new Date(data.last_check);
-            status.innerHTML = `<i class="fas fa-check-circle"></i> Проверено: ${lastCheck.toLocaleString('ru')}`;
-            status.style.color = '#4CAF50';
+            badge.textContent = sortedNfts.length;
+            badge.classList.remove('empty');
+            
+            // 🔥 Обновляем статус с последним временем проверки
+            if (data.timestamp) {
+                try {
+                    const lastCheck = new Date(data.timestamp);
+                    if (!isNaN(lastCheck.getTime())) {
+                        const checkTime = lastCheck.toLocaleString('ru', {
+                            day: '2-digit',
+                            month: '2-digit',
+                            hour: '2-digit',
+                            minute: '2-digit'
+                        });
+                        status.innerHTML = `<i class="fas fa-check-circle"></i> Обновлено: ${checkTime}`;
+                        status.style.color = '#22c55e';
+                    }
+                } catch(e) {
+                    status.innerHTML = '<i class="fas fa-check-circle"></i> Данные загружены';
+                    status.style.color = '#22c55e';
+                }
+            } else {
+                status.innerHTML = '<i class="fas fa-check-circle"></i> Данные загружены';
+                status.style.color = '#22c55e';
+            }
+            
         } else {
             showEmptyState();
         }
         
     } catch (error) {
+        console.error('Twitter results load error:', error);
         showEmptyState();
     }
 }
@@ -2699,81 +2705,81 @@ function showEmptyState() {
     const status = document.getElementById('monitorStatus');
     const badge = document.getElementById('monitorBadge');
     
-    list.innerHTML = '<li class="monitor-item" style="text-align: center; color: #888;">Нажми "Проверить новые NFT" для запуска</li>';
+    if (!list || !status || !badge) return;
+    
+    list.innerHTML = `
+        <li style="text-align: center; padding: 20px; color: #64748b; font-size: 0.9rem;">
+            <i class="fas fa-info-circle" style="font-size: 2rem; margin-bottom: 10px; opacity: 0.5;"></i>
+            <p>Нажми "🔄 Обновить" для запуска парсинга</p>
+            <p style="font-size: 0.75rem; margin-top: 5px;">Или запусти <code>twitter_parser.py</code></p>
+        </li>
+    `;
     badge.textContent = '0';
-    status.innerHTML = '<i class="fas fa-info-circle"></i> Ожидание проверки';
-    status.style.color = '#888';
-}
-
-function startManualCheck() {
-    const modal = document.createElement('div');
-    modal.style.cssText = `
-        position: fixed;
-        top: 50%;
-        left: 50%;
-        transform: translate(-50%, -50%);
-        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-        color: white;
-        padding: 40px;
-        border-radius: 20px;
-        box-shadow: 0 20px 60px rgba(0,0,0,0.5);
-        z-index: 10000;
-        text-align: center;
-        max-width: 500px;
-    `;
-    
-    modal.innerHTML = `
-        <h2 style="margin: 0 0 20px 0;"><i class="fas fa-rocket"></i> Запуск парсинга</h2>
-        <p style="margin: 20px 0; line-height: 1.6;">
-            <strong>Инструкция:</strong><br><br>
-            1. Открой папку с сайтом<br>
-            2. Запусти <code style="background: rgba(255,255,255,0.2); padding: 2px 8px; border-radius: 5px;">twitter_parser.py</code><br>
-            3. Когда откроется Edge - залогинься<br>
-            4. Скрипт соберёт данные (2-3 мин)<br>
-            5. Обнови эту страницу
-        </p>
-        <button onclick="this.parentElement.remove()" style="
-            background: white;
-            color: #667eea;
-            border: none;
-            padding: 12px 30px;
-            border-radius: 25px;
-            font-weight: bold;
-            cursor: pointer;
-            margin-top: 10px;
-        ">Понятно</button>
-    `;
-    
-    document.body.appendChild(modal);
-    
-    // Закрытие по клику вне окна
-    setTimeout(() => {
-        const overlay = document.createElement('div');
-        overlay.style.cssText = `
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: rgba(0,0,0,0.7);
-            z-index: 9999;
-        `;
-        overlay.onclick = () => {
-            overlay.remove();
-            modal.remove();
-        };
-        document.body.insertBefore(overlay, modal);
-    }, 100);
+    badge.classList.add('empty');
+    status.innerHTML = '<i class="fas fa-clock"></i> Ожидание обновления';
+    status.style.color = '#94a3b8';
 }
 
 function getTimeAgo(date) {
-    const seconds = Math.floor((new Date() - date) / 1000);
+    // 🔥 Защита от NaN и невалидных дат
+    if (!(date instanceof Date) || isNaN(date.getTime())) {
+        return 'недавно';
+    }
+    
+    const now = new Date();
+    const seconds = Math.floor((now - date) / 1000);
+    
+    // 🔥 Защита от отрицательных значений (твит из будущего?)
+    if (seconds < 0) return 'только что';
     
     if (seconds < 60) return 'только что';
-    if (seconds < 3600) return Math.floor(seconds / 60) + ' мин назад';
-    if (seconds < 86400) return Math.floor(seconds / 3600) + ' ч назад';
-    return Math.floor(seconds / 86400) + ' д назад';
+    if (seconds < 3600) {
+        const mins = Math.floor(seconds / 60);
+        return `${mins} мин назад`;
+    }
+    if (seconds < 86400) {
+        const hours = Math.floor(seconds / 3600);
+        return `${hours} ч назад`;
+    }
+    if (seconds < 604800) {
+        const days = Math.floor(seconds / 86400);
+        return `${days} д назад`;
+    }
+    
+    // Для старых постов
+    const weeks = Math.floor(seconds / 604800);
+    return `${weeks} нед назад`;
 }
+
+function initTwitterMonitor() {
+    if (!isAdmin) return;
+    
+    const refreshBtn = document.getElementById('monitorRefreshBtn');
+    
+    if (!refreshBtn) return;
+    
+    // 🔥 Загружаем данные при старте
+    loadTwitterResults();
+    
+    // 🔥 Кнопка обновления
+    refreshBtn.addEventListener('click', async () => {
+        const originalHTML = refreshBtn.innerHTML;
+        refreshBtn.disabled = true;
+        refreshBtn.innerHTML = '<i class="fas fa-sync-alt fa-spin"></i> Обновление...';
+        
+        await loadTwitterResults();
+        
+        setTimeout(() => {
+            refreshBtn.disabled = false;
+            refreshBtn.innerHTML = originalHTML;
+            showToast('Данные обновлены!', 'success');
+        }, 1000);
+    });
+    
+    // 🔥 Автообновление каждые 5 минут
+    setInterval(loadTwitterResults, 5 * 60 * 1000);
+}
+
 </script>
 <!-- ====== LOGIN MODAL ====== -->
 <div id="loginModal" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.8); backdrop-filter:blur(8px); z-index:1000; align-items:center; justify-content:center; padding:20px;">
