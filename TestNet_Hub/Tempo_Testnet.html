@@ -1120,6 +1120,11 @@ const FAVORITES_ORDER_KEY = 'tempo_tracker_favorites_order_v1';
 const FAVORITES_TIMESTAMP_KEY = 'tempo_tracker_favorites_timestamp_v1';
 const PAGE_VERSION = '2026-02-15-tempo-v1'; // Также обновите версию
 
+	const CLOUD_STATS_FIELD = 'tempoGuideStatsTempo';
+const CLOUD_FAV_STATE_FIELD = 'tempoFavoritesState';
+const CLOUD_FAV_ORDER_FIELD = 'tempoFavoritesOrder';
+const CLOUD_FAV_TS_FIELD = 'tempoFavoritesTimestamp';
+	
     let newLinksSet = new Set();
     let knownLinksSet = new Set();
     let favoritesSortable = null;
@@ -1259,9 +1264,9 @@ const PAGE_VERSION = '2026-02-15-tempo-v1'; // Также обновите ве�
 
                 if (docSnap.exists()) {
                     const cloudData = docSnap.data();
-                    const cloudFavorites = cloudData.favoritesState || {};
-                    const cloudOrder = cloudData.favoritesOrder || [];
-                    const cloudTimestamp = parseInt(cloudData.favoritesTimestamp || '0', 10);
+const cloudFavorites = cloudData[CLOUD_FAV_STATE_FIELD] || {};
+const cloudOrder = cloudData[CLOUD_FAV_ORDER_FIELD] || [];
+const cloudTimestamp = parseInt(cloudData[CLOUD_FAV_TS_FIELD] || '0', 10);
                     
                     const localHasFavorites = Object.keys(localFavorites).length > 0 || localOrder.length > 0;
                     const cloudHasFavorites = Object.keys(cloudFavorites).length > 0 || cloudOrder.length > 0;
@@ -1274,30 +1279,30 @@ const PAGE_VERSION = '2026-02-15-tempo-v1'; // Также обновите ве�
                             localStorage.setItem(FAVORITES_ORDER_KEY, JSON.stringify(favoritesOrder));
                             localStorage.setItem(FAVORITES_TIMESTAMP_KEY, String(cloudTimestamp));
                         } else {
-                            await saveToCloud({
-                                favoritesState: localFavorites,
-                                favoritesOrder: localOrder,
-                                favoritesTimestamp: localTimestamp
-                            });
+                           await saveToCloud({
+    [CLOUD_FAV_STATE_FIELD]: localFavorites,
+    [CLOUD_FAV_ORDER_FIELD]: localOrder,
+    [CLOUD_FAV_TS_FIELD]: localTimestamp
+});
                         }
                     } else if (localHasFavorites) {
                         await saveToCloud({
-                            favoritesState: localFavorites,
-                            favoritesOrder: localOrder,
-                            favoritesTimestamp: localTimestamp
-                        });
+    [CLOUD_FAV_STATE_FIELD]: localFavorites,
+    [CLOUD_FAV_ORDER_FIELD]: localOrder,
+    [CLOUD_FAV_TS_FIELD]: localTimestamp
+});
                     }
                     
-                    if (cloudData.arcGuideStats && Object.keys(cloudData.arcGuideStats).length > 0) {
-                        arcData = cloudData.arcGuideStats;
-                        localStorage.setItem(STORAGE_KEY, JSON.stringify(arcData));
-                    }
+                    if (cloudData[CLOUD_STATS_FIELD] && Object.keys(cloudData[CLOUD_STATS_FIELD]).length > 0) {
+    arcData = cloudData[CLOUD_STATS_FIELD];
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(arcData));
+}}
                 } else if (Object.keys(localFavorites).length > 0 || localOrder.length > 0) {
                     await saveToCloud({
-                        favoritesState: localFavorites,
-                        favoritesOrder: localOrder,
-                        favoritesTimestamp: localTimestamp
-                    });
+    [CLOUD_FAV_STATE_FIELD]: localFavorites,
+    [CLOUD_FAV_ORDER_FIELD]: localOrder,
+    [CLOUD_FAV_TS_FIELD]: localTimestamp
+});
                 }
             } catch (e) {
                 console.error("Ошибка загрузки из облака:", e);
@@ -1318,25 +1323,28 @@ const PAGE_VERSION = '2026-02-15-tempo-v1'; // Также обновите ве�
     }
 
     async function saveStats() {
-        localStorage.setItem(STORAGE_KEY, JSON.stringify(arcData));
-        if (currentUser) {
-            await saveToCloud({ arcGuideStats: arcData });
-        }
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(arcData));
+    if (currentUser) {
+        await saveToCloud({
+            [CLOUD_STATS_FIELD]: arcData
+        });
     }
+}
 
-    async function saveFavorites() {
-        const newTimestamp = Date.now();
-        localStorage.setItem(FAVORITES_KEY, JSON.stringify(favoritesState));
-        localStorage.setItem(FAVORITES_ORDER_KEY, JSON.stringify(favoritesOrder));
-        localStorage.setItem(FAVORITES_TIMESTAMP_KEY, String(newTimestamp));
-        if (currentUser) {
-            await saveToCloud({
-                favoritesState: favoritesState,
-                favoritesOrder: favoritesOrder,
-                favoritesTimestamp: newTimestamp
-            });
-        }
+		    async function saveFavorites() {
+    const newTimestamp = Date.now();
+    localStorage.setItem(FAVORITES_KEY, JSON.stringify(favoritesState));
+    localStorage.setItem(FAVORITES_ORDER_KEY, JSON.stringify(favoritesOrder));
+    localStorage.setItem(FAVORITES_TIMESTAMP_KEY, String(newTimestamp));
+
+    if (currentUser) {
+        await saveToCloud({
+            [CLOUD_FAV_STATE_FIELD]: favoritesState,
+            [CLOUD_FAV_ORDER_FIELD]: favoritesOrder,
+            [CLOUD_FAV_TS_FIELD]: newTimestamp
+        });
     }
+}
 
     window.loginGoogle = async () => {
         try { await signInWithPopup(auth, new GoogleAuthProvider()); } 
