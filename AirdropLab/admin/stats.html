@@ -1,0 +1,1172 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TestNet Hub | Админ-панель</title>
+	<!-- Favicon -->
+<link rel="icon" href="./favicon.svg" type="image/svg+xml">
+<link rel="alternate icon" href="./favicon.ico">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+
+        :root {
+            --bg-primary: #0b0f19;
+            --bg-secondary: #151b2b;
+            --bg-card: #1e2538;
+            --accent: #3b82f6;
+            --success: #10b981;
+            --warning: #f59e0b;
+            --danger: #ef4444;
+            --text-primary: #f1f5f9;
+            --text-secondary: #94a3b8;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            background-image: 
+                radial-gradient(circle at 20% 50%, rgba(59, 130, 246, 0.15) 0%, transparent 50%),
+                radial-gradient(circle at 80% 80%, rgba(16, 185, 129, 0.1) 0%, transparent 50%);
+            min-height: 100vh;
+        }
+
+        .glass-card {
+            background: rgba(30, 37, 56, 0.6);
+            backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+        }
+
+        .stat-card {
+            background: linear-gradient(135deg, rgba(59, 130, 246, 0.15), rgba(139, 92, 246, 0.1));
+            border: 1px solid rgba(59, 130, 246, 0.2);
+        }
+
+        .stat-value {
+            background: linear-gradient(135deg, #3b82f6, #8b5cf6);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .user-row:hover {
+            background: rgba(59, 130, 246, 0.1);
+        }
+
+        .back-btn {
+            background: linear-gradient(135deg, rgba(59, 130, 246, 0.2), rgba(139, 92, 246, 0.1));
+            border: 1px solid rgba(59, 130, 246, 0.3);
+        }
+
+        .back-btn:hover {
+            background: linear-gradient(135deg, rgba(59, 130, 246, 0.3), rgba(139, 92, 246, 0.2));
+        }
+
+        ::-webkit-scrollbar { width: 6px; }
+        ::-webkit-scrollbar-track { background: rgba(255, 255, 255, 0.02); }
+        ::-webkit-scrollbar-thumb { background: #334155; border-radius: 3px; }
+
+        .pulse-dot {
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+
+        .notification-badge {
+            animation: bounce 0.5s ease;
+        }
+
+        @keyframes bounce {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.2); }
+        }
+    </style>
+</head>
+<body class="antialiased">
+    <div class="max-w-7xl mx-auto px-4 py-6">
+        <!-- Header -->
+        <header class="mb-8">
+            <div class="flex items-center justify-between">
+                <div class="flex items-center gap-4">
+                    <a href="Airdrop_Hunter_Hub.html" class="back-btn px-4 py-2 rounded-lg text-blue-400 hover:text-white transition-colors flex items-center gap-2">
+                        <i class="fas fa-arrow-left"></i>
+                        <span class="hidden sm:inline">Назад</span>
+                    </a>
+                    <div>
+                        <h1 class="text-2xl font-bold flex items-center gap-3">
+                            <i class="fas fa-cog text-blue-400"></i>
+                            Админ-панель
+                        </h1>
+                        <p class="text-slate-400 text-sm mt-1">Управление пользователями и рассылки</p>
+                    </div>
+                </div>
+                <div class="flex items-center gap-4">
+                    <div id="lastUpdate" class="text-xs text-slate-500"></div>
+                    <button onclick="loadStats()" class="bg-blue-600 hover:bg-blue-500 px-4 py-2 rounded-lg text-sm transition-colors flex items-center gap-2">
+                        <i class="fas fa-sync-alt"></i>
+                        <span class="hidden sm:inline">Обновить</span>
+                    </button>
+                </div>
+            </div>
+        </header>
+
+        <!-- Access Denied -->
+        <div id="accessDenied" class="hidden text-center py-20">
+            <div class="text-6xl mb-4">🚫</div>
+            <h2 class="text-2xl font-bold mb-4">Доступ запрещён</h2>
+            <p class="text-slate-400">У вас нет прав для просмотра этой страницы</p>
+            <a href="Airdrop_Hunter_Hub.html" class="inline-block mt-6 bg-blue-600 hover:bg-blue-500 px-6 py-3 rounded-lg text-sm font-medium transition-colors">
+                Вернуться на главную
+            </a>
+        </div>
+
+        <!-- Admin Content -->
+        <div id="adminContent" class="hidden">
+            <!-- Stats & Broadcast -->
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
+                <!-- Overview Cards -->
+                <div class="lg:col-span-2">
+                    <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+                        <div class="glass-card rounded-2xl p-5 stat-card">
+                            <div class="flex items-center justify-between mb-3">
+                                <div class="w-12 h-12 rounded-xl bg-blue-600/20 flex items-center justify-center">
+                                    <i class="fas fa-users text-blue-400 text-xl"></i>
+                                </div>
+                                <span class="text-emerald-400 text-xs flex items-center gap-1">
+                                    <span class="pulse-dot w-2 h-2 rounded-full bg-emerald-400"></span>
+                                    Online
+                                </span>
+                            </div>
+                            <div class="stat-value text-3xl font-bold mb-1" id="totalUsers">0</div>
+                            <div class="text-slate-400 text-sm">Всего пользователей</div>
+                        </div>
+
+                        <div class="glass-card rounded-2xl p-5">
+                            <div class="flex items-center justify-between mb-3">
+                                <div class="w-12 h-12 rounded-xl bg-green-600/20 flex items-center justify-center">
+                                    <i class="fas fa-user-plus text-green-400 text-xl"></i>
+                                </div>
+                            </div>
+                            <div class="stat-value text-3xl font-bold mb-1" id="newToday">0</div>
+                            <div class="text-slate-400 text-sm">Новых сегодня</div>
+                        </div>
+
+                        <div class="glass-card rounded-2xl p-5">
+                            <div class="flex items-center justify-between mb-3">
+                                <div class="w-12 h-12 rounded-xl bg-yellow-600/20 flex items-center justify-center">
+                                    <i class="fas fa-clock text-yellow-400 text-xl"></i>
+                                </div>
+                            </div>
+                            <div class="stat-value text-3xl font-bold mb-1" id="activeWeek">0</div>
+                            <div class="text-slate-400 text-sm">За неделю</div>
+                        </div>
+
+                        <div class="glass-card rounded-2xl p-5">
+                            <div class="flex items-center justify-between mb-3">
+                                <div class="w-12 h-12 rounded-xl bg-purple-600/20 flex items-center justify-center">
+                                    <i class="fas fa-fire text-purple-400 text-xl"></i>
+                                </div>
+                            </div>
+                            <div class="stat-value text-3xl font-bold mb-1" id="onlineNow">0</div>
+                            <div class="text-slate-400 text-sm">Онлайн сейчас</div>
+                        </div>
+                    </div>
+
+                    <!-- Top Projects -->
+                    <div class="glass-card rounded-2xl p-5 mb-6">
+                        <h3 class="font-semibold text-lg mb-4 flex items-center gap-2">
+                            <i class="fas fa-star text-yellow-400"></i>
+                            Топ проектов по кликам
+                        </h3>
+                        <div id="topProjects" class="grid grid-cols-2 md:grid-cols-3 gap-3">
+                            <!-- Заполнится JS -->
+                        </div>
+                    </div>
+                    
+                    <!-- Notification Stats -->
+                    <div class="glass-card rounded-2xl p-5 mb-6">
+                        <h3 class="font-semibold text-lg mb-4 flex items-center gap-2">
+                            <i class="fas fa-bell text-pink-400"></i>
+                            Статистика уведомлений
+                        </h3>
+                        <div class="grid grid-cols-3 gap-4">
+                            <div class="text-center p-3 bg-slate-800/50 rounded-lg">
+                                <div class="text-2xl font-bold text-blue-400" id="totalNotifications">0</div>
+                                <div class="text-xs text-slate-500">Всего отправлено</div>
+                            </div>
+                            <div class="text-center p-3 bg-slate-800/50 rounded-lg">
+                                <div class="text-2xl font-bold text-green-400" id="viewedNotifications">0</div>
+                                <div class="text-xs text-slate-500">Просмотрено</div>
+                            </div>
+                            <div class="text-center p-3 bg-slate-800/50 rounded-lg">
+                                <div class="text-2xl font-bold text-purple-400" id="viewRate">0%</div>
+                                <div class="text-xs text-slate-500">Процент просмотра</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Broadcast Panel -->
+                <div class="glass-card rounded-2xl p-5">
+                    <h3 class="font-semibold text-lg mb-4 flex items-center gap-2">
+                        <i class="fas fa-bullhorn text-pink-400"></i>
+                        Рассылка уведомлений
+                    </h3>
+                    
+                    <!-- Выбор получателей -->
+                    <div class="mb-4">
+                        <label class="text-sm text-slate-400 block mb-2">Получатели:</label>
+                        <div class="space-y-2">
+                            <label class="flex items-center gap-2 cursor-pointer">
+                                <input type="radio" name="broadcastTarget" value="all" checked onchange="updateSelectedCount()">
+                                <span class="text-sm">Все пользователи</span>
+                                <span id="countAll" class="text-xs text-blue-400"></span>
+                            </label>
+                            <label class="flex items-center gap-2 cursor-pointer">
+                                <input type="radio" name="broadcastTarget" value="online" onchange="updateSelectedCount()">
+                                <span class="text-sm">Онлайн сейчас</span>
+                                <span id="countOnline" class="text-xs text-emerald-400"></span>
+                            </label>
+                            <label class="flex items-center gap-2 cursor-pointer">
+                                <input type="radio" name="broadcastTarget" value="selected" onchange="toggleSelectedUsers()">
+                                <span class="text-sm">Выбранные</span>
+                                <span id="countSelected" class="text-xs text-yellow-400">0</span>
+                            </label>
+                        </div>
+                    </div>
+
+                    <!-- Выбранные пользователи -->
+                    <div id="selectedUsersList" class="hidden mb-4 max-h-32 overflow-y-auto">
+                        <div class="text-xs text-slate-500 mb-2">Выбрано:</div>
+                        <div id="selectedNames" class="space-y-1 text-sm text-slate-300"></div>
+                    </div>
+
+                    <!-- Текст сообщения -->
+                    <div class="mb-4">
+                        <label class="text-sm text-slate-400 block mb-2">Сообщение:</label>
+                        <textarea id="broadcastMessage" rows="4" 
+                            class="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-sm focus:border-blue-500 outline-none resize-none"
+                            placeholder="Введите текст уведомления... Ссылки автоматически станут кликабельными"></textarea>
+                        <div class="flex justify-between mt-1">
+                            <span class="text-xs text-slate-500">Поддерживаются ссылки</span>
+                            <span id="msgLength" class="text-xs text-slate-500">0/500</span>
+                        </div>
+                    </div>
+
+                    <!-- Тип уведомления -->
+                    <div class="mb-4">
+                        <label class="text-sm text-slate-400 block mb-2">Тип:</label>
+                        <select id="broadcastType" class="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-sm outline-none">
+                            <option value="info">ℹ️ Информация</option>
+                            <option value="success">✅ Успех</option>
+                            <option value="warning">⚠️ Важно</option>
+                            <option value="promo">🎁 Акция/Бонус</option>
+                            <option value="referral">🔗 Реферальная ссылка</option>
+                        </select>
+                    </div>
+
+                    <!-- Кнопка отправки -->
+                    <button onclick="sendBroadcast()" id="sendBtn" class="w-full bg-gradient-to-r from-pink-600 to-purple-600 hover:from-pink-500 hover:to-purple-500 px-4 py-3 rounded-lg text-sm font-medium transition-all flex items-center justify-center gap-2">
+                        <i class="fas fa-paper-plane"></i>
+                        Отправить уведомление
+                    </button>
+                    
+                    <!-- Статус отправки -->
+                    <div id="broadcastStatus" class="mt-3 text-center text-sm hidden"></div>
+                </div>
+            </div>
+
+            <!-- Activity Chart & Top Users -->
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+                <!-- Activity Chart -->
+                <div class="glass-card rounded-2xl p-5">
+                    <h3 class="font-semibold text-lg mb-4 flex items-center gap-2">
+                        <i class="fas fa-chart-line text-blue-400"></i>
+                        Активность по дням (7 дней)
+                    </h3>
+                    <div id="activityChart" class="space-y-3">
+                        <!-- Chart will be rendered here -->
+                    </div>
+                </div>
+
+                <!-- Top Users -->
+                <div class="glass-card rounded-2xl p-5">
+                    <h3 class="font-semibold text-lg mb-4 flex items-center gap-2">
+                        <i class="fas fa-trophy text-yellow-400"></i>
+                        Топ пользователей
+                    </h3>
+                    <div id="topUsers" class="space-y-3">
+                        <!-- Top users will be rendered here -->
+                    </div>
+                </div>
+            </div>
+
+            <!-- User List with Selection -->
+            <div class="glass-card rounded-2xl p-5">
+                <div class="flex items-center justify-between mb-4 flex-wrap gap-4">
+                    <h3 class="font-semibold text-lg flex items-center gap-2">
+                        <input type="checkbox" id="selectAllUsers" onchange="toggleSelectAll()" class="w-4 h-4 rounded">
+                        <i class="fas fa-list text-blue-400 ml-2"></i>
+                        Все пользователи
+                    </h3>
+                    <div class="flex items-center gap-3 flex-wrap">
+                        <button onclick="selectOnlineOnly()" class="text-xs bg-emerald-600/20 text-emerald-400 px-3 py-1.5 rounded-lg hover:bg-emerald-600/30 transition-colors">
+                            <i class="fas fa-circle mr-1"></i>Онлайн
+                        </button>
+                        <input type="text" id="searchUser" placeholder="Поиск..." 
+                               class="bg-slate-800 border border-slate-700 rounded-lg px-3 py-1.5 text-sm focus:border-blue-500 outline-none"
+                               onkeyup="filterUsers()">
+                        <select id="sortUsers" onchange="sortUsersList()" class="bg-slate-800 border border-slate-700 rounded-lg px-3 py-1.5 text-sm outline-none">
+                            <option value="lastLogin">По последнему входу</option>
+                            <option value="firstLogin">По первому входу</option>
+                            <option value="clicks">По кликам</option>
+                            <option value="name">По имени</option>
+                        </select>
+                    </div>
+                </div>
+                
+                <div class="overflow-x-auto">
+                    <table class="w-full">
+                        <thead>
+                            <tr class="text-left text-slate-400 text-sm border-b border-slate-700">
+                                <th class="pb-3 pl-2 w-10">
+                                    <input type="checkbox" onchange="toggleSelectAll()" class="w-4 h-4 rounded">
+                                </th>
+                                <th class="pb-3">Пользователь</th>
+                                <th class="pb-3">Первый вход</th>
+                                <th class="pb-3">Последний вход</th>
+                                <th class="pb-3 text-center">Кликов по гайдам</th>
+                                <th class="pb-3 text-center">Завершено активностей</th>
+                                <th class="pb-3 text-center">Избранное ❤️</th>
+                                <th class="pb-3">Любимый проект</th>
+								<th class="pb-3">Способ входа</th>
+                            </tr>
+                        </thead>
+                        <tbody id="usersTableBody">
+                            <!-- Users will be rendered here -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- History Broadcasts -->
+            <div class="glass-card rounded-2xl p-5 mt-6">
+                <h3 class="font-semibold text-lg mb-4 flex items-center gap-2">
+                    <i class="fas fa-history text-slate-400"></i>
+                    История рассылок
+                </h3>
+                <div id="broadcastHistory" class="space-y-3">
+                    <!-- Заполнится JS -->
+                </div>
+            </div>
+        </div>
+
+        <!-- Loading -->
+        <div id="loading" class="text-center py-20">
+            <div class="text-4xl mb-4 animate-pulse">📊</div>
+            <p class="text-slate-400">Загрузка...</p>
+        </div>
+    </div>
+
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+        import { getAuth, signInWithPopup, GoogleAuthProvider, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
+		import { getFirestore, collection, doc, getDocs, query, orderBy, limit, getDoc, addDoc, setDoc, where, writeBatch, serverTimestamp, increment, deleteDoc, updateDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+        const firebaseConfig = {
+            apiKey: "AIzaSyBdXGYg2t8DJBrQHCC80-pFerZU9PWmSCk",
+            authDomain: "testnet-hub.firebaseapp.com",
+            projectId: "testnet-hub",
+            storageBucket: "testnet-hub.firebasestorage.app",
+            messagingSenderId: "497813176653",
+            appId: "1:497813176653:web:089188fdd1555d76cd7704"
+        };
+
+        const ALLOWED_ADMIN_ID = "SAkz4mdW9reDaIsvqigCNZhEKJR2";
+
+        const app = initializeApp(firebaseConfig);
+        const auth = getAuth(app);
+        const db = getFirestore(app);
+
+        let allUsers = [];
+        let filteredUsers = [];
+        let selectedUserIds = new Set();
+        let projectStats = {};
+        let notificationStats = { total: 0, viewed: 0 };
+        let allProjectsMap = new Map();
+
+        // Проверка доступа
+        // Проверка доступа
+onAuthStateChanged(auth, async (user) => {
+    document.getElementById('loading').classList.add('hidden');
+
+    if (!user) {
+        showLoginButton();
+        return;
+    }
+
+    if (user.uid !== ALLOWED_ADMIN_ID) {
+        document.getElementById('accessDenied').classList.remove('hidden');
+        return;
+    }
+
+    document.getElementById('adminContent').classList.remove('hidden');
+    
+    // === НОВОЕ: Сохраняем firstLogin и provider для всех пользователей ===
+    await ensureUserData(user);
+    
+    await loadAllData();
+});
+
+// === НОВАЯ ФУНКЦИЯ: Сохраняет firstLogin и provider если их нет ===
+async function ensureUserData(user) {
+    try {
+        const userRef = doc(db, "users", user.uid);
+        const userSnap = await getDoc(userRef);
+        
+        if (!userSnap.exists()) {
+            // Новый пользователь - создаем запись с firstLogin и provider
+            await setDoc(userRef, {
+                email: user.email,
+                displayName: user.displayName,
+                photoURL: user.photoURL,
+                firstLogin: serverTimestamp(),
+                provider: user.providerData[0]?.providerId || "unknown",
+                lastLogin: serverTimestamp()
+            });
+        } else {
+            // Существующий пользователь - проверяем firstLogin и provider
+            const userData = userSnap.data();
+            const updates = {};
+            
+            if (!userData.firstLogin) {
+                updates.firstLogin = serverTimestamp();
+            }
+            
+            if (!userData.provider && user.providerData[0]) {
+                updates.provider = user.providerData[0].providerId;
+            }
+            
+            if (Object.keys(updates).length > 0) {
+                await updateDoc(userRef, updates);
+            }
+        }
+    } catch (e) {
+        console.error('Ошибка при сохранении данных пользователя:', e);
+    }
+}
+
+        function showLoginButton() {
+            const content = document.getElementById('loading');
+            content.innerHTML = `
+                <div class="text-6xl mb-4">🔐</div>
+                <h2 class="text-2xl font-bold mb-4">Требуется вход</h2>
+                <p class="text-slate-400 mb-6">Войдите, чтобы просмотреть статистику</p>
+                <button onclick="login()" class="bg-blue-600 hover:bg-blue-500 px-6 py-3 rounded-lg text-sm font-medium transition-colors flex items-center gap-2 mx-auto">
+                    <i class="fab fa-google"></i> Войти через Google
+                </button>
+            `;
+            content.classList.remove('hidden');
+        }
+
+        window.login = async () => {
+            try {
+                await signInWithPopup(auth, new GoogleAuthProvider());
+            } catch (e) {
+                alert('Ошибка входа: ' + e.message);
+            }
+        };
+
+        async function loadProjectsData() {
+            try {
+                const projectsSnapshot = await getDocs(collection(db, "projects"));
+                projectsSnapshot.docs.forEach(docSnap => {
+                    const projectData = docSnap.data();
+                    allProjectsMap.set(docSnap.id, projectData);
+                });
+            } catch (e) {
+                console.error("Ошибка загрузки проектов:", e);
+            }
+        }
+
+        async function loadAllData() {
+            await loadProjectsData();
+            await Promise.all([
+                loadUsers(),
+                loadProjectStats(),
+                loadNotificationStats(),
+                loadBroadcastHistory()
+            ]);
+            updateSelectedCount();
+        }
+
+        async function loadUsers() {
+            try {
+                const usersSnapshot = await getDocs(collection(db, "users"));
+                allUsers = [];
+                const now = new Date();
+                const thirtyMinAgo = new Date(now.getTime() - 30 * 60 * 1000);
+
+                for (const docSnap of usersSnapshot.docs) {
+                    const userData = docSnap.data();
+                    const userId = docSnap.id;
+
+                    const lastLoginDate = userData.lastLogin && typeof userData.lastLogin.toDate === 'function' ? userData.lastLogin.toDate() : (userData.lastLogin ? new Date(userData.lastLogin) : null);
+					const firstLoginDate = userData.firstLogin && typeof userData.firstLogin.toDate === 'function' ? userData.firstLogin.toDate() : (userData.firstLogin ? new Date(userData.firstLogin) : null);
+                    const isOnline = lastLoginDate && lastLoginDate >= thirtyMinAgo;
+                    
+                    // === КЛЮЧЕВОЕ: читаем arcGuideStats из Firestore ===
+                    const arcGuideStats = userData.arcGuideStats || {};
+                    
+                    // Подсчитываем клики: суммируем totalClicks по всем проектам
+                    let totalClicks = 0;
+                    let topProject = null;
+                    let topProjectClicks = 0;
+                    const projectClicks = {};
+
+                    Object.entries(arcGuideStats).forEach(([projectId, stats]) => {
+                        // stats = { totalClicks: N, lastClick: "..." }
+                        const clicks = stats.totalClicks || 0;
+                        projectClicks[projectId] = clicks;
+                        totalClicks += clicks;
+                        
+                        if (clicks > topProjectClicks) {
+                            topProjectClicks = clicks;
+                            topProject = projectId;
+                        }
+                    });
+
+                    allUsers.push({
+                        id: userId,
+                        email: userData.email || '—',
+                        displayName: userData.displayName || 'Аноним',
+                        photoURL: userData.photoURL || null,
+                        firstLogin: firstLoginDate,
+                        lastLogin: lastLoginDate,
+						provider: userData.provider || '—', // НОВОЕ: способ входа
+                        totalClicks: totalClicks,        // Всего кликов по гайдам
+                        projectClicks: projectClicks,
+                        topProject: topProject,
+                        topProjectClicks: topProjectClicks,
+                        completedCount: userData.completed ? userData.completed.length : 0,
+                        favoritesCount: userData.favorites ? userData.favorites.length : 0,
+                        isOnline: isOnline
+                    });
+                }
+
+                allUsers.sort((a, b) => (b.lastLogin || 0) - (a.lastLogin || 0));
+                filteredUsers = [...allUsers];
+
+                const onlineCount = allUsers.filter(u => u.isOnline).length;
+                document.getElementById('onlineNow').textContent = onlineCount;
+
+                renderStats();
+                renderUsersTable();
+                updateLastUpdateTime();
+
+            } catch (e) {
+                console.error('Ошибка загрузки пользователей:', e);
+            }
+        }
+
+        async function loadProjectStats() {
+            try {
+                // Агрегируем клики по проектам из всех пользователей
+                const usersSnapshot = await getDocs(collection(db, "users"));
+                projectStats = {};
+
+                for (const docSnap of usersSnapshot.docs) {
+                    const userData = docSnap.data();
+                    if (userData.arcGuideStats) {
+                        Object.entries(userData.arcGuideStats).forEach(([projectId, stats]) => {
+                            if (!projectStats[projectId]) {
+                                projectStats[projectId] = { clicks: 0, users: new Set() };
+                            }
+                            projectStats[projectId].clicks += stats.totalClicks || 0;
+                            projectStats[projectId].users.add(docSnap.id);
+                        });
+                    }
+                }
+
+                renderTopProjects();
+            } catch (e) {
+                console.error('Ошибка загрузки статистики проектов:', e);
+            }
+        }
+
+        async function loadNotificationStats() {
+            try {
+                const notificationsSnapshot = await getDocs(collection(db, "notifications"));
+                let total = 0;
+                let viewed = 0;
+
+                notificationsSnapshot.docs.forEach(doc => {
+                    total++;
+                    const data = doc.data();
+                    if (data.read || data.viewedAt) {
+                        viewed++;
+                    }
+                });
+
+                notificationStats = { total, viewed };
+                
+                document.getElementById('totalNotifications').textContent = total;
+                document.getElementById('viewedNotifications').textContent = viewed;
+                
+                const viewRate = total > 0 ? Math.round((viewed / total) * 100) : 0;
+                document.getElementById('viewRate').textContent = viewRate + '%';
+                
+            } catch (e) {
+                console.error('Ошибка загрузки уведомлений:', e);
+            }
+        }
+
+        async function loadBroadcastHistory() {
+            try {
+                const historySnapshot = await getDocs(
+                    query(collection(db, "broadcasts"), orderBy("createdAt", "desc"), limit(10))
+                );
+
+                const container = document.getElementById('broadcastHistory');
+                
+                if (historySnapshot.empty) {
+                    container.innerHTML = '<p class="text-slate-500 text-sm">Нет рассылок</p>';
+                    return;
+                }
+
+                container.innerHTML = historySnapshot.docs.map(doc => {
+                    const data = doc.data();
+                    const date = data.createdAt ? new Date(data.createdAt.toDate()) : new Date();
+                    const typeColors = {
+                        info: 'bg-blue-600/20 text-blue-400',
+                        success: 'bg-green-600/20 text-green-400',
+                        warning: 'bg-yellow-600/20 text-yellow-400',
+                        promo: 'bg-pink-600/20 text-pink-400',
+                        referral: 'bg-purple-600/20 text-purple-400'
+                    };
+
+                    return `
+                        <div class="flex items-start gap-4 p-3 bg-slate-800/50 rounded-lg">
+                            <div class="w-10 h-10 rounded-lg ${typeColors[data.type] || 'bg-blue-600/20 text-blue-400'} flex items-center justify-center flex-shrink-0">
+                                <i class="fas fa-bell"></i>
+                            </div>
+                            <div class="flex-1 min-w-0">
+                                <div class="flex items-center gap-2 mb-1">
+                                    <span class="text-xs px-2 py-0.5 rounded ${typeColors[data.type]}">${data.type}</span>
+                                    <span class="text-xs text-slate-500">${date.toLocaleString('ru-RU')}</span>
+                                </div>
+                                <p class="text-sm text-slate-300 line-clamp-2">${data.message}</p>
+                                <div class="flex flex-wrap gap-3 mt-2">
+                                    <span class="text-xs text-slate-500">📤 ${data.recipientCount || 0} отправлено</span>
+                                    <span class="text-xs text-blue-400">👁️ ${data.viewCount || 0} просмотров</span>
+                                    <span class="text-xs text-green-400">📖 ${data.guideClickCount || 0} кликов на гайд</span>
+                                </div>
+                            </div>
+                            <button onclick="deleteBroadcast('${doc.id}')" class="text-xs text-red-400 hover:text-red-300 px-2 py-1 rounded hover:bg-red-600/20 transition-colors">
+                                <i class="fas fa-trash"></i>
+                            </button>
+                        </div>
+                    `;
+                }).join('');
+
+            } catch (e) {
+                console.error('Ошибка истории:', e);
+            }
+        }
+
+        window.deleteBroadcast = async function(broadcastId) {
+            if (!confirm('Удалить эту рассылку?')) return;
+            
+            try {
+                await deleteDoc(doc(db, "broadcasts", broadcastId));
+                loadBroadcastHistory();
+            } catch (e) {
+                console.error('Ошибка удаления:', e);
+                alert('Ошибка удаления: ' + e.message);
+            }
+        };
+
+        function renderTopProjects() {
+            const container = document.getElementById('topProjects');
+            
+            const sorted = Object.entries(projectStats)
+                .map(([id, stats]) => ({ id, ...stats }))
+                .sort((a, b) => b.clicks - a.clicks)
+                .slice(0, 6);
+
+            if (sorted.length === 0) {
+                container.innerHTML = '<p class="text-slate-500 text-sm col-span-3">Нет данных о проектах</p>';
+                return;
+            }
+
+            const maxClicks = sorted[0]?.clicks || 1;
+
+            container.innerHTML = sorted.map((projectStat, index) => {
+                const project = allProjectsMap.get(projectStat.id);
+                const percent = (projectStat.clicks / maxClicks) * 100;
+                const colors = ['bg-yellow-500', 'bg-slate-400', 'bg-orange-500', 'bg-blue-500', 'bg-purple-500', 'bg-green-500'];
+                const medals = ['🥇', '🥈', '🥉', '4️⃣', '5️⃣', '6️⃣'];
+
+                const projectName = project ? project.name : 'Неизвестный проект';
+                const projectImage = project?.image || `https://ui-avatars.com/api/?name=${encodeURIComponent(projectName.charAt(0))}&background=random&color=fff`;
+
+                return `
+                    <div class="bg-slate-800/50 rounded-lg p-3 flex flex-col justify-between items-start">
+                        <div class="flex items-center justify-between w-full mb-2">
+                            <span class="text-lg">${medals[index]}</span>
+                            <span class="text-xs text-slate-500">${projectStat.users.size} чел.</span>
+                        </div>
+                        <div class="flex items-center gap-2 mb-2 w-full">
+                            <img src="${projectImage}" alt="${projectName}" class="w-8 h-8 rounded-full object-cover">
+                            <div class="text-sm font-medium truncate flex-1" title="${projectName}">${projectName}</div>
+                        </div>
+                        <div class="w-full">
+                            <div class="flex justify-between text-xs text-slate-400 mb-1">
+                                <span>${projectStat.clicks} кликов</span>
+                                <span>${Math.round(percent)}%</span>
+                            </div>
+                            <div class="h-1.5 bg-slate-700 rounded-full overflow-hidden">
+                                <div class="h-full ${colors[index]} rounded-full" style="width: ${percent}%"></div>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        function renderStats() {
+            const now = new Date();
+            const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+            const weekStart = new Date(todayStart);
+            weekStart.setDate(weekStart.getDate() - 7);
+
+            const newToday = allUsers.filter(u => u.firstLogin && u.firstLogin >= todayStart).length;
+            const activeWeek = allUsers.filter(u => u.lastLogin && u.lastLogin >= weekStart).length;
+
+            animateValue('totalUsers', 0, allUsers.length, 1000);
+            animateValue('newToday', 0, newToday, 500);
+            animateValue('activeWeek', 0, activeWeek, 800);
+
+            renderActivityChart();
+            renderTopUsers();
+        }
+
+        function animateValue(id, start, end, duration) {
+            const obj = document.getElementById(id);
+            if (!obj) return;
+            const range = end - start;
+            const startTime = performance.now();
+
+            function update(currentTime) {
+                const elapsed = currentTime - startTime;
+                const progress = Math.min(elapsed / duration, 1);
+                const value = Math.floor(progress * range + start);
+                obj.textContent = value;
+
+                if (progress < 1) {
+                    requestAnimationFrame(update);
+                }
+            }
+
+            requestAnimationFrame(update);
+        }
+
+        function renderActivityChart() {
+            const container = document.getElementById('activityChart');
+            const now = new Date();
+            const days = [];
+
+            for (let i = 6; i >= 0; i--) {
+                const date = new Date(now);
+                date.setDate(date.getDate() - i);
+                const dayStart = new Date(date.getFullYear(), date.getMonth(), date.getDate());
+                const dayEnd = new Date(dayStart);
+                dayEnd.setDate(dayEnd.getDate() + 1);
+
+                const count = allUsers.filter(u => u.lastLogin && u.lastLogin >= dayStart && u.lastLogin < dayEnd).length;
+                days.push({ date, label: date.toLocaleDateString('ru-RU', { weekday: 'short', day: 'numeric' }), count });
+            }
+
+            const maxCount = Math.max(...days.map(d => d.count), 1);
+
+            container.innerHTML = days.map(day => {
+                const height = (day.count / maxCount) * 100;
+                const isToday = day.date.toDateString() === now.toDateString();
+                return `
+                    <div class="flex items-center gap-3">
+                        <span class="text-xs text-slate-400 w-12">${day.label}</span>
+                        <div class="flex-1 h-8 bg-slate-800 rounded-lg overflow-hidden">
+                            <div class="h-full rounded-lg transition-all duration-500 ${isToday ? 'bg-gradient-to-r from-blue-500 to-purple-500' : 'bg-gradient-to-r from-blue-600/50 to-purple-600/50'}" style="width: ${height}%"></div>
+                        </div>
+                        <span class="text-sm text-slate-300 w-8 text-right">${day.count}</span>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        function renderTopUsers() {
+            const container = document.getElementById('topUsers');
+            const top5 = [...allUsers].sort((a, b) => b.totalClicks - a.totalClicks).slice(0, 5);
+
+            if (top5.length === 0) {
+                container.innerHTML = '<p class="text-slate-500 text-sm">Нет данных</p>';
+                return;
+            }
+
+            const medals = ['🥇', '🥈', '🥉', '4️⃣', '5️⃣'];
+
+            container.innerHTML = top5.map((user, index) => `
+                <div class="flex items-center gap-3 p-3 bg-slate-800/50 rounded-lg">
+                    <span class="text-xl w-8">${medals[index]}</span>
+                    <img src="${user.photoURL || `https://ui-avatars.com/api/?name=${encodeURIComponent(user.displayName)}&background=3b82f6&color=fff`}" class="w-10 h-10 rounded-full" alt="">
+                    <div class="flex-1 min-w-0">
+                        <div class="font-medium truncate">${user.displayName}</div>
+                        <div class="text-xs text-slate-500">${formatDateShort(user.lastLogin)}</div>
+                    </div>
+                    <div class="text-right">
+                        <div class="text-lg font-bold text-blue-400">${user.totalClicks}</div>
+                        <div class="text-xs text-slate-500">кликов</div>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        window.renderUsersTable = function() {
+            const tbody = document.getElementById('usersTableBody');
+
+            if (filteredUsers.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="8" class="py-8 text-center text-slate-500">Нет пользователей</td></tr>';
+                return;
+            }
+
+            tbody.innerHTML = filteredUsers.map((user) => {
+                const isSelected = selectedUserIds.has(user.id);
+                
+                const topProjectData = user.topProject ? allProjectsMap.get(user.topProject) : null;
+                const topProjectName = topProjectData ? topProjectData.name : '—';
+                const topProjectImage = topProjectData?.image || `https://ui-avatars.com/api/?name=${encodeURIComponent(topProjectName === '—' ? '?' : topProjectName.charAt(0))}&background=333&color=fff`;
+
+                const topProjectDisplay = user.topProject 
+                    ? `<div class="flex items-center gap-2"><img src="${topProjectImage}" class="w-5 h-5 rounded-full object-cover" title="${topProjectName}"> <span class="truncate max-w-[120px]">${topProjectName}</span> <span class="text-xs text-slate-500">(${user.topProjectClicks})</span></div>`
+                    : '—';
+
+                return `
+                    <tr class="user-row border-b border-slate-800/50 transition-colors ${isSelected ? 'bg-blue-900/20' : ''}">
+                        <td class="py-3 pl-2">
+                            <input type="checkbox" ${isSelected ? 'checked' : ''} 
+                                onchange="toggleUserSelect('${user.id}')" class="w-4 h-4 rounded">
+                        </td>
+                        <td class="py-3">
+                            <div class="flex items-center gap-3">
+                                <img src="${user.photoURL || `https://ui-avatars.com/api/?name=${encodeURIComponent(user.displayName)}&background=3b82f6&color=fff`}" class="w-8 h-8 rounded-full" alt="">
+                                <div>
+                                    <div class="font-medium text-sm flex items-center gap-2">
+                                        ${user.displayName}
+                                        ${user.isOnline ? '<span class="w-2 h-2 bg-emerald-400 rounded-full" title="Онлайн"></span>' : ''}
+                                    </div>
+                                    <div class="text-xs text-slate-500 truncate max-w-[150px]">${user.email}</div>
+                                </div>
+                            </div>
+                        </td>
+                        <td class="py-3 text-sm text-slate-300">${formatDateTime(user.firstLogin)}</td>
+                        <td class="py-3 text-sm">
+                            <span class="${isRecent(user.lastLogin) ? 'text-emerald-400' : 'text-slate-300'}">
+                                ${formatDateTime(user.lastLogin)}
+                            </span>
+                        </td>
+                        <td class="py-3 text-center">
+                            <span class="px-2 py-1 bg-blue-600/20 text-blue-400 rounded text-sm font-medium">${user.totalClicks}</span>
+                        </td>
+                        <td class="py-3 text-center">
+                            <span class="px-2 py-1 bg-teal-600/20 text-teal-400 rounded text-sm font-medium">${user.completedCount}</span>
+                        </td>
+                        <td class="py-3 text-center">
+                            <span class="px-2 py-1 bg-red-600/20 text-red-400 rounded text-sm font-medium">${user.favoritesCount}</span>
+                        </td>
+                        <td class="py-3 text-sm text-slate-300">
+                            ${topProjectDisplay}
+                        </td>
+						<td class="py-3 text-sm text-slate-300">
+            ${getProviderIcon(user.provider)}
+        </td>
+                    </tr>
+                `;
+            }).join('');
+        };
+
+        window.toggleUserSelect = function(userId) {
+            if (selectedUserIds.has(userId)) {
+                selectedUserIds.delete(userId);
+            } else {
+                selectedUserIds.add(userId);
+            }
+            
+            if (selectedUserIds.size > 0) {
+                document.querySelector('input[name="broadcastTarget"][value="selected"]').checked = true;
+                toggleSelectedUsers();
+            }
+            
+            renderUsersTable();
+            updateSelectedCount();
+        };
+
+        window.toggleSelectAll = function() {
+            const checkbox = document.getElementById('selectAllUsers');
+            
+            if (checkbox.checked) {
+                selectedUserIds = new Set(filteredUsers.map(u => u.id));
+            } else {
+                selectedUserIds.clear();
+            }
+            
+            if (selectedUserIds.size > 0) {
+                document.querySelector('input[name="broadcastTarget"][value="selected"]').checked = true;
+                toggleSelectedUsers();
+            }
+            
+            renderUsersTable();
+            updateSelectedCount();
+        };
+
+        window.selectOnlineOnly = function() {
+            selectedUserIds = new Set(filteredUsers.filter(u => u.isOnline).map(u => u.id));
+            document.querySelector('input[name="broadcastTarget"][value="online"]').checked = true;
+            toggleSelectedUsers();
+            renderUsersTable();
+            updateSelectedCount();
+        };
+
+        window.toggleSelectedUsers = function() {
+            const list = document.getElementById('selectedUsersList');
+            const namesContainer = document.getElementById('selectedNames');
+            const target = document.querySelector('input[name="broadcastTarget"]:checked').value;
+            
+            if (target === 'selected' && selectedUserIds.size > 0) {
+                list.classList.remove('hidden');
+                const selectedNames = filteredUsers
+                    .filter(u => selectedUserIds.has(u.id))
+                    .slice(0, 5)
+                    .map(u => u.displayName);
+                
+                if (selectedUserIds.size > 5) {
+                    selectedNames.push(`... и ещё ${selectedUserIds.size - 5}`);
+                }
+                
+                namesContainer.innerHTML = selectedNames.map(n => `<div>• ${n}</div>`).join('');
+            } else {
+                list.classList.add('hidden');
+            }
+        };
+
+        window.updateSelectedCount = function() {
+            const target = document.querySelector('input[name="broadcastTarget"]:checked').value;
+            
+            let count = 0;
+            
+            switch (target) {
+                case 'all':
+                    count = allUsers.length;
+                    break;
+                case 'online':
+                    count = allUsers.filter(u => u.isOnline).length;
+                    break;
+                case 'selected':
+                    count = selectedUserIds.size;
+                    break;
+            }
+            
+            document.getElementById('countAll').textContent = `(${allUsers.length})`;
+            document.getElementById('countOnline').textContent = `(${allUsers.filter(u => u.isOnline).length})`;
+            document.getElementById('countSelected').textContent = count;
+            
+            if (target === 'selected') {
+                toggleSelectedUsers();
+            }
+        };
+
+        window.filterUsers = function() {
+            const search = document.getElementById('searchUser').value.toLowerCase();
+            filteredUsers = allUsers.filter(u => 
+                u.displayName.toLowerCase().includes(search) || 
+                u.email.toLowerCase().includes(search)
+            );
+            renderUsersTable();
+        };
+
+        window.sortUsersList = function() {
+            const sortBy = document.getElementById('sortUsers').value;
+            filteredUsers.sort((a, b) => {
+                switch (sortBy) {
+                    case 'lastLogin': return (b.lastLogin || 0) - (a.lastLogin || 0);
+                    case 'firstLogin': return (b.firstLogin || 0) - (a.firstLogin || 0);
+                    case 'clicks': return b.totalClicks - a.totalClicks;
+                    case 'name': return a.displayName.localeCompare(b.displayName);
+                    default: return 0;
+                }
+            });
+            renderUsersTable();
+        };
+
+        window.sendBroadcast = async function() {
+            const message = document.getElementById('broadcastMessage').value.trim();
+            const type = document.getElementById('broadcastType').value;
+            
+            if (!message) {
+                showBroadcastStatus('Введите сообщение', 'error');
+                return;
+            }
+            
+            if (message.length > 500) {
+                showBroadcastStatus('Сообщение слишком длинное (макс. 500 символов)', 'error');
+                return;
+            }
+
+            const target = document.querySelector('input[name="broadcastTarget"]:checked').value;
+            let recipientIds = [];
+            
+            switch (target) {
+                case 'all':
+                    recipientIds = allUsers.map(u => u.id);
+                    break;
+                case 'online':
+                    recipientIds = allUsers.filter(u => u.isOnline).map(u => u.id);
+                    break;
+                case 'selected':
+                    recipientIds = Array.from(selectedUserIds);
+                    break;
+            }
+            
+            if (recipientIds.length === 0) {
+                showBroadcastStatus('Нет получателей', 'error');
+                return;
+            }
+
+            const btn = document.getElementById('sendBtn');
+            btn.disabled = true;
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Отправка...';
+
+            try {
+                const batch = writeBatch(db);
+
+                const broadcastRef = doc(collection(db, "broadcasts"));
+                batch.set(broadcastRef, {
+                    message: message,
+                    type: type,
+                    createdAt: serverTimestamp(),
+                    recipientCount: recipientIds.length,
+                    viewCount: 0,
+                    guideClickCount: 0,
+                    status: 'sent'
+                });
+
+                const notificationsRef = collection(db, "notifications");
+                
+                recipientIds.forEach(userId => {
+                    const notifRef = doc(notificationsRef);
+                    batch.set(notifRef, {
+                        userId: userId,
+                        broadcastId: broadcastRef.id,
+                        message: message,
+                        type: type,
+                        read: false,
+                        createdAt: serverTimestamp()
+                    });
+                });
+
+                await batch.commit();
+
+                showBroadcastStatus(`Отправлено ${recipientIds.length} пользователям!`, 'success');
+                document.getElementById('broadcastMessage').value = '';
+                document.getElementById('msgLength').textContent = '0/500';
+                
+                loadBroadcastHistory();
+                loadNotificationStats();
+                
+            } catch (e) {
+                console.error('Ошибка отправки:', e);
+                showBroadcastStatus('Ошибка отправки: ' + e.message, 'error');
+            } finally {
+                btn.disabled = false;
+                btn.innerHTML = '<i class="fas fa-paper-plane"></i> Отправить уведомление';
+            }
+        };
+
+        function showBroadcastStatus(text, type) {
+            const status = document.getElementById('broadcastStatus');
+            status.textContent = text;
+            status.className = `mt-3 text-center text-sm ${type === 'error' ? 'text-red-400' : 'text-green-400'}`;
+            status.classList.remove('hidden');
+            
+            setTimeout(() => {
+                status.classList.add('hidden');
+            }, 5000);
+        }
+
+        document.getElementById('broadcastMessage').addEventListener('input', function(e) {
+            document.getElementById('msgLength').textContent = `${this.value.length}/500`;
+        });
+
+        function updateLastUpdateTime() {
+            document.getElementById('lastUpdate').textContent = `Обновлено: ${new Date().toLocaleTimeString('ru-RU')}`;
+        }
+
+        function formatDateTime(date) {
+            if (!date) return '—';
+            return date.toLocaleString('ru-RU');
+        }
+
+        function formatDateShort(date) {
+            if (!date) return '—';
+            const now = new Date();
+            const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+            const dateDay = new Date(date.getFullYear(), date.getMonth(), date.getDate());
+
+            if (dateDay.getTime() === today.getTime()) {
+                return `сегодня в ${date.toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' })}`;
+            }
+
+            const yesterday = new Date(today);
+            yesterday.setDate(yesterday.getDate() - 1);
+            if (dateDay.getTime() === yesterday.getTime()) {
+                return `вчера в ${date.toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' })}`;
+            }
+
+            return date.toLocaleDateString('ru-RU', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' });
+        }
+
+        function isRecent(date) {
+            if (!date) return false;
+            const now = new Date();
+            const diff = now - date;
+            return diff < 30 * 60 * 1000;
+        }
+
+        window.loadStats = async function() {
+            await loadAllData();
+        };
+		function getProviderIcon(provider) {
+    const providerIcons = {
+        'google.com': '<i class="fab fa-google text-red-400"></i> Google',
+        'twitter.com': '<i class="fab fa-twitter text-blue-400"></i> Twitter',
+        'twitter.com:legacy': '<i class="fab fa-twitter text-blue-400"></i> Twitter',
+        'facebook.com': '<i class="fab fa-facebook text-blue-500"></i> Facebook',
+        'github.com': '<i class="fab fa-github text-gray-400"></i> GitHub',
+        'microsoft.com': '<i class="fab fa-microsoft text-blue-300"></i> Microsoft',
+        'apple.com': '<i class="fab fa-apple text-slate-400"></i> Apple',
+        'password': '<i class="fas fa-envelope text-yellow-400"></i> Email/Pass',
+        'phone': '<i class="fas fa-phone text-green-400"></i> Phone',
+        'anonymous': '<i class="fas fa-mask text-slate-500"></i> Анонимно',
+        'unknown': '<i class="fas fa-question text-slate-500"></i> -'
+    };
+
+    return providerIcons[provider] || providerIcons['unknown'];
+}
+
+    </script>
+</body>
+</html>
