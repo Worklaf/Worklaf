@@ -1899,15 +1899,19 @@
     updateSectionBadges();
 }
     async function loadAllData() {
+    if (!currentUser) return;
+
     const db = getFirestore();
     const userRef = db.collection('users').doc(currentUser.uid);
     const doc = await userRef.get();
+
     if (doc.exists) {
         const data = doc.data();
         newLinksSet = new Set(data.newLinks || []);
+        knownLinksSet = new Set(data.knownLinks || []);
         localStorage.setItem(NEW_LINKS_KEY, JSON.stringify([...newLinksSet]));
+        localStorage.setItem(KNOWN_LINKS_KEY, JSON.stringify([...knownLinksSet]));
     }
-    // ...
 }
     function applyNewFlag(element) {
         element.setAttribute('data-new', 'true');
@@ -2018,6 +2022,18 @@
     }
 
     document.addEventListener('DOMContentLoaded', () => {
+        if (typeof firebase === 'undefined' || !firebase.apps.length) {
+        console.error('Firebase не инициализирован');
+        return;
+    }
+
+    // Получите текущего пользователя
+    const user = firebase.auth().currentUser;
+    if (!user) {
+        console.error('Пользователь не авторизован');
+        return;
+    }
+    currentUser = user;
         attachFavoriteControls();
         bindTrackingHandlersToAll();
 
@@ -2054,13 +2070,15 @@
 
         initializeLegendCollapsing();
         initializeTooltips();
-        detectNewLinks();
-        updateUI();
-        updateBadgeVisibility();
+        loadAllData().catch(err => console.error('Ошибка загрузки данных:', err));
+    detectNewLinks();
+    updateUI();
+    updateBadgeVisibility();
     });
 </script>
 
 </body>
 </html>
+
 
 
