@@ -804,23 +804,8 @@ body.light-theme .monitor-item {
 </div>
 
 <div class="page-shell">
-    <aside class="sidebar">
-        <!-- Вставь куда-то в header справа -->
+   <aside class="sidebar">
 <div id="authPanelArc" class="auth-panel-arc">
-    <!-- 🐦 TWITTER МОНИТОРИНГ (ADMIN ONLY) -->
-<div class="twitter-monitor-panel admin-only" id="twitterMonitorPanel">
-    <div class="monitor-header">
-        <h3><i class="fab fa-twitter"></i> Новые NFT</h3>
-        <span class="monitor-badge" id="monitorBadge">0</span>
-    </div>
-    <div class="monitor-status" id="monitorStatus">
-        <i class="fas fa-sync-alt fa-spin"></i> Проверка...
-    </div>
-    <ul class="monitor-list" id="monitorList"></ul>
-    <button type="button" class="monitor-refresh-btn" id="monitorRefreshBtn">
-        <i class="fas fa-redo"></i> Обновить
-    </button>
-</div>
     <div id="arcLoggedOutView">
         <button onclick="openLoginModal()" class="auth-btn-arc auth-btn-google">
             <i class="fas fa-sign-in-alt"></i> Войти
@@ -838,7 +823,6 @@ body.light-theme .monitor-item {
         <button onclick="logout()" class="auth-btn-arc auth-btn-logout">Выйти</button>
     </div>
 </div>
-
         <div class="sidebar-controls">
             <button class="theme-toggle-btn" id="themeToggleBtn" type="button"><i class="fas fa-sun"></i> Светлая тема</button>
             <button class="toggle-badges-btn" id="toggleBadgesBtn" type="button">Скрыть бейджи</button>
@@ -1266,20 +1250,100 @@ async function autoAddNewNFT(projectKey, config, tweet) {
     showToast(`🐦 Найден новый пост у ${projectKey}!`, 'success');
 }
 
-function isAlreadyInList(zone, url) {
-    const items = userItemsData.items[zone] || [];
-    return items.some(item => item.url === url);
-}
-
 // Проверка на дубликаты по ссылке
 function isAlreadyInList(zone, url) {
     const items = userItemsData.items[zone] || [];
     return items.some(item => item.url === url);
 }
+// ===== TWITTER RSS MONITORING =====
+function parseRSS(xmlText) {
+    const parser = new DOMParser();
+    const xmlDoc = parser.parseFromString(xmlText, "text/xml");
+    const items = Array.from(xmlDoc.querySelectorAll("item"));
+    
+    return items.map(item => {
+        const title = item.querySelector("title")?.textContent || "";
+        const link = item.querySelector("link")?.textContent || "";
+        const pubDate = item.querySelector("pubDate")?.textContent || "";
+        const dcDate = item.getElementsByTagNameNS("*", "date")[0]?.textContent;
+        
+        return {
+            title: title,
+            link: link,
+            pubDate: pubDate || dcDate || new Date().toISOString()
+        };
+    });
+}
 
+async function runTwitterMonitor() {
+    if (!isAdmin) return;
+
+    const nitterInstances = [
+        'https://nitter.privacydev.net',
+        'https://nitter.lucabased.xyz',
+        'https://nitter.poast.org',
+        'https://xcancel.com'
+    ];
+
+    const corsProxies = [
+        (url) => `https://api.allorigins.win/raw?url=${encodeURIComponent(url)}`,
+        (url) => `https://corsproxy.io/?${encodeURIComponent(url)}`
+    ];
+
+    console.log("🚀 Запуск мониторинга Twitter...");
+
+    for (const [key, config] of Object.entries(TWITTER_MONITOR_CONFIG)) {
+        let success = false;
+
+        for (const instance of nitterInstances) {
+            const rssUrl = `${instance}/${config.username}/rss`;
+
+            for (const proxyGen of corsProxies) {
+                try {
+                    const fetchUrl = proxyGen(rssUrl);
+                    const controller = new AbortController();
+                    const timeoutId = setTimeout(() => controller.abort(), 5000);
+
+                    const response = await fetch(fetchUrl, { 
+                        signal: controller.signal,
+                        cache: "no-store"
+                    });
+                    clearTimeout(timeoutId);
+
+                    if (!response.ok) continue;
+
+                    const textData = await response.text();
+                    if (!textData.includes('<rss') && !textData.includes('<feed')) continue;
+
+                    const tweets = parseRSS(textData);
+
+                    if (tweets.length > 0) {
+                        console.log(`✅ [${key}] Успех`);
+                        
+                        tweets.forEach(tweet => {
+                            if (tweet.title && tweet.title.toLowerCase().includes(config.triggerText.toLowerCase())) {
+                                autoAddNewNFT(key, config, tweet);
+                            }
+                        });
+
+                        success = true;
+                        break;
+                    }
+
+                } catch (e) {
+                    continue;
+                }
+            }
+            if (success) break;
+        }
+        
+        await new Promise(r => setTimeout(r, 1500));
+    }
+}
 // Twitter Monitor State
 let twitterMonitorData = [];
 const TWITTER_MONITOR_STORAGE = 'arc_twitter_monitor_v1';
+    
 let knownLinksSet = new Set();
 let favoritesSortable = null;
 const favoriteControls = new Map();
