@@ -2574,50 +2574,210 @@ document.addEventListener('DOMContentLoaded', () => {
 
     initializeTooltips(); detectNewLinks(); updateBadgeVisibility();
 });
-    // ===== TWITTER MONITOR UI =====
-function loadMonitorData() {
+   // ============================================================
+//  TWITTER MONITOR (Загрузка из JSON)
+// ============================================================
+
+async function loadTwitterResults() {
+    const list = document.getElementById('monitorList');
+    const status = document.getElementById('monitorStatus');
+    const badge = document.getElementById('monitorBadge');
+    
+    if (!list || !status || !badge) return;
+    
     try {
-        const raw = localStorage.getItem(TWITTER_MONITOR_STORAGE);
-        if (raw) twitterMonitorData = JSON.parse(raw);
-    } catch(e) { twitterMonitorData = []; }
+        // 🔥 Добавляем timestamp чтобы избежать кэширования
+        const response = await fetch('twitter_results.json?' + Date.now());
+        
+        if (!response.ok) {
+            throw new Error(`HTTP ${response.status}`);
+        }
+        
+        const data = await response.json();
+        
+        if (data.nfts && data.nfts.length > 0) {
+            list.innerHTML = '';
+            
+            // 🔥 Сортируем по времени (новые первые)
+            const sortedNfts = [...data.nfts].sort((a, b) => {
+                const timeA = new Date(a.datetime || 0).getTime();
+                const timeB = new Date(b.datetime || 0).getTime();
+                return timeB - timeA; // Новые сверху
+            });
+            
+            sortedNfts.forEach(nft => {
+                const li = document.createElement('li');
+                li.className = 'monitor-item';
+                
+                // 🔥 Безопасное получение времени
+                let timeAgo = 'недавно';
+                try {
+                    if (nft.time_ago) {
+                        // Используем готовое значение из Python
+                        timeAgo = nft.time_ago;
+                    } else if (nft.datetime) {
+                        const date = new Date(nft.datetime);
+                        if (!isNaN(date.getTime())) {
+                            timeAgo = getTimeAgo(date);
+                        }
+                    }
+                } catch (e) {
+                    console.error('Time parsing error:', e);
+                }
+                
+                // 🔥 Безопасное получение ссылки
+                const tweetUrl = nft.url || `https://twitter.com/${nft.twitter}`;
+                
+                // 🔥 Безопасное получение текста
+                const tweetText = (nft.text || 'NFT пост').substring(0, 120);
+                const truncated = (nft.text || '').length > 120 ? '...' : '';
+                
+                // 🔥 Название проекта с эмодзи
+                const projectEmoji = {
+                    'morkie': '🐾',
+                    'clara': '✨',
+                    'oku': '🌸',
+                    'mintaura': '💫',
+                    'arkle': '🎨',
+                    'draze': '🌙',
+                    'caset': '🎵',
+                    'alze': '⚡'
+                };
+                const emoji = projectEmoji[nft.project] || '🆕';
+                const projectName = nft.project.charAt(0).toUpperCase() + nft.project.slice(1);
+                
+                li.innerHTML = `
+                    <div class="monitor-item-header">
+                        <span class="monitor-item-project">${emoji} ${projectName}</span>
+                        <span class="monitor-item-time">${timeAgo}</span>
+                    </div>
+                    <div class="monitor-item-text">${tweetText}${truncated}</div>
+                    <div style="display: flex; gap: 12px; margin-top: 8px; align-items: center;">
+                        <a href="${tweetUrl}" target="_blank" rel="noopener" class="monitor-item-link">
+                            <i class="fab fa-twitter"></i> Открыть твит
+                        </a>
+                        ${nft.likes ? `<span style="font-size: 0.75rem; color: #64748b;">❤️ ${nft.likes}</span>` : ''}
+                        ${nft.retweets ? `<span style="font-size: 0.75rem; color: #64748b;">🔁 ${nft.retweets}</span>` : ''}
+                    </div>
+                `;
+                
+                list.appendChild(li);
+            });
+            
+            badge.textContent = sortedNfts.length;
+            badge.classList.remove('empty');
+            
+            // 🔥 Обновляем статус с последним временем проверки
+            if (data.timestamp) {
+                try {
+                    const lastCheck = new Date(data.timestamp);
+                    if (!isNaN(lastCheck.getTime())) {
+                        const checkTime = lastCheck.toLocaleString('ru', {
+                            day: '2-digit',
+                            month: '2-digit',
+                            hour: '2-digit',
+                            minute: '2-digit'
+                        });
+                        status.innerHTML = `<i class="fas fa-check-circle"></i> Обновлено: ${checkTime}`;
+                        status.style.color = '#22c55e';
+                    }
+                } catch(e) {
+                    status.innerHTML = '<i class="fas fa-check-circle"></i> Данные загружены';
+                    status.style.color = '#22c55e';
+                }
+            } else {
+                status.innerHTML = '<i class="fas fa-check-circle"></i> Данные загружены';
+                status.style.color = '#22c55e';
+            }
+            
+        } else {
+            showEmptyState();
+        }
+        
+    } catch (error) {
+        console.error('Twitter results load error:', error);
+        showEmptyState();
+    }
 }
 
-function updateMonitorUI() {
-    const badge = document.getElementById('monitorBadge');
+function showEmptyState() {
     const list = document.getElementById('monitorList');
+    const status = document.getElementById('monitorStatus');
+    const badge = document.getElementById('monitorBadge');
     
-    if (!badge || !list) return;
+    if (!list || !status || !badge) return;
     
-    const count = twitterMonitorData.length;
-    badge.textContent = count;
-    badge.classList.toggle('empty', count === 0);
+    list.innerHTML = `
+        <li style="text-align: center; padding: 20px; color: #64748b; font-size: 0.9rem;">
+            <i class="fas fa-info-circle" style="font-size: 2rem; margin-bottom: 10px; opacity: 0.5;"></i>
+            <p>Нажми "🔄 Обновить" для запуска парсинга</p>
+            <p style="font-size: 0.75rem; margin-top: 5px;">Или запусти <code>twitter_parser.py</code></p>
+        </li>
+    `;
+    badge.textContent = '0';
+    badge.classList.add('empty');
+    status.innerHTML = '<i class="fas fa-clock"></i> Ожидание обновления';
+    status.style.color = '#94a3b8';
+}
+
+function getTimeAgo(date) {
+    // 🔥 Защита от NaN и невалидных дат
+    if (!(date instanceof Date) || isNaN(date.getTime())) {
+        return 'недавно';
+    }
     
-    list.innerHTML = '';
+    const now = new Date();
+    const seconds = Math.floor((now - date) / 1000);
     
-    twitterMonitorData.forEach(item => {
-        const li = document.createElement('li');
-        li.className = 'monitor-item';
+    // 🔥 Защита от отрицательных значений (твит из будущего?)
+    if (seconds < 0) return 'только что';
+    
+    if (seconds < 60) return 'только что';
+    if (seconds < 3600) {
+        const mins = Math.floor(seconds / 60);
+        return `${mins} мин назад`;
+    }
+    if (seconds < 86400) {
+        const hours = Math.floor(seconds / 3600);
+        return `${hours} ч назад`;
+    }
+    if (seconds < 604800) {
+        const days = Math.floor(seconds / 86400);
+        return `${days} д назад`;
+    }
+    
+    // Для старых постов
+    const weeks = Math.floor(seconds / 604800);
+    return `${weeks} нед назад`;
+}
+
+function initTwitterMonitor() {
+    if (!isAdmin) return;
+    
+    const refreshBtn = document.getElementById('monitorRefreshBtn');
+    
+    if (!refreshBtn) return;
+    
+    // 🔥 Загружаем данные при старте
+    loadTwitterResults();
+    
+    // 🔥 Кнопка обновления
+    refreshBtn.addEventListener('click', async () => {
+        const originalHTML = refreshBtn.innerHTML;
+        refreshBtn.disabled = true;
+        refreshBtn.innerHTML = '<i class="fas fa-sync-alt fa-spin"></i> Обновление...';
         
-        const timeStr = new Date(item.timestamp).toLocaleString('ru', {
-            day: '2-digit',
-            month: '2-digit',
-            hour: '2-digit',
-            minute: '2-digit'
-        });
+        await loadTwitterResults();
         
-        li.innerHTML = `
-            <div class="monitor-item-header">
-                <span class="monitor-item-project">${item.project}</span>
-                <span class="monitor-item-time">${timeStr}</span>
-            </div>
-            <div class="monitor-item-text">${item.text}</div>
-            <a href="${item.link}" target="_blank" rel="noopener" class="monitor-item-link">
-                <i class="fab fa-twitter"></i> Открыть твит
-            </a>
-        `;
-        
-        list.appendChild(li);
+        setTimeout(() => {
+            refreshBtn.disabled = false;
+            refreshBtn.innerHTML = originalHTML;
+            showToast('Данные обновлены!', 'success');
+        }, 1000);
     });
+    
+    // 🔥 Автообновление каждые 5 минут
+    setInterval(loadTwitterResults, 5 * 60 * 1000);
 }
 
 // ============================================================
