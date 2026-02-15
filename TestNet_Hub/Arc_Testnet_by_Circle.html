@@ -2620,36 +2620,159 @@ function updateMonitorUI() {
     });
 }
 
+// ============================================================
+//  TWITTER MONITOR (Ручной запуск)
+// ============================================================
+
 function initTwitterMonitor() {
     if (!isAdmin) return;
     
-    loadMonitorData();
-    updateMonitorUI();
-    
-    const refreshBtn = document.getElementById('monitorRefreshBtn');
+    const list = document.getElementById('monitorList');
     const status = document.getElementById('monitorStatus');
+    const badge = document.getElementById('monitorBadge');
+    const refreshBtn = document.getElementById('monitorRefreshBtn');
     
-    if (refreshBtn) {
-        refreshBtn.addEventListener('click', async () => {
-            refreshBtn.disabled = true;
-            status.innerHTML = '<i class="fas fa-sync-alt fa-spin"></i> Проверка...';
+    if (!list || !status || !badge || !refreshBtn) return;
+    
+    // Загружаем сохранённые результаты
+    loadTwitterResults();
+    
+    // Кнопка запуска парсинга
+    refreshBtn.innerHTML = '<i class="fas fa-search"></i> Проверить новые NFT';
+    refreshBtn.addEventListener('click', startManualCheck);
+}
+
+async function loadTwitterResults() {
+    const list = document.getElementById('monitorList');
+    const status = document.getElementById('monitorStatus');
+    const badge = document.getElementById('monitorBadge');
+    
+    try {
+        const response = await fetch('twitter_results.json?' + Date.now());
+        
+        if (!response.ok) {
+            showEmptyState();
+            return;
+        }
+        
+        const data = await response.json();
+        
+        if (data.nfts && data.nfts.length > 0) {
+            list.innerHTML = '';
             
-            await runTwitterMonitor();
+            data.nfts.forEach(nft => {
+                const li = document.createElement('li');
+                li.className = 'monitor-item';
+                
+                const date = new Date(nft.timestamp);
+                const timeAgo = getTimeAgo(date);
+                
+                li.innerHTML = `
+                    <div class="monitor-item-header">
+                        <span class="monitor-item-project">${nft.project}</span>
+                        <span class="monitor-item-time">${timeAgo}</span>
+                    </div>
+                    <div class="monitor-item-text">${nft.text}</div>
+                    <a href="${nft.link}" target="_blank" rel="noopener" class="monitor-item-link">
+                        <i class="fab fa-twitter"></i> Открыть твит
+                    </a>
+                `;
+                
+                list.appendChild(li);
+            });
             
-            refreshBtn.disabled = false;
-            status.innerHTML = '<i class="fas fa-check"></i> Обновлено';
-            
-            setTimeout(() => {
-                status.innerHTML = `<i class="fas fa-clock"></i> След. проверка через 15 мин`;
-            }, 3000);
-        });
+            badge.textContent = data.nfts.length;
+            const lastCheck = new Date(data.last_check);
+            status.innerHTML = `<i class="fas fa-check-circle"></i> Проверено: ${lastCheck.toLocaleString('ru')}`;
+            status.style.color = '#4CAF50';
+        } else {
+            showEmptyState();
+        }
+        
+    } catch (error) {
+        showEmptyState();
     }
+}
+
+function showEmptyState() {
+    const list = document.getElementById('monitorList');
+    const status = document.getElementById('monitorStatus');
+    const badge = document.getElementById('monitorBadge');
     
-    // Автозапуск
-    runTwitterMonitor();
-    setInterval(runTwitterMonitor, 15 * 60 * 1000);
+    list.innerHTML = '<li class="monitor-item" style="text-align: center; color: #888;">Нажми "Проверить новые NFT" для запуска</li>';
+    badge.textContent = '0';
+    status.innerHTML = '<i class="fas fa-info-circle"></i> Ожидание проверки';
+    status.style.color = '#888';
+}
+
+function startManualCheck() {
+    const modal = document.createElement('div');
+    modal.style.cssText = `
+        position: fixed;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        padding: 40px;
+        border-radius: 20px;
+        box-shadow: 0 20px 60px rgba(0,0,0,0.5);
+        z-index: 10000;
+        text-align: center;
+        max-width: 500px;
+    `;
     
-    status.innerHTML = '<i class="fas fa-check-circle"></i> Мониторинг активен';
+    modal.innerHTML = `
+        <h2 style="margin: 0 0 20px 0;"><i class="fas fa-rocket"></i> Запуск парсинга</h2>
+        <p style="margin: 20px 0; line-height: 1.6;">
+            <strong>Инструкция:</strong><br><br>
+            1. Открой папку с сайтом<br>
+            2. Запусти <code style="background: rgba(255,255,255,0.2); padding: 2px 8px; border-radius: 5px;">twitter_parser.py</code><br>
+            3. Когда откроется Edge - залогинься<br>
+            4. Скрипт соберёт данные (2-3 мин)<br>
+            5. Обнови эту страницу
+        </p>
+        <button onclick="this.parentElement.remove()" style="
+            background: white;
+            color: #667eea;
+            border: none;
+            padding: 12px 30px;
+            border-radius: 25px;
+            font-weight: bold;
+            cursor: pointer;
+            margin-top: 10px;
+        ">Понятно</button>
+    `;
+    
+    document.body.appendChild(modal);
+    
+    // Закрытие по клику вне окна
+    setTimeout(() => {
+        const overlay = document.createElement('div');
+        overlay.style.cssText = `
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.7);
+            z-index: 9999;
+        `;
+        overlay.onclick = () => {
+            overlay.remove();
+            modal.remove();
+        };
+        document.body.insertBefore(overlay, modal);
+    }, 100);
+}
+
+function getTimeAgo(date) {
+    const seconds = Math.floor((new Date() - date) / 1000);
+    
+    if (seconds < 60) return 'только что';
+    if (seconds < 3600) return Math.floor(seconds / 60) + ' мин назад';
+    if (seconds < 86400) return Math.floor(seconds / 3600) + ' ч назад';
+    return Math.floor(seconds / 86400) + ' д назад';
 }
 </script>
 <!-- ====== LOGIN MODAL ====== -->
