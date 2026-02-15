@@ -1831,39 +1831,32 @@
         }
     }
 
-    function detectNewLinks() {
-        const elements = document.querySelectorAll('[data-id]');
-        const currentIds = new Set();
-        elements.forEach(el => {
-            if (el.dataset.id) {
-                currentIds.add(el.dataset.id);
-            }
-        });
-
-        const storedKnownRaw = JSON.parse(localStorage.getItem(KNOWN_LINKS_KEY) || '[]');
-        const storedNewRaw = JSON.parse(localStorage.getItem(NEW_LINKS_KEY) || '[]');
-
-        knownLinksSet = new Set(Array.isArray(storedKnownRaw) ? storedKnownRaw : []);
-        newLinksSet = new Set(Array.isArray(storedNewRaw) ? storedNewRaw : []);
-
-        const storedVersion = localStorage.getItem(PAGE_VERSION_KEY);
-        const isFirstRun = !storedVersion && knownLinksSet.size === 0;
-
-        if (isFirstRun) {
-            knownLinksSet = new Set(currentIds);
-            newLinksSet = new Set();
-            localStorage.setItem(KNOWN_LINKS_KEY, JSON.stringify([...knownLinksSet]));
-            localStorage.setItem(NEW_LINKS_KEY, JSON.stringify([]));
-            localStorage.setItem(PAGE_VERSION_KEY, PAGE_VERSION);
-            updateNewIndicators();
-            return;
+   function detectNewLinks() {
+    const elements = document.querySelectorAll('[data-id]');
+    const currentIds = new Set();
+    elements.forEach(el => {
+        if (el.dataset.id) {
+            currentIds.add(el.dataset.id);
         }
+    });
 
+    const storedKnownRaw = JSON.parse(localStorage.getItem(KNOWN_LINKS_KEY) || '[]');
+    const storedNewRaw = JSON.parse(localStorage.getItem(NEW_LINKS_KEY) || '[]');
+
+    knownLinksSet = new Set(Array.isArray(storedKnownRaw) ? storedKnownRaw : []);
+    newLinksSet = new Set(Array.isArray(storedNewRaw) ? storedNewRaw : []);
+
+    const storedVersion = localStorage.getItem(PAGE_VERSION_KEY);
+    const isFirstRun = !storedVersion && knownLinksSet.size === 0;
+
+    if (isFirstRun) {
+        knownLinksSet = new Set(currentIds);
+        newLinksSet = new Set();
+    } else {
         if (storedVersion !== PAGE_VERSION) {
             knownLinksSet = new Set([...knownLinksSet].filter(id => currentIds.has(id)));
             newLinksSet = new Set([...newLinksSet].filter(id => currentIds.has(id)));
         }
-
         const newlyDetected = [];
         currentIds.forEach(id => {
             if (!knownLinksSet.has(id)) {
@@ -1871,30 +1864,51 @@
                 newlyDetected.push(id);
             }
         });
-
         newlyDetected.forEach(id => newLinksSet.add(id));
-        newLinksSet = new Set([...newLinksSet].filter(id => currentIds.has(id)));
-
-        localStorage.setItem(KNOWN_LINKS_KEY, JSON.stringify([...knownLinksSet]));
-        localStorage.setItem(NEW_LINKS_KEY, JSON.stringify([...newLinksSet]));
-        localStorage.setItem(PAGE_VERSION_KEY, PAGE_VERSION);
-
-        updateNewIndicators();
     }
+
+    newLinksSet = new Set([...newLinksSet].filter(id => currentIds.has(id)));
+
+    localStorage.setItem(KNOWN_LINKS_KEY, JSON.stringify([...knownLinksSet]));
+    localStorage.setItem(NEW_LINKS_KEY, JSON.stringify([...newLinksSet]));
+    localStorage.setItem(PAGE_VERSION_KEY, PAGE_VERSION);
+
+    // Синхронизация с Firebase
+    if (currentUser) {
+        const db = getFirestore();
+        const userRef = db.collection('users').doc(currentUser.uid);
+        userRef.set({
+            knownLinks: [...knownLinksSet],
+            newLinks: [...newLinksSet]
+        }, { merge: true });
+    }
+
+    updateNewIndicators();
+}
 
     function updateNewIndicators() {
-        const elements = document.querySelectorAll('[data-id]');
-        elements.forEach(el => {
-            const id = el.dataset.id;
-            if (id && newLinksSet.has(id)) {
-                applyNewFlag(el);
-            } else {
-                removeNewFlag(el);
-            }
-        });
-        updateSectionBadges();
+    const elements = document.querySelectorAll('[data-id]');
+    elements.forEach(el => {
+        const id = el.dataset.id;
+        if (id && newLinksSet.has(id)) {
+            applyNewFlag(el);
+        } else {
+            removeNewFlag(el);
+        }
+    });
+    updateSectionBadges();
+}
+    async function loadAllData() {
+    const db = getFirestore();
+    const userRef = db.collection('users').doc(currentUser.uid);
+    const doc = await userRef.get();
+    if (doc.exists) {
+        const data = doc.data();
+        knownLinksSet = new Set(data.knownLinks || []);
+        newLinksSet = new Set(data.newLinks || []);
     }
-
+    // ...
+}
     function applyNewFlag(element) {
         element.setAttribute('data-new', 'true');
         element.classList.add('has-new-flag');
@@ -2040,3 +2054,4 @@
 
 </body>
 </html>
+
