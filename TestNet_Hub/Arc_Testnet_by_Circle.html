@@ -1583,42 +1583,108 @@ async function loadAllData() {
     const localFav = JSON.parse(localStorage.getItem(FAVORITES_KEY) || '{}');
     const localOrder = JSON.parse(localStorage.getItem(FAVORITES_ORDER_KEY) || '[]');
     const localTimestamp = parseInt(localStorage.getItem(FAVORITES_TIMESTAMP_KEY) || '0', 10);
-    arcData = localStats; favoritesState = localFav; favoritesOrder = localOrder;
+    arcData = localStats;
+    favoritesState = localFav;
+    favoritesOrder = localOrder;
+
     if (currentUser) {
         try {
             const docRef = doc(db, "users", currentUser.uid);
             const docSnap = await getDoc(docRef);
+            
             if (docSnap.exists()) {
                 const cloudData = docSnap.data();
+
+                // === Статистика кликов с таймстампом ===
+                const localStatsTs = parseInt(localStorage.getItem('arc_stats_timestamp') || '0', 10);
+                const cloudStatsTs = parseInt(cloudData.statsTimestamp || '0', 10);
+                
+                if (cloudData.arcGuideStats && cloudStatsTs > localStatsTs) {
+                    arcData = cloudData.arcGuideStats;
+                    localStorage.setItem(STORAGE_KEY, JSON.stringify(arcData));
+                    localStorage.setItem('arc_stats_timestamp', String(cloudStatsTs));
+                } else if (Object.keys(localStats).length > 0) {
+                    await saveToCloud({ 
+                        arcGuideStats: localStats, 
+                        statsTimestamp: Date.now() 
+                    });
+                }
+
+                // === Избранное (уже было) ===
                 const cloudFav = cloudData.favoritesState || {};
                 const cloudOrder = cloudData.favoritesOrder || [];
                 const cloudTs = parseInt(cloudData.favoritesTimestamp || '0', 10);
                 const localHasFav = Object.keys(localFav).length > 0 || localOrder.length > 0;
                 const cloudHasFav = Object.keys(cloudFav).length > 0 || cloudOrder.length > 0;
-                if (cloudHasFav) {
-                    if (cloudTs > localTimestamp) {
-                        favoritesState = cloudFav; favoritesOrder = cloudOrder;
-                        localStorage.setItem(FAVORITES_KEY, JSON.stringify(favoritesState));
-                        localStorage.setItem(FAVORITES_ORDER_KEY, JSON.stringify(favoritesOrder));
-                        localStorage.setItem(FAVORITES_TIMESTAMP_KEY, String(cloudTs));
-                    } else {
-                        await saveToCloud({ favoritesState: localFav, favoritesOrder: localOrder, favoritesTimestamp: localTimestamp });
-                    }
-                } else if (localHasFav) {
-                    await saveToCloud({ favoritesState: localFav, favoritesOrder: localOrder, favoritesTimestamp: localTimestamp });
-                }
-                if (cloudData.arcGuideStats && Object.keys(cloudData.arcGuideStats).length > 0) {
-                    arcData = cloudData.arcGuideStats;
-                    localStorage.setItem(STORAGE_KEY, JSON.stringify(arcData));
-                }
-            } else if (Object.keys(localFav).length > 0) {
-                await saveToCloud({ favoritesState: localFav, favoritesOrder: localOrder, favoritesTimestamp: localTimestamp });
-            }
-        } catch (e) { console.error("Cloud load error:", e); }
-    }
-    refreshAllVisuals(); applyAllOverrides();
-}
 
+                if (cloudHasFav && cloudTs > localTimestamp) {
+                    favoritesState = cloudFav;
+                    favoritesOrder = cloudOrder;
+                    localStorage.setItem(FAVORITES_KEY, JSON.stringify(favoritesState));
+                    localStorage.setItem(FAVORITES_ORDER_KEY, JSON.stringify(favoritesOrder));
+                    localStorage.setItem(FAVORITES_TIMESTAMP_KEY, String(cloudTs));
+                } else if (localHasFav) {
+                    await saveToCloud({ 
+                        favoritesState: localFav, 
+                        favoritesOrder: localOrder, 
+                        favoritesTimestamp: localTimestamp 
+                    });
+                }
+
+                // === Настройки UI ===
+                if (cloudData.userPrefs) {
+                    const prefs = cloudData.userPrefs;
+                    const isFirstVisit = Object.keys(localStats).length === 0 
+                        && Object.keys(localFav).length === 0;
+                    
+                    if (isFirstVisit) {
+                        // Новое устройство — берём всё из облака
+                        if (prefs.sections) {
+                            localStorage.setItem(SECTION_COLLAPSE_KEY, JSON.stringify(prefs.sections));
+                            // Применяем состояние секций
+                            document.querySelectorAll('.collapsible-section').forEach(sec => {
+                                const sid = sec.getAttribute('data-section-id');
+                                if (prefs.sections[sid]) applySectionState(sec, true);
+                            });
+                        }
+                        if (prefs.badgesHidden != null) {
+                            localStorage.setItem(BADGE_VISIBILITY_KEY, prefs.badgesHidden);
+                            updateBadgeVisibility();
+                        }
+                        if (prefs.theme) {
+                            localStorage.setItem(THEME_KEY, prefs.theme);
+                            if (prefs.theme === 'light') document.body.classList.add('light-theme');
+                            else document.body.classList.remove('light-theme');
+                            updateThemeBtn();
+                        }
+                        if (prefs.clickedNew) {
+                            localStorage.setItem('arc_tracker_clicked_new', JSON.stringify(prefs.clickedNew));
+                        }
+                        if (prefs.knownLinks) {
+                            localStorage.setItem(KNOWN_LINKS_KEY, JSON.stringify(prefs.knownLinks));
+                            knownLinksSet = new Set(prefs.knownLinks);
+                        }
+                    }
+                }
+            } else {
+                // Документа нет — пушим локальные данные
+                if (Object.keys(localFav).length > 0) {
+                    await saveToCloud({ 
+                        favoritesState: localFav, 
+                        favoritesOrder: localOrder, 
+                        favoritesTimestamp: localTimestamp 
+                    });
+                }
+            }
+        } catch (e) { 
+            console.error("Cloud load error:", e); 
+        }
+    }
+
+    refreshAllVisuals();
+    applyAllOverrides();
+    detectNewLinks();
+}
 async function saveToCloud(data) {
     if (!currentUser) return;
     try { await setDoc(doc(db, "users", currentUser.uid), data, { merge: true }); }
@@ -1627,7 +1693,21 @@ async function saveToCloud(data) {
 
 async function saveStats() {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(arcData));
-    if (currentUser) await saveToCloud({ arcGuideStats: arcData });
+    if (currentUser) {
+        await saveToCloud({ 
+            arcGuideStats: arcData,
+            statsTimestamp: Date.now(),
+            // Синхронизируем настройки UI
+            userPrefs: {
+                sections: JSON.parse(localStorage.getItem(SECTION_COLLAPSE_KEY) || '{}'),
+                badgesHidden: localStorage.getItem(BADGE_VISIBILITY_KEY),
+                theme: localStorage.getItem(THEME_KEY),
+                legendCollapsed: localStorage.getItem(LEGEND_COLLAPSE_KEY),
+                clickedNew: JSON.parse(localStorage.getItem('arc_tracker_clicked_new') || '[]'),
+                knownLinks: JSON.parse(localStorage.getItem(KNOWN_LINKS_KEY) || '[]')
+            }
+        });
+    }
 }
 
 async function saveFavorites() {
