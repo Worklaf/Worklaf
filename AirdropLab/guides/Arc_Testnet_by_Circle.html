@@ -2206,35 +2206,32 @@ document.getElementById('addModalSave').addEventListener('click', async () => {
     const saveBtn = document.getElementById('addModalSave');
     const isEdit = saveBtn.dataset.editMode === 'true';
 
-    // Режим редактирования
+    // ---------- РЕДАКТИРОВАНИЕ ----------
     if (isEdit && currentEditTarget) {
-        // ... код редактирования остаётся без изменений ...
+        // … код редактирования остаётся без изменений …
         return;
     }
 
-    // Режим добавления
+    // ---------- ДОБАВЛЕНИЕ ----------
     if (!currentAddContext) return;
 
-    const title = document.getElementById('addFieldTitle').value.trim();
-    const url = document.getElementById('addFieldUrl').value.trim();
+    const title   = document.getElementById('addFieldTitle').value.trim();
+    const url     = document.getElementById('addFieldUrl').value.trim();
     const tooltip = document.getElementById('addFieldTooltip').value.trim();
-    const image = normalizeImageUrl(document.getElementById('addFieldImage').value.trim());
+    const image   = normalizeImageUrl(document.getElementById('addFieldImage').value.trim());
 
     if (!title || !url) {
         alert('Название и URL обязательны!');
         return;
     }
 
-    const zone = currentAddContext.zone;
+    const zone   = currentAddContext.zone;
     const config = currentAddContext.config;
 
     // Проверка дубликатов
-    if (userItemsData.items[zone]) {
-        const exists = userItemsData.items[zone].some(i => i.url === url);
-        if (exists) {
-            showToast('Такая ссылка уже существует!', 'error');
-            return;
-        }
+    if (userItemsData.items[zone]?.some(i => i.url === url)) {
+        showToast('Такая ссылка уже существует!', 'error');
+        return;
     }
 
     const id = generateId();
@@ -2248,10 +2245,8 @@ document.getElementById('addModalSave').addEventListener('click', async () => {
         addedAt: Date.now()
     };
 
-    if (!userItemsData.items[zone]) {
-        userItemsData.items[zone] = [];
-    }
-
+    // Сохраняем в локальное хранилище
+    if (!userItemsData.items[zone]) userItemsData.items[zone] = [];
     userItemsData.items[zone].push(item);
 
     newLinksSet.add(id);
@@ -2262,16 +2257,16 @@ document.getElementById('addModalSave').addEventListener('click', async () => {
 
     await saveUserItems();
 
-    // Проверяем, существует ли контейнер
+    // ---------- РЕНДЕР ----------
     const container = document.querySelector(`[data-zone="${zone}"]`);
 
     if (container) {
         renderUserItemInZone(zone, item);
     } else {
-        console.log(`[INFO] Контейнер для zone="${zone}" не найден — элемент появится при полной синхронизации`);
+        console.log(`[INFO] Зона "${zone}" ещё не создана — элемент появится при полной синхронизации`);
     }
 
-    // Обновление UI
+    // ---------- ОБНОВЛЕНИЕ UI ----------
     bindTrackingHandlersToAll();
     attachFavoriteControls();
     initializeTooltips();
@@ -2281,6 +2276,7 @@ document.getElementById('addModalSave').addEventListener('click', async () => {
     showToast(`✅ Добавлено: ${title}`, 'success');
     closeModal();
 });
+
 
 
 // ===== ИСПРАВЛЕННАЯ ФУНКЦИЯ createUserLink =====
@@ -2353,25 +2349,24 @@ function createUserLink(item, zone) {
 
 function renderUserItemInZone(zone, item) {
     const container = document.querySelector(`[data-zone="${zone}"]`);
-    
-    // 🆕 КРИТИЧНО: Если контейнер не существует - не добавляем элемент!
     if (!container) {
-        console.warn(`[WARN] Контейнер для zone="${zone}" не найден, пропускаем renderUserItemInZone`);
+        console.warn(`[WARN] Нет контейнера для zone="${zone}" – рендер откладывается`);
         return;
     }
-    
-    // 🆕 Проверка на СУЩЕСТВОВАНИЕ элемента перед добавлением
-    const existingWrapper = container.querySelector(`[data-user-item-id="${item.id}"]`);
-    if (existingWrapper) {
-        console.log(`[INFO] Элемент ${item.id} уже есть в DOM, пропускаем`);
+
+    // проверяем, есть ли уже элемент с тем же id в этом контейнере
+    const exists = container.querySelector(`[data-user-item-id="${item.id}"]`);
+    if (exists) {
+        console.log(`[INFO] Элемент ${item.id} уже есть в zone="${zone}"`);
         return;
     }
-    
+
+    // определяем, куда вставлять
     let target;
     if (container.tagName === 'TR') target = container.querySelector('.dapp-links');
     else target = container.querySelector('.link-collection') || container.querySelector('.link-row');
     if (!target) return;
-    
+
     const wrapper = createUserLink(item, zone);
     const addBtn = target.querySelector('.add-item-btn');
     if (addBtn) target.insertBefore(wrapper, addBtn);
@@ -2381,62 +2376,49 @@ function renderUserItemInZone(zone, item) {
 // ===== ИСПРАВЛЕННАЯ ФУНКЦИЯ renderAllUserItems =====
 
 function renderAllUserItems() {
-    // 🆕 ИСПРАВЛЕНИЕ: Проверяем, нужно ли вообще что-то рендерить
+    // получаем текущие данные из локального хранилища
     const raw = localStorage.getItem(USER_ITEMS_KEY);
     if (!raw) return;
-    
     let savedData;
-    try {
-        savedData = JSON.parse(raw);
-    } catch(e) {
+    try { savedData = JSON.parse(raw); } catch (e) { return; }
+
+    // если в DOM уже есть все элементы – просто выходим
+    const existingIds = new Set(
+        [...document.querySelectorAll('[data-user-item-id]')]
+            .map(el => el.dataset.userItemId)
+    );
+    const newIds = Object.values(savedData.items || {})
+        .flat()
+        .map(i => i.id);
+    const allRendered = newIds.every(id => existingIds.has(id));
+    if (allRendered) {
+        console.log('[INFO] Все элементы уже отрисованы – пропускаем ререндер');
         return;
     }
-    
-    // Обновляем только если данные изменились
-    const newItemsStr = JSON.stringify(userItemsData.items);
-    const savedItemsStr = JSON.stringify(savedData.items || {});
-    
-    // 🆕 Если данные идентичны, не перерендериваем
-    if (newItemsStr === savedItemsStr && 
-        document.querySelectorAll('.user-item-wrapper').length > 0) {
-        console.log('[INFO] Данные не изменились, пропускаем перерендер');
-        return;
-    }
-    
-    // 🆕 Теперь загружаем и рендерим
+
+    // иначе загружаем и отрисовываем
     loadUserItems();
-    
-    // Проверяем и рендерим коллекции только если их еще нет
-    userItemsData.collections.forEach(coll => {
-        if (!document.querySelector(`[data-zone="${coll.id}"]`)) {
-            if (coll.parentZone === 'nfts') renderUserCollection(coll);
-            else if (coll.parentZone === 'deploy') renderUserDeployGroup(grp);
-        }
-    });
-    
-    userItemsData.dappCategories.forEach(cat => {
-        if (!document.querySelector(`[data-zone="${cat.id}"]`)) {
-            renderUserDappCategory(cat);
-        }
-    });
-    
-    // 🆕 Рендерим только элементы которых еще нет
+
+    // рендерим коллекции/категории, которых ещё нет
+    userItemsData.collections.forEach(renderUserCollection);
+    userItemsData.dappCategories.forEach(renderUserDappCategory);
+
+    // рендерим отдельные ссылки
     Object.keys(userItemsData.items).forEach(zone => {
         const items = userItemsData.items[zone];
-        if (!items || !items.length) return;
+        if (!items) return;
         items.forEach(item => {
+            // проверка, что элемент ещё не в DOM
             if (!document.querySelector(`[data-user-item-id="${item.id}"]`)) {
                 renderUserItemInZone(zone, item);
             }
         });
     });
-    
+
     injectAddButtons();
-    
-    bindTrackingHandlersToAll(); 
-    attachFavoriteControls(); 
-    initializeTooltips(); 
-    initLightbox(); 
+    bindTrackingHandlersToAll();
+    attachFavoriteControls();
+    initializeTooltips();
     updateUI();
 }
 
