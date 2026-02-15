@@ -1979,22 +1979,40 @@ function detectNewLinks() {
     updateNewIndicators();
 }
 
-function updateNewIndicators() {
-    document.querySelectorAll('[data-id]').forEach(el => {
-        const id = el.dataset.id;
-        if (id && newLinksSet.has(id)) {
-            el.setAttribute('data-new', 'true'); el.classList.add('has-new-flag');
-            if (!el.querySelector('.new-flag')) {
-                const flag = document.createElement('span');
-                flag.className = 'new-flag'; flag.innerHTML = '<span class="new-flag-text">New!</span>';
-                el.appendChild(flag);
-            }
-        } else {
-            el.removeAttribute('data-new'); el.classList.remove('has-new-flag');
-            const f = el.querySelector('.new-flag'); if (f) f.remove();
-        }
-    });
-    updateSectionBadges();
+// Добавляем функцию для синхронизации с сервером
+async function syncNewLinksSet() {
+  const response = await fetch('/api/new-links', {
+    method: 'POST',
+    body: JSON.stringify(Array.from(newLinksSet)),
+    headers: { 'Content-Type': 'application/json' }
+  });
+  return response.json();
+}
+
+// Модифицированная версия updateNewIndicators
+async function updateNewIndicators() {
+  // Сначала синхронизируемся с сервером
+  await syncNewLinksSet();
+
+  document.querySelectorAll('[data-id]').forEach(el => {
+    const id = el.dataset.id;
+    if (id && newLinksSet.has(id)) {
+      el.setAttribute('data-new', 'true');
+      el.classList.add('has-new-flag');
+      if (!el.querySelector('.new-flag')) {
+        const flag = document.createElement('span');
+        flag.className = 'new-flag';
+        flag.innerHTML = '<span class="new-flag-text">New!</span>';
+        el.appendChild(flag);
+      }
+    } else {
+      el.removeAttribute('data-new');
+      el.classList.remove('has-new-flag');
+      const f = el.querySelector('.new-flag');
+      if (f) f.remove();
+    }
+  });
+  updateSectionBadges();
 }
 
 function clearNewLink(id) { newLinksSet.delete(id); localStorage.setItem(NEW_LINKS_KEY, JSON.stringify([...newLinksSet])); updateNewIndicators(); }
@@ -2779,8 +2797,25 @@ function initTwitterMonitor() {
     
     // 🔥 Автообновление каждые 5 минут
     setInterval(loadTwitterResults, 5 * 60 * 1000);
+}// 1. При добавлении/редактировании отправляем данные на сервер
+async function addItem(item) {
+  const response = await fetch('/api/items', {
+    method: 'POST',
+    body: JSON.stringify(item),
+    headers: { 'Content-Type': 'application/json' }
+  });
+  return response.json();
 }
 
+// 2. Подписываемся на обновления через WebSocket
+const socket = new WebSocket('wss://your-server.com/updates');
+socket.onmessage = (event) => {
+  const data = JSON.parse(event.data);
+  if (data.type === 'NEW_ITEM') {
+    // Обновляем UI для всех пользователей
+    updateUI(data.item);
+  }
+};
 </script>
 <!-- ====== LOGIN MODAL ====== -->
 <div id="loginModal" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.8); backdrop-filter:blur(8px); z-index:1000; align-items:center; justify-content:center; padding:20px;">
