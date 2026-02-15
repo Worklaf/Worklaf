@@ -1730,9 +1730,6 @@ onAuthStateChanged(auth, async (user) => {
     await loadSharedData();
     await loadAllData();
     renderAllUserItems();
-    await loadAllData();
-    await detectNewLinks(); // Перезагружаем состояние новых ссылок
-    refreshAllVisuals();
 });
 
 // ===== HELPERS =====
@@ -1908,18 +1905,11 @@ function bindTrackingHandler(el) {
 function bindTrackingHandlersToAll() { document.querySelectorAll('.track-daily, .track-once').forEach(bindTrackingHandler); }
 
 function handleClick(e) {
-    const btn = e.currentTarget;
-    const id = btn.getAttribute('data-id');
+    const btn = e.currentTarget; const id = btn.getAttribute('data-id');
     if (!id) return;
-
-    // Отмечаем ссылку как не новую при клике
-    clearNewLink(id);
-
-    // Остальная логика остается без изменений
+    if (newLinksSet.has(id)) clearNewLink(id);
     const now = new Date().toISOString();
-
     if (!arcData[id]) arcData[id] = {};
-
     if (btn.classList.contains('track-daily')) {
         if (arcData[id].lastClick && isToday(arcData[id].lastClick)) return;
         arcData[id].totalClicks = (arcData[id].totalClicks || 0) + 1;
@@ -1931,21 +1921,15 @@ function handleClick(e) {
             arcData[id].lastClick = now;
         }
     }
+    saveStats(); updateUI();
+}
 
-    saveStats();
-    updateUI();
-}window.resetAll = async function() {
+window.resetAll = async function() {
     if (confirm('Сбросить всю статистику?')) {
-        arcData = {};
-        const userKey = currentUser ? `newLinks_${currentUser.uid}` : 'newLinks_default';
-        localStorage.removeItem(userKey);
-        await saveStats();
+        arcData = {}; await saveStats();
         document.querySelectorAll('.click-info').forEach(el => el.remove());
-        document.querySelectorAll('.link-inline').forEach(link => {
-            link.classList.remove('daily-active');
-            link.classList.remove('visited-once');
-        });
-        updateUI();
+        document.querySelectorAll('.link-inline').forEach(l => { l.classList.remove('daily-active', 'visited-once'); });
+        updateUI(); showToast('Прогресс сброшен', 'info');
     }
 };
 
@@ -1969,29 +1953,28 @@ function applySectionState(sec, collapsed) {
 }
 
 // ===== NEW LINKS =====
-async function detectNewLinks() {
+function detectNewLinks() {
     const elements = document.querySelectorAll('[data-id]');
     const currentIds = new Set();
     elements.forEach(el => { if (el.dataset.id) currentIds.add(el.dataset.id); });
-
-    // Загружаем состояние для текущего пользователя
-    const userKey = currentUser ? `newLinks_${currentUser.uid}` : 'newLinks_default';
-    const storedNew = JSON.parse(localStorage.getItem(userKey) || '{}');
-
-    // Инициализируем карту для текущего пользователя
-    newLinksMap = storedNew;
-
-    // Для новых пользователей или при изменении версии страницы
+    const storedKnown = JSON.parse(localStorage.getItem(KNOWN_LINKS_KEY) || '[]');
+    const storedNew = JSON.parse(localStorage.getItem(NEW_LINKS_KEY) || '[]');
+    knownLinksSet = new Set(Array.isArray(storedKnown) ? storedKnown : []);
+    newLinksSet = new Set(Array.isArray(storedNew) ? storedNew : []);
     const storedVer = localStorage.getItem(PAGE_VERSION_KEY);
-    if (!storedVer || storedVer !== PAGE_VERSION) {
-        // Все ссылки становятся новыми при первом запуске или обновлении
-        currentIds.forEach(id => {
-            if (!newLinksMap[id]) newLinksMap[id] = true;
-        });
-        localStorage.setItem(userKey, JSON.stringify(newLinksMap));
-        localStorage.setItem(PAGE_VERSION_KEY, PAGE_VERSION);
+    const isFirstRun = !storedVer && knownLinksSet.size === 0;
+    if (isFirstRun) { knownLinksSet = new Set(currentIds); newLinksSet = new Set(); }
+    else {
+        if (storedVer !== PAGE_VERSION) {
+            knownLinksSet = new Set([...knownLinksSet].filter(id => currentIds.has(id)));
+            newLinksSet = new Set([...newLinksSet].filter(id => currentIds.has(id)));
+        }
+        currentIds.forEach(id => { if (!knownLinksSet.has(id)) { knownLinksSet.add(id); newLinksSet.add(id); } });
     }
-
+    newLinksSet = new Set([...newLinksSet].filter(id => currentIds.has(id)));
+    localStorage.setItem(KNOWN_LINKS_KEY, JSON.stringify([...knownLinksSet]));
+    localStorage.setItem(NEW_LINKS_KEY, JSON.stringify([...newLinksSet]));
+    localStorage.setItem(PAGE_VERSION_KEY, PAGE_VERSION);
     updateNewIndicators();
 }
 
@@ -2013,14 +1996,7 @@ function updateNewIndicators() {
     updateSectionBadges();
 }
 
-function clearNewLink(id) {
-    if (!id) return;
-
-    const userKey = currentUser ? `newLinks_${currentUser.uid}` : 'newLinks_default';
-    newLinksMap[id] = false;
-    localStorage.setItem(userKey, JSON.stringify(newLinksMap));
-    updateNewIndicators();
-}
+function clearNewLink(id) { newLinksSet.delete(id); localStorage.setItem(NEW_LINKS_KEY, JSON.stringify([...newLinksSet])); updateNewIndicators(); }
 
 function updateSectionBadges() {
     document.querySelectorAll('.collapsible-section').forEach(sec => {
@@ -2253,26 +2229,14 @@ function createUserLink(item, zone) {
 function renderUserItemInZone(zone, item) {
     const container = document.querySelector(`[data-zone="${zone}"]`);
     if (!container) return;
-
     let target;
-    if (container.tagName === 'TR') {
-        target = container.querySelector('.dapp-links');
-    } else {
-        target = container.querySelector('.link-collection') || container.querySelector('.link-row');
-    }
+    if (container.tagName === 'TR') target = container.querySelector('.dapp-links');
+    else target = container.querySelector('.link-collection') || container.querySelector('.link-row');
     if (!target) return;
-
     const wrapper = createUserLink(item, zone);
-    // Insert before the + button if present
     const addBtn = target.querySelector('.add-item-btn');
     if (addBtn) target.insertBefore(wrapper, addBtn);
     else target.appendChild(wrapper);
-
-    // Добавляем в newLinksMap для текущего пользователя
-    const userKey = currentUser ? `newLinks_${currentUser.uid}` : 'newLinks_default';
-    newLinksMap[item.id] = true;
-    localStorage.setItem(userKey, JSON.stringify(newLinksMap));
-    updateNewIndicators();
 }
 
 function renderUserCollection(coll) {
