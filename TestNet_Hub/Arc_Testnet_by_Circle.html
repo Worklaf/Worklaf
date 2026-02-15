@@ -1677,7 +1677,6 @@ window.logout = function() { signOut(auth); };
 // ===== SHARED DATA — админские элементы видны всем =====
 async function loadSharedData() {
     try {
-        // Загрузка общих элементов (коллекции, ссылки, категории)
         const itemsSnap = await getDoc(doc(db, "config", "sharedItems"));
         if (itemsSnap.exists()) {
             const data = itemsSnap.data();
@@ -1689,8 +1688,19 @@ async function loadSharedData() {
                 };
                 localStorage.setItem(USER_ITEMS_KEY, JSON.stringify(userItemsData));
             }
+            // === NEW: загружаем глобальные NEW метки ===
+            if (data.newItemIds && Array.isArray(data.newItemIds)) {
+                const localClicked = JSON.parse(localStorage.getItem('arc_tracker_clicked_new') || '[]');
+                const clickedSet = new Set(localClicked);
+                // Добавляем в newLinksSet те ID, которые пользователь ещё НЕ кликал
+                data.newItemIds.forEach(id => {
+                    if (!clickedSet.has(id)) {
+                        newLinksSet.add(id);
+                    }
+                });
+                localStorage.setItem(NEW_LINKS_KEY, JSON.stringify([...newLinksSet]));
+            }
         }
-        // Загрузка общих правок (editsOverride)
         const editsSnap = await getDoc(doc(db, "config", "sharedEdits"));
         if (editsSnap.exists()) {
             const data = editsSnap.data();
@@ -1701,7 +1711,6 @@ async function loadSharedData() {
         }
     } catch (e) {
         console.error("Load shared data error:", e);
-        // Фоллбэк на localStorage
         loadUserItems();
         loadEditsOverride();
     }
@@ -1997,7 +2006,19 @@ function updateNewIndicators() {
     updateSectionBadges();
 }
 
-function clearNewLink(id) { newLinksSet.delete(id); localStorage.setItem(NEW_LINKS_KEY, JSON.stringify([...newLinksSet])); updateNewIndicators(); }
+function clearNewLink(id) {
+    newLinksSet.delete(id);
+    localStorage.setItem(NEW_LINKS_KEY, JSON.stringify([...newLinksSet]));
+    
+    // === NEW: запоминаем что пользователь кликнул этот элемент ===
+    const clicked = JSON.parse(localStorage.getItem('arc_tracker_clicked_new') || '[]');
+    if (!clicked.includes(id)) {
+        clicked.push(id);
+        localStorage.setItem('arc_tracker_clicked_new', JSON.stringify(clicked));
+    }
+    
+    updateNewIndicators();
+}
 
 function updateSectionBadges() {
     document.querySelectorAll('.collapsible-section').forEach(sec => {
@@ -2067,7 +2088,10 @@ async function saveUserItems() {
     localStorage.setItem(USER_ITEMS_KEY, JSON.stringify(userItemsData));
     if (isAdmin) {
         try {
-            await setDoc(doc(db, "config", "sharedItems"), { userItems: userItemsData });
+            await setDoc(doc(db, "config", "sharedItems"), { 
+                userItems: userItemsData,
+                newItemIds: [...newLinksSet] // <-- синхронизируем NEW метки
+            });
         } catch (e) { console.error("Save shared items error:", e); }
     }
 }
@@ -2161,6 +2185,10 @@ document.getElementById('addModalSave').addEventListener('click', async () => {
         const item = { id, title, url, tooltip, image, trackType: config.trackType, addedAt: Date.now() };
         if (!userItemsData.items[currentAddContext.zone]) userItemsData.items[currentAddContext.zone] = [];
         userItemsData.items[currentAddContext.zone].push(item);
+        newLinksSet.add(id);
+    knownLinksSet.add(id);
+    localStorage.setItem(NEW_LINKS_KEY, JSON.stringify([...newLinksSet]));
+    localStorage.setItem(KNOWN_LINKS_KEY, JSON.stringify([...knownLinksSet]));
         await saveUserItems(); renderUserItemInZone(currentAddContext.zone, item);
         showToast('Добавлено: ' + title, 'success');
     } else if (currentAddContext.sectionZone) {
@@ -2192,7 +2220,7 @@ document.getElementById('addModalSave').addEventListener('click', async () => {
         }
     }
     closeModal();
-    bindTrackingHandlersToAll(); attachFavoriteControls(); initializeTooltips(); initLightbox(); updateUI();
+    bindTrackingHandlersToAll(); attachFavoriteControls(); initializeTooltips(); initLightbox(); updateUI();detectNewLinks();
 });
 
 // ---- RENDER USER ITEMS ----
