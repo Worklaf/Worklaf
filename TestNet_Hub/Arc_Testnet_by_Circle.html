@@ -4,12 +4,8 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Полный список: Тестнет Arc (Circle)</title>
-
+    
     <script src="https://cdnjs.cloudflare.com/ajax/libs/Sortable/1.15.0/Sortable.min.js"></script>
-    <!-- Firebase SDK -->
-    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
 
     <style>
         :root {
@@ -301,7 +297,7 @@
             gap: 8px;
             padding: 4px 0;
         }
-
+        
         .favorites-item.sortable-ghost {
             opacity: 0.4;
             background: rgba(255, 255, 255, 0.05);
@@ -317,12 +313,12 @@
             padding-right: 4px;
             opacity: 0.6;
         }
-
+        
         .drag-handle:hover {
             opacity: 1;
             color: var(--accent);
         }
-
+        
         .favorites-item:active .drag-handle {
             cursor: grabbing;
         }
@@ -936,7 +932,7 @@
             .link-inline .click-info {
                 font-size: 0.65rem;
             }
-
+            
             .back-link {
                 font-size: 0.85rem;
                 padding: 8px 12px;
@@ -1105,7 +1101,7 @@
                             <a href="https://www.draze.io/helena" target="_blank" class="link-inline link-compact track-once" data-id="draze_hel" data-tooltip="Helena — художественная коллекция NFT на Draze, созданная для Arc Testnet.">Helena</a>
                         </div>
                     </div>
-
+                    
                     <div class="resource-item">
                         <div class="resource-header"><span class="resource-title">MintAura</span></div>
                         <div class="link-collection">
@@ -1265,21 +1261,6 @@
 </div>
 
 <script>
-    // Инициализация Firebase
-   const firebaseConfig = {
-  apiKey: "AIzaSyBDIQiu_1QeDYzIcFOP-RXRyYuJG0Ef0WM",
-  authDomain: "testnet-hub.firebaseapp.com",
-  projectId: "testnet-hub",
-  storageBucket: "testnet-hub.firebasestorage.app",
-  messagingSenderId: "497813176653",
-  appId: "1:497813176653:web:7dd876e4a0aed757cd7704",
-  measurementId: "G-SEM7ZR0EGN"
-};
-    firebase.initializeApp(firebaseConfig);
-    const auth = firebase.auth();
-    const db = firebase.firestore();
-    let currentUser = null;
-
     const STORAGE_KEY = 'arc_tracker_v3';
     const BADGE_VISIBILITY_KEY = 'arc_tracker_badges_hidden';
     const SECTION_COLLAPSE_KEY = 'arc_tracker_sections';
@@ -1288,12 +1269,14 @@
     const PAGE_VERSION_KEY = 'arc_tracker_page_version_v2';
     const LEGEND_COLLAPSE_KEY = 'arc_tracker_legend_collapsed';
     const FAVORITES_KEY = 'arc_tracker_favorites_v1';
+    
+    // Новая переменная для порядка сортировки
     const FAVORITES_ORDER_KEY = 'arc_tracker_favorites_order_v1';
     const PAGE_VERSION = '2026-02-01-v3';
 
     let newLinksSet = new Set();
     let knownLinksSet = new Set();
-    let favoritesSortable = null;
+    let favoritesSortable = null; // Для инстанса Sortable
 
     function loadFavorites() {
         try {
@@ -1307,6 +1290,7 @@
         }
     }
 
+    // Загрузка порядка сортировки
     function loadFavoritesOrder() {
         try {
             const raw = localStorage.getItem(FAVORITES_ORDER_KEY);
@@ -1509,6 +1493,7 @@
         document.querySelectorAll('.track-daily, .track-once').forEach(bindTrackingHandler);
     }
 
+    // --- Обновленная функция рендера списка избранного с Drag-and-Drop ---
     function renderFavoritesList() {
         const listEl = document.getElementById('favoritesList');
         const emptyEl = document.getElementById('favoritesEmpty');
@@ -1518,7 +1503,10 @@
         listEl.innerHTML = '';
         const allIds = Object.keys(favoritesState);
 
+        // Синхронизация порядка с существующими ID
+        // 1. Убираем из Order ID, которых больше нет в State
         favoritesOrder = favoritesOrder.filter(id => favoritesState[id]);
+        // 2. Добавляем в Order ID, которые есть в State, но нет в Order (в конец)
         allIds.forEach(id => {
             if (!favoritesOrder.includes(id)) {
                 favoritesOrder.push(id);
@@ -1538,12 +1526,14 @@
 
         favoritesOrder.forEach(id => {
             const info = favoritesState[id];
+            // Защита от сбоя, если вдруг ID есть в order, но нет в state
             if (!info) return;
 
             const li = document.createElement('li');
             li.className = 'favorites-item';
-            li.dataset.id = id;
+            li.dataset.id = id; // Важно для SortableJS
 
+            // Ручка перетаскивания
             const handle = document.createElement('span');
             handle.className = 'drag-handle';
             handle.innerHTML = '⋮⋮';
@@ -1581,6 +1571,7 @@
 
             li.appendChild(anchor);
 
+            // Кнопка удаления (крестик)
             const removeBtn = document.createElement('button');
             removeBtn.type = 'button';
             removeBtn.className = 'remove-fav-btn';
@@ -1605,23 +1596,27 @@
         initializeTooltips();
         updateNewIndicators();
         updateUI();
-
+        
+        // Инициализация Drag-and-Drop
         initSortable();
     }
 
+    // --- Инициализация SortableJS ---
     function initSortable() {
         const listEl = document.getElementById('favoritesList');
         if (!listEl || typeof Sortable === 'undefined') return;
 
+        // Если уже инициализирован, не трогаем, или можно destroy() и создать заново
         if (favoritesSortable) {
             favoritesSortable.destroy();
         }
 
         favoritesSortable = new Sortable(listEl, {
             animation: 150,
-            handle: '.drag-handle',
+            handle: '.drag-handle', // Тянуть только за ручку
             ghostClass: 'sortable-ghost',
             onEnd: function (evt) {
+                // Обновляем массив порядка после перетаскивания
                 const newOrder = Array.from(listEl.children).map(li => li.dataset.id);
                 favoritesOrder = newOrder;
                 saveFavorites();
@@ -1676,11 +1671,13 @@
     function toggleFavorite(id) {
         const control = favoriteControls.get(id);
         if (!control) return;
-
+        
         if (favoritesState[id]) {
+            // Удаление
             delete favoritesState[id];
             favoritesOrder = favoritesOrder.filter(item => item !== id);
         } else {
+            // Добавление
             favoritesState[id] = extractLinkInfo(control.link);
             favoritesOrder.push(id);
         }
@@ -1834,43 +1831,6 @@
         }
     }
 
-    // Функция для загрузки данных из Firebase
-    async function loadAllData() {
-        // Проверка авторизации пользователя
-        auth.onAuthStateChanged(user => {
-            if (user) {
-                currentUser = user;
-                const userRef = db.collection('users').doc(user.uid);
-                
-                // Загрузка данных при авторизации
-                userRef.get().then(doc => {
-                    if (doc.exists) {
-                        const data = doc.data();
-                        newLinksSet = new Set(data.newLinks || []);
-                        knownLinksSet = new Set(data.knownLinks || []);
-                        localStorage.setItem(NEW_LINKS_KEY, JSON.stringify([...newLinksSet]));
-                        localStorage.setItem(KNOWN_LINKS_KEY, JSON.stringify([...knownLinksSet]));
-                        updateNewIndicators();
-                    }
-                }).catch(err => console.error('Ошибка загрузки данных:', err));
-
-                // Синхронизация изменений в реальном времени
-                userRef.onSnapshot(doc => {
-                    if (doc.exists) {
-                        const data = doc.data();
-                        newLinksSet = new Set(data.newLinks || []);
-                        knownLinksSet = new Set(data.knownLinks || []);
-                        localStorage.setItem(NEW_LINKS_KEY, JSON.stringify([...newLinksSet]));
-                        localStorage.setItem(KNOWN_LINKS_KEY, JSON.stringify([...knownLinksSet]));
-                        updateNewIndicators();
-                    }
-                });
-            } else {
-                currentUser = null;
-            }
-        });
-    }
-
     function detectNewLinks() {
         const elements = document.querySelectorAll('[data-id]');
         const currentIds = new Set();
@@ -1892,35 +1852,32 @@
         if (isFirstRun) {
             knownLinksSet = new Set(currentIds);
             newLinksSet = new Set();
-        } else {
-            if (storedVersion !== PAGE_VERSION) {
-                knownLinksSet = new Set([...knownLinksSet].filter(id => currentIds.has(id)));
-                newLinksSet = new Set([...newLinksSet].filter(id => currentIds.has(id)));
-            }
-            const newlyDetected = [];
-            currentIds.forEach(id => {
-                if (!knownLinksSet.has(id)) {
-                    knownLinksSet.add(id);
-                    newlyDetected.push(id);
-                }
-            });
-            newlyDetected.forEach(id => newLinksSet.add(id));
+            localStorage.setItem(KNOWN_LINKS_KEY, JSON.stringify([...knownLinksSet]));
+            localStorage.setItem(NEW_LINKS_KEY, JSON.stringify([]));
+            localStorage.setItem(PAGE_VERSION_KEY, PAGE_VERSION);
+            updateNewIndicators();
+            return;
         }
 
+        if (storedVersion !== PAGE_VERSION) {
+            knownLinksSet = new Set([...knownLinksSet].filter(id => currentIds.has(id)));
+            newLinksSet = new Set([...newLinksSet].filter(id => currentIds.has(id)));
+        }
+
+        const newlyDetected = [];
+        currentIds.forEach(id => {
+            if (!knownLinksSet.has(id)) {
+                knownLinksSet.add(id);
+                newlyDetected.push(id);
+            }
+        });
+
+        newlyDetected.forEach(id => newLinksSet.add(id));
         newLinksSet = new Set([...newLinksSet].filter(id => currentIds.has(id)));
 
         localStorage.setItem(KNOWN_LINKS_KEY, JSON.stringify([...knownLinksSet]));
         localStorage.setItem(NEW_LINKS_KEY, JSON.stringify([...newLinksSet]));
         localStorage.setItem(PAGE_VERSION_KEY, PAGE_VERSION);
-
-        // Синхронизация с Firebase
-        if (currentUser) {
-            const userRef = db.collection('users').doc(currentUser.uid);
-            userRef.set({
-                knownLinks: [...knownLinksSet],
-                newLinks: [...newLinksSet]
-            }, { merge: true }).catch(err => console.error('Ошибка сохранения:', err));
-        }
 
         updateNewIndicators();
     }
@@ -1977,13 +1934,6 @@
     function clearNewLink(id) {
         newLinksSet.delete(id);
         localStorage.setItem(NEW_LINKS_KEY, JSON.stringify([...newLinksSet]));
-        // Синхронизация с Firebase
-        if (currentUser) {
-            const userRef = db.collection('users').doc(currentUser.uid);
-            userRef.set({
-                newLinks: [...newLinksSet]
-            }, { merge: true }).catch(err => console.error('Ошибка обновления:', err));
-        }
         updateNewIndicators();
     }
 
@@ -2003,7 +1953,7 @@
     function initializeLegendCollapsing() {
         const legendContainer = document.getElementById('statusLegend');
         const legendToggle = document.getElementById('legendToggle');
-
+        
         if (!legendContainer || !legendToggle) return;
 
         let isMobile = window.innerWidth <= 768;
@@ -2046,56 +1996,45 @@
     }
 
     document.addEventListener('DOMContentLoaded', () => {
-        // Проверка авторизации перед инициализацией
-        auth.onAuthStateChanged(user => {
-            if (user) {
-                currentUser = user;
-                attachFavoriteControls();
-                bindTrackingHandlersToAll();
-                loadAllData().catch(err => console.error('Ошибка загрузки:', err));
-            } else {
-                // Если пользователь не авторизован, продолжаем без синхронизации
-                attachFavoriteControls();
-                bindTrackingHandlersToAll();
-            }
+        attachFavoriteControls();
+        bindTrackingHandlersToAll();
 
-            const toggleBadgesBtn = document.getElementById('toggleBadgesBtn');
-            if (toggleBadgesBtn) {
-                toggleBadgesBtn.addEventListener('click', () => {
-                    const hidden = !getBadgeHiddenState();
-                    setBadgeHiddenState(hidden);
-                    updateBadgeVisibility();
+        const toggleBadgesBtn = document.getElementById('toggleBadgesBtn');
+        if (toggleBadgesBtn) {
+            toggleBadgesBtn.addEventListener('click', () => {
+                const hidden = !getBadgeHiddenState();
+                setBadgeHiddenState(hidden);
+                updateBadgeVisibility();
+            });
+        }
+
+        const sectionState = getSectionCollapseState();
+        document.querySelectorAll('.collapsible-section').forEach(section => {
+            const sectionId = section.getAttribute('data-section-id');
+            const collapsed = sectionState[sectionId] === true;
+            applySectionState(section, collapsed);
+
+            const toggle = section.querySelector('.section-toggle');
+            if (toggle) {
+                toggle.addEventListener('click', () => {
+                    const currentlyCollapsed = section.classList.contains('collapsed');
+                    const newCollapsed = !currentlyCollapsed;
+                    applySectionState(section, newCollapsed);
+                    if (newCollapsed) {
+                        sectionState[sectionId] = true;
+                    } else {
+                        delete sectionState[sectionId];
+                    }
+                    saveSectionCollapseState(sectionState);
                 });
             }
-
-            const sectionState = getSectionCollapseState();
-            document.querySelectorAll('.collapsible-section').forEach(section => {
-                const sectionId = section.getAttribute('data-section-id');
-                const collapsed = sectionState[sectionId] === true;
-                applySectionState(section, collapsed);
-
-                const toggle = section.querySelector('.section-toggle');
-                if (toggle) {
-                    toggle.addEventListener('click', () => {
-                        const currentlyCollapsed = section.classList.contains('collapsed');
-                        const newCollapsed = !currentlyCollapsed;
-                        applySectionState(section, newCollapsed);
-                        if (newCollapsed) {
-                            sectionState[sectionId] = true;
-                        } else {
-                            delete sectionState[sectionId];
-                        }
-                        saveSectionCollapseState(sectionState);
-                    });
-                }
-            });
-
-            initializeLegendCollapsing();
-            initializeTooltips();
-            detectNewLinks();
-            updateUI();
-            updateBadgeVisibility();
         });
+
+        initializeLegendCollapsing();
+        initializeTooltips();
+        detectNewLinks();
+        updateUI();
+        updateBadgeVisibility();
     });
 </script>
 
