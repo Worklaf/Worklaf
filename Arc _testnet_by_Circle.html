@@ -1611,17 +1611,16 @@
             favoritesSortable.destroy();
         }
 
-        favoritesSortable = new Sortable(listEl, {
-            animation: 150,
-            handle: '.drag-handle', // Тянуть только за ручку
-            ghostClass: 'sortable-ghost',
-            onEnd: function (evt) {
-                // Обновляем массив порядка после перетаскивания
-                const newOrder = Array.from(listEl.children).map(li => li.dataset.id);
-                favoritesOrder = newOrder;
-                saveFavorites();
-            }
-        });
+        // Инициализация SortableJS
+favoritesSortable = new Sortable(listEl, {
+    animation: 150,
+    handle: '.drag-handle', // Только за ручку
+    ghostClass: 'sortable-ghost',
+    onEnd: function (evt) {
+        favoritesOrder = Array.from(listEl.children).map(li => li.dataset.id);
+        saveFavorites();
+    }
+});
     }
 
     function attachFavoriteControls() {
@@ -1898,20 +1897,21 @@
     });
     updateSectionBadges();
 }
-    async function loadAllData() {
-    if (!currentUser) return;
-
+    // Загрузка из облака
+async function loadAllData() {
     const db = getFirestore();
-    const userRef = db.collection('users').doc(currentUser.uid);
-    const doc = await userRef.get();
-
+    const doc = await db.collection('users').doc(currentUser.uid).get();
     if (doc.exists) {
-        const data = doc.data();
-        newLinksSet = new Set(data.newLinks || []);
-        knownLinksSet = new Set(data.knownLinks || []);
-        localStorage.setItem(NEW_LINKS_KEY, JSON.stringify([...newLinksSet]));
-        localStorage.setItem(KNOWN_LINKS_KEY, JSON.stringify([...knownLinksSet]));
+        newLinksSet = new Set(doc.data().newLinks || []);
     }
+}
+
+// Сохранение в облако
+function clearNewLink(id) {
+    newLinksSet.delete(id);
+    db.collection('users').doc(currentUser.uid).set({
+        newLinks: [...newLinksSet]
+    }, { merge: true });
 }
     function applyNewFlag(element) {
         element.setAttribute('data-new', 'true');
@@ -1949,20 +1949,7 @@
         });
     }
 
-    function clearNewLink(id) {
-    newLinksSet.delete(id);
-    localStorage.setItem(NEW_LINKS_KEY, JSON.stringify([...newLinksSet]));
-    // Синхронизация с Firebase
-    if (currentUser) {
-        const db = getFirestore();
-        const userRef = db.collection('users').doc(currentUser.uid);
-        userRef.set({
-            newLinks: [...newLinksSet]
-        }, { merge: true });
-    }
-    updateNewIndicators();
-}
-
+    
     function applyLegendState(collapsed) {
         const legend = document.getElementById('statusLegend');
         const toggle = document.getElementById('legendToggle');
@@ -2079,6 +2066,7 @@
 
 </body>
 </html>
+
 
 
 
