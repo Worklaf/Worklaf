@@ -1243,74 +1243,86 @@ const CLOUD_FAV_TS_FIELD = 'tempoFavoritesTimestamp';
     // ========== ОСТАЛЬНОЙ КОД (БЕЗ ИЗМЕНЕНИЙ) ==========
     
     async function loadAllData() {
-        const localStatsRaw = localStorage.getItem(STORAGE_KEY);
-        const localFavRaw = localStorage.getItem(FAVORITES_KEY);
-        const localOrderRaw = localStorage.getItem(FAVORITES_ORDER_KEY);
-        const localTimestampRaw = localStorage.getItem(FAVORITES_TIMESTAMP_KEY);
+    const localStatsRaw = localStorage.getItem(STORAGE_KEY);
+    const localFavRaw = localStorage.getItem(FAVORITES_KEY);
+    const localOrderRaw = localStorage.getItem(FAVORITES_ORDER_KEY);
+    const localTimestampRaw = localStorage.getItem(FAVORITES_TIMESTAMP_KEY);
 
-        const localStats = JSON.parse(localStatsRaw || '{}');
-        const localFavorites = JSON.parse(localFavRaw || '{}');
-        const localOrder = JSON.parse(localOrderRaw || '[]');
-        const localTimestamp = parseInt(localTimestampRaw || '0', 10);
+    const localStats = JSON.parse(localStatsRaw || '{}');
+    const localFavorites = JSON.parse(localFavRaw || '{}');
+    const localOrder = JSON.parse(localOrderRaw || '[]');
+    const localTimestamp = parseInt(localTimestampRaw || '0', 10);
 
-        arcData = localStats;
-        favoritesState = localFavorites;
-        favoritesOrder = localOrder;
+    arcData = localStats;
+    favoritesState = localFavorites;
+    favoritesOrder = localOrder;
 
-        if (currentUser) {
-            try {
-                const docRef = doc(db, "users", currentUser.uid);
-                const docSnap = await getDoc(docRef);
+    if (currentUser) {
+        try {
+            const docRef = doc(db, "users", currentUser.uid);
+            const docSnap = await getDoc(docRef);
 
-                if (docSnap.exists()) {
-                    const cloudData = docSnap.data();
-const cloudFavorites = cloudData[CLOUD_FAV_STATE_FIELD] || {};
-const cloudOrder = cloudData[CLOUD_FAV_ORDER_FIELD] || [];
-const cloudTimestamp = parseInt(cloudData[CLOUD_FAV_TS_FIELD] || '0', 10);
-                    
-                    const localHasFavorites = Object.keys(localFavorites).length > 0 || localOrder.length > 0;
-                    const cloudHasFavorites = Object.keys(cloudFavorites).length > 0 || cloudOrder.length > 0;
-                    
-                    if (cloudHasFavorites) {
-                        if (cloudTimestamp > localTimestamp) {
-                            favoritesState = cloudFavorites;
-                            favoritesOrder = cloudOrder;
-                            localStorage.setItem(FAVORITES_KEY, JSON.stringify(favoritesState));
-                            localStorage.setItem(FAVORITES_ORDER_KEY, JSON.stringify(favoritesOrder));
-                            localStorage.setItem(FAVORITES_TIMESTAMP_KEY, String(cloudTimestamp));
-                        } else {
-                           await saveToCloud({
-    [CLOUD_FAV_STATE_FIELD]: localFavorites,
-    [CLOUD_FAV_ORDER_FIELD]: localOrder,
-    [CLOUD_FAV_TS_FIELD]: localTimestamp
-});
-                        }
-                    } else if (localHasFavorites) {
+            if (docSnap.exists()) {
+                const cloudData = docSnap.data();
+
+                const cloudFavorites = cloudData[CLOUD_FAV_STATE_FIELD] || {};
+                const cloudOrder = cloudData[CLOUD_FAV_ORDER_FIELD] || [];
+                const cloudTimestamp = parseInt(cloudData[CLOUD_FAV_TS_FIELD] || '0', 10);
+
+                const localHasFavorites =
+                    Object.keys(localFavorites).length > 0 || localOrder.length > 0;
+                const cloudHasFavorites =
+                    Object.keys(cloudFavorites).length > 0 || cloudOrder.length > 0;
+
+                // Синхронизация избранного
+                if (cloudHasFavorites) {
+                    if (cloudTimestamp > localTimestamp) {
+                        // Берём более свежие данные из облака
+                        favoritesState = cloudFavorites;
+                        favoritesOrder = cloudOrder;
+                        localStorage.setItem(FAVORITES_KEY, JSON.stringify(favoritesState));
+                        localStorage.setItem(FAVORITES_ORDER_KEY, JSON.stringify(favoritesOrder));
+                        localStorage.setItem(FAVORITES_TIMESTAMP_KEY, String(cloudTimestamp));
+                    } else {
+                        // Локальные свежее → отправляем в облако
                         await saveToCloud({
-    [CLOUD_FAV_STATE_FIELD]: localFavorites,
-    [CLOUD_FAV_ORDER_FIELD]: localOrder,
-    [CLOUD_FAV_TS_FIELD]: localTimestamp
-});
+                            [CLOUD_FAV_STATE_FIELD]: localFavorites,
+                            [CLOUD_FAV_ORDER_FIELD]: localOrder,
+                            [CLOUD_FAV_TS_FIELD]: localTimestamp
+                        });
                     }
-                    
-                    if (cloudData[CLOUD_STATS_FIELD] && Object.keys(cloudData[CLOUD_STATS_FIELD]).length > 0) {
-    arcData = cloudData[CLOUD_STATS_FIELD];
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(arcData));
-}}
-                } else if (Object.keys(localFavorites).length > 0 || localOrder.length > 0) {
+                } else if (localHasFavorites) {
+                    // В облаке пусто, но локально что‑то есть → заливаем в облако
                     await saveToCloud({
-    [CLOUD_FAV_STATE_FIELD]: localFavorites,
-    [CLOUD_FAV_ORDER_FIELD]: localOrder,
-    [CLOUD_FAV_TS_FIELD]: localTimestamp
-});
+                        [CLOUD_FAV_STATE_FIELD]: localFavorites,
+                        [CLOUD_FAV_ORDER_FIELD]: localOrder,
+                        [CLOUD_FAV_TS_FIELD]: localTimestamp
+                    });
                 }
-            } catch (e) {
-                console.error("Ошибка загрузки из облака:", e);
-            }
-        }
 
-        refreshAllVisuals();
+                // Синхронизация статистики кликов
+                if (
+                    cloudData[CLOUD_STATS_FIELD] &&
+                    Object.keys(cloudData[CLOUD_STATS_FIELD]).length > 0
+                ) {
+                    arcData = cloudData[CLOUD_STATS_FIELD];
+                    localStorage.setItem(STORAGE_KEY, JSON.stringify(arcData));
+                }
+            } else if (Object.keys(localFavorites).length > 0 || localOrder.length > 0) {
+                // Документа ещё нет, но локально есть данные → создаём запись в облаке
+                await saveToCloud({
+                    [CLOUD_FAV_STATE_FIELD]: localFavorites,
+                    [CLOUD_FAV_ORDER_FIELD]: localOrder,
+                    [CLOUD_FAV_TS_FIELD]: localTimestamp
+                });
+            }
+        } catch (e) {
+            console.error("Ошибка загрузки из облака:", e);
+        }
     }
+
+    refreshAllVisuals();
+}
     
     async function saveToCloud(dataToSave) {
         if (!currentUser) return;
