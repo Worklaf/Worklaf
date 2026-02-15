@@ -1904,8 +1904,8 @@
     const doc = await userRef.get();
     if (doc.exists) {
         const data = doc.data();
-        knownLinksSet = new Set(data.knownLinks || []);
         newLinksSet = new Set(data.newLinks || []);
+        localStorage.setItem(NEW_LINKS_KEY, JSON.stringify([...newLinksSet]));
     }
     // ...
 }
@@ -1946,10 +1946,18 @@
     }
 
     function clearNewLink(id) {
-        newLinksSet.delete(id);
-        localStorage.setItem(NEW_LINKS_KEY, JSON.stringify([...newLinksSet]));
-        updateNewIndicators();
+    newLinksSet.delete(id);
+    localStorage.setItem(NEW_LINKS_KEY, JSON.stringify([...newLinksSet]));
+    // Синхронизация с Firebase
+    if (currentUser) {
+        const db = getFirestore();
+        const userRef = db.collection('users').doc(currentUser.uid);
+        userRef.set({
+            newLinks: [...newLinksSet]
+        }, { merge: true });
     }
+    updateNewIndicators();
+}
 
     function applyLegendState(collapsed) {
         const legend = document.getElementById('statusLegend');
@@ -2054,4 +2062,5 @@
 
 </body>
 </html>
+
 
