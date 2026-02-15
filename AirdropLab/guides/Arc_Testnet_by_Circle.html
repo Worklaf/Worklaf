@@ -2321,10 +2321,18 @@ function createUserLink(item, zone) {
 function renderUserItemInZone(zone, item) {
     const container = document.querySelector(`[data-zone="${zone}"]`);
     if (!container) return;
+    
+    // 🆕 ПРОВЕРКА НА ДУБЛИКАТ — если такой ID уже есть в DOM, не добавляем
+    if (container.querySelector(`[data-id="${item.id}"]`)) {
+        console.log(`[WARN] Элемент ${item.id} уже существует в ${zone}, пропускаем`);
+        return;
+    }
+    
     let target;
     if (container.tagName === 'TR') target = container.querySelector('.dapp-links');
     else target = container.querySelector('.link-collection') || container.querySelector('.link-row');
     if (!target) return;
+    
     const wrapper = createUserLink(item, zone);
     const addBtn = target.querySelector('.add-item-btn');
     if (addBtn) target.insertBefore(wrapper, addBtn);
@@ -2450,77 +2458,123 @@ function renderUserDeployGroup(grp) {
 
 function injectAddButtons() {
     document.querySelectorAll('[data-zone]').forEach(container => {
-        const zone = container.dataset.zone; const config = ZONE_CONFIG[zone];
+        const zone = container.dataset.zone;
+        const config = ZONE_CONFIG[zone];
         if (!config) return;
+
+        // Проверяем, есть ли уже кнопка
         if (container.querySelector('.add-item-btn')) return;
+
         const btn = document.createElement('button');
-        btn.type = 'button'; btn.className = 'add-item-btn admin-only';
+        btn.type = 'button';
+        btn.className = 'add-item-btn admin-only';
         btn.title = `Добавить в ${config.label}`;
         btn.innerHTML = '<span class="btn-plus">+</span>';
+
         btn.addEventListener('click', (e) => {
             e.stopPropagation();
             currentAddContext = { zone, config };
             openModal(`Добавить: ${config.label}`, ['fieldTitle','fieldUrl','fieldImage','fieldTooltip']);
         });
+
         if (container.tagName === 'TR') {
             const linksCell = container.querySelector('.dapp-links');
             if (linksCell) linksCell.appendChild(btn);
         } else {
             const header = container.querySelector('.resource-header');
             if (header) header.appendChild(btn);
-            else { const lc = container.querySelector('.link-collection,.link-row'); if (lc) lc.appendChild(btn); }
+            else {
+                const lc = container.querySelector('.link-collection, .link-row');
+                if (lc) lc.appendChild(btn);
+            }
         }
     });
+
     document.querySelectorAll('[data-section-zone]').forEach(sectionContent => {
-        const sectionZone = sectionContent.dataset.sectionZone;
-        const sConfig = SECTION_ZONE_CONFIG[sectionZone];
-        if (!sConfig) return;
-        const section = sectionContent.closest('.collapsible-section');
-        if (!section) return;
-        const sectionHeader = section.querySelector('.section-header');
-        if (!sectionHeader || sectionHeader.querySelector('.section-add-btn')) return;
-        const btn = document.createElement('button');
-        btn.type = 'button'; btn.className = 'section-add-btn admin-only';
-        btn.title = `Добавить ${sConfig.label}`;
-        btn.innerHTML = '<span class="btn-plus">+</span>';
-        btn.addEventListener('click', (e) => {
-            e.stopPropagation();
-            currentAddContext = { sectionZone, config: sConfig };
-            if (sConfig.type === 'nft-collection') openModal(`Добавить ${sConfig.label}`, ['fieldTitle','fieldWebsite','fieldTwitter']);
-            else if (sConfig.type === 'dapp-category') openModal(`Добавить ${sConfig.label}`, ['fieldTitle','fieldDescription']);
-            else if (sConfig.type === 'deploy-group') openModal(`Добавить ${sConfig.label}`, ['fieldTitle']);
-        });
-        const toggle = sectionHeader.querySelector('.section-toggle');
-        if (toggle) sectionHeader.insertBefore(btn, toggle);
-        else sectionHeader.appendChild(btn);
+        const zone = sectionContent.dataset.sectionZone;
+        const config = ZONE_CONFIG[zone];
+        if (!config) return;
+
+        const sectionHeader = sectionContent.querySelector('.section-header');
+
+        // Проверяем, есть ли уже кнопка
+        if (sectionHeader && !sectionHeader.querySelector('.section-add-btn')) {
+            const btn = document.createElement('button');
+            btn.type = 'button';
+            btn.className = 'section-add-btn admin-only';
+            btn.title = `Добавить в ${config.label}`;
+            btn.innerHTML = '<span class="btn-plus">+</span>';
+
+            btn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                currentAddContext = { zone, config };
+                openModal(`Добавить: ${config.label}`, ['fieldTitle','fieldUrl','fieldImage','fieldTooltip']);
+            });
+
+            sectionHeader.appendChild(btn);
+        }
     });
 }
 
 
 
+
 function renderAllUserItems() {
+    // 🆕 Очищаем контейнеры ОТ ПРЕДЫДУЩИХ пользовательских элементов перед перерисовкой
+    // Удаляем только динамически добавленные элементы (не статические из HTML)
+    document.querySelectorAll('.user-item-wrapper').forEach(el => el.remove());
+    document.querySelectorAll('.user-collection-card').forEach(el => el.remove());
+    
+    // Затем перезагружаем данные и рендерим
     loadUserItems();
+    
     userItemsData.collections.forEach(coll => {
         if (!ZONE_CONFIG[coll.id]) {
             const isNft = coll.parentZone === 'nfts';
-            ZONE_CONFIG[coll.id] = { type: isNft ? 'nft-item' : 'link-item', label: coll.title, trackType: isNft ? 'track-once' : 'track-once track-once-info' };
+            ZONE_CONFIG[coll.id] = { 
+                type: isNft ? 'nft-item' : 'link-item', 
+                label: coll.title, 
+                trackType: isNft ? 'track-once' : 'track-once track-once-info' 
+            };
         }
     });
+    
     userItemsData.dappCategories.forEach(cat => {
-        if (!ZONE_CONFIG[cat.id]) ZONE_CONFIG[cat.id] = { type:'link-item', label: cat.title, trackType:'track-daily' };
+        if (!ZONE_CONFIG[cat.id]) ZONE_CONFIG[cat.id] = { 
+            type:'link-item', 
+            label: cat.title, 
+            trackType:'track-daily' 
+        };
     });
+    
+    // 🆕 Проверяем существование перед рендером коллекций
     userItemsData.collections.forEach(coll => {
-        if (coll.parentZone === 'nfts') renderUserCollection(coll);
-        else if (coll.parentZone === 'deploy') renderUserDeployGroup(coll);
+        if (!document.querySelector(`[data-zone="${coll.id}"]`)) {
+            if (coll.parentZone === 'nfts') renderUserCollection(coll);
+            else if (coll.parentZone === 'deploy') renderUserDeployGroup(coll);
+        }
     });
-    userItemsData.dappCategories.forEach(cat => renderUserDappCategory(cat));
+    
+    userItemsData.dappCategories.forEach(cat => {
+        if (!document.querySelector(`[data-zone="${cat.id}"]`)) {
+            renderUserDappCategory(cat);
+        }
+    });
+    
     Object.keys(userItemsData.items).forEach(zone => {
         const items = userItemsData.items[zone];
         if (!items || !items.length) return;
         items.forEach(item => renderUserItemInZone(zone, item));
     });
+    
+    // 🆕 Проверяем существование кнопок перед добавлением
     injectAddButtons();
-    bindTrackingHandlersToAll(); attachFavoriteControls(); initializeTooltips(); initLightbox(); updateUI();
+    
+    bindTrackingHandlersToAll(); 
+    attachFavoriteControls(); 
+    initializeTooltips(); 
+    initLightbox(); 
+    updateUI();
 }
 
 // ===== EDIT MODE =====
