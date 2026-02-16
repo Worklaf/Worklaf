@@ -1687,22 +1687,6 @@ async function loadSharedData() {
                     dappCategories: data.userItems.dappCategories || []
                 };
                 localStorage.setItem(USER_ITEMS_KEY, JSON.stringify(userItemsData));
-                
-                // 🔥 ПРОВЕРКА НА ДУБЛИКАТЫ
-                const collectionIds = new Set(
-                    (userItemsData.collections || []).map(c => c.id)
-                );
-                const categoryIds = new Set(
-                    (userItemsData.dappCategories || []).map(c => c.id)
-                );
-                
-                const hasDuplicates = Object.keys(userItemsData.items || {})
-                    .some(zone => collectionIds.has(zone) || categoryIds.has(zone));
-                
-                if (hasDuplicates) {
-                    console.warn("⚠️ ОБНАРУЖЕНЫ ДУБЛИКАТЫ!");
-                    await cleanupDuplicatesAuto();
-                }
             }
             if (data.newItemIds && Array.isArray(data.newItemIds)) {
                 const localClicked = JSON.parse(localStorage.getItem('arc_tracker_clicked_new') || '[]');
@@ -1724,37 +1708,11 @@ async function loadSharedData() {
             }
         }
     } catch (e) {
-        console.error("Load shared data error:", e);
+        console.error("Ошибка загрузки общих данных:", e);
         loadUserItems();
         loadEditsOverride();
     }
 }
-onAuthStateChanged(auth, async (user) => {
-    currentUser = user;
-    const loggedOut = document.getElementById('arcLoggedOutView');
-    const loggedIn = document.getElementById('arcLoggedInView');
-    const nameEl = document.getElementById('arcUserName');
-    
-    if (user) {
-        loggedOut.style.display = 'none';
-        loggedIn.style.display = '';
-        nameEl.textContent = user.displayName || user.email?.split('@')[0] || 'User';
-        checkAdmin(user);
-        
-        // Запуск мониторинга для админа
-        if (user.uid === ADMIN_UID) {
-            setTimeout(initTwitterMonitor, 1000);
-        }
-    } else {
-        loggedOut.style.display = '';
-        loggedIn.style.display = 'none';
-        checkAdmin(null);
-    }
-    
-    await loadSharedData();
-    await loadAllData();
-    renderAllUserItems();
-});
 
 // ===== HELPERS =====
 function getBaseClasses(link) {
@@ -2099,26 +2057,9 @@ function loadUserItems() {
 }
 
 async function saveUserItems() {
-    // 🔥 ОЧИСТКА ДУБЛИКАТОВ перед сохранением
-    const collectionIds = new Set(
-        (userItemsData.collections || []).map(c => c.id)
-    );
-    const categoryIds = new Set(
-        (userItemsData.dappCategories || []).map(c => c.id)
-    );
-    
-    // Удаляем из items ключи-дубликаты
-    const itemsToSave = {};
-    Object.keys(userItemsData.items || {}).forEach(zone => {
-        if (!collectionIds.has(zone) && !categoryIds.has(zone)) {
-            itemsToSave[zone] = userItemsData.items[zone];
-        } else {
-            console.warn(`[SKIP] Zone "${zone}" - это ID коллекции/категории`);
-        }
-    });
-
+    // Сохраняем все данные без удаления зон коллекций/категорий
     const cleanedData = {
-        items: itemsToSave,
+        items: userItemsData.items || {},
         collections: userItemsData.collections || [],
         dappCategories: userItemsData.dappCategories || []
     };
@@ -2131,9 +2072,9 @@ async function saveUserItems() {
                 userItems: cleanedData,
                 newItemIds: [...newLinksSet]
             });
-            console.log('✅ Сохранено без дублей');
+            console.log('✅ Данные сохранены');
         } catch (e) { 
-            console.error("Save shared items error:", e); 
+            console.error("Ошибка сохранения в Firestore:", e); 
         }
     }
 }
@@ -2850,192 +2791,7 @@ function initTwitterMonitor() {
     // 🔥 Автообновление каждые 5 минут
     setInterval(loadTwitterResults, 5 * 60 * 1000);
 }
-// 🔥 Автоматическая очистка при загрузке
-// 🔥 Автоматическая очистка при загрузке
-async function cleanupDuplicatesAuto() {
-    if (!isAdmin) return;
-    
-    try {
-        console.log("🧹 Автоматическая очистка дубликатов...");
-        
-        const collectionIds = new Set(
-            (userItemsData.collections || []).map(c => c.id)
-        );
-        const categoryIds = new Set(
-            (userItemsData.dappCategories || []).map(c => c.id)
-        );
 
-        let removed = 0;
-        
-        // === ПЕРЕМЕЩАЕМ ITEMS В КОЛЛЕКЦИИ/КАТЕГОРИИ ===
-        Object.keys(userItemsData.items).forEach(zone => {
-            if (collectionIds.has(zone)) {
-                // Это пользовательская коллекция
-                const collection = userItemsData.collections.find(c => c.id === zone);
-                if (collection && userItemsData.items[zone]?.length > 0) {
-                    console.log(`📦 Перемещаю ${userItemsData.items[zone].length} items в коллекцию "${collection.title}"`);
-                    collection.items = [...(collection.items || []), ...userItemsData.items[zone]];
-                }
-                delete userItemsData.items[zone];
-                removed++;
-            } else if (categoryIds.has(zone)) {
-                // Это пользовательская категория
-                const category = userItemsData.dappCategories.find(c => c.id === zone);
-                if (category && userItemsData.items[zone]?.length > 0) {
-                    console.log(`📦 Перемещаю ${userItemsData.items[zone].length} items в категорию "${category.title}"`);
-                    category.items = [...(category.items || []), ...userItemsData.items[zone]];
-                }
-                delete userItemsData.items[zone];
-                removed++;
-            }
-        });
-
-        if (removed > 0) {
-            await saveUserItems();
-            console.log(`✅ Очищено! Перемещено зон: ${removed}`);
-            showToast(`✅ Данные организованы (${removed} зон), ничего не потеряно`, 'success');
-        }
-    } catch (err) {
-        console.error("❌ Ошибка очистки:", err);
-    }
-}
-
-// 🔥 Ручная очистка (вызывается из консоли)
-window.cleanupDuplicatesManual = async function() {
-    if (!isAdmin) {
-        showToast("❌ Требуется доступ администратора!", "error");
-        return;
-    }
-
-    try {
-        console.log("⚙️ Запуск ручной очистки дубликатов...");
-
-        const collectionIds = new Set(
-            (userItemsData.collections || []).map(c => c.id)
-        );
-        const categoryIds = new Set(
-            (userItemsData.dappCategories || []).map(c => c.id)
-        );
-
-        console.log("📦 Коллекции:", [...collectionIds]);
-        console.log("📦 Категории:", [...categoryIds]);
-        console.log("📦 Текущие zone в items:", Object.keys(userItemsData.items || {}));
-
-        let removed = 0;
-        const removedZones = [];
-        const movedItems = {};
-
-        Object.keys(userItemsData.items).forEach(zone => {
-            if (collectionIds.has(zone)) {
-                const collection = userItemsData.collections.find(c => c.id === zone);
-                const itemsCount = userItemsData.items[zone]?.length || 0;
-                
-                if (collection && itemsCount > 0) {
-                    console.log(`📦 Перемещаю ${itemsCount} items в коллекцию "${collection.title}"`);
-                    collection.items = [...(collection.items || []), ...userItemsData.items[zone]];
-                    movedItems[zone] = itemsCount;
-                }
-                
-                delete userItemsData.items[zone];
-                removed++;
-                removedZones.push(zone);
-            } else if (categoryIds.has(zone)) {
-                const category = userItemsData.dappCategories.find(c => c.id === zone);
-                const itemsCount = userItemsData.items[zone]?.length || 0;
-                
-                if (category && itemsCount > 0) {
-                    console.log(`📦 Перемещаю ${itemsCount} items в категорию "${category.title}"`);
-                    category.items = [...(category.items || []), ...userItemsData.items[zone]];
-                    movedItems[zone] = itemsCount;
-                }
-                
-                delete userItemsData.items[zone];
-                removed++;
-                removedZones.push(zone);
-            }
-        });
-
-        if (removed > 0) {
-            await saveUserItems();
-            console.log(`✅ Успешно очищено!`);
-            console.log(`   Перемещено зон: ${removed}`);
-            console.log(`   Перемещённые items:`);
-            Object.entries(movedItems).forEach(([zone, count]) => {
-                console.log(`     - ${zone}: ${count} items`);
-            });
-            console.log(`   Удалённые zone: ${removedZones.join(', ')}`);
-            console.log(`   Оставленные коллекции: ${[...collectionIds].join(', ')}`);
-            console.log(`   Оставленные категории: ${[...categoryIds].join(', ')}`);
-            showToast(`✅ Данные организованы! Перемещено: ${removed} зон`, 'success');
-            setTimeout(() => location.reload(), 1500);
-        } else {
-            console.log("✅ Дубликатов не найдено!");
-            console.log(`   Коллекции: ${[...collectionIds].join(', ')}`);
-            console.log(`   Категории: ${[...categoryIds].join(', ')}`);
-            showToast('✅ Всё чистo!', 'info');
-        }
-
-    } catch (err) {
-        console.error("❌ Ошибка:", err);
-        showToast('❌ Ошибка: ' + err.message, 'error');
-    }
-};
-
-// 🔥 Ручная очистка (вызывается из консоли)
-window.cleanupDuplicatesManual = async function() {
-    if (!isAdmin) {
-        showToast("❌ Требуется доступ администратора!", "error");
-        return;
-    }
-
-    try {
-        console.log("⚙️ Запуск ручной очистки дубликатов...");
-
-        const collectionIds = new Set(
-            (userItemsData.collections || []).map(c => c.id)
-        );
-        const categoryIds = new Set(
-            (userItemsData.dappCategories || []).map(c => c.id)
-        );
-
-        console.log("📦 Коллекции:", [...collectionIds]);
-        console.log("📦 Категории:", [...categoryIds]);
-        console.log("📦 Текущие zone в items:", Object.keys(userItemsData.items || {}));
-
-        let removed = 0;
-        const removedZones = [];
-
-        Object.keys(userItemsData.items).forEach(zone => {
-            if (collectionIds.has(zone) || categoryIds.has(zone)) {
-                const itemsCount = userItemsData.items[zone]?.length || 0;
-                console.log(`🗑️ Удаляю zone: ${zone} (было ${itemsCount} items, оставляю коллекцию)`);
-                delete userItemsData.items[zone];
-                removed++;
-                removedZones.push(zone);
-            }
-        });
-
-        if (removed > 0) {
-            await saveUserItems();
-            console.log(`✅ Успешно очищено!`);
-            console.log(`   Удалено дублирующих zone: ${removed}`);
-            console.log(`   Удалённые zone: ${removedZones.join(', ')}`);
-            console.log(`   Оставленные коллекции: ${[...collectionIds].join(', ')}`);
-            console.log(`   Оставленные категории: ${[...categoryIds].join(', ')}`);
-            showToast(`✅ Очищено! Удалено дублей: ${removed}`, 'success');
-            setTimeout(() => location.reload(), 1500);
-        } else {
-            console.log("✅ Дубликатов не найдено!");
-            console.log(`   Коллекции: ${[...collectionIds].join(', ')}`);
-            console.log(`   Категории: ${[...categoryIds].join(', ')}`);
-            showToast('✅ Дубликатов не найдено!', 'info');
-        }
-
-    } catch (err) {
-        console.error("❌ Ошибка:", err);
-        showToast('❌ Ошибка: ' + err.message, 'error');
-    }
-};
 </script>
 <!-- ====== LOGIN MODAL ====== -->
 <div id="loginModal" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.8); backdrop-filter:blur(8px); z-index:1000; align-items:center; justify-content:center; padding:20px;">
