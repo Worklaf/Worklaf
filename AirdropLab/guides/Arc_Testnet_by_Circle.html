@@ -1792,30 +1792,62 @@ async function loadSharedData() {
 }
 onAuthStateChanged(auth, async (user) => {
     currentUser = user;
+
     const loggedOut = document.getElementById('arcLoggedOutView');
-    const loggedIn = document.getElementById('arcLoggedInView');
-    const nameEl = document.getElementById('arcUserName');
-    
+    const loggedIn  = document.getElementById('arcLoggedInView');
+    const nameEl    = document.getElementById('arcUserName');
+
     if (user) {
+        // ---------- Пользователь вошёл ----------
         loggedOut.style.display = 'none';
-        loggedIn.style.display = '';
-        nameEl.textContent = user.displayName || user.email?.split('@')[0] || 'User';
+        loggedIn.style.display  = '';
+
+        nameEl.textContent =
+            user.displayName ||
+            user.email?.split('@')[0] ||
+            'User';
+
         checkAdmin(user);
-        
-        // Запуск мониторинга для админа
+
+        // ---------- Проверка дублей для админа ----------
         if (user.uid === ADMIN_UID) {
-            setTimeout(initTwitterMonitor, 1000);
+            setTimeout(() => {
+                const docRef = doc(db, "config", "sharedItems");
+                getDoc(docRef).then(snap => {
+                    if (snap.exists()) {
+                        const data = snap.data();
+                        const collectionIds = new Set(
+                            (data.userItems?.collections || []).map(c => c.id)
+                        );
+
+                        const hasDuplicates = Object.keys(data.userItems?.items || {})
+                            .some(zone => collectionIds.has(zone));
+
+                        if (hasDuplicates) {
+                            console.warn("⚠️ Обнаружены дубликаты в Firebase!");
+                            showToast(
+                                "⚠️ Обнаружены дубликаты. Запустите cleanupCollectionDuplicates()",
+                                "info"
+                            );
+                        }
+                    }
+                });
+            }, 2000);
         }
+
     } else {
+        // ---------- Пользователь вышел ----------
         loggedOut.style.display = '';
-        loggedIn.style.display = 'none';
+        loggedIn.style.display  = 'none';
         checkAdmin(null);
     }
-    
+
+    // ---------- Загрузка данных ----------
     await loadSharedData();
     await loadAllData();
     renderAllUserItems();
 });
+
 
 // ===== HELPERS =====
 function getBaseClasses(link) {
@@ -2249,7 +2281,7 @@ document.getElementById('addModalSave').addEventListener('click', async () => {
 
     // ---------- РЕДАКТИРОВАНИЕ ----------
     if (isEdit && currentEditTarget) {
-        // … код редактирования остаётся без изменений …
+        // код редактирования остаётся без изменений
         return;
     }
 
@@ -2269,8 +2301,33 @@ document.getElementById('addModalSave').addEventListener('click', async () => {
     const zone   = currentAddContext.zone;
     const config = currentAddContext.config;
 
+    // 🔥 КРИТИЧЕСКОЕ ИСПРАВЛЕНИЕ: Определяем реальную зону для сохранения
+    let saveZone = zone;
+    
+    // Проверяем, является ли zone ID коллекции
+    const isCollection = userItemsData.collections?.some(c => c.id === zone);
+    const isCategory = userItemsData.dappCategories?.some(c => c.id === zone);
+    
+    if (isCollection) {
+        // Для коллекций NFT определяем родительскую зону
+        const collection = userItemsData.collections.find(c => c.id === zone);
+        if (collection && collection.parentZone === 'nfts') {
+            // Определяем зону на основе названия коллекции
+            const collectionTitle = collection.title.toLowerCase();
+            if (collectionTitle.includes('clara')) saveZone = 'nft_clara';
+            else if (collectionTitle.includes('morkie')) saveZone = 'nft_morkie';
+            else if (collectionTitle.includes('oku')) saveZone = 'nft_oku';
+            else if (collectionTitle.includes('alze')) saveZone = 'nft_alze';
+            else if (collectionTitle.includes('caset')) saveZone = 'nft_caset';
+            else if (collectionTitle.includes('draze')) saveZone = 'nft_draze';
+            else if (collectionTitle.includes('arkle')) saveZone = 'nft_arkle';
+            else if (collectionTitle.includes('mintaura')) saveZone = 'nft_mintaura';
+            else saveZone = 'nft_other'; // По умолчанию для новых коллекций
+        }
+    }
+
     // Проверка дубликатов
-    if (userItemsData.items[zone]?.some(i => i.url === url)) {
+    if (userItemsData.items[saveZone]?.some(i => i.url === url)) {
         showToast('Такая ссылка уже существует!', 'error');
         return;
     }
@@ -2286,9 +2343,9 @@ document.getElementById('addModalSave').addEventListener('click', async () => {
         addedAt: Date.now()
     };
 
-    // Сохраняем в локальное хранилище
-    if (!userItemsData.items[zone]) userItemsData.items[zone] = [];
-    userItemsData.items[zone].push(item);
+    // 🔥 Сохраняем в правильную зону
+    if (!userItemsData.items[saveZone]) userItemsData.items[saveZone] = [];
+    userItemsData.items[saveZone].push(item);
 
     newLinksSet.add(id);
     knownLinksSet.add(id);
@@ -2298,16 +2355,9 @@ document.getElementById('addModalSave').addEventListener('click', async () => {
 
     await saveUserItems();
 
-    // ---------- РЕНДЕР ----------
-    const container = document.querySelector(`[data-zone="${zone}"]`);
+    // Рендерим в правильном контейнере (используем zone для визуального контейнера)
+    renderUserItemInZone(zone, item);
 
-    if (container) {
-        renderUserItemInZone(zone, item);
-    } else {
-        console.log(`[INFO] Зона "${zone}" ещё не создана — элемент появится при полной синхронизации`);
-    }
-
-    // ---------- ОБНОВЛЕНИЕ UI ----------
     bindTrackingHandlersToAll();
     attachFavoriteControls();
     initializeTooltips();
@@ -3116,84 +3166,106 @@ function initTwitterMonitor() {
 </script>
 	<script>
   // Глобальная функция для удаления дубликатов
-  window.cleanupDuplicates = async function() {
-    try {
-      // 🔥 Проверяем, есть ли доступ к переменным
-      if (typeof window.isAdmin === 'undefined') {
-        console.error("❌ Переменная isAdmin не доступна!");
-        alert("Ошибка: не удалось проверить права администратора.");
+  async function cleanupCollectionDuplicates() {
+    if (!isAdmin) {
+        showToast("❌ Требуется доступ администратора!", "error");
         return;
-      }
-
-      // Проверка прав администратора
-      if (!window.isAdmin) {
-        console.log("❌ Требуется доступ администратора!");
-        window.showToast("❌ Требуется доступ администратора!", "error");
-        return;
-      }
-
-      console.log("⚙️ Запуск очистки дубликатов...");
-
-      // Проверяем, инициализирован ли Firebase
-      if (typeof window.db === 'undefined') {
-        console.error("❌ Firebase не инициализирован!");
-        alert("Ошибка: Firebase не инициализирован.");
-        return;
-      }
-
-      const docRef = window.doc(window.db, "config", "sharedItems");
-      const snap = await window.getDoc(docRef);
-
-      if (!snap.exists()) {
-        console.log("❌ Документ config/sharedItems не найден");
-        window.showToast("❌ Документ не найден!", "error");
-        return;
-      }
-
-      const data = snap.data();
-      let userItems = data.userItems || {};
-
-      // 🔥 Проверяем структуру данных
-      if (!userItems.items) {
-        console.log("⚠️  Поле userItems.items не найдено");
-        userItems.items = {};
-      }
-
-      const collectionIds = new Set((userItems.collections || []).map(c => c.id));
-      const categoryIds = new Set((userItems.dappCategories || []).map(c => c.id));
-
-      console.log("📦 Коллекции:", [...collectionIds]);
-      console.log("📦 Категории:", [...categoryIds]);
-
-      let removed = 0;
-      const removedZones = [];
-
-      // Удаляем дубликаты
-      if (userItems.items) {
-        Object.keys(userItems.items).forEach(zone => {
-          if (collectionIds.has(zone) || categoryIds.has(zone)) {
-            console.log(`🗑️ Удаляю дублирующий zone: ${zone}`);
-            delete userItems.items[zone];
-            removed++;
-            removedZones.push(zone);
-          }
-        });
-      }
-
-      // Сохраняем изменения в Firebase
-      await window.setDoc(docRef, { userItems }, { merge: true });
-
-      console.log(`✅ Успешно очищено! Удалено дублей: ${removed}`);
-      console.log(`   Удалённые зоны: ${removedZones.join(', ')}`);
-
-      window.showToast('✅ Дубликаты удалены! Перезагрузка...', 'success');
-      setTimeout(() => location.reload(), 1500);
-
-    } catch (err) {
-      console.error("❌ Ошибка:", err);
-      window.showToast('❌ Ошибка очистки: ' + err.message, 'error');
     }
-  };
+
+    try {
+        console.log("🧹 Начинаю очистку дубликатов...");
+        
+        // Получаем данные из Firebase
+        const docRef = doc(db, "config", "sharedItems");
+        const snap = await getDoc(docRef);
+        
+        if (!snap.exists()) {
+            console.log("❌ Документ не найден");
+            return;
+        }
+        
+        const data = snap.data();
+        const userItems = data.userItems || {};
+        
+        // Собираем ID коллекций и категорий
+        const collectionIds = new Set((userItems.collections || []).map(c => c.id));
+        const categoryIds = new Set((userItems.dappCategories || []).map(c => c.id));
+        
+        console.log("📦 ID коллекций:", [...collectionIds]);
+        console.log("📦 ID категорий:", [...categoryIds]);
+        
+        let moved = 0;
+        const itemsToMove = {};
+        
+        // Проходим по всем items
+        Object.keys(userItems.items || {}).forEach(zone => {
+            // Если zone это ID коллекции или категории
+            if (collectionIds.has(zone) || categoryIds.has(zone)) {
+                console.log(`🔍 Найден дубликат в zone: ${zone}`);
+                
+                // Переносим элементы в правильную зону
+                const items = userItems.items[zone] || [];
+                
+                items.forEach(item => {
+                    // Определяем правильную зону по URL
+                    let correctZone = 'nft_other';
+                    
+                    if (item.url.includes('clarachain')) correctZone = 'nft_clara';
+                    else if (item.url.includes('morkie')) correctZone = 'nft_morkie';
+                    else if (item.url.includes('oku.xyz')) correctZone = 'nft_oku';
+                    else if (item.url.includes('alze')) correctZone = 'nft_alze';
+                    else if (item.url.includes('caset')) correctZone = 'nft_caset';
+                    else if (item.url.includes('draze')) correctZone = 'nft_draze';
+                    else if (item.url.includes('arkle')) correctZone = 'nft_arkle';
+                    else if (item.url.includes('mintaura')) correctZone = 'nft_mintaura';
+                    
+                    console.log(`  📍 Перемещаю "${item.title}" в ${correctZone}`);
+                    
+                    if (!itemsToMove[correctZone]) itemsToMove[correctZone] = [];
+                    itemsToMove[correctZone].push(item);
+                    moved++;
+                });
+                
+                // Удаляем неправильную зону
+                delete userItems.items[zone];
+            }
+        });
+        
+        // Добавляем перемещённые элементы в правильные зоны
+        Object.keys(itemsToMove).forEach(zone => {
+            if (!userItems.items[zone]) userItems.items[zone] = [];
+            
+            itemsToMove[zone].forEach(item => {
+                // Проверяем на дубликаты
+                const exists = userItems.items[zone].some(existing => 
+                    existing.url === item.url || existing.id === item.id
+                );
+                
+                if (!exists) {
+                    userItems.items[zone].push(item);
+                } else {
+                    console.log(`  ⚠️ Пропускаю дубликат: ${item.title}`);
+                }
+            });
+        });
+        
+        // Сохраняем очищенные данные
+        await setDoc(docRef, { userItems }, { merge: true });
+        
+        console.log(`✅ Очистка завершена! Перемещено элементов: ${moved}`);
+        showToast(`✅ Дубликаты очищены! Перемещено: ${moved}`, 'success');
+        
+        // Перезагружаем страницу
+        setTimeout(() => location.reload(), 1500);
+        
+    } catch (err) {
+        console.error("❌ Ошибка очистки:", err);
+        showToast('❌ Ошибка: ' + err.message, 'error');
+    }
+}
+
+// Добавляем глобальную функцию для вызова из консоли
+window.cleanupCollectionDuplicates = cleanupCollectionDuplicates;
 </script>
 <!-- ====== LOGIN MODAL ====== -->
 <div id="loginModal" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.8); backdrop-filter:blur(8px); z-index:1000; align-items:center; justify-content:center; padding:20px;">
