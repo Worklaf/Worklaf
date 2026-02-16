@@ -2151,9 +2151,7 @@ function loadUserItems() {
 }
 
 async function saveUserItems() {
-    localStorage.setItem(USER_ITEMS_KEY, JSON.stringify(userItemsData));
-    
-    // 🔥 ОЧИСТКА перед сохранением в Firebase
+    // 🔥 ОЧИСТКА перед сохранением
     const collectionIds = new Set(
         (userItemsData.collections || []).map(c => c.id)
     );
@@ -2161,20 +2159,34 @@ async function saveUserItems() {
         (userItemsData.dappCategories || []).map(c => c.id)
     );
     
-    // Удаляем дублирующиеся ключи
-    Object.keys(userItemsData.items).forEach(zone => {
-        if (collectionIds.has(zone) || categoryIds.has(zone)) {
-            delete userItemsData.items[zone];
+    // Удаляем из items ключи, которые являются ID коллекций/категорий
+    const itemsToSave = {};
+    Object.keys(userItemsData.items || {}).forEach(zone => {
+        if (!collectionIds.has(zone) && !categoryIds.has(zone)) {
+            itemsToSave[zone] = userItemsData.items[zone];
+        } else {
+            console.warn(`[SKIP SAVE] Ключ "${zone}" - это ID коллекции/категории`);
         }
     });
+
+    const cleanedData = {
+        items: itemsToSave,
+        collections: userItemsData.collections || [],
+        dappCategories: userItemsData.dappCategories || []
+    };
+
+    localStorage.setItem(USER_ITEMS_KEY, JSON.stringify(cleanedData));
     
     if (isAdmin) {
         try {
             await setDoc(doc(db, "config", "sharedItems"), { 
-                userItems: userItemsData,
+                userItems: cleanedData,
                 newItemIds: [...newLinksSet]
             });
-        } catch (e) { console.error("Save shared items error:", e); }
+            console.log('✅ Сохранено в Firebase без дублей');
+        } catch (e) { 
+            console.error("Save shared items error:", e); 
+        }
     }
 }
 
@@ -2393,21 +2405,24 @@ function renderAllUserItems() {
 
     loadUserItems();
 
-    // 🔥 Очищаем старые элементы
-    document.querySelectorAll('[data-user-item-id]').forEach(el => {
-        const found = Object.values(savedData.items || {})
-            .flat()
-            .some(item => item.id === el.dataset.userItemId);
-        if (!found) el.remove();
-    });
-
-    // 🔥 ВАЖНО: собираем ID коллекций и категорий (исключим их из итерации)
+    // Собираем ID коллекций и категорий ДЛЯ ПРОВЕРКИ
     const collectionIds = new Set(
         (userItemsData.collections || []).map(c => c.id)
     );
     const categoryIds = new Set(
         (userItemsData.dappCategories || []).map(c => c.id)
     );
+
+    console.log('[CHECK] collections:', [...collectionIds]);
+    console.log('[CHECK] categories:', [...categoryIds]);
+
+    // Очищаем старые элементы
+    document.querySelectorAll('[data-user-item-id]').forEach(el => {
+        const found = Object.values(savedData.items || {})
+            .flat()
+            .some(item => item.id === el.dataset.userItemId);
+        if (!found) el.remove();
+    });
 
     // Рендерим коллекции
     userItemsData.collections.forEach(coll => {
@@ -2423,11 +2438,11 @@ function renderAllUserItems() {
         }
     });
 
-    // 🔥 ИСПРАВЛЕНИЕ: итерируем ТОЛЬКО стандартные зоны, исключаем коллекции/категории
-    Object.keys(userItemsData.items).forEach(zone => {
+    // 🔥 ИТЕРИРУЕМ ТОЛЬКО стандартные зоны, исключаем ID коллекций/категорий
+    Object.keys(userItemsData.items || {}).forEach(zone => {
         // Пропускаем ID коллекций и категорий
         if (collectionIds.has(zone) || categoryIds.has(zone)) {
-            console.log(`[SKIP] ${zone} - это ID коллекции/категории, не зона`);
+            console.warn(`[SKIP] "${zone}" - это ID коллекции/категории`);
             return;
         }
 
@@ -2435,8 +2450,9 @@ function renderAllUserItems() {
         if (!items || !Array.isArray(items)) return;
         
         items.forEach(item => {
-            const selector = `[data-zone="${zone}"] [data-user-item-id="${item.id}"]`;
-            const exists = document.querySelector(selector);
+            const exists = document.querySelector(
+                `[data-zone="${zone}"] [data-user-item-id="${item.id}"]`
+            );
             
             if (!exists) {
                 renderUserItemInZone(zone, item);
@@ -2450,6 +2466,7 @@ function renderAllUserItems() {
     initializeTooltips();
     updateUI();
 }
+	
 async function cleanupFirebaseStructure() {
     if (!isAdmin) return;
     
@@ -3085,7 +3102,54 @@ function initTwitterMonitor() {
     // 🔥 Автообновление каждые 5 минут
     setInterval(loadTwitterResults, 5 * 60 * 1000);
 }
+window.cleanupDuplicates = async function() {
+    try {
+        console.log("⚙️ Запуск очистки дубликатов...");
 
+        const docRef = doc(db, "config", "sharedItems");
+        const snap = await getDoc(docRef);
+
+        if (!snap.exists()) {
+            console.log("❌ Документ config/sharedItems не найден");
+            return;
+        }
+
+        const data = snap.data();
+        let userItems = data.userItems || {};
+
+        const collectionIds = new Set((userItems.collections || []).map(c => c.id));
+        const categoryIds   = new Set((userItems.dappCategories || []).map(c => c.id));
+
+        console.log("📦 Коллекции:", [...collectionIds]);
+        console.log("📦 Категории:", [...categoryIds]);
+
+        let removed = 0;
+        const removedZones = [];
+
+        Object.keys(userItems.items || {}).forEach(zone => {
+            if (collectionIds.has(zone) || categoryIds.has(zone)) {
+                console.log(`🗑️ Удаляю дублирующий zone: ${zone}`);
+                delete userItems.items[zone];
+                removed++;
+                removedZones.push(zone);
+            }
+        });
+
+        await setDoc(docRef, { userItems }, { merge: true });
+
+        console.log(`✅ Успешно очищено!`);
+        console.log(`   Удалено дублей: ${removed}`);
+        console.log(`   Удалённые зоны: ${removedZones.join(', ')}`);
+        console.log("🔄 Перезагружаю страницу...");
+        
+        showToast('✅ Дубликаты удалены! Перезагрузка...', 'success');
+        setTimeout(() => location.reload(), 1500);
+
+    } catch (err) {
+        console.error("❌ Ошибка:", err);
+        showToast('❌ Ошибка очистки: ' + err.message, 'error');
+    }
+};
 </script>
 <!-- ====== LOGIN MODAL ====== -->
 <div id="loginModal" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.8); backdrop-filter:blur(8px); z-index:1000; align-items:center; justify-content:center; padding:20px;">
