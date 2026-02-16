@@ -2867,7 +2867,10 @@ async function cleanupDuplicatesAuto() {
         let removed = 0;
         Object.keys(userItemsData.items).forEach(zone => {
             if (collectionIds.has(zone) || categoryIds.has(zone)) {
-                console.log(`🗑️ Удаляю дублирующий zone: ${zone}`);
+                console.log(`🗑️ Удаляю дублирующий zone: ${zone} (оставляю коллекцию/категорию)`);
+                // Проверяем есть ли там items
+                const itemsCount = userItemsData.items[zone]?.length || 0;
+                console.log(`   - Удалено ${itemsCount} items`);
                 delete userItemsData.items[zone];
                 removed++;
             }
@@ -2875,8 +2878,8 @@ async function cleanupDuplicatesAuto() {
 
         if (removed > 0) {
             await saveUserItems();
-            console.log(`✅ Очищено! Удалено: ${removed}`);
-            showToast(`✅ Дубликаты удалены автоматически (${removed})`, 'success');
+            console.log(`✅ Очищено! Удалено зон: ${removed}`);
+            showToast(`✅ Дубликаты удалены (${removed}), коллекции сохранены`, 'success');
         }
     } catch (err) {
         console.error("❌ Ошибка очистки:", err);
@@ -2902,13 +2905,15 @@ window.cleanupDuplicatesManual = async function() {
 
         console.log("📦 Коллекции:", [...collectionIds]);
         console.log("📦 Категории:", [...categoryIds]);
+        console.log("📦 Текущие zone в items:", Object.keys(userItemsData.items || {}));
 
         let removed = 0;
         const removedZones = [];
 
         Object.keys(userItemsData.items).forEach(zone => {
             if (collectionIds.has(zone) || categoryIds.has(zone)) {
-                console.log(`🗑️ Удаляю дублирующий zone: ${zone}`);
+                const itemsCount = userItemsData.items[zone]?.length || 0;
+                console.log(`🗑️ Удаляю zone: ${zone} (было ${itemsCount} items, оставляю коллекцию)`);
                 delete userItemsData.items[zone];
                 removed++;
                 removedZones.push(zone);
@@ -2917,12 +2922,17 @@ window.cleanupDuplicatesManual = async function() {
 
         if (removed > 0) {
             await saveUserItems();
-            console.log(`✅ Успешно очищено! Удалено: ${removed}`);
-            console.log(`   Удалённые зоны: ${removedZones.join(', ')}`);
+            console.log(`✅ Успешно очищено!`);
+            console.log(`   Удалено дублирующих zone: ${removed}`);
+            console.log(`   Удалённые zone: ${removedZones.join(', ')}`);
+            console.log(`   Оставленные коллекции: ${[...collectionIds].join(', ')}`);
+            console.log(`   Оставленные категории: ${[...categoryIds].join(', ')}`);
             showToast(`✅ Очищено! Удалено дублей: ${removed}`, 'success');
             setTimeout(() => location.reload(), 1500);
         } else {
             console.log("✅ Дубликатов не найдено!");
+            console.log(`   Коллекции: ${[...collectionIds].join(', ')}`);
+            console.log(`   Категории: ${[...categoryIds].join(', ')}`);
             showToast('✅ Дубликатов не найдено!', 'info');
         }
 
