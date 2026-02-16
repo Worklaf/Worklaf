@@ -3108,10 +3108,11 @@ function initTwitterMonitor() {
     // 🔥 Автообновление каждые 5 минут
     setInterval(loadTwitterResults, 5 * 60 * 1000);
 }
-window.cleanupDuplicates = async function() {
+async function cleanupDuplicates() {
     try {
         console.log("⚙️ Запуск очистки дубликатов...");
 
+        // Используем существующую инициализацию Firebase из основного кода
         const docRef = doc(db, "config", "sharedItems");
         const snap = await getDoc(docRef);
 
@@ -3124,7 +3125,7 @@ window.cleanupDuplicates = async function() {
         let userItems = data.userItems || {};
 
         const collectionIds = new Set((userItems.collections || []).map(c => c.id));
-        const categoryIds   = new Set((userItems.dappCategories || []).map(c => c.id));
+        const categoryIds = new Set((userItems.dappCategories || []).map(c => c.id));
 
         console.log("📦 Коллекции:", [...collectionIds]);
         console.log("📦 Категории:", [...categoryIds]);
@@ -3132,30 +3133,37 @@ window.cleanupDuplicates = async function() {
         let removed = 0;
         const removedZones = [];
 
+        // Создаем новый объект без дубликатов
+        const cleanedItems = {};
         Object.keys(userItems.items || {}).forEach(zone => {
-            if (collectionIds.has(zone) || categoryIds.has(zone)) {
+            if (!collectionIds.has(zone) && !categoryIds.has(zone)) {
+                cleanedItems[zone] = userItems.items[zone];
+            } else {
                 console.log(`🗑️ Удаляю дублирующий zone: ${zone}`);
-                delete userItems.items[zone];
                 removed++;
                 removedZones.push(zone);
             }
         });
 
-        await setDoc(docRef, { userItems }, { merge: true });
+        // Сохраняем очищенные данные
+        await setDoc(docRef, { 
+            userItems: {
+                ...data.userItems,
+                items: cleanedItems
+            }
+        }, { merge: true });
 
-        console.log(`✅ Успешно очищено!`);
-        console.log(`   Удалено дублей: ${removed}`);
+        console.log(`✅ Успешно очищено! Удалено дублей: ${removed}`);
         console.log(`   Удалённые зоны: ${removedZones.join(', ')}`);
-        console.log("🔄 Перезагружаю страницу...");
         
-        showToast('✅ Дубликаты удалены! Перезагрузка...', 'success');
+        showToast('✅ Дубликаты удалены! Обновляю страницу...', 'success');
         setTimeout(() => location.reload(), 1500);
 
     } catch (err) {
         console.error("❌ Ошибка:", err);
         showToast('❌ Ошибка очистки: ' + err.message, 'error');
     }
-};
+}
 </script>
 <!-- ====== LOGIN MODAL ====== -->
 <div id="loginModal" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.8); backdrop-filter:blur(8px); z-index:1000; align-items:center; justify-content:center; padding:20px;">
