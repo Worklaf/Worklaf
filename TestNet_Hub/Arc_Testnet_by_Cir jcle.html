@@ -2215,8 +2215,27 @@ document.getElementById('addModalSave').addEventListener('click', async () => {
         if (!title || !url) { alert('Название и URL обязательны!'); return; }
         const config = currentAddContext.config; const id = generateId();
         const item = { id, title, url, tooltip, image, trackType: config.trackType, addedAt: Date.now() };
-        if (!userItemsData.items[currentAddContext.zone]) userItemsData.items[currentAddContext.zone] = [];
-        userItemsData.items[currentAddContext.zone].push(item);
+        // 🔥 ИСПРАВЛЕНИЕ: добавляем в правильное место
+const config = currentAddContext.config;
+if (config.type === 'nft-item' && currentAddContext.zone.startsWith('u_')) {
+    // Если это пользовательская коллекция - добавляем в items коллекции
+    const collection = userItemsData.collections.find(c => c.id === currentAddContext.zone);
+    if (collection) {
+        if (!collection.items) collection.items = [];
+        collection.items.push(item);
+    }
+} else if (config.type === 'link-item' && currentAddContext.zone.startsWith('u_')) {
+    // Если это пользовательская категория - добавляем в items категории  
+    const category = userItemsData.dappCategories.find(c => c.id === currentAddContext.zone);
+    if (category) {
+        if (!category.items) category.items = [];
+        category.items.push(item);
+    }
+} else {
+    // Для обычных зон - как было
+    if (!userItemsData.items[currentAddContext.zone]) userItemsData.items[currentAddContext.zone] = [];
+    userItemsData.items[currentAddContext.zone].push(item);
+}
         newLinksSet.add(id);
     knownLinksSet.add(id);
     localStorage.setItem(NEW_LINKS_KEY, JSON.stringify([...newLinksSet]));
@@ -2274,9 +2293,23 @@ function createUserLink(item, zone) {
     delBtn.addEventListener('click', async (e) => {
         e.stopPropagation();
         if (!confirm(`Удалить «${item.title}»?`)) return;
-        if (userItemsData.items[zone]) userItemsData.items[zone] = userItemsData.items[zone].filter(i => i.id !== item.id);
-        userItemsData.collections.forEach(c => { if (c.items) c.items = c.items.filter(i => i.id !== item.id); });
-        userItemsData.dappCategories.forEach(c => { if (c.items) c.items = c.items.filter(i => i.id !== item.id); });
+        // 🔥 ИСПРАВЛЕНИЕ: правильное удаление из нужного места
+const isUserZone = zone.startsWith('u_');
+if (isUserZone) {
+    // Удаляем из коллекции или категории
+    userItemsData.collections.forEach(c => { 
+        if (c.id === zone && c.items) c.items = c.items.filter(i => i.id !== item.id); 
+    });
+    userItemsData.dappCategories.forEach(c => { 
+        if (c.id === zone && c.items) c.items = c.items.filter(i => i.id !== item.id); 
+    });
+} else {
+    // Удаляем из обычных зон
+    if (userItemsData.items[zone]) userItemsData.items[zone] = userItemsData.items[zone].filter(i => i.id !== item.id);
+}
+// Дополнительная очистка на всякий случай
+userItemsData.collections.forEach(c => { if (c.items) c.items = c.items.filter(i => i.id !== item.id); });
+userItemsData.dappCategories.forEach(c => { if (c.items) c.items = c.items.filter(i => i.id !== item.id); });
         await saveUserItems(); wrapper.remove();
         if (favoritesState[item.id]) {
             delete favoritesState[item.id]; favoritesOrder = favoritesOrder.filter(x => x !== item.id);
@@ -2348,8 +2381,8 @@ function renderUserCollection(coll) {
     header.appendChild(addBtn); card.appendChild(header);
     const linkColl = document.createElement('div'); linkColl.className = 'link-collection';
     card.appendChild(linkColl); grid.appendChild(card);
-    const items = userItemsData.items[coll.id] || [];
-    items.forEach(item => renderUserItemInZone(coll.id, item));
+    const items = coll.items || [];
+items.forEach(item => renderUserItemInZone(coll.id, item));
     requestAnimationFrame(() => card.classList.add('anim-visible'));
 }
 
@@ -2386,8 +2419,8 @@ function renderUserDappCategory(cat) {
     const tdDesc = document.createElement('td'); tdDesc.setAttribute('data-label', 'Действие'); tdDesc.className = 'task-desc';
     tdDesc.textContent = cat.description || ''; tr.appendChild(tdDesc);
     table.appendChild(tr);
-    const items = userItemsData.items[cat.id] || [];
-    items.forEach(item => renderUserItemInZone(cat.id, item));
+    const items = cat.items || [];
+items.forEach(item => renderUserItemInZone(cat.id, item));
 }
 
 function renderUserDeployGroup(grp) {
@@ -2421,8 +2454,8 @@ function renderUserDeployGroup(grp) {
     header.appendChild(addBtn); card.appendChild(header);
     const linkColl = document.createElement('div'); linkColl.className = 'link-collection';
     card.appendChild(linkColl); grid.appendChild(card);
-    const items = userItemsData.items[grp.id] || [];
-    items.forEach(item => renderUserItemInZone(grp.id, item));
+    const items = grp.items || [];
+items.forEach(item => renderUserItemInZone(grp.id, item));
     requestAnimationFrame(() => card.classList.add('anim-visible'));
 }
 
