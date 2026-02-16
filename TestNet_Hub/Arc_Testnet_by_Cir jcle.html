@@ -1639,112 +1639,41 @@ async function saveFavorites() {
 }
 
 // ===== AUTH =====
+window.openLoginModal = function() {
+    document.getElementById('loginModal').style.display = 'flex';
+};
+window.closeLoginModal = function() {
+    document.getElementById('loginModal').style.display = 'none';
+};
 window.loginGoogle = async function() {
     try {
-        console.log('🔍 Запуск входа через Google...');
-        const result = await signInWithPopup(auth, new GoogleAuthProvider());
-        console.log('✅ Google вход успешен:', result.user.email);
+        await signInWithPopup(auth, new GoogleAuthProvider());
         closeLoginModal();
-        showToast('Добро пожаловать, ' + (result.user.displayName || 'друг') + '!', 'success');
-    } catch(e) { 
-        console.error('❌ Google ошибка:', e.code, e.message);
-        let msg = e.message;
-        if (e.code === 'auth/popup-closed-by-user') msg = 'Вы закрыли окно входа';
-        if (e.code === 'auth/network-request-failed') msg = 'Ошибка сети. Проверьте интернет';
-        showToast('Ошибка: ' + msg, 'error');
-    }
+    } catch(e) { alert('Ошибка: ' + e.message); }
 };
-
-window.logout = function() { 
-    console.log('🚪 Выход из системы...');
-    signOut(auth).then(() => {
-        console.log('✅ Успешно вышли');
-        showToast('Вы вышли из системы', 'info');
-    }).catch(e => {
-        console.error('❌ Ошибка выхода:', e);
-        showToast('Ошибка при выходе', 'error');
-    });
+window.loginTwitter = async function() {
+    try {
+        await signInWithPopup(auth, new TwitterAuthProvider());
+        closeLoginModal();
+    } catch(e) { alert('Ошибка: ' + e.message); }
 };
-
 window.handleEmailLogin = async function() {
-    const email = document.getElementById('emailInput')?.value?.trim() || '';
-    const pass = document.getElementById('passInput')?.value || '';
-    
-    if (!email || !pass) {
-        showToast('Заполните Email и пароль', 'error');
-        return;
-    }
-    
+    const email = document.getElementById('emailInput').value;
+    const pass = document.getElementById('passInput').value;
     try {
-        console.log('🔍 Email вход:', email);
-        const result = await signInWithEmailAndPassword(auth, email, pass);
-        console.log('✅ Email вход успешен');
+        await signInWithEmailAndPassword(auth, email, pass);
         closeLoginModal();
-        showToast('Вы вошли!', 'success');
-    } catch(e) { 
-        console.error('❌ Email ошибка:', e.code, e.message);
-        let errorMsg = 'Ошибка входа';
-        if (e.code === 'auth/user-not-found') errorMsg = 'Пользователь не найден';
-        if (e.code === 'auth/wrong-password') errorMsg = 'Неверный пароль';
-        if (e.code === 'auth/invalid-email') errorMsg = 'Неверный email';
-        if (e.code === 'auth/invalid-credential') errorMsg = 'Неверные учётные данные';
-        showToast(errorMsg, 'error');
-    }
+    } catch(e) { alert('Ошибка: ' + e.message); }
 };
-
 window.handleRegister = async function() {
-    const email = document.getElementById('emailInput')?.value?.trim() || '';
-    const pass = document.getElementById('passInput')?.value || '';
-    
-    if (!email || !pass) {
-        showToast('Заполните Email и пароль (минимум 6 символов)', 'error');
-        return;
-    }
-    
-    if (pass.length < 6) {
-        showToast('Пароль должен быть минимум 6 символов', 'error');
-        return;
-    }
-    
+    const email = document.getElementById('emailInput').value;
+    const pass = document.getElementById('passInput').value;
     try {
-        console.log('📝 Регистрация:', email);
-        const result = await createUserWithEmailAndPassword(auth, email, pass);
-        console.log('✅ Регистрация успешна');
+        await createUserWithEmailAndPassword(auth, email, pass);
         closeLoginModal();
-        showToast('🎉 Добро пожаловать! Аккаунт создан', 'success');
-    } catch(e) { 
-        console.error('❌ Ошибка регистрации:', e.code, e.message);
-        let errorMsg = 'Ошибка регистрации';
-        if (e.code === 'auth/email-already-in-use') errorMsg = 'Email уже зарегистрирован';
-        if (e.code === 'auth/weak-password') errorMsg = 'Слабый пароль (минимум 6 символов)';
-        if (e.code === 'auth/invalid-email') errorMsg = 'Неверный email';
-        showToast(errorMsg, 'error');
-    }
+    } catch(e) { alert('Ошибка: ' + e.message); }
 };
-
-window.openLoginModal = function() {
-    console.log('📪 Открытие модали логина');
-    const modal = document.getElementById('loginModal');
-    if (modal) {
-        modal.style.display = 'flex';
-        setTimeout(() => {
-            const emailInput = document.getElementById('emailInput');
-            if (emailInput) emailInput.focus();
-        }, 100);
-    }
-};
-
-window.closeLoginModal = function() {
-    console.log('📫 Закрытие модали логина');
-    const modal = document.getElementById('loginModal');
-    if (modal) {
-        modal.style.display = 'none';
-        const emailInput = document.getElementById('emailInput');
-        const passInput = document.getElementById('passInput');
-        if (emailInput) emailInput.value = '';
-        if (passInput) passInput.value = '';
-    }
-};
+window.logout = function() { signOut(auth); };
 // ===== SHARED DATA — админские элементы видны всем =====
 async function loadSharedData() {
     try {
@@ -1800,30 +1729,28 @@ async function loadSharedData() {
         loadEditsOverride();
     }
 }
-    console.log('🚀 Инициализация Firebase Auth...');
 onAuthStateChanged(auth, async (user) => {
-    console.log('🔐 Auth state changed:', user?.email || 'logged out');
-    
     currentUser = user;
     const loggedOut = document.getElementById('arcLoggedOutView');
     const loggedIn = document.getElementById('arcLoggedInView');
     const nameEl = document.getElementById('arcUserName');
     
     if (user) {
-        console.log('✅ Пользователь вошёл:', user.email);
-        if (loggedOut) loggedOut.style.display = 'none';
-        if (loggedIn) loggedIn.style.display = '';
-        if (nameEl) nameEl.textContent = user.displayName || user.email?.split('@')[0] || 'User';
-        
+        loggedOut.style.display = 'none';
+        loggedIn.style.display = '';
+        nameEl.textContent = user.displayName || user.email?.split('@')[0] || 'User';
         checkAdmin(user);
+        
+        // Запуск мониторинга для админа
+        if (user.uid === ADMIN_UID) {
+            setTimeout(initTwitterMonitor, 1000);
+        }
     } else {
-        console.log('❌ Пользователь вышел');
-        if (loggedOut) loggedOut.style.display = '';
-        if (loggedIn) loggedIn.style.display = 'none';
+        loggedOut.style.display = '';
+        loggedIn.style.display = 'none';
         checkAdmin(null);
     }
     
-    // Загружаем данные после auth
     await loadSharedData();
     await loadAllData();
     renderAllUserItems();
@@ -2295,62 +2222,48 @@ document.getElementById('addModalSave').addEventListener('click', async () => {
     const description = document.getElementById('addFieldDescription').value.trim();
 
     if (currentAddContext.zone) {
-    if (!title || !url) { 
-        alert('Название и URL обязательны!'); 
-        return; 
-    }
-
-    const config = currentAddContext.config;
-    const id = generateId();
-    const item = { 
-        id, 
-        title, 
-        url, 
-        tooltip, 
-        image, 
-        trackType: config.trackType, 
-        addedAt: Date.now() 
-    };
-
-    // 🔥 Определяем, куда сохранять: коллекция, категория или обычная зона
-    const collection = userItemsData.collections?.find(c => c.id === currentAddContext.zone);
-    const category   = userItemsData.dappCategories?.find(c => c.id === currentAddContext.zone);
-
-    if (collection) {
-        // Пользовательская коллекция
-        if (!collection.items) collection.items = [];
-        collection.items.push(item);
-        console.log(`✅ Добавлено в коллекцию: ${collection.title}`);
-    } 
-    else if (category) {
-        // Пользовательская категория
-        if (!category.items) category.items = [];
-        category.items.push(item);
-        console.log(`✅ Добавлено в категорию: ${category.title}`);
-    } 
-    else {
-        // Обычная встроенная зона
-        if (!userItemsData.items[currentAddContext.zone]) {
-            userItemsData.items[currentAddContext.zone] = [];
-        }
+        if (!title || !url) { alert('Название и URL обязательны!'); return; }
+        const config = currentAddContext.config; const id = generateId();
+        const item = { id, title, url, tooltip, image, trackType: config.trackType, addedAt: Date.now() };
+        if (!userItemsData.items[currentAddContext.zone]) userItemsData.items[currentAddContext.zone] = [];
         userItemsData.items[currentAddContext.zone].push(item);
-        console.log(`✅ Добавлено в zone: ${currentAddContext.zone}`);
-    }
-
-    // Обновляем локальные данные
-    newLinksSet.add(id);
+        newLinksSet.add(id);
     knownLinksSet.add(id);
     localStorage.setItem(NEW_LINKS_KEY, JSON.stringify([...newLinksSet]));
     localStorage.setItem(KNOWN_LINKS_KEY, JSON.stringify([...knownLinksSet]));
-
-    await saveUserItems();
-
-    // Рендерим в визуальной зоне (она может быть другой, чем зона сохранения)
-    renderUserItemInZone(currentAddContext.zone, item);
-
-    showToast('Добавлено: ' + title, 'success');
-}
-
+        await saveUserItems(); renderUserItemInZone(currentAddContext.zone, item);
+        showToast('Добавлено: ' + title, 'success');
+    } else if (currentAddContext.sectionZone) {
+        const sConfig = currentAddContext.config;
+        if (sConfig.type === 'nft-collection') {
+            if (!title) { alert('Название обязательно!'); return; }
+            const collId = generateId();
+            const coll = { id: collId, title, website, twitter, parentZone: currentAddContext.sectionZone, items: [] };
+            userItemsData.collections.push(coll);
+            ZONE_CONFIG[collId] = { type:'nft-item', label:'NFT в '+title, trackType:'track-once' };
+            await saveUserItems(); renderUserCollection(coll);
+            showToast('Коллекция создана: ' + title, 'success');
+        } else if (sConfig.type === 'dapp-category') {
+            if (!title) { alert('Название обязательно!'); return; }
+            const catId = generateId();
+            const cat = { id: catId, title, description, parentZone: currentAddContext.sectionZone, items: [] };
+            userItemsData.dappCategories.push(cat);
+            ZONE_CONFIG[catId] = { type:'link-item', label: title, trackType:'track-daily' };
+            await saveUserItems(); renderUserDappCategory(cat);
+            showToast('Категория создана: ' + title, 'success');
+        } else if (sConfig.type === 'deploy-group') {
+            if (!title) { alert('Название обязательно!'); return; }
+            const grpId = generateId();
+            const grp = { id: grpId, title, parentZone: currentAddContext.sectionZone, items: [] };
+            userItemsData.collections.push(grp);
+            ZONE_CONFIG[grpId] = { type:'link-item', label: title, trackType:'track-once track-once-info' };
+            await saveUserItems(); renderUserDeployGroup(grp);
+            showToast('Группа создана: ' + title, 'success');
+        }
+    }
+    closeModal();
+    bindTrackingHandlersToAll(); attachFavoriteControls(); initializeTooltips(); initLightbox(); updateUI();detectNewLinks();
+});
 
 // ---- RENDER USER ITEMS ----
 function createUserLink(item, zone) {
@@ -2385,30 +2298,12 @@ function createUserLink(item, zone) {
 }
 
 function renderUserItemInZone(zone, item) {
-    // 🔥 Сначала ищем в коллекциях и категориях
-    const collection = userItemsData.collections.find(c => c.id === zone);
-    const category = userItemsData.dappCategories.find(c => c.id === zone);
-    
-    let container;
-    
-    if (collection || category) {
-        // Динамическая коллекция/категория - ищем её карточку
-        container = document.querySelector(`[data-zone="${zone}"]`);
-    } else {
-        // Встроенная зона - обычный поиск
-        container = document.querySelector(`[data-zone="${zone}"]`);
-    }
-    
-    if (!container) {
-        console.warn(`⚠️ Container не найден для zone: ${zone}`);
-        return;
-    }
-    
+    const container = document.querySelector(`[data-zone="${zone}"]`);
+    if (!container) return;
     let target;
     if (container.tagName === 'TR') target = container.querySelector('.dapp-links');
     else target = container.querySelector('.link-collection') || container.querySelector('.link-row');
     if (!target) return;
-    
     const wrapper = createUserLink(item, zone);
     const addBtn = target.querySelector('.add-item-btn');
     if (addBtn) target.insertBefore(wrapper, addBtn);
@@ -2694,82 +2589,37 @@ function openEditModal(link) {
 
 // ===== DOM CONTENT LOADED =====
 document.addEventListener('DOMContentLoaded', () => {
+    loadTheme(); loadEditsOverride(); applyAllOverrides();
+    attachFavoriteControls(); bindTrackingHandlersToAll();
+    initLightbox(); initCardAnimations(); initLazyLoading();
 
-    // ---------- ТВОИ ОСНОВНЫЕ ИНИЦИАЛИЗАЦИИ ----------
-    loadTheme();
-    loadEditsOverride();
-    applyAllOverrides();
-    attachFavoriteControls();
-    bindTrackingHandlersToAll();
-    initLightbox();
-    initCardAnimations();
-    initLazyLoading();
-
-    // ---------- КНОПКИ И ПЕРЕКЛЮЧАТЕЛИ ----------
-    document.getElementById('themeToggleBtn')?.addEventListener('click', toggleTheme);
-
-    document.getElementById('toggleBadgesBtn')?.addEventListener('click', () => {
-        setBadgeHiddenState(!getBadgeHiddenState());
-        updateBadgeVisibility();
-    });
+    document.getElementById('themeToggleBtn').addEventListener('click', toggleTheme);
+    document.getElementById('toggleBadgesBtn').addEventListener('click', () => { setBadgeHiddenState(!getBadgeHiddenState()); updateBadgeVisibility(); });
 
     const editBtn = document.getElementById('editModeBtn');
     if (editBtn) editBtn.addEventListener('click', toggleEditMode);
 
-    document.getElementById('exportBtn')?.addEventListener('click', exportJSON);
-
-    document.getElementById('importBtn')?.addEventListener('click', () =>
-        document.getElementById('importFileInput').click()
-    );
-
-    document.getElementById('importFileInput')?.addEventListener('change', (e) => {
-        if (e.target.files[0]) {
-            importJSON(e.target.files[0]);
-            e.target.value = '';
-        }
+    document.getElementById('exportBtn').addEventListener('click', exportJSON);
+    document.getElementById('importBtn').addEventListener('click', () => document.getElementById('importFileInput').click());
+    document.getElementById('importFileInput').addEventListener('change', (e) => {
+        if (e.target.files[0]) { importJSON(e.target.files[0]); e.target.value = ''; }
     });
 
-    // ---------- СОСТОЯНИЕ СЕКЦИЙ ----------
     const sectionState = getSectionCollapseState();
     document.querySelectorAll('.collapsible-section').forEach(sec => {
         const sid = sec.getAttribute('data-section-id');
         const collapsed = sectionState[sid] === true;
-
         applySectionState(sec, collapsed);
-
         const toggle = sec.querySelector('.section-toggle');
         if (toggle) {
             toggle.addEventListener('click', () => {
                 const isCol = sec.classList.contains('collapsed');
                 applySectionState(sec, !isCol);
-
-                if (!isCol) sectionState[sid] = true;
-                else delete sectionState[sid];
-
+                if (!isCol) sectionState[sid] = true; else delete sectionState[sid];
                 saveSectionCollapseState(sectionState);
             });
         }
     });
-
-    // ---------- ДОБАВЛЕНО: ESC ДЛЯ ЗАКРЫТИЯ МОДАЛЕЙ ----------
-    document.addEventListener('keydown', (e) => {
-        if (e.key === 'Escape') {
-            closeLoginModal?.();
-            closeLightbox?.();
-        }
-    });
-
-    // ---------- ДОБАВЛЕНО: КЛИК ПО ФОНУ ДЛЯ ЗАКРЫТИЯ ----------
-    const loginModal = document.getElementById('loginModal');
-    if (loginModal) {
-        loginModal.addEventListener('click', (e) => {
-            if (e.target === loginModal) {
-                closeLoginModal?.();
-            }
-        });
-    }
-});
-
 
     let isMobile = window.innerWidth <= 768;
     let storedLegend = localStorage.getItem(LEGEND_COLLAPSE_KEY);
@@ -3000,6 +2850,56 @@ function initTwitterMonitor() {
     // 🔥 Автообновление каждые 5 минут
     setInterval(loadTwitterResults, 5 * 60 * 1000);
 }
+// 🔥 Автоматическая очистка при загрузке
+// 🔥 Автоматическая очистка при загрузке
+async function cleanupDuplicatesAuto() {
+    if (!isAdmin) return;
+    
+    try {
+        console.log("🧹 Автоматическая очистка дубликатов...");
+        
+        const collectionIds = new Set(
+            (userItemsData.collections || []).map(c => c.id)
+        );
+        const categoryIds = new Set(
+            (userItemsData.dappCategories || []).map(c => c.id)
+        );
+
+        let removed = 0;
+        
+        // === ПЕРЕМЕЩАЕМ ITEMS В КОЛЛЕКЦИИ/КАТЕГОРИИ ===
+        Object.keys(userItemsData.items).forEach(zone => {
+            if (collectionIds.has(zone)) {
+                // Это пользовательская коллекция
+                const collection = userItemsData.collections.find(c => c.id === zone);
+                if (collection && userItemsData.items[zone]?.length > 0) {
+                    console.log(`📦 Перемещаю ${userItemsData.items[zone].length} items в коллекцию "${collection.title}"`);
+                    collection.items = [...(collection.items || []), ...userItemsData.items[zone]];
+                }
+                delete userItemsData.items[zone];
+                removed++;
+            } else if (categoryIds.has(zone)) {
+                // Это пользовательская категория
+                const category = userItemsData.dappCategories.find(c => c.id === zone);
+                if (category && userItemsData.items[zone]?.length > 0) {
+                    console.log(`📦 Перемещаю ${userItemsData.items[zone].length} items в категорию "${category.title}"`);
+                    category.items = [...(category.items || []), ...userItemsData.items[zone]];
+                }
+                delete userItemsData.items[zone];
+                removed++;
+            }
+        });
+
+        if (removed > 0) {
+            await saveUserItems();
+            console.log(`✅ Очищено! Перемещено зон: ${removed}`);
+            showToast(`✅ Данные организованы (${removed} зон), ничего не потеряно`, 'success');
+        }
+    } catch (err) {
+        console.error("❌ Ошибка очистки:", err);
+    }
+}
+
 // 🔥 Ручная очистка (вызывается из консоли)
 window.cleanupDuplicatesManual = async function() {
     if (!isAdmin) {
@@ -3081,6 +2981,61 @@ window.cleanupDuplicatesManual = async function() {
     }
 };
 
+// 🔥 Ручная очистка (вызывается из консоли)
+window.cleanupDuplicatesManual = async function() {
+    if (!isAdmin) {
+        showToast("❌ Требуется доступ администратора!", "error");
+        return;
+    }
+
+    try {
+        console.log("⚙️ Запуск ручной очистки дубликатов...");
+
+        const collectionIds = new Set(
+            (userItemsData.collections || []).map(c => c.id)
+        );
+        const categoryIds = new Set(
+            (userItemsData.dappCategories || []).map(c => c.id)
+        );
+
+        console.log("📦 Коллекции:", [...collectionIds]);
+        console.log("📦 Категории:", [...categoryIds]);
+        console.log("📦 Текущие zone в items:", Object.keys(userItemsData.items || {}));
+
+        let removed = 0;
+        const removedZones = [];
+
+        Object.keys(userItemsData.items).forEach(zone => {
+            if (collectionIds.has(zone) || categoryIds.has(zone)) {
+                const itemsCount = userItemsData.items[zone]?.length || 0;
+                console.log(`🗑️ Удаляю zone: ${zone} (было ${itemsCount} items, оставляю коллекцию)`);
+                delete userItemsData.items[zone];
+                removed++;
+                removedZones.push(zone);
+            }
+        });
+
+        if (removed > 0) {
+            await saveUserItems();
+            console.log(`✅ Успешно очищено!`);
+            console.log(`   Удалено дублирующих zone: ${removed}`);
+            console.log(`   Удалённые zone: ${removedZones.join(', ')}`);
+            console.log(`   Оставленные коллекции: ${[...collectionIds].join(', ')}`);
+            console.log(`   Оставленные категории: ${[...categoryIds].join(', ')}`);
+            showToast(`✅ Очищено! Удалено дублей: ${removed}`, 'success');
+            setTimeout(() => location.reload(), 1500);
+        } else {
+            console.log("✅ Дубликатов не найдено!");
+            console.log(`   Коллекции: ${[...collectionIds].join(', ')}`);
+            console.log(`   Категории: ${[...categoryIds].join(', ')}`);
+            showToast('✅ Дубликатов не найдено!', 'info');
+        }
+
+    } catch (err) {
+        console.error("❌ Ошибка:", err);
+        showToast('❌ Ошибка: ' + err.message, 'error');
+    }
+};
 </script>
 <!-- ====== LOGIN MODAL ====== -->
 <div id="loginModal" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.8); backdrop-filter:blur(8px); z-index:1000; align-items:center; justify-content:center; padding:20px;">
