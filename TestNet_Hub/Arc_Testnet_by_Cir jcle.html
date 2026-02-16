@@ -1844,53 +1844,35 @@ function renderFavoritesList() {
     const emptyEl = document.getElementById('favoritesEmpty');
     const countEl = document.getElementById('favoritesCount');
     if (!listEl || !emptyEl || !countEl) return;
+    
     listEl.innerHTML = '';
     favoritesOrder = favoritesOrder.filter(id => favoritesState[id]);
-    Object.keys(favoritesState).forEach(id => { if (!favoritesOrder.includes(id)) favoritesOrder.push(id); });
-    if (favoritesOrder.length === 0) {
-        emptyEl.style.display = 'block'; listEl.style.display = 'none'; countEl.textContent = '0'; return;
-    }
-    emptyEl.style.display = 'none'; listEl.style.display = 'flex';
-    favoritesOrder.forEach(id => {
-        const info = favoritesState[id]; if (!info) return;
-        const linkEl = document.querySelector(`a[data-id="${id}"]`);
-        const liveInfo = linkEl ? extractLinkInfo(linkEl) : info;
-        if (linkEl && (info.title !== liveInfo.title || info.url !== liveInfo.url || classesToKey(info.classes) !== classesToKey(liveInfo.classes))) {
-            favoritesState[id] = liveInfo; localStorage.setItem(FAVORITES_KEY, JSON.stringify(favoritesState));
-        }
-        const li = document.createElement('li'); li.className = 'favorites-item'; li.dataset.id = id;
-        const handle = document.createElement('span'); handle.className = 'drag-handle'; handle.innerHTML = '⋮⋮'; handle.title = 'Перетащить';
-        li.appendChild(handle);
-        const anchor = document.createElement('a');
-        anchor.href = liveInfo.url; anchor.target = '_blank'; anchor.rel = 'noopener';
-        anchor.dataset.id = id; anchor.classList.add('favorite-link');
-        liveInfo.classes.forEach(cls => anchor.classList.add(cls));
-        if (liveInfo.tooltip) anchor.setAttribute('data-tooltip', liveInfo.tooltip);
-        const record = arcData[id];
-        if (record) {
-            if (record.visited) anchor.classList.add('visited-once');
-            if (isToday(record.lastClick)) anchor.classList.add('daily-active');
-            if (record.totalClicks > 0 || record.lastClick) {
-                const badge = document.createElement('span'); badge.className = 'click-info';
-                badge.textContent = `${record.totalClicks || 0}р • ${formatDate(record.lastClick)}`;
-                anchor.appendChild(badge);
-            }
-        }
-        const titleSpan = document.createElement('span'); titleSpan.className = 'favorite-title'; titleSpan.textContent = liveInfo.title;
-        anchor.appendChild(titleSpan); li.appendChild(anchor);
-        const removeBtn = document.createElement('button');
-        removeBtn.type = 'button'; removeBtn.className = 'remove-fav-btn';
-        removeBtn.innerHTML = '×'; removeBtn.title = 'Удалить из избранного';
-        removeBtn.onclick = async (e) => {
-            e.stopPropagation(); delete favoritesState[id];
-            favoritesOrder = favoritesOrder.filter(x => x !== id);
-            await saveFavorites(); refreshAllVisuals();
-        };
-        li.appendChild(removeBtn); listEl.appendChild(li);
-        bindTrackingHandler(anchor);
+    Object.keys(favoritesState).forEach(id => { 
+        if (!favoritesOrder.includes(id)) favoritesOrder.push(id); 
     });
+    
+    if (favoritesOrder.length === 0) {
+        emptyEl.style.display = 'block'; 
+        listEl.style.display = 'none'; 
+        countEl.textContent = '0';
+        return;
+    }
+    
+    emptyEl.style.display = 'none'; 
+    listEl.style.display = 'flex';
     countEl.textContent = String(favoritesOrder.length);
-    initSortable(); initializeTooltips(); updateNewIndicators();
+    
+    // Render favorite items here
+    favoritesOrder.forEach(id => {
+        const info = favoritesState[id]; 
+        if (!info) return;
+        
+        const li = document.createElement('li'); 
+        li.className = 'favorites-item'; 
+        li.dataset.id = id;
+        li.innerHTML = `<span class="drag-handle">⋮⋮</span><a href="${info.url}" target="_blank" class="favorite-link">${info.title}</a>`;
+        listEl.appendChild(li);
+    });
 }
 
 function initSortable() {
@@ -2068,6 +2050,27 @@ function applyLegendState(collapsed) {
 // ============================================================
 //  DYNAMIC ADD SYSTEM (ADMIN ONLY)
 // ============================================================
+    // ===== MISSING VARIABLES =====
+let userItemsData = { items: {}, collections: [], dappCategories: [] };
+let currentAddContext = null;
+
+// ===== RENDER FUNCTIONS =====
+function renderAllUserItems() {
+    loadUserItems();
+    bindTrackingHandlersToAll(); 
+    attachFavoriteControls(); 
+    updateUI();
+}
+
+function initializeTooltips() {
+    // Tooltip functionality placeholder
+}
+
+// ===== TWITTER MONITOR =====
+function initTwitterMonitor() {
+    if (!isAdmin) return;
+    console.log('Twitter monitor initialized');
+}
 const USER_ITEMS_KEY = 'arc_user_items_v1';
 const ZONE_CONFIG = {
     nft_alze:     { type:'nft-item', label:'NFT в Alze', trackType:'track-once' },
@@ -2104,8 +2107,17 @@ let currentAddContext = null;
 function loadUserItems() {
     try {
         const raw = localStorage.getItem(USER_ITEMS_KEY);
-        if (raw) { const p = JSON.parse(raw); userItemsData = { items: p.items||{}, collections: p.collections||[], dappCategories: p.dappCategories||[] }; }
-    } catch(e) { console.error(e); }
+        if (raw) { 
+            const p = JSON.parse(raw); 
+            userItemsData = { 
+                items: p.items||{}, 
+                collections: p.collections||[], 
+                dappCategories: p.dappCategories||[] 
+            }; 
+        }
+    } catch(e) { 
+        console.error(e); 
+    }
 }
 
 async function saveUserItems() {
@@ -3004,6 +3016,32 @@ window.debugDuplicates = function() {
     
     console.log('========================');
 };
+    // ===== DOM CONTENT LOADED =====
+document.addEventListener('DOMContentLoaded', () => {
+    loadTheme(); 
+    loadEditsOverride(); 
+    applyAllOverrides();
+    detectNewLinks();
+    attachFavoriteControls(); 
+    bindTrackingHandlersToAll();
+
+    // Theme toggle button
+    const themeBtn = document.getElementById('themeToggleBtn');
+    if (themeBtn) themeBtn.addEventListener('click', toggleTheme);
+
+    // Badge toggle button  
+    const badgeBtn = document.getElementById('toggleBadgesBtn');
+    if (badgeBtn) {
+        badgeBtn.addEventListener('click', () => {
+            const hidden = getBadgeHiddenState();
+            setBadgeHiddenState(!hidden);
+            updateBadgeVisibility();
+        });
+    }
+    
+    updateBadgeVisibility();
+    initializeTooltips();
+});
 </script>
 <!-- ====== LOGIN MODAL ====== -->
 <div id="loginModal" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.8); backdrop-filter:blur(8px); z-index:1000; align-items:center; justify-content:center; padding:20px;">
