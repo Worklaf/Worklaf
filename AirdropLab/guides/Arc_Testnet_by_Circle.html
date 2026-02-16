@@ -1752,12 +1752,11 @@ async function loadSharedData() {
                     dappCategories: data.userItems.dappCategories || []
                 };
                 localStorage.setItem(USER_ITEMS_KEY, JSON.stringify(userItemsData));
+                // 🔥 НЕ вызываем renderAllUserItems() здесь!
             }
-            // === NEW: загружаем глобальные NEW метки ===
             if (data.newItemIds && Array.isArray(data.newItemIds)) {
                 const localClicked = JSON.parse(localStorage.getItem('arc_tracker_clicked_new') || '[]');
                 const clickedSet = new Set(localClicked);
-                // Добавляем в newLinksSet те ID, которые пользователь ещё НЕ кликал
                 data.newItemIds.forEach(id => {
                     if (!clickedSet.has(id)) {
                         newLinksSet.add(id);
@@ -1779,6 +1778,7 @@ async function loadSharedData() {
         loadUserItems();
         loadEditsOverride();
     }
+    // 🔥 Рендер вызывается один раз в DOMContentLoaded или onAuthStateChanged
 }
 onAuthStateChanged(auth, async (user) => {
     currentUser = user;
@@ -2379,39 +2379,57 @@ function renderUserItemInZone(zone, item) {
 // ===== ИСПРАВЛЕННАЯ ФУНКЦИЯ renderAllUserItems =====
 
 function renderAllUserItems() {
-    // получаем текущие данные из локального хранилища
     const raw = localStorage.getItem(USER_ITEMS_KEY);
     if (!raw) return;
+    
     let savedData;
-    try { savedData = JSON.parse(raw); } catch (e) { return; }
+    try { 
+        savedData = JSON.parse(raw); 
+    } catch (e) { 
+        return; 
+    }
 
-    // если в DOM уже есть все элементы – просто выходим
+    // ПРОВЕРЯЕМ ВСЕ ТИПЫ ЭЛЕМЕНТОВ, НЕ ТОЛЬКО ОТДЕЛЬНЫЕ ССЫЛКИ
     const existingIds = new Set(
-        [...document.querySelectorAll('[data-user-item-id]')]
-            .map(el => el.dataset.userItemId)
+        [...document.querySelectorAll('[data-user-item-id], [data-user-collection-id], [data-user-category-id]')]
+            .map(el => el.dataset.userItemId || el.dataset.userCollectionId || el.dataset.userCategoryId)
     );
-    const newIds = Object.values(savedData.items || {})
-        .flat()
-        .map(i => i.id);
-    const allRendered = newIds.every(id => existingIds.has(id));
-    if (allRendered) {
-        console.log('[INFO] Все элементы уже отрисованы – пропускаем ререндер');
+    
+    // Все ID, которые должны быть
+    const allItemIds = Object.values(savedData.items || {}).flat().map(i => i.id);
+    const collectionIds = (savedData.collections || []).map(c => c.id);
+    const categoryIds = (savedData.dappCategories || []).map(c => c.id);
+    
+    const shouldRender = allItemIds.length + collectionIds.length + categoryIds.length;
+    const alreadyExists = allItemIds.filter(id => existingIds.has(id)).length 
+                        + collectionIds.filter(id => existingIds.has(id)).length
+                        + categoryIds.filter(id => existingIds.has(id)).length;
+    
+    // Если всё уже отрисовано — выходим
+    if (shouldRender > 0 && shouldRender === alreadyExists) {
+        console.log('[✓] Все элементы уже отрисованы');
         return;
     }
 
-    // иначе загружаем и отрисовываем
     loadUserItems();
 
-    // рендерим коллекции/категории, которых ещё нет
-    userItemsData.collections.forEach(renderUserCollection);
-    userItemsData.dappCategories.forEach(renderUserDappCategory);
+    // 🔥 РЕНДЕРИМ ТОЛЬКО ТО, ЧЕ ЕЩЁ НЕТ В DOM
+    userItemsData.collections.forEach(coll => {
+        if (!document.querySelector(`[data-user-collection-id="${coll.id}"]`)) {
+            renderUserCollection(coll);
+        }
+    });
+    
+    userItemsData.dappCategories.forEach(cat => {
+        if (!document.querySelector(`[data-user-category-id="${cat.id}"]`)) {
+            renderUserDappCategory(cat);
+        }
+    });
 
-    // рендерим отдельные ссылки
     Object.keys(userItemsData.items).forEach(zone => {
         const items = userItemsData.items[zone];
         if (!items) return;
         items.forEach(item => {
-            // проверка, что элемент ещё не в DOM
             if (!document.querySelector(`[data-user-item-id="${item.id}"]`)) {
                 renderUserItemInZone(zone, item);
             }
@@ -2426,84 +2444,166 @@ function renderAllUserItems() {
 }
 
 function renderUserCollection(coll) {
+    // 🔥 ПРОВЕРЯЕМ, ЕСТЬ ЛИ УЖЕ КАРТОЧКА
+    if (document.querySelector(`[data-user-collection-id="${coll.id}"]`)) {
+        console.log(`[✓] Коллекция ${coll.id} уже в DOM`);
+        return;
+    }
+
     const sectionContent = document.querySelector(`[data-section-zone="${coll.parentZone}"]`);
     if (!sectionContent) return;
     const grid = sectionContent.querySelector('.resource-grid');
     if (!grid) return;
+    
     const card = document.createElement('div');
-    card.className = 'resource-item user-collection-card'; card.dataset.zone = coll.id;
+    card.className = 'resource-item user-collection-card';
+    card.dataset.zone = coll.id;
+    card.dataset.userCollectionId = coll.id; // 🔥 УНИКАЛЬНЫЙ ID
+    
     const delTop = document.createElement('button');
-    delTop.type = 'button'; delTop.className = 'user-collection-delete-top admin-only';
-    delTop.title = 'Удалить коллекцию'; delTop.innerHTML = '×';
+    delTop.type = 'button';
+    delTop.className = 'user-collection-delete-top admin-only';
+    delTop.title = 'Удалить коллекцию';
+    delTop.innerHTML = '×';
     delTop.addEventListener('click', async () => {
         if (!confirm(`Удалить коллекцию «${coll.title}»?`)) return;
         userItemsData.collections = userItemsData.collections.filter(c => c.id !== coll.id);
-        delete userItemsData.items[coll.id]; delete ZONE_CONFIG[coll.id];
-        await saveUserItems(); card.remove();
+        delete userItemsData.items[coll.id];
+        delete ZONE_CONFIG[coll.id];
+        await saveUserItems();
+        card.remove();
         showToast(`Коллекция удалена: ${coll.title}`, 'info');
     });
     card.appendChild(delTop);
-    const header = document.createElement('div'); header.className = 'resource-header';
-    const titleSpan = document.createElement('span'); titleSpan.className = 'resource-title'; titleSpan.textContent = coll.title;
+
+    const header = document.createElement('div');
+    header.className = 'resource-header';
+    const titleSpan = document.createElement('span');
+    titleSpan.className = 'resource-title';
+    titleSpan.textContent = coll.title;
     header.appendChild(titleSpan);
+
     if (coll.website || coll.twitter) {
-        const icons = document.createElement('span'); icons.className = 'social-icons';
-        if (coll.website) icons.innerHTML += `<a href="${coll.website}" target="_blank" class="site-icon" title="Сайт"><i class="fas fa-globe"></i></a>`;
-        if (coll.twitter) icons.innerHTML += `<a href="${coll.twitter}" target="_blank" class="collection-social-link" title="Twitter"><i class="fab fa-x-twitter"></i></a>`;
+        const icons = document.createElement('span');
+        icons.className = 'social-icons';
+        if (coll.website) 
+            icons.innerHTML += `<a href="${coll.website}" target="_blank" class="site-icon" title="Сайт"><i class="fas fa-globe"></i></a>`;
+        if (coll.twitter) 
+            icons.innerHTML += `<a href="${coll.twitter}" target="_blank" class="collection-social-link" title="Twitter"><i class="fab fa-x-twitter"></i></a>`;
         header.appendChild(icons);
     }
+
     const addBtn = document.createElement('button');
-    addBtn.type = 'button'; addBtn.className = 'add-item-btn admin-only';
+    addBtn.type = 'button';
+    addBtn.className = 'add-item-btn admin-only';
     addBtn.title = `Добавить NFT в ${coll.title}`;
     addBtn.innerHTML = '<span class="btn-plus">+</span>';
     addBtn.addEventListener('click', (e) => {
         e.stopPropagation();
-        currentAddContext = { zone: coll.id, config: ZONE_CONFIG[coll.id] || { type:'nft-item', label: coll.title, trackType:'track-once' } };
+        currentAddContext = { 
+            zone: coll.id, 
+            config: ZONE_CONFIG[coll.id] || { 
+                type: 'nft-item', 
+                label: coll.title, 
+                trackType: 'track-once' 
+            } 
+        };
         openModal(`Добавить: NFT в ${coll.title}`, ['fieldTitle','fieldUrl','fieldImage','fieldTooltip']);
     });
-    header.appendChild(addBtn); card.appendChild(header);
-    const linkColl = document.createElement('div'); linkColl.className = 'link-collection';
-    card.appendChild(linkColl); grid.appendChild(card);
+    header.appendChild(addBtn);
+    card.appendChild(header);
+
+    const linkColl = document.createElement('div');
+    linkColl.className = 'link-collection';
+    card.appendChild(linkColl);
+    grid.appendChild(card);
+
     const items = userItemsData.items[coll.id] || [];
-    items.forEach(item => renderUserItemInZone(coll.id, item));
+    items.forEach(item => {
+        if (!document.querySelector(`[data-user-item-id="${item.id}"]`)) {
+            renderUserItemInZone(coll.id, item);
+        }
+    });
+
     requestAnimationFrame(() => card.classList.add('anim-visible'));
 }
 
 function renderUserDappCategory(cat) {
+    // 🔥 ПРОВЕРЯЕМ, ЕСТЬ ЛИ УЖЕ КАТЕГОРИЯ
+    if (document.querySelector(`[data-user-category-id="${cat.id}"]`)) {
+        console.log(`[✓] Категория ${cat.id} уже в DOM`);
+        return;
+    }
+
     const sectionContent = document.querySelector(`[data-section-zone="${cat.parentZone}"]`);
     if (!sectionContent) return;
     const table = sectionContent.querySelector('.dapp-table tbody');
     if (!table) return;
-    const tr = document.createElement('tr'); tr.dataset.zone = cat.id;
-    const tdCat = document.createElement('td'); tdCat.setAttribute('data-label', 'Категория');
+
+    const tr = document.createElement('tr');
+    tr.dataset.zone = cat.id;
+    tr.dataset.userCategoryId = cat.id; // 🔥 УНИКАЛЬНЫЙ ID
+
+    const tdCat = document.createElement('td');
+    tdCat.setAttribute('data-label', 'Категория');
     tdCat.innerHTML = `<strong>${cat.title}</strong>`;
+
     const delCatBtn = document.createElement('button');
-    delCatBtn.type = 'button'; delCatBtn.className = 'user-item-delete admin-only'; delCatBtn.style.marginLeft = '8px';
-    delCatBtn.title = 'Удалить категорию'; delCatBtn.innerHTML = '×';
+    delCatBtn.type = 'button';
+    delCatBtn.className = 'user-item-delete admin-only';
+    delCatBtn.style.marginLeft = '8px';
+    delCatBtn.title = 'Удалить категорию';
+    delCatBtn.innerHTML = '×';
     delCatBtn.addEventListener('click', async () => {
         if (!confirm(`Удалить «${cat.title}»?`)) return;
         userItemsData.dappCategories = userItemsData.dappCategories.filter(c => c.id !== cat.id);
-        delete userItemsData.items[cat.id]; delete ZONE_CONFIG[cat.id];
-        await saveUserItems(); tr.remove();
+        delete userItemsData.items[cat.id];
+        delete ZONE_CONFIG[cat.id];
+        await saveUserItems();
+        tr.remove();
         showToast(`Категория удалена: ${cat.title}`, 'info');
     });
-    tdCat.appendChild(delCatBtn); tr.appendChild(tdCat);
-    const tdLinks = document.createElement('td'); tdLinks.setAttribute('data-label', 'Ссылки'); tdLinks.className = 'dapp-links';
+    tdCat.appendChild(delCatBtn);
+    tr.appendChild(tdCat);
+
+    const tdLinks = document.createElement('td');
+    tdLinks.setAttribute('data-label', 'Ссылки');
+    tdLinks.className = 'dapp-links';
+
     const addBtn = document.createElement('button');
-    addBtn.type = 'button'; addBtn.className = 'add-item-btn admin-only';
+    addBtn.type = 'button';
+    addBtn.className = 'add-item-btn admin-only';
     addBtn.title = `Добавить в ${cat.title}`;
     addBtn.innerHTML = '<span class="btn-plus">+</span>';
     addBtn.addEventListener('click', (e) => {
         e.stopPropagation();
-        currentAddContext = { zone: cat.id, config: ZONE_CONFIG[cat.id] || { type:'link-item', label: cat.title, trackType:'track-daily' } };
+        currentAddContext = { 
+            zone: cat.id, 
+            config: ZONE_CONFIG[cat.id] || { 
+                type: 'link-item', 
+                label: cat.title, 
+                trackType: 'track-daily' 
+            } 
+        };
         openModal(`Добавить: ${cat.title}`, ['fieldTitle','fieldUrl','fieldImage','fieldTooltip']);
     });
-    tdLinks.appendChild(addBtn); tr.appendChild(tdLinks);
-    const tdDesc = document.createElement('td'); tdDesc.setAttribute('data-label', 'Действие'); tdDesc.className = 'task-desc';
-    tdDesc.textContent = cat.description || ''; tr.appendChild(tdDesc);
+    tdLinks.appendChild(addBtn);
+    tr.appendChild(tdLinks);
+
+    const tdDesc = document.createElement('td');
+    tdDesc.setAttribute('data-label', 'Действие');
+    tdDesc.className = 'task-desc';
+    tdDesc.textContent = cat.description || '';
+    tr.appendChild(tdDesc);
+
     table.appendChild(tr);
+
     const items = userItemsData.items[cat.id] || [];
-    items.forEach(item => renderUserItemInZone(cat.id, item));
+    items.forEach(item => {
+        if (!document.querySelector(`[data-user-item-id="${item.id}"]`)) {
+            renderUserItemInZone(cat.id, item);
+        }
+    });
 }
 
 function renderUserDeployGroup(grp) {
