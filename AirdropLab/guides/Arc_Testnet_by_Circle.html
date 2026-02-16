@@ -2377,16 +2377,21 @@ function renderAllUserItems() {
 
     loadUserItems();
 
-    // 🔥 ОЧИЩАЕМ СТАРЫЕ USER-ЭЛЕМЕНТЫ ПЕРЕД РЕНДЕРОМ
+    // 🔥 Очищаем старые элементы
     document.querySelectorAll('[data-user-item-id]').forEach(el => {
-        // Проверяем, есть ли этот элемент ещё в savedData
         const found = Object.values(savedData.items || {})
             .flat()
             .some(item => item.id === el.dataset.userItemId);
-        if (!found) {
-            el.remove();
-        }
+        if (!found) el.remove();
     });
+
+    // 🔥 ВАЖНО: собираем ID коллекций и категорий (исключим их из итерации)
+    const collectionIds = new Set(
+        (userItemsData.collections || []).map(c => c.id)
+    );
+    const categoryIds = new Set(
+        (userItemsData.dappCategories || []).map(c => c.id)
+    );
 
     // Рендерим коллекции
     userItemsData.collections.forEach(coll => {
@@ -2402,13 +2407,18 @@ function renderAllUserItems() {
         }
     });
 
-    // 🔥 ИСПРАВЛЕННАЯ ЛОГИКА: проверяем по (zone + id) паре
+    // 🔥 ИСПРАВЛЕНИЕ: итерируем ТОЛЬКО стандартные зоны, исключаем коллекции/категории
     Object.keys(userItemsData.items).forEach(zone => {
+        // Пропускаем ID коллекций и категорий
+        if (collectionIds.has(zone) || categoryIds.has(zone)) {
+            console.log(`[SKIP] ${zone} - это ID коллекции/категории, не зона`);
+            return;
+        }
+
         const items = userItemsData.items[zone];
-        if (!items) return;
+        if (!items || !Array.isArray(items)) return;
         
         items.forEach(item => {
-            // Проверяем есть ли элемент именно в этой зоне
             const selector = `[data-zone="${zone}"] [data-user-item-id="${item.id}"]`;
             const exists = document.querySelector(selector);
             
@@ -2424,7 +2434,34 @@ function renderAllUserItems() {
     initializeTooltips();
     updateUI();
 }
+async function cleanupFirebaseStructure() {
+    if (!isAdmin) return;
+    
+    const collectionIds = new Set(
+        (userItemsData.collections || []).map(c => c.id)
+    );
+    const categoryIds = new Set(
+        (userItemsData.dappCategories || []).map(c => c.id)
+    );
 
+    // Удаляем дублирующиеся ключи из items
+    let updated = false;
+    Object.keys(userItemsData.items).forEach(zone => {
+        if (collectionIds.has(zone) || categoryIds.has(zone)) {
+            console.log(`🗑️ Удаляю дублирующийся ключ: ${zone}`);
+            delete userItemsData.items[zone];
+            updated = true;
+        }
+    });
+
+    if (updated) {
+        await saveUserItems();
+        showToast('✅ Firebase очищена от дублей!', 'success');
+    }
+}
+
+// Вызови эту функцию один раз в консоли:
+// cleanupFirebaseStructure();
 function renderUserCollection(coll) {
     // 🔥 ПРОВЕРЯЕМ, ЕСТЬ ЛИ УЖЕ КАРТОЧКА
     if (document.querySelector(`[data-user-collection-id="${coll.id}"]`)) {
