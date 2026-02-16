@@ -2287,53 +2287,37 @@ document.getElementById('addModalSave').addEventListener('click', async () => {
 function createUserLink(item, zone) {
     const wrapper = document.createElement('span');
     wrapper.className = 'user-item-wrapper';
-    wrapper.dataset.userItemId = item.id;  // 🆕 Уникальный ID для обёртки
-    wrapper.dataset.userItemZone = zone;   // 🆕 Zone для точного удаления
+    wrapper.dataset.userItemId = item.id;    // ← ID элемента
+    wrapper.dataset.userItemZone = zone;     // ← Зона (важно!)
     
     const link = document.createElement('a');
-    link.href = item.url; link.target = '_blank';
+    link.href = item.url; 
+    link.target = '_blank';
     link.className = 'link-inline link-compact ' + item.trackType;
-    link.dataset.id = item.id;  // 🆕 Этот ID может быть одинаковым у нескольких элементов!
+    link.dataset.id = item.id;
     if (item.tooltip) link.setAttribute('data-tooltip', item.tooltip);
     if (item.image) link.setAttribute('data-image', item.image);
     link.textContent = item.title;
     wrapper.appendChild(link);
     
+    // Кнопка удаления
     const delBtn = document.createElement('button');
-    delBtn.type = 'button'; delBtn.className = 'user-item-delete admin-only';
-    delBtn.title = 'Удалить'; delBtn.innerHTML = '×';
+    delBtn.type = 'button'; 
+    delBtn.className = 'user-item-delete admin-only';
+    delBtn.title = 'Удалить'; 
+    delBtn.innerHTML = '×';
     
-    // 🆕 ИСПРАВЛЕНИЕ: Удаляем ТОЛЬКО этот конкретный элемент по userItemId
     delBtn.addEventListener('click', async (e) => {
         e.stopPropagation();
         if (!confirm(`Удалить «${item.title}»?`)) return;
         
-        // Удаляем ТОЛЬКО из этого zone
-        const wrappedItemId = wrapper.dataset.userItemId;  // 🆕 Берем ID обёртки
+        // 🔥 Удаляем из конкретной зоны
         if (userItemsData.items[zone]) {
-            // 🆕 Удаляем первый найденный элемент с этим ID (а не все!)
-            const idx = userItemsData.items[zone].findIndex(i => i.id === item.id);
-            if (idx !== -1) {
-                userItemsData.items[zone].splice(idx, 1);
-            }
+            userItemsData.items[zone] = userItemsData.items[zone].filter(i => i.id !== item.id);
         }
         
-        // Также удаляем из коллекций
-        userItemsData.collections.forEach(c => { 
-            if (c.items) {
-                const idx = c.items.findIndex(i => i.id === item.id);
-                if (idx !== -1) c.items.splice(idx, 1);
-            }
-        });
-        userItemsData.dappCategories.forEach(c => { 
-            if (c.items) {
-                const idx = c.items.findIndex(i => i.id === item.id);
-                if (idx !== -1) c.items.splice(idx, 1);
-            }
-        });
-        
         await saveUserItems(); 
-        wrapper.remove();  // 🆕 Удаляем ТОЛЬКО эту обёртку из DOM
+        wrapper.remove();
         
         if (favoritesState[item.id]) {
             delete favoritesState[item.id]; 
@@ -2344,7 +2328,7 @@ function createUserLink(item, zone) {
         showToast(`Удалено: ${item.title}`, 'info');
     });
     
-    wrapper.appendChild(delBtn); 
+    wrapper.appendChild(delBtn);  
     return wrapper;
 }
 
@@ -2353,18 +2337,18 @@ function createUserLink(item, zone) {
 function renderUserItemInZone(zone, item) {
     const container = document.querySelector(`[data-zone="${zone}"]`);
     if (!container) {
-        console.warn(`[WARN] Нет контейнера для zone="${zone}" – рендер откладывается`);
+        console.warn(`[WARN] Нет контейнера для zone="${zone}"`);
         return;
     }
 
-    // проверяем, есть ли уже элемент с тем же id в этом контейнере
+    // 🔥 СТРОГАЯ ПРОВЕРКА: есть ли элемент именно в этой зоне
     const exists = container.querySelector(`[data-user-item-id="${item.id}"]`);
     if (exists) {
-        console.log(`[INFO] Элемент ${item.id} уже есть в zone="${zone}"`);
+        console.log(`[✓] Элемент ${item.id} уже в zone="${zone}" - пропускаем`);
         return;
     }
 
-    // определяем, куда вставлять
+    // Определяем, куда вставлять
     let target;
     if (container.tagName === 'TR') target = container.querySelector('.dapp-links');
     else target = container.querySelector('.link-collection') || container.querySelector('.link-row');
@@ -2374,6 +2358,8 @@ function renderUserItemInZone(zone, item) {
     const addBtn = target.querySelector('.add-item-btn');
     if (addBtn) target.insertBefore(wrapper, addBtn);
     else target.appendChild(wrapper);
+
+    console.log(`✅ Элемент ${item.id} добавлен в zone="${zone}"`);
 }
 
 // ===== ИСПРАВЛЕННАЯ ФУНКЦИЯ renderAllUserItems =====
@@ -2389,48 +2375,44 @@ function renderAllUserItems() {
         return; 
     }
 
-    // ПРОВЕРЯЕМ ВСЕ ТИПЫ ЭЛЕМЕНТОВ, НЕ ТОЛЬКО ОТДЕЛЬНЫЕ ССЫЛКИ
-    const existingIds = new Set(
-        [...document.querySelectorAll('[data-user-item-id], [data-user-collection-id], [data-user-category-id]')]
-            .map(el => el.dataset.userItemId || el.dataset.userCollectionId || el.dataset.userCategoryId)
-    );
-    
-    // Все ID, которые должны быть
-    const allItemIds = Object.values(savedData.items || {}).flat().map(i => i.id);
-    const collectionIds = (savedData.collections || []).map(c => c.id);
-    const categoryIds = (savedData.dappCategories || []).map(c => c.id);
-    
-    const shouldRender = allItemIds.length + collectionIds.length + categoryIds.length;
-    const alreadyExists = allItemIds.filter(id => existingIds.has(id)).length 
-                        + collectionIds.filter(id => existingIds.has(id)).length
-                        + categoryIds.filter(id => existingIds.has(id)).length;
-    
-    // Если всё уже отрисовано — выходим
-    if (shouldRender > 0 && shouldRender === alreadyExists) {
-        console.log('[✓] Все элементы уже отрисованы');
-        return;
-    }
-
     loadUserItems();
 
-    // 🔥 РЕНДЕРИМ ТОЛЬКО ТО, ЧЕ ЕЩЁ НЕТ В DOM
+    // 🔥 ОЧИЩАЕМ СТАРЫЕ USER-ЭЛЕМЕНТЫ ПЕРЕД РЕНДЕРОМ
+    document.querySelectorAll('[data-user-item-id]').forEach(el => {
+        // Проверяем, есть ли этот элемент ещё в savedData
+        const found = Object.values(savedData.items || {})
+            .flat()
+            .some(item => item.id === el.dataset.userItemId);
+        if (!found) {
+            el.remove();
+        }
+    });
+
+    // Рендерим коллекции
     userItemsData.collections.forEach(coll => {
         if (!document.querySelector(`[data-user-collection-id="${coll.id}"]`)) {
             renderUserCollection(coll);
         }
     });
     
+    // Рендерим категории
     userItemsData.dappCategories.forEach(cat => {
         if (!document.querySelector(`[data-user-category-id="${cat.id}"]`)) {
             renderUserDappCategory(cat);
         }
     });
 
+    // 🔥 ИСПРАВЛЕННАЯ ЛОГИКА: проверяем по (zone + id) паре
     Object.keys(userItemsData.items).forEach(zone => {
         const items = userItemsData.items[zone];
         if (!items) return;
+        
         items.forEach(item => {
-            if (!document.querySelector(`[data-user-item-id="${item.id}"]`)) {
+            // Проверяем есть ли элемент именно в этой зоне
+            const selector = `[data-zone="${zone}"] [data-user-item-id="${item.id}"]`;
+            const exists = document.querySelector(selector);
+            
+            if (!exists) {
                 renderUserItemInZone(zone, item);
             }
         });
