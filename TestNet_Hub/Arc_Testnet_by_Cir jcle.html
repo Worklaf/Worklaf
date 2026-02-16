@@ -1152,1890 +1152,2152 @@ body.light-theme .monitor-item {
 </div>
 
 <script type="module">
-    let newLinksSet = new Set();
-import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
-import {
-  getAuth, signInWithPopup, GoogleAuthProvider, TwitterAuthProvider,
-  signInWithEmailAndPassword, createUserWithEmailAndPassword,
-  signOut, onAuthStateChanged
-} from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
-import {
-  getFirestore, doc, setDoc, getDoc
-} from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+    // --- Firebase Init and Global Module Variables ---
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+    import {
+      getAuth, signInWithPopup, GoogleAuthProvider, TwitterAuthProvider,
+      signInWithEmailAndPassword, createUserWithEmailAndPassword,
+      signOut, onAuthStateChanged
+    } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
+    import {
+      getFirestore, doc, setDoc, getDoc
+    } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+    import Sortable from "https://cdnjs.cloudflare.com/ajax/libs/Sortable/1.15.0/Sortable.min.js"; // Убедитесь, что Sortable импортируется
 
-const firebaseConfig = {
-    apiKey: "AIzaSyBdXGYg2t8DJBrQHCC80-pFerZU9PWmSCk",
-    authDomain: "testnet-hub.firebaseapp.com",
-    projectId: "testnet-hub",
-    storageBucket: "testnet-hub.firebasestorage.app",
-    messagingSenderId: "497813176653",
-    appId: "1:497813176653:web:089188fdd1555d76cd7704"
-};
-
-const app = initializeApp(firebaseConfig);
-const auth = getAuth(app);
-const db = getFirestore(app);
-
-// ===== ADMIN =====
-const ADMIN_UID = 'SAkz4mdW9reDaIsvqigCNZhEKJR2';
-let isAdmin = false;
-let currentUser = null;
-let arcData = {};
-let favoritesState = {};
-let favoritesOrder = [];
-
-const STORAGE_KEY = 'arc_tracker_v3';
-const BADGE_VISIBILITY_KEY = 'arc_tracker_badges_hidden';
-const SECTION_COLLAPSE_KEY = 'arc_tracker_sections';
-const KNOWN_LINKS_KEY = 'arc_tracker_known_links_v2';
-const NEW_LINKS_KEY = 'arc_tracker_new_links_v2';
-const PAGE_VERSION_KEY = 'arc_tracker_page_version_v2';
-const LEGEND_COLLAPSE_KEY = 'arc_tracker_legend_collapsed';
-const FAVORITES_KEY = 'arc_tracker_favorites_v1';
-const FAVORITES_ORDER_KEY = 'arc_tracker_favorites_order_v1';
-const FAVORITES_TIMESTAMP_KEY = 'arc_tracker_favorites_timestamp_v1';
-const THEME_KEY = 'arc_tracker_theme';
-const PAGE_VERSION = '2026-02-14-v4';
-
-// ============================================================
-//  TWITTER RSS MONITOR (ADMIN ONLY)
-// ============================================================
-
-const TWITTER_MONITOR_CONFIG = {
-    morkie:   { username: '_morkie',     zone: 'nft_morkie',   triggerText: 'Mint Free NFT On Arc Testnet' },
-    clara:    { username: 'clarachainxyz', zone: 'nft_clara',    triggerText: 'Free Mint NFT on Arc Testnet' },
-    oku:      { username: 'OKUXYZ',       zone: 'nft_oku',      triggerText: 'NFT On Arc Testnet' },
-    mintaura: { username: 'MintAura',     zone: 'nft_mintaura', triggerText: 'Mint Free Nft on Arc Testnet' },
-    arkle:    { username: '0xarkle',      zone: 'nft_arkle',    triggerText: 'NFT On Arc Testnet' },
-    draze:    { username: 'DrazeLab',     zone: 'nft_draze',    triggerText: 'NFT On Arc Testnet' },
-    caset:    { username: 'casetnetwork', zone: 'nft_caset',    triggerText: 'Mint Free NFT On ARC Testnet' },
-    alze:     { username: '0xAlze',       zone: 'nft_alze',     triggerText: 'NFT on Arc Testnet' }
-};
-
-
-
-async function autoAddNewNFT(projectKey, config, tweet) {
-    const tweetLink = tweet.link;
-    const tweetId = tweetLink.split('/').pop().split('?')[0];
-    const internalId = `tw_${projectKey}_${tweetId}`;
-
-    // 1. Проверяем дубликаты
-    if (arcData[internalId] || isAlreadyInList(config.zone, tweetLink)) {
-        return; 
-    }
-
-    // 2. Сохраняем в список мониторинга
-    const monitorItem = {
-        id: internalId,
-        project: projectKey,
-        text: tweet.title.substring(0, 100) + '...',
-        link: tweetLink,
-        timestamp: Date.now(),
-        zone: config.zone
-    };
-    
-    twitterMonitorData.unshift(monitorItem);
-    if (twitterMonitorData.length > 20) twitterMonitorData = twitterMonitorData.slice(0, 20);
-    localStorage.setItem(TWITTER_MONITOR_STORAGE, JSON.stringify(twitterMonitorData));
-    
-    updateMonitorUI();
-
-    // 3. Создаем NFT
-    const newItem = {
-        id: internalId,
-        title: `🆕 ${config.triggerText.split(' on ')[0]}`,
-        url: tweetLink,
-        tooltip: `Авто-обнаружение из Twitter @${config.username} (${new Date(tweet.pubDate || Date.now()).toLocaleDateString()})`,
-        image: "",
-        trackType: 'track-once',
-        addedAt: Date.now()
+    const firebaseConfig = {
+        apiKey: "AIzaSyBdXGYg2t8DJBrQHCC80-pFerZU9PWmSCk",
+        authDomain: "testnet-hub.firebaseapp.com",
+        projectId: "testnet-hub",
+        storageBucket: "testnet-hub.firebasestorage.app",
+        messagingSenderId: "497813176653",
+        appId: "1:497813176653:web:089188fdd1555d76cd7704"
     };
 
-    if (!userItemsData.items[config.zone]) userItemsData.items[config.zone] = [];
-    userItemsData.items[config.zone].unshift(newItem);
-    
-    if (typeof newLinksSet !== 'undefined') {
-        newLinksSet.add(internalId);
-        localStorage.setItem('arc_tracker_new_links_v2', JSON.stringify([...newLinksSet]));
-    }
+    const app = initializeApp(firebaseConfig);
+    const auth = getAuth(app); // КРИТИЧНОЕ РАСПОЛОЖЕНИЕ: ВЕРХНИЙ УРОВЕНЬ МОДУЛЯ
+    const db = getFirestore(app); // КРИТИЧНОЕ РАСПОЛОЖЕНИЕ: ВЕРХНИЙ УРОВЕНЬ МОДУЛЯ
 
-    await saveUserItems();
-    renderUserItemInZone(config.zone, newItem);
-    
-    showToast(`🐦 Найден новый пост у ${projectKey}!`, 'success');
-}
+    const ADMIN_UID = 'SAkz4mdW9reDaIsvqigCNZhEKJR2';
+    let isAdmin = false;
+    let currentUser = null; // Будет установлено в onAuthStateChanged
+    let arcData = {};
+    let favoritesState = {};
+    let favoritesOrder = [];
 
-// Проверка на дубликаты по ссылке
-function isAlreadyInList(zone, url) {
-    const items = userItemsData.items[zone] || [];
-    return items.some(item => item.url === url);
-}
-// ===== TWITTER RSS MONITORING =====
-function parseRSS(xmlText) {
-    const parser = new DOMParser();
-    const xmlDoc = parser.parseFromString(xmlText, "text/xml");
-    const items = Array.from(xmlDoc.querySelectorAll("item"));
-    
-    return items.map(item => {
-        const title = item.querySelector("title")?.textContent || "";
-        const link = item.querySelector("link")?.textContent || "";
-        const pubDate = item.querySelector("pubDate")?.textContent || "";
-        const dcDate = item.getElementsByTagNameNS("*", "date")[0]?.textContent;
+    const STORAGE_KEY = 'arc_tracker_v3';
+    const BADGE_VISIBILITY_KEY = 'arc_tracker_badges_hidden';
+    const SECTION_COLLAPSE_KEY = 'arc_tracker_sections';
+    const KNOWN_LINKS_KEY = 'arc_tracker_known_links_v2';
+    const NEW_LINKS_KEY = 'arc_tracker_new_links_v2';
+    const PAGE_VERSION_KEY = 'arc_tracker_page_version_v2';
+    const LEGEND_COLLAPSE_KEY = 'arc_tracker_legend_collapsed';
+    const FAVORITES_KEY = 'arc_tracker_favorites_v1';
+    const FAVORITES_ORDER_KEY = 'arc_tracker_favorites_order_v1';
+    const FAVORITES_TIMESTAMP_KEY = 'arc_tracker_favorites_timestamp_v1';
+    const THEME_KEY = 'arc_tracker_theme';
+    const PAGE_VERSION = '2026-02-14-v4'; // Обновлена для принудительной перепроверки new-ссылок
+    let newLinksSet = new Set(); // Теперь объявляется здесь, чтобы быть доступной
+
+    let knownLinksSet = new Set();
+    let favoritesSortable = null;
+    const favoriteControls = new Map();
+    const DYNAMIC_CLASS_SET = new Set(['daily-active', 'visited-once', 'has-new-flag']);
+    let tooltipEl = null;
+    let activeTooltipTarget = null;
+    let editModeActive = false;
+    let currentEditTarget = null;
+    const EDITS_OVERRIDE_KEY = 'arc_tracker_edits_v1';
+    let editsOverride = {};
+
+    // ============================================================
+    //  Firebase Auth State Listener (Критично для правильной загрузки данных)
+    // ============================================================
+    console.log('🚀 Подписка на изменение состояния аутентификации Firebase...');
+    onAuthStateChanged(auth, async (user) => {
+        console.log('🔐 Состояние аутентификации изменилось:', user?.email || 'разлогинен');
         
-        return {
-            title: title,
-            link: link,
-            pubDate: pubDate || dcDate || new Date().toISOString()
-        };
-    });
-}
-
-async function runTwitterMonitor() {
-    if (!isAdmin) return;
-
-    const nitterInstances = [
-        'https://nitter.privacydev.net',
-        'https://nitter.lucabased.xyz',
-        'https://nitter.poast.org',
-        'https://xcancel.com'
-    ];
-
-    const corsProxies = [
-        (url) => `https://api.allorigins.win/raw?url=${encodeURIComponent(url)}`,
-        (url) => `https://corsproxy.io/?${encodeURIComponent(url)}`
-    ];
-
-    console.log("🚀 Запуск мониторинга Twitter...");
-
-    for (const [key, config] of Object.entries(TWITTER_MONITOR_CONFIG)) {
-        let success = false;
-
-        for (const instance of nitterInstances) {
-            const rssUrl = `${instance}/${config.username}/rss`;
-
-            for (const proxyGen of corsProxies) {
-                try {
-                    const fetchUrl = proxyGen(rssUrl);
-                    const controller = new AbortController();
-                    const timeoutId = setTimeout(() => controller.abort(), 5000);
-
-                    const response = await fetch(fetchUrl, { 
-                        signal: controller.signal,
-                        cache: "no-store"
-                    });
-                    clearTimeout(timeoutId);
-
-                    if (!response.ok) continue;
-
-                    const textData = await response.text();
-                    if (!textData.includes('<rss') && !textData.includes('<feed')) continue;
-
-                    const tweets = parseRSS(textData);
-
-                    if (tweets.length > 0) {
-                        console.log(`✅ [${key}] Успех`);
-                        
-                        tweets.forEach(tweet => {
-                            if (tweet.title && tweet.title.toLowerCase().includes(config.triggerText.toLowerCase())) {
-                                autoAddNewNFT(key, config, tweet);
-                            }
-                        });
-
-                        success = true;
-                        break;
-                    }
-
-                } catch (e) {
-                    continue;
-                }
-            }
-            if (success) break;
+        currentUser = user; // Обновляем текущего пользователя
+        
+        // Обновляем UI для входа/выхода
+        const loggedOutView = document.getElementById('arcLoggedOutView');
+        const loggedInView = document.getElementById('arcLoggedInView');
+        const userNameEl = document.getElementById('arcUserName');
+        
+        if (user) {
+            console.log('✅ Пользователь вошёл в систему:', user.email);
+            if (loggedOutView) loggedOutView.style.display = 'none';
+            if (loggedInView) loggedInView.style.display = '';
+            if (userNameEl) userNameEl.textContent = user.displayName || user.email?.split('@')[0] || 'Пользователь';
+            checkAdmin(user); // Проверяем, является ли пользователь администратором
+        } else {
+            console.log('❌ Пользователь вышел из системы.');
+            if (loggedOutView) loggedOutView.style.display = '';
+            if (loggedInView) loggedInView.style.display = 'none';
+            checkAdmin(null); // Сбрасываем статус администратора
         }
         
-        await new Promise(r => setTimeout(r, 1500));
-    }
-}
-// Twitter Monitor State
-let twitterMonitorData = [];
-const TWITTER_MONITOR_STORAGE = 'arc_twitter_monitor_v1';
+        // *** Важный порядок загрузки данных после определения состояния аутентификации ***
+        await loadSharedData();      // Загружаем общие данные (админские ссылки, overrides)
+        await loadAllData();         // Загружаем пользовательские данные (статистика, избранное)
+        renderAllUserItems();        // Рендерим динамически добавленные пользователем элементы
+        initTwitterMonitor();        // Инициализируем Twitter Monitor (зависит от isAdmin)
+        // refreshAllVisuals() вызывается внутри loadAllData, чтобы обновить UI после загрузки
+    });
+
+    // ============================================================
+    //  TWITTER RSS MONITOR (ADMIN ONLY) - КОНФИГУРАЦИЯ
+    // ============================================================
+    const TWITTER_MONITOR_CONFIG = {
+        morkie:   { username: '_morkie',     zone: 'nft_morkie',   triggerText: 'Mint Free NFT On Arc Testnet' },
+        clara:    { username: 'clarachainxyz', zone: 'nft_clara',    triggerText: 'Free Mint NFT on Arc Testnet' },
+        oku:      { username: 'OKUXYZ',       zone: 'nft_oku',      triggerText: 'NFT On Arc Testnet' },
+        mintaura: { username: 'MintAura',     zone: 'nft_mintaura', triggerText: 'Mint Free Nft on Arc Testnet' },
+        arkle:    { username: '0xarkle',      zone: 'nft_arkle',    triggerText: 'NFT On Arc Testnet' },
+        draze:    { username: 'DrazeLab',     zone: 'nft_draze',    triggerText: 'NFT On Arc Testnet' },
+        caset:    { username: 'casetnetwork', zone: 'nft_caset',    triggerText: 'Mint Free NFT On ARC Testnet' },
+        alze:     { username: '0xAlze',       zone: 'nft_alze',     triggerText: 'NFT on Arc Testnet' }
+    };
     
-let knownLinksSet = new Set();
-let favoritesSortable = null;
-const favoriteControls = new Map();
-const DYNAMIC_CLASS_SET = new Set(['daily-active', 'visited-once', 'has-new-flag']);
-let tooltipEl = null;
-let activeTooltipTarget = null;
-let editModeActive = false;
-let currentEditTarget = null;
-const EDITS_OVERRIDE_KEY = 'arc_tracker_edits_v1';
-let editsOverride = {};
+    // Twitter Monitor State
+    let twitterMonitorData = [];
+    const TWITTER_MONITOR_STORAGE = 'arc_twitter_monitor_v1';
 
-// ===== TOAST =====
-function showToast(message, type = 'info') {
-    const container = document.getElementById('toastContainer');
-    const toast = document.createElement('div');
-    toast.className = `toast ${type}`;
-    toast.textContent = message;
-    container.appendChild(toast);
-    setTimeout(() => { toast.style.opacity = '0'; toast.style.transform = 'translateY(20px)'; setTimeout(() => toast.remove(), 300); }, 3000);
-}
+    async function autoAddNewNFT(projectKey, config, tweet) {
+        const tweetLink = tweet.link;
+        const tweetId = tweetLink.split('/').pop().split('?')[0];
+        const internalId = `tw_${projectKey}_${tweetId}`;
 
-// ===== ADMIN CHECK =====
-function checkAdmin(user) {
-    isAdmin = user && user.uid === ADMIN_UID;
-    document.body.classList.toggle('is-admin', isAdmin);
-    const badgeContainer = document.getElementById('adminBadgeContainer');
-    if (badgeContainer) {
-        badgeContainer.innerHTML = isAdmin ? '<span class="admin-badge"><i class="fas fa-crown"></i> Администратор</span>' : '';
+        // 1. Проверяем дубликаты
+        if (arcData[internalId] || isAlreadyInList(config.zone, tweetLink)) {
+            return;
+        }
+
+        // 2. Сохраняем в список мониторинга (если он нужен, в данном случае его нет в UI)
+        // В данном случае, мы сразу создаём элемент, а не просто мониторим.
+        // monitorItem (и twitterMonitorData) здесь не используются в вашем текущем HTML,
+        // но оставим эту логику, если она планировалась для отдельного отображения.
+        const monitorItem = {
+            id: internalId,
+            project: projectKey,
+            text: tweet.title.substring(0, 100) + '...',
+            link: tweetLink,
+            timestamp: Date.now(),
+            zone: config.zone
+        };
+        twitterMonitorData.unshift(monitorItem);
+        if (twitterMonitorData.length > 20) twitterMonitorData = twitterMonitorData.slice(0, 20);
+        localStorage.setItem(TWITTER_MONITOR_STORAGE, JSON.stringify(twitterMonitorData));
+        
+        // updateMonitorUI(); // Эта функция не определена в предоставленном коде
+
+        // 3. Создаем NFT как новый пользовательский элемент
+        const newItem = {
+            id: internalId,
+            title: `🆕 ${config.triggerText.split(' on ')[0]}`,
+            url: tweetLink,
+            tooltip: `Авто-обнаружение из Twitter @${config.username} (${new Date(tweet.pubDate || Date.now()).toLocaleDateString()})`,
+            image: "", // Если нужно парсить изображение из твита, потребуется дополнительная логика
+            trackType: 'track-once',
+            addedAt: Date.now()
+        };
+
+        if (!userItemsData.items[config.zone]) userItemsData.items[config.zone] = [];
+        userItemsData.items[config.zone].unshift(newItem);
+        
+        if (typeof newLinksSet !== 'undefined') { // Проверка на случай, если newLinksSet не инициализирован
+            newLinksSet.add(internalId);
+            localStorage.setItem(NEW_LINKS_KEY, JSON.stringify([...newLinksSet]));
+        }
+
+        await saveUserItems(); // Сохраняем добавленный элемент в Firestore и LocalStorage
+        renderUserItemInZone(config.zone, newItem); // Отображаем на странице
+        
+        showToast(`🐦 Найден новый пост у ${projectKey}!`, 'success');
+        detectNewLinks(); // Обновляем индикаторы "New!"
     }
-}
 
-// ===== THEME =====
-function loadTheme() {
-    const saved = localStorage.getItem(THEME_KEY);
-    if (saved === 'light') document.body.classList.add('light-theme');
-    updateThemeBtn();
-}
+    // Проверка на дубликаты по ссылке
+    function isAlreadyInList(zone, url) {
+        const items = userItemsData.items[zone] || [];
+        return items.some(item => item.url === url);
+    }
+    // ===== TWITTER RSS MONITORING =====
+    function parseRSS(xmlText) {
+        const parser = new DOMParser();
+        const xmlDoc = parser.parseFromString(xmlText, "text/xml");
+        const items = Array.from(xmlDoc.querySelectorAll("item"));
+        
+        return items.map(item => {
+            const title = item.querySelector("title")?.textContent || "";
+            const link = item.querySelector("link")?.textContent || "";
+            const pubDate = item.querySelector("pubDate")?.textContent || "";
+            const dcDate = item.getElementsByTagNameNS("*", "date")[0]?.textContent;
+            
+            return {
+                title: title,
+                link: link,
+                pubDate: pubDate || dcDate || new Date().toISOString()
+            };
+        });
+    }
 
-function toggleTheme() {
-    document.body.classList.toggle('light-theme');
-    const isLight = document.body.classList.contains('light-theme');
-    localStorage.setItem(THEME_KEY, isLight ? 'light' : 'dark');
-    updateThemeBtn();
-    showToast(isLight ? 'Светлая тема активна' : 'Тёмная тема активна', 'info');
-}
+    async function runTwitterMonitor() {
+        if (!isAdmin) {
+             console.log("Twitter Monitor: Не админ, пропуск мониторинга.");
+             return;
+        }
 
-function updateThemeBtn() {
-    const btn = document.getElementById('themeToggleBtn');
-    if (!btn) return;
-    const isLight = document.body.classList.contains('light-theme');
-    btn.innerHTML = isLight ? '<i class="fas fa-moon"></i> Тёмная тема' : '<i class="fas fa-sun"></i> Светлая тема';
-}
+        const nitterInstances = [
+            'https://nitter.privacydev.net',
+            'https://nitter.lucabased.xyz',
+            'https://nitter.poast.org',
+            'https://xcancel.com'
+        ];
 
-// ===== LIGHTBOX =====
-function openLightbox(imageUrl, title, tooltip, linkUrl, linkLabel, linkIcon) {
-    const overlay = document.getElementById('lightboxOverlay');
-    const img = document.getElementById('lightboxImage');
-    const titleEl = document.getElementById('lightboxTitle');
-    const captionEl = document.getElementById('lightboxCaption');
-    const linkEl = document.getElementById('lightboxLink');
-    img.src = imageUrl;
-    img.alt = title;
-    titleEl.textContent = title;
-    captionEl.textContent = tooltip || '';
-    linkEl.href = linkUrl;
-    linkEl.innerHTML = `<i class="fas fa-${linkIcon || 'external-link-alt'}"></i> ${linkLabel || 'Перейти к минту'}`;
-    overlay.classList.add('open');
-    document.body.style.overflow = 'hidden';
-}
+        const corsProxies = [
+            (url) => `https://api.allorigins.win/raw?url=${encodeURIComponent(url)}`,
+            (url) => `https://corsproxy.io/?${encodeURIComponent(url)}`
+        ];
 
-function closeLightbox() {
-    const overlay = document.getElementById('lightboxOverlay');
-    overlay.classList.remove('open');
-    document.body.style.overflow = '';
-}
+        console.log("🚀 Запуск мониторинга Twitter...");
+        let newPostsDetected = 0;
 
-function initLightbox() {
-    document.getElementById('lightboxClose').addEventListener('click', closeLightbox);
-    document.getElementById('lightboxOverlay').addEventListener('click', (e) => {
-        if (e.target === e.currentTarget) closeLightbox();
-    });
-    document.addEventListener('keydown', (e) => { if (e.key === 'Escape') closeLightbox(); });
-    document.querySelectorAll('.link-inline[data-image]').forEach(link => {
-        if (link.dataset.lightboxBound) return;
-        link.addEventListener('contextmenu', (e) => {
-    const imageUrl = link.getAttribute('data-image');
-    if (!imageUrl) return;
-    e.preventDefault();
-    const title = getLinkTitle(link);
-    const tooltip = link.getAttribute('data-tooltip') || '';
-    const isNftMint = link.classList.contains('track-once') && !link.classList.contains('track-once-info') && !link.classList.contains('track-daily');
-    const linkLabel = isNftMint ? 'Перейти к минту' : 'Перейти на Website';
-    const linkIcon = isNftMint ? 'external-link-alt' : 'globe';
-    openLightbox(imageUrl, title, tooltip, link.href, linkLabel, linkIcon);
-});
-        link.dataset.lightboxBound = 'true';
-    });
-}
+        for (const [key, config] of Object.entries(TWITTER_MONITOR_CONFIG)) {
+            let success = false;
+            let currentInstance = '';
+            let currentProxy = '';
 
-// ===== CARD ANIMATIONS =====
-function initCardAnimations() {
-    const observer = new IntersectionObserver((entries) => {
-        entries.forEach((entry, index) => {
-            if (entry.isIntersecting) {
-                setTimeout(() => { entry.target.classList.add('anim-visible'); }, index * 80);
-                observer.unobserve(entry.target);
+            for (const instance of nitterInstances) {
+                currentInstance = instance;
+                for (const proxyGen of corsProxies) {
+                    currentProxy = proxyGen.name || 'custom_proxy'; // Для логирования
+                    try {
+                        const rssUrl = `${instance}/${config.username}/rss`;
+                        const fetchUrl = proxyGen(rssUrl);
+                        const controller = new AbortController();
+                        const timeoutId = setTimeout(() => {
+                            controller.abort();
+                            console.warn(`Twitter Monitor: Таймаут для ${key} через ${currentInstance} с прокси ${currentProxy}`);
+                        }, 8000); // Увеличил таймаут до 8 секунд
+
+                        const response = await fetch(fetchUrl, {
+                            signal: controller.signal,
+                            cache: "no-store"
+                        });
+                        clearTimeout(timeoutId);
+
+                        if (!response.ok) {
+                            console.warn(`Twitter Monitor: Неудачный ответ ${response.status} для ${key} через ${currentInstance} с прокси ${currentProxy}`);
+                            continue;
+                        }
+
+                        const textData = await response.text();
+                        if (!textData.includes('<rss') && !textData.includes('<feed')) {
+                             console.warn(`Twitter Monitor: Не RSS/ATOM ответ для ${key} через ${currentInstance} с прокси ${currentProxy}`);
+                             continue;
+                        }
+
+                        const tweets = parseRSS(textData);
+
+                        if (tweets.length > 0) {
+                            console.log(`✅ [${key}] Успех через ${currentInstance} (${currentProxy})`);
+                            
+                            tweets.forEach(tweet => {
+                                if (tweet.title && tweet.title.toLowerCase().includes(config.triggerText.toLowerCase())) {
+                                    autoAddNewNFT(key, config, tweet);
+                                    newPostsDetected++;
+                                }
+                            });
+
+                            success = true;
+                            break; // Успех для текущего проекта, переходим к следующему
+                        }
+
+                    } catch (e) {
+                        if (e.name === 'AbortError') {
+                            console.error(`Twitter Monitor: Aborted request for ${key} (timeout)`);
+                        } else {
+                            console.error(`Twitter Monitor: Ошибка для ${key} через ${currentInstance} с прокси ${currentProxy}:`, e);
+                        }
+                        // Продолжаем попытки с другими прокси/инстансами
+                    }
+                }
+                if (success) break; // Успех для текущего проекта, переходим к следующему
+            }
+            
+            // Задержка между запросами к разным проектам
+            await new Promise(r => setTimeout(r, 1500));
+        }
+        if (newPostsDetected > 0) {
+            showToast(`Найдено ${newPostsDetected} новых твитов!`, 'info');
+        } else {
+            showToast('Новых твитов не найдено.', 'info');
+        }
+    }
+
+
+    // ===== TOAST =====
+    function showToast(message, type = 'info') {
+        const container = document.getElementById('toastContainer');
+        if (!container) { console.error('Toast container not found'); return; }
+        const toast = document.createElement('div');
+        toast.className = `toast ${type}`;
+        toast.textContent = message;
+        container.appendChild(toast);
+        setTimeout(() => { toast.style.opacity = '0'; toast.style.transform = 'translateY(20px)'; setTimeout(() => toast.remove(), 300); }, 3000);
+    }
+
+    // ===== ADMIN CHECK =====
+    function checkAdmin(user) {
+        isAdmin = user && user.uid === ADMIN_UID;
+        document.body.classList.toggle('is-admin', isAdmin);
+        const badgeContainer = document.getElementById('adminBadgeContainer');
+        if (badgeContainer) {
+            badgeContainer.innerHTML = isAdmin ? '<span class="admin-badge"><i class="fas fa-crown"></i> Администратор</span>' : '';
+        }
+        // После изменения статуса админа, пере-инициализируем кнопки (для показа/скрытия)
+        injectAddButtons();
+        if (isAdmin && editModeActive) { // Если админ и был активен режим редактирования
+            injectEditButtons();
+        } else if (!isAdmin) {
+            removeEditButtons(); // Удаляем кнопки редактирования, если пользователь не админ
+            editModeActive = false;
+            document.body.classList.remove('edit-mode');
+            const editBtn = document.getElementById('editModeBtn');
+            if (editBtn) {
+                editBtn.classList.remove('active');
+                editBtn.innerHTML = '<i class="fas fa-pen"></i> Редактирование';
+            }
+        }
+    }
+
+    // ===== THEME =====
+    function loadTheme() {
+        const saved = localStorage.getItem(THEME_KEY);
+        if (saved === 'light') document.body.classList.add('light-theme');
+        updateThemeBtn();
+    }
+
+    function toggleTheme() {
+        document.body.classList.toggle('light-theme');
+        const isLight = document.body.classList.contains('light-theme');
+        localStorage.setItem(THEME_KEY, isLight ? 'light' : 'dark');
+        updateThemeBtn();
+        showToast(isLight ? 'Светлая тема активна' : 'Тёмная тема активна', 'info');
+    }
+
+    function updateThemeBtn() {
+        const btn = document.getElementById('themeToggleBtn');
+        if (!btn) return;
+        const isLight = document.body.classList.contains('light-theme');
+        btn.innerHTML = isLight ? '<i class="fas fa-moon"></i> Тёмная тема' : '<i class="fas fa-sun"></i> Светлая тема';
+    }
+
+    // ===== LIGHTBOX =====
+    function openLightbox(imageUrl, title, tooltip, linkUrl, linkLabel, linkIcon) {
+        const overlay = document.getElementById('lightboxOverlay');
+        const img = document.getElementById('lightboxImage');
+        const titleEl = document.getElementById('lightboxTitle');
+        const captionEl = document.getElementById('lightboxCaption');
+        const linkEl = document.getElementById('lightboxLink');
+
+        if (!overlay || !img || !titleEl || !captionEl || !linkEl) {
+             console.error('Lightbox elements missing.');
+             return;
+        }
+
+        img.src = imageUrl;
+        img.alt = title;
+        titleEl.textContent = title;
+        captionEl.textContent = tooltip || '';
+        linkEl.href = linkUrl;
+        linkEl.innerHTML = `<i class="fas fa-${linkIcon || 'external-link-alt'}"></i> ${linkLabel || 'Перейти к минту'}`;
+        overlay.classList.add('open');
+        document.body.style.overflow = 'hidden';
+    }
+
+    function closeLightbox() {
+        const overlay = document.getElementById('lightboxOverlay');
+        if (overlay) overlay.classList.remove('open');
+        document.body.style.overflow = '';
+    }
+
+    function initLightbox() {
+        const lightboxCloseBtn = document.getElementById('lightboxClose');
+        const lightboxOverlayEl = document.getElementById('lightboxOverlay');
+
+        if (lightboxCloseBtn) lightboxCloseBtn.removeEventListener('click', closeLightbox); // Избегаем дублирования
+        if (lightboxOverlayEl) lightboxOverlayEl.removeEventListener('click', (e) => { // Избегаем дублирования
+            if (e.target === e.currentTarget) closeLightbox();
+        });
+
+        if (lightboxCloseBtn) lightboxCloseBtn.addEventListener('click', closeLightbox);
+        if (lightboxOverlayEl) lightboxOverlayEl.addEventListener('click', (e) => {
+            if (e.target === e.currentTarget) closeLightbox();
+        });
+
+        document.querySelectorAll('.link-inline[data-image]').forEach(link => {
+            if (link.dataset.lightboxBound) return; // Пропускаем, если уже привязано
+            link.addEventListener('contextmenu', (e) => {
+                const imageUrl = link.getAttribute('data-image');
+                if (!imageUrl) return;
+                e.preventDefault();
+                const title = getLinkTitle(link);
+                const tooltip = link.getAttribute('data-tooltip') || '';
+                const isNftMint = link.classList.contains('track-once') && !link.classList.contains('track-once-info') && !link.classList.contains('track-daily');
+                const linkLabel = isNftMint ? 'Перейти к минту' : 'Перейти на Website';
+                const linkIcon = isNftMint ? 'external-link-alt' : 'globe';
+                openLightbox(imageUrl, title, tooltip, link.href, linkLabel, linkIcon);
+            });
+            link.dataset.lightboxBound = 'true'; // Отмечаем, что обработчик привязан
+        });
+    }
+
+    // ===== CARD ANIMATIONS =====
+    function initCardAnimations() {
+        const observer = new IntersectionObserver((entries) => {
+            entries.forEach((entry, index) => {
+                if (entry.isIntersecting) {
+                    setTimeout(() => { entry.target.classList.add('anim-visible'); }, index * 80);
+                    observer.unobserve(entry.target);
+                }
+            });
+        }, { threshold: 0.1, rootMargin: '0px 0px -40px 0px' });
+        document.querySelectorAll('.resource-item').forEach(card => observer.observe(card));
+    }
+
+    // ===== LAZY LOADING =====
+    function initLazyLoading() {
+        const imgObserver = new IntersectionObserver((entries) => {
+            entries.forEach(entry => {
+                if (entry.isIntersecting) {
+                    const img = entry.target;
+                    if (img.dataset.lazySrc) { img.src = img.dataset.lazySrc; img.removeAttribute('data-lazy-src'); }
+                    imgObserver.unobserve(img);
+                }
+            });
+        }, { rootMargin: '200px' });
+        document.querySelectorAll('img[loading="lazy"]').forEach(img => imgObserver.observe(img));
+    }
+
+    // ===== TOOLTIP =====
+    function ensureTooltipElement() {
+        if (!tooltipEl) { tooltipEl = document.createElement('div'); tooltipEl.className = 'floating-tooltip'; document.body.appendChild(tooltipEl); }
+    }
+
+    function positionTooltip(target) {
+        if (!tooltipEl || !target) return;
+        const rect = target.getBoundingClientRect();
+        const spacing = 15;
+        tooltipEl.style.left = '0'; tooltipEl.style.top = '0';
+        const tooltipRect = tooltipEl.getBoundingClientRect();
+        const tooltipWidth = Math.min(tooltipRect.width, 320);
+        const tooltipHeight = tooltipRect.height;
+        let left = rect.left - tooltipWidth - spacing;
+        if (left < spacing) left = rect.right + spacing;
+        let top = rect.top + (rect.height / 2) - (tooltipHeight / 2);
+        if (top < spacing) top = spacing;
+        if (top + tooltipHeight > window.innerHeight - spacing) top = window.innerHeight - tooltipHeight - spacing;
+        if (left < spacing) left = spacing;
+        if (left + tooltipWidth > window.innerWidth - spacing) left = window.innerWidth - tooltipWidth - spacing;
+        tooltipEl.style.left = left + 'px'; tooltipEl.style.top = top + 'px';
+    }
+
+    function showTooltip(e) {
+        const target = e.target.closest('[data-tooltip]');
+        if (!target) return;
+        const text = target.getAttribute('data-tooltip');
+        const imageUrl = target.getAttribute('data-image');
+        if (!text && !imageUrl) return;
+        ensureTooltipElement();
+        activeTooltipTarget = target;
+        if (imageUrl) {
+            tooltipEl.classList.add('has-image');
+            tooltipEl.innerHTML = `<div class="tooltip-image-container"><img src="${imageUrl}" alt="${text || 'Image'}" class="tooltip-image" loading="lazy" onerror="this.style.display='none'">${text ? `<div class="tooltip-text">${text}</div>` : ''}</div>`;
+        } else { tooltipEl.classList.remove('has-image'); tooltipEl.textContent = text; }
+        positionTooltip(target);
+        tooltipEl.classList.add('visible');
+    }
+
+    function hideTooltip() { activeTooltipTarget = null; if (tooltipEl) tooltipEl.classList.remove('visible'); }
+
+    function initializeTooltips() {
+        // Удаляем старые обработчики, чтобы избежать дублирования
+        document.querySelectorAll('[data-tooltip]').forEach(el => {
+            if (el.dataset.tooltipBound === 'true') {
+                el.removeEventListener('mouseenter', showTooltip);
+                el.removeEventListener('mouseleave', hideTooltip);
+                el.removeEventListener('focus', showTooltip);
+                el.removeEventListener('blur', hideTooltip);
+                delete el.dataset.tooltipBound;
             }
         });
-    }, { threshold: 0.1, rootMargin: '0px 0px -40px 0px' });
-    document.querySelectorAll('.resource-item').forEach(card => observer.observe(card));
-}
 
-// ===== LAZY LOADING =====
-function initLazyLoading() {
-    const imgObserver = new IntersectionObserver((entries) => {
-        entries.forEach(entry => {
-            if (entry.isIntersecting) {
-                const img = entry.target;
-                if (img.dataset.lazySrc) { img.src = img.dataset.lazySrc; img.removeAttribute('data-lazy-src'); }
-                imgObserver.unobserve(img);
-            }
+        // Добавляем новые обработчики
+        document.querySelectorAll('[data-tooltip]').forEach(el => {
+            el.addEventListener('mouseenter', showTooltip);
+            el.addEventListener('mouseleave', hideTooltip);
+            el.addEventListener('focus', showTooltip);
+            el.addEventListener('blur', hideTooltip);
+            el.dataset.tooltipBound = 'true'; // Отмечаем, что обработчик привязан
         });
-    }, { rootMargin: '200px' });
-    document.querySelectorAll('img[loading="lazy"]').forEach(img => imgObserver.observe(img));
-}
+    }
 
-// ===== TOOLTIP =====
-function ensureTooltipElement() {
-    if (!tooltipEl) { tooltipEl = document.createElement('div'); tooltipEl.className = 'floating-tooltip'; document.body.appendChild(tooltipEl); }
-}
+    document.addEventListener('scroll', () => { if (activeTooltipTarget) positionTooltip(activeTooltipTarget); }, true);
+    window.addEventListener('resize', () => { if (activeTooltipTarget) positionTooltip(activeTooltipTarget); });
 
-function positionTooltip(target) {
-    if (!tooltipEl || !target) return;
-    const rect = target.getBoundingClientRect();
-    const spacing = 15;
-    tooltipEl.style.left = '0'; tooltipEl.style.top = '0';
-    const tooltipRect = tooltipEl.getBoundingClientRect();
-    const tooltipWidth = Math.min(tooltipRect.width, 320);
-    const tooltipHeight = tooltipRect.height;
-    let left = rect.left - tooltipWidth - spacing;
-    if (left < spacing) left = rect.right + spacing;
-    let top = rect.top + (rect.height / 2) - (tooltipHeight / 2);
-    if (top < spacing) top = spacing;
-    if (top + tooltipHeight > window.innerHeight - spacing) top = window.innerHeight - tooltipHeight - spacing;
-    if (left < spacing) left = spacing;
-    if (left + tooltipWidth > window.innerWidth - spacing) left = window.innerWidth - tooltipWidth - spacing;
-    tooltipEl.style.left = left + 'px'; tooltipEl.style.top = top + 'px';
-}
+    // ===== EXPORT / IMPORT =====
+    function exportJSON() {
+        const exportData = {
+            version: PAGE_VERSION, exportDate: new Date().toISOString(), arcData, favoritesState, favoritesOrder,
+            userItems: JSON.parse(localStorage.getItem('arc_user_items_v1') || '{}'),
+            sections: JSON.parse(localStorage.getItem(SECTION_COLLAPSE_KEY) || '{}'),
+            badgesHidden: localStorage.getItem(BADGE_VISIBILITY_KEY), theme: localStorage.getItem(THEME_KEY),
+            editsOverride: editsOverride
+        };
+        const blob = new Blob([JSON.stringify(exportData, null, 2)], { type: 'application/json' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a'); a.href = url;
+        a.download = `arc-tracker-backup-${new Date().toISOString().slice(0, 10)}.json`;
+        a.click(); URL.revokeObjectURL(url);
+        showToast('Данные экспортированы!', 'success');
+    }
 
-function showTooltip(e) {
-    const target = e.target.closest('[data-tooltip]');
-    if (!target) return;
-    const text = target.getAttribute('data-tooltip');
-    const imageUrl = target.getAttribute('data-image');
-    if (!text && !imageUrl) return;
-    ensureTooltipElement();
-    activeTooltipTarget = target;
-    if (imageUrl) {
-        tooltipEl.classList.add('has-image');
-        tooltipEl.innerHTML = `<div class="tooltip-image-container"><img src="${imageUrl}" alt="${text || 'Image'}" class="tooltip-image" loading="lazy" onerror="this.style.display='none'">${text ? `<div class="tooltip-text">${text}</div>` : ''}</div>`;
-    } else { tooltipEl.classList.remove('has-image'); tooltipEl.textContent = text; }
-    positionTooltip(target);
-    tooltipEl.classList.add('visible');
-}
+    function importJSON(file) {
+        const reader = new FileReader();
+        reader.onload = async (e) => {
+            try {
+                const data = JSON.parse(e.target.result);
+                if (!data.arcData && !data.favoritesState && !data.userItems) throw new Error('Неверный формат файла или отсутствуют данные');
 
-function hideTooltip() { activeTooltipTarget = null; if (tooltipEl) tooltipEl.classList.remove('visible'); }
+                if (data.arcData) { arcData = data.arcData; localStorage.setItem(STORAGE_KEY, JSON.stringify(arcData)); }
+                if (data.favoritesState) { favoritesState = data.favoritesState; localStorage.setItem(FAVORITES_KEY, JSON.stringify(favoritesState)); }
+                if (data.favoritesOrder) { favoritesOrder = data.favoritesOrder; localStorage.setItem(FAVORITES_ORDER_KEY, JSON.stringify(favoritesOrder)); }
+                if (data.userItems) { localStorage.setItem(USER_ITEMS_KEY, JSON.stringify(data.userItems)); }
+                if (data.sections) { localStorage.setItem(SECTION_COLLAPSE_KEY, JSON.stringify(data.sections)); }
+                if (data.badgesHidden != null) localStorage.setItem(BADGE_VISIBILITY_KEY, data.badgesHidden);
+                if (data.theme) { localStorage.setItem(THEME_KEY, data.theme); if (data.theme === 'light') document.body.classList.add('light-theme'); else document.body.classList.remove('light-theme'); updateThemeBtn(); }
+                if (data.editsOverride) { editsOverride = data.editsOverride; localStorage.setItem(EDITS_OVERRIDE_KEY, JSON.stringify(editsOverride)); }
 
-function initializeTooltips() {
-    document.querySelectorAll('[data-tooltip]').forEach(el => {
-        if (el.dataset.tooltipBound === 'true') return;
-        el.addEventListener('mouseenter', showTooltip);
-        el.addEventListener('mouseleave', hideTooltip);
-        el.addEventListener('focus', showTooltip);
-        el.addEventListener('blur', hideTooltip);
-        el.dataset.tooltipBound = 'true';
-    });
-}
+                await saveStats();
+                await saveFavorites();
+                // Если userItems были импортированы, сохраним их в облако, если пользователь залогинен и админ
+                if (currentUser && isAdmin && data.userItems) {
+                    await setDoc(doc(db, "config", "sharedItems"), {
+                        userItems: data.userItems,
+                        newItemIds: [...newLinksSet] // Сохраняем текущие newLinksSet
+                    }, { merge: true });
+                }
+                 // Если editsOverride были импортированы, сохраним их в облако, если пользователь залогинен и админ
+                if (currentUser && isAdmin && data.editsOverride) {
+                    await setDoc(doc(db, "config", "sharedEdits"), { editsOverride: data.editsOverride }, { merge: true });
+                }
 
-document.addEventListener('scroll', () => { if (activeTooltipTarget) positionTooltip(activeTooltipTarget); }, true);
-window.addEventListener('resize', () => { if (activeTooltipTarget) positionTooltip(activeTooltipTarget); });
+                showToast('Данные импортированы! Страница обновится.', 'success');
+                setTimeout(() => location.reload(), 1500);
+            } catch (err) { showToast('Ошибка импорта: ' + err.message, 'error'); }
+        };
+        reader.readAsText(file);
+    }
 
-// ===== EXPORT / IMPORT =====
-function exportJSON() {
-    const exportData = {
-        version: PAGE_VERSION, exportDate: new Date().toISOString(), arcData, favoritesState, favoritesOrder,
-        userItems: JSON.parse(localStorage.getItem('arc_user_items_v1') || '{}'),
-        sections: JSON.parse(localStorage.getItem(SECTION_COLLAPSE_KEY) || '{}'),
-        badgesHidden: localStorage.getItem(BADGE_VISIBILITY_KEY), theme: localStorage.getItem(THEME_KEY)
-    };
-    const blob = new Blob([JSON.stringify(exportData, null, 2)], { type: 'application/json' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a'); a.href = url;
-    a.download = `arc-tracker-backup-${new Date().toISOString().slice(0, 10)}.json`;
-    a.click(); URL.revokeObjectURL(url);
-    showToast('Данные экспортированы!', 'success');
-}
+    // ===== DATA MANAGEMENT =====
+    async function loadAllData() {
+        console.log('🔄 Загрузка всех пользовательских данных...');
+        const localStats = JSON.parse(localStorage.getItem(STORAGE_KEY) || '{}');
+        const localFav = JSON.parse(localStorage.getItem(FAVORITES_KEY) || '{}');
+        const localOrder = JSON.parse(localStorage.getItem(FAVORITES_ORDER_KEY) || '[]');
+        const localTimestamp = parseInt(localStorage.getItem(FAVORITES_TIMESTAMP_KEY) || '0', 10);
 
-function importJSON(file) {
-    const reader = new FileReader();
-    reader.onload = async (e) => {
-        try {
-            const data = JSON.parse(e.target.result);
-            if (!data.arcData && !data.favoritesState) throw new Error('Неверный формат');
-            if (data.arcData) { arcData = data.arcData; localStorage.setItem(STORAGE_KEY, JSON.stringify(arcData)); }
-            if (data.favoritesState) { favoritesState = data.favoritesState; localStorage.setItem(FAVORITES_KEY, JSON.stringify(favoritesState)); }
-            if (data.favoritesOrder) { favoritesOrder = data.favoritesOrder; localStorage.setItem(FAVORITES_ORDER_KEY, JSON.stringify(favoritesOrder)); }
-            if (data.userItems) { localStorage.setItem('arc_user_items_v1', JSON.stringify(data.userItems)); }
-            if (data.sections) { localStorage.setItem(SECTION_COLLAPSE_KEY, JSON.stringify(data.sections)); }
-            if (data.badgesHidden != null) localStorage.setItem(BADGE_VISIBILITY_KEY, data.badgesHidden);
-            if (data.theme) { localStorage.setItem(THEME_KEY, data.theme); if (data.theme === 'light') document.body.classList.add('light-theme'); else document.body.classList.remove('light-theme'); updateThemeBtn(); }
-            await saveStats(); await saveFavorites();
-            showToast('Данные импортированы! Страница обновится.', 'success');
-            setTimeout(() => location.reload(), 1500);
-        } catch (err) { showToast('Ошибка импорта: ' + err.message, 'error'); }
-    };
-    reader.readAsText(file);
-}
+        arcData = localStats;
+        favoritesState = localFav;
+        favoritesOrder = localOrder;
 
-// ===== DATA MANAGEMENT =====
-async function loadAllData() {
-    const localStats = JSON.parse(localStorage.getItem(STORAGE_KEY) || '{}');
-    const localFav = JSON.parse(localStorage.getItem(FAVORITES_KEY) || '{}');
-    const localOrder = JSON.parse(localStorage.getItem(FAVORITES_ORDER_KEY) || '[]');
-    const localTimestamp = parseInt(localStorage.getItem(FAVORITES_TIMESTAMP_KEY) || '0', 10);
-    arcData = localStats; favoritesState = localFav; favoritesOrder = localOrder;
-    if (currentUser) {
-        try {
-            const docRef = doc(db, "users", currentUser.uid);
-            const docSnap = await getDoc(docRef);
-            if (docSnap.exists()) {
-                const cloudData = docSnap.data();
-                const cloudFav = cloudData.favoritesState || {};
-                const cloudOrder = cloudData.favoritesOrder || [];
-                const cloudTs = parseInt(cloudData.favoritesTimestamp || '0', 10);
-                const localHasFav = Object.keys(localFav).length > 0 || localOrder.length > 0;
-                const cloudHasFav = Object.keys(cloudFav).length > 0 || cloudOrder.length > 0;
-                if (cloudHasFav) {
-                    if (cloudTs > localTimestamp) {
-                        favoritesState = cloudFav; favoritesOrder = cloudOrder;
-                        localStorage.setItem(FAVORITES_KEY, JSON.stringify(favoritesState));
-                        localStorage.setItem(FAVORITES_ORDER_KEY, JSON.stringify(favoritesOrder));
-                        localStorage.setItem(FAVORITES_TIMESTAMP_KEY, String(cloudTs));
-                    } else {
+        if (currentUser) {
+            console.log('☁️ Пользователь залогинен, пытаемся загрузить данные из облака...');
+            try {
+                const docRef = doc(db, "users", currentUser.uid);
+                const docSnap = await getDoc(docRef);
+                if (docSnap.exists()) {
+                    const cloudData = docSnap.data();
+                    console.log('✅ Данные пользователя найдены в облаке:', cloudData);
+
+                    // Сравнение избранного
+                    const cloudFav = cloudData.favoritesState || {};
+                    const cloudOrder = cloudData.favoritesOrder || [];
+                    const cloudTs = parseInt(cloudData.favoritesTimestamp || '0', 10);
+                    const localHasFav = Object.keys(localFav).length > 0 || localOrder.length > 0;
+                    const cloudHasFav = Object.keys(cloudFav).length > 0 || cloudOrder.length > 0;
+
+                    if (cloudHasFav) {
+                        if (cloudTs > localTimestamp) {
+                            console.log('➡️ Обновление избранного из облака (новее)');
+                            favoritesState = cloudFav;
+                            favoritesOrder = cloudOrder;
+                            localStorage.setItem(FAVORITES_KEY, JSON.stringify(favoritesState));
+                            localStorage.setItem(FAVORITES_ORDER_KEY, JSON.stringify(favoritesOrder));
+                            localStorage.setItem(FAVORITES_TIMESTAMP_KEY, String(cloudTs));
+                        } else if (localHasFav && localTimestamp > cloudTs) {
+                            console.log('⬆️ Отправка избранного в облако (локальное новее)');
+                            await saveToCloud({ favoritesState: localFav, favoritesOrder: localOrder, favoritesTimestamp: localTimestamp });
+                        }
+                    } else if (localHasFav) {
+                        console.log('⬆️ Отправка локального избранного в пустое облако');
                         await saveToCloud({ favoritesState: localFav, favoritesOrder: localOrder, favoritesTimestamp: localTimestamp });
                     }
-                } else if (localHasFav) {
-                    await saveToCloud({ favoritesState: localFav, favoritesOrder: localOrder, favoritesTimestamp: localTimestamp });
-                }
-                if (cloudData.arcGuideStats && Object.keys(cloudData.arcGuideStats).length > 0) {
-                    arcData = cloudData.arcGuideStats;
-                    localStorage.setItem(STORAGE_KEY, JSON.stringify(arcData));
-                }
-            } else if (Object.keys(localFav).length > 0) {
-                await saveToCloud({ favoritesState: localFav, favoritesOrder: localOrder, favoritesTimestamp: localTimestamp });
-            }
-        } catch (e) { console.error("Cloud load error:", e); }
-    }
-    refreshAllVisuals(); applyAllOverrides();
-}
 
-async function saveToCloud(data) {
-    if (!currentUser) return;
-    try { await setDoc(doc(db, "users", currentUser.uid), data, { merge: true }); }
-    catch (e) { console.error("Cloud save error:", e); }
-}
-
-async function saveStats() {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(arcData));
-    if (currentUser) await saveToCloud({ arcGuideStats: arcData });
-}
-
-async function saveFavorites() {
-    const ts = Date.now();
-    localStorage.setItem(FAVORITES_KEY, JSON.stringify(favoritesState));
-    localStorage.setItem(FAVORITES_ORDER_KEY, JSON.stringify(favoritesOrder));
-    localStorage.setItem(FAVORITES_TIMESTAMP_KEY, String(ts));
-    if (currentUser) await saveToCloud({ favoritesState, favoritesOrder, favoritesTimestamp: ts });
-}
-
-// ===== AUTH =====
-window.openLoginModal = function() {
-    document.getElementById('loginModal').style.display = 'flex';
-};
-window.closeLoginModal = function() {
-    document.getElementById('loginModal').style.display = 'none';
-};
-window.loginGoogle = async function() {
-    try {
-        await signInWithPopup(auth, new GoogleAuthProvider());
-        closeLoginModal();
-    } catch(e) { alert('Ошибка: ' + e.message); }
-};
-window.loginTwitter = async function() {
-    try {
-        await signInWithPopup(auth, new TwitterAuthProvider());
-        closeLoginModal();
-    } catch(e) { alert('Ошибка: ' + e.message); }
-};
-window.handleEmailLogin = async function() {
-    const email = document.getElementById('emailInput').value;
-    const pass = document.getElementById('passInput').value;
-    try {
-        await signInWithEmailAndPassword(auth, email, pass);
-        closeLoginModal();
-    } catch(e) { alert('Ошибка: ' + e.message); }
-};
-window.handleRegister = async function() {
-    const email = document.getElementById('emailInput').value;
-    const pass = document.getElementById('passInput').value;
-    try {
-        await createUserWithEmailAndPassword(auth, email, pass);
-        closeLoginModal();
-    } catch(e) { alert('Ошибка: ' + e.message); }
-};
-window.logout = function() { signOut(auth); };
-// ===== SHARED DATA — админские элементы видны всем =====
-async function loadSharedData() {
-    try {
-        const itemsSnap = await getDoc(doc(db, "config", "sharedItems"));
-        if (itemsSnap.exists()) {
-            const data = itemsSnap.data();
-            if (data.userItems) {
-                userItemsData = {
-                    items: data.userItems.items || {},
-                    collections: data.userItems.collections || [],
-                    dappCategories: data.userItems.dappCategories || []
-                };
-                localStorage.setItem(USER_ITEMS_KEY, JSON.stringify(userItemsData));
-                
-                // 🔥 ПРОВЕРКА НА ДУБЛИКАТЫ
-                const collectionIds = new Set(
-                    (userItemsData.collections || []).map(c => c.id)
-                );
-                const categoryIds = new Set(
-                    (userItemsData.dappCategories || []).map(c => c.id)
-                );
-                
-                const hasDuplicates = Object.keys(userItemsData.items || {})
-                    .some(zone => collectionIds.has(zone) || categoryIds.has(zone));
-                
-                if (hasDuplicates) {
-                    console.warn("⚠️ ОБНАРУЖЕНЫ ДУБЛИКАТЫ!");
-                    await cleanupDuplicatesAuto();
-                }
-            }
-            if (data.newItemIds && Array.isArray(data.newItemIds)) {
-                const localClicked = JSON.parse(localStorage.getItem('arc_tracker_clicked_new') || '[]');
-                const clickedSet = new Set(localClicked);
-                data.newItemIds.forEach(id => {
-                    if (!clickedSet.has(id)) {
-                        newLinksSet.add(id);
+                    // Обновление статистики (arcData) из облака
+                    if (cloudData.arcGuideStats && Object.keys(cloudData.arcGuideStats).length > 0) {
+                        // TODO: Добавить логику слияния, если локальные и облачные данные могут конфликтовать.
+                        // Для простоты, пока облако перезаписывает локальные.
+                        console.log('➡️ Обновление статистики из облака');
+                        arcData = cloudData.arcGuideStats;
+                        localStorage.setItem(STORAGE_KEY, JSON.stringify(arcData));
+                    } else if (Object.keys(localStats).length > 0) {
+                        console.log('⬆️ Отправка локальной статистики в пустое облако');
+                        await saveToCloud({ arcGuideStats: localStats });
                     }
-                });
-                localStorage.setItem(NEW_LINKS_KEY, JSON.stringify([...newLinksSet]));
+
+                } else if (Object.keys(localFav).length > 0 || Object.keys(localStats).length > 0) {
+                    console.log('⬆️ Документ пользователя отсутствует, сохраняем локальные данные в облако.');
+                    const dataToSave = {};
+                    if (Object.keys(localFav).length > 0) {
+                        dataToSave.favoritesState = localFav;
+                        dataToSave.favoritesOrder = localOrder;
+                        dataToSave.favoritesTimestamp = localTimestamp;
+                    }
+                    if (Object.keys(localStats).length > 0) {
+                        dataToSave.arcGuideStats = localStats;
+                    }
+                    await saveToCloud(dataToSave);
+                }
+            } catch (e) {
+                console.error("❌ Ошибка загрузки/синхронизации пользовательских данных из облака:", e);
+                showToast('Ошибка синхронизации данных с облаком.', 'error');
             }
         }
-        const editsSnap = await getDoc(doc(db, "config", "sharedEdits"));
-        if (editsSnap.exists()) {
-            const data = editsSnap.data();
-            if (data.editsOverride) {
-                editsOverride = data.editsOverride;
-                localStorage.setItem(EDITS_OVERRIDE_KEY, JSON.stringify(editsOverride));
-            }
-        }
-    } catch (e) {
-        console.error("Load shared data error:", e);
-        loadUserItems();
-        loadEditsOverride();
+        console.log('✅ Загрузка всех пользовательских данных завершена.');
+        refreshAllVisuals();
+        applyAllOverrides(); // Применяем overrides после загрузки всех данных
     }
-}
-onAuthStateChanged(auth, async (user) => {
-    currentUser = user;
-    const loggedOut = document.getElementById('arcLoggedOutView');
-    const loggedIn = document.getElementById('arcLoggedInView');
-    const nameEl = document.getElementById('arcUserName');
-    
-    if (user) {
-        loggedOut.style.display = 'none';
-        loggedIn.style.display = '';
-        nameEl.textContent = user.displayName || user.email?.split('@')[0] || 'User';
-        checkAdmin(user);
+
+    async function saveToCloud(data) {
+        if (!currentUser) {
+            console.warn('☁️ Отмена сохранения в облако: пользователь не залогинен.');
+            return;
+        }
+        try {
+            await setDoc(doc(db, "users", currentUser.uid), data, { merge: true });
+            console.log('✅ Данные успешно сохранены в облако.');
+        } catch (e) {
+            console.error("❌ Ошибка сохранения в облако:", e);
+            showToast('Ошибка сохранения данных в облако.', 'error');
+        }
+    }
+
+    async function saveStats() {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(arcData));
+        if (currentUser) await saveToCloud({ arcGuideStats: arcData });
+    }
+
+    async function saveFavorites() {
+        const ts = Date.now();
+        localStorage.setItem(FAVORITES_KEY, JSON.stringify(favoritesState));
+        localStorage.setItem(FAVORITES_ORDER_KEY, JSON.stringify(favoritesOrder));
+        localStorage.setItem(FAVORITES_TIMESTAMP_KEY, String(ts));
+        if (currentUser) await saveToCloud({ favoritesState, favoritesOrder, favoritesTimestamp: ts });
+    }
+
+    // ===== AUTH (Перенесены для доступности из window.*) =====
+    // Эти функции должны быть назначены window, чтобы быть доступными из HTML onclick атрибутов
+    window.openLoginModal = function() {
+        console.log('📪 Открытие модали входа');
+        const modal = document.getElementById('loginModal');
+        if (modal) {
+            modal.style.display = 'flex';
+            setTimeout(() => {
+                const emailInput = document.getElementById('emailInput');
+                if (emailInput) emailInput.focus();
+            }, 100);
+        }
+    };
+    window.closeLoginModal = function() {
+        console.log('📫 Закрытие модали входа');
+        const modal = document.getElementById('loginModal');
+        if (modal) {
+            modal.style.display = 'none';
+            const emailInput = document.getElementById('emailInput');
+            const passInput = document.getElementById('passInput');
+            if (emailInput) emailInput.value = '';
+            if (passInput) passInput.value = '';
+        }
+    };
+    window.loginGoogle = async function() {
+        try {
+            console.log('🔍 Запуск входа через Google...');
+            const provider = new GoogleAuthProvider();
+            const result = await signInWithPopup(auth, provider);
+            console.log('✅ Google вход успешен:', result.user.email);
+            closeLoginModal();
+            showToast('Добро пожаловать, ' + (result.user.displayName || 'друг') + '!', 'success');
+        } catch(e) {
+            console.error('❌ Google ошибка:', e.code, e.message);
+            let msg = e.message;
+            if (e.code === 'auth/popup-closed-by-user') msg = 'Вы закрыли окно входа';
+            if (e.code === 'auth/network-request-failed') msg = 'Ошибка сети. Проверьте интернет';
+            showToast('Ошибка: ' + msg, 'error');
+        }
+    };
+     window.loginTwitter = async function() {
+        try {
+            console.log('🔍 Запуск входа через Twitter...');
+            const provider = new TwitterAuthProvider();
+            const result = await signInWithPopup(auth, provider);
+            console.log('✅ Twitter вход успешен:', result.user.displayName || result.user.email);
+            closeLoginModal();
+            showToast('Добро пожаловать, ' + (result.user.displayName || 'друг') + '!', 'success');
+        } catch(e) {
+            console.error('❌ Twitter ошибка:', e.code, e.message);
+            let msg = e.message;
+            if (e.code === 'auth/popup-closed-by-user') msg = 'Вы закрыли окно входа';
+            if (e.code === 'auth/network-request-failed') msg = 'Ошибка сети. Проверьте интернет';
+            if (e.code === 'auth/account-exists-with-different-credential') msg = 'Аккаунт с таким Email уже существует, попробуйте Google.';
+            showToast('Ошибка: ' + msg, 'error');
+        }
+    };
+    window.handleEmailLogin = async function() {
+        const email = document.getElementById('emailInput')?.value?.trim() || '';
+        const pass = document.getElementById('passInput')?.value || '';
         
-        // Запуск мониторинга для админа
-        if (user.uid === ADMIN_UID) {
-            setTimeout(initTwitterMonitor, 1000);
+        if (!email || !pass) {
+            showToast('Заполните Email и пароль', 'error');
+            return;
         }
-    } else {
-        loggedOut.style.display = '';
-        loggedIn.style.display = 'none';
-        checkAdmin(null);
-    }
-    
-    await loadSharedData();
-    await loadAllData();
-    renderAllUserItems();
-});
-
-// ===== HELPERS =====
-function getBaseClasses(link) {
-    if (!link) return ['link-inline'];
-    return [...link.classList].filter(cls => !DYNAMIC_CLASS_SET.has(cls));
-}
-function classesToKey(classes) { return Array.isArray(classes) ? [...classes].sort().join('|') : ''; }
-function getLinkTitle(link) {
-    const clone = link.cloneNode(true);
-    clone.querySelectorAll('.click-info, .new-flag').forEach(el => el.remove());
-    return clone.textContent.trim();
-}
-function extractLinkInfo(link) {
-    return { id: link.dataset.id, title: getLinkTitle(link), url: link.href, tooltip: link.getAttribute('data-tooltip') || '', classes: getBaseClasses(link) };
-}
-function formatDate(iso) {
-    if (!iso) return '';
-    const d = new Date(iso);
-    return `${String(d.getDate()).padStart(2,'0')}.${String(d.getMonth()+1).padStart(2,'0')}`;
-}
-function isToday(iso) {
-    if (!iso) return false;
-    const d = new Date(iso), t = new Date();
-    return d.getDate()===t.getDate() && d.getMonth()===t.getMonth() && d.getFullYear()===t.getFullYear();
-}
-
-// ===== FAVORITES =====
-function ensureLinkWrapper(link) {
-    if (link.parentElement && link.parentElement.classList.contains('link-with-favorite')) return link.parentElement;
-    const w = document.createElement('span'); w.className = 'link-with-favorite';
-    link.parentNode.insertBefore(w, link); w.appendChild(link); return w;
-}
-
-function createFavoriteToggle(id) {
-    const btn = document.createElement('button');
-    btn.type = 'button'; btn.className = 'favorite-toggle';
-    btn.setAttribute('aria-label', 'Добавить в избранное');
-    btn.title = 'Добавить в избранное'; btn.textContent = '☆';
-    btn.addEventListener('click', async (e) => {
-        e.preventDefault(); e.stopPropagation();
-        if (favoritesState[id]) {
-            delete favoritesState[id]; favoritesOrder = favoritesOrder.filter(x => x !== id);
-        } else {
-            const ctrl = favoriteControls.get(id);
-            if (ctrl) { favoritesState[id] = extractLinkInfo(ctrl.link); favoritesOrder.push(id); }
+        
+        try {
+            console.log('🔍 Email вход:', email);
+            const result = await signInWithEmailAndPassword(auth, email, pass);
+            console.log('✅ Email вход успешен');
+            closeLoginModal();
+            showToast('Вы вошли!', 'success');
+        } catch(e) {
+            console.error('❌ Email ошибка:', e.code, e.message);
+            let errorMsg = 'Ошибка входа';
+            if (e.code === 'auth/user-not-found') errorMsg = 'Пользователь не найден';
+            if (e.code === 'auth/wrong-password') errorMsg = 'Неверный пароль';
+            if (e.code === 'auth/invalid-email') errorMsg = 'Неверный email';
+            if (e.code === 'auth/invalid-credential') errorMsg = 'Неверные учётные данные';
+            showToast(errorMsg, 'error');
         }
-        await saveFavorites(); refreshAllVisuals();
-    });
-    return btn;
-}
-
-function refreshAllVisuals() {
-    favoriteControls.forEach((ctrl, id) => {
-        const isFav = Boolean(favoritesState[id]);
-        ctrl.button.classList.toggle('is-favorite', isFav);
-        ctrl.button.textContent = isFav ? '★' : '☆';
-        ctrl.button.setAttribute('aria-label', isFav ? 'Убрать из избранного' : 'Добавить в избранное');
-        ctrl.button.title = isFav ? 'Убрать из избранного' : 'Добавить в избранное';
-    });
-    renderFavoritesList(); updateUI();
-}
-
-function attachFavoriteControls() {
-    favoriteControls.clear();
-    document.querySelectorAll('a.link-inline[data-id]').forEach(link => {
-        const id = link.dataset.id; if (!id) return;
-        const wrapper = ensureLinkWrapper(link);
-        let btn = wrapper.querySelector('.favorite-toggle');
-        if (!btn) { btn = createFavoriteToggle(id); wrapper.appendChild(btn); }
-        favoriteControls.set(id, { button: btn, link });
-    });
-    refreshAllVisuals();
-}
-
-function renderFavoritesList() {
-    const listEl = document.getElementById('favoritesList');
-    const emptyEl = document.getElementById('favoritesEmpty');
-    const countEl = document.getElementById('favoritesCount');
-    if (!listEl || !emptyEl || !countEl) return;
-    listEl.innerHTML = '';
-    favoritesOrder = favoritesOrder.filter(id => favoritesState[id]);
-    Object.keys(favoritesState).forEach(id => { if (!favoritesOrder.includes(id)) favoritesOrder.push(id); });
-    if (favoritesOrder.length === 0) {
-        emptyEl.style.display = 'block'; listEl.style.display = 'none'; countEl.textContent = '0'; return;
-    }
-    emptyEl.style.display = 'none'; listEl.style.display = 'flex';
-    favoritesOrder.forEach(id => {
-        const info = favoritesState[id]; if (!info) return;
-        const linkEl = document.querySelector(`a[data-id="${id}"]`);
-        const liveInfo = linkEl ? extractLinkInfo(linkEl) : info;
-        if (linkEl && (info.title !== liveInfo.title || info.url !== liveInfo.url || classesToKey(info.classes) !== classesToKey(liveInfo.classes))) {
-            favoritesState[id] = liveInfo; localStorage.setItem(FAVORITES_KEY, JSON.stringify(favoritesState));
+    };
+    window.handleRegister = async function() {
+        const email = document.getElementById('emailInput')?.value?.trim() || '';
+        const pass = document.getElementById('passInput')?.value || '';
+        
+        if (!email || !pass) {
+            showToast('Заполните Email и пароль (минимум 6 символов)', 'error');
+            return;
         }
-        const li = document.createElement('li'); li.className = 'favorites-item'; li.dataset.id = id;
-        const handle = document.createElement('span'); handle.className = 'drag-handle'; handle.innerHTML = '⋮⋮'; handle.title = 'Перетащить';
-        li.appendChild(handle);
-        const anchor = document.createElement('a');
-        anchor.href = liveInfo.url; anchor.target = '_blank'; anchor.rel = 'noopener';
-        anchor.dataset.id = id; anchor.classList.add('favorite-link');
-        liveInfo.classes.forEach(cls => anchor.classList.add(cls));
-        if (liveInfo.tooltip) anchor.setAttribute('data-tooltip', liveInfo.tooltip);
-        const record = arcData[id];
-        if (record) {
-            if (record.visited) anchor.classList.add('visited-once');
-            if (isToday(record.lastClick)) anchor.classList.add('daily-active');
-            if (record.totalClicks > 0 || record.lastClick) {
-                const badge = document.createElement('span'); badge.className = 'click-info';
-                badge.textContent = `${record.totalClicks || 0}р • ${formatDate(record.lastClick)}`;
-                anchor.appendChild(badge);
-            }
+        
+        if (pass.length < 6) {
+            showToast('Пароль должен быть минимум 6 символов', 'error');
+            return;
         }
-        const titleSpan = document.createElement('span'); titleSpan.className = 'favorite-title'; titleSpan.textContent = liveInfo.title;
-        anchor.appendChild(titleSpan); li.appendChild(anchor);
-        const removeBtn = document.createElement('button');
-        removeBtn.type = 'button'; removeBtn.className = 'remove-fav-btn';
-        removeBtn.innerHTML = '×'; removeBtn.title = 'Удалить из избранного';
-        removeBtn.onclick = async (e) => {
-            e.stopPropagation(); delete favoritesState[id];
-            favoritesOrder = favoritesOrder.filter(x => x !== id);
-            await saveFavorites(); refreshAllVisuals();
-        };
-        li.appendChild(removeBtn); listEl.appendChild(li);
-        bindTrackingHandler(anchor);
-    });
-    countEl.textContent = String(favoritesOrder.length);
-    initSortable(); initializeTooltips(); updateNewIndicators();
-}
-
-function initSortable() {
-    const listEl = document.getElementById('favoritesList');
-    if (!listEl || typeof Sortable === 'undefined') return;
-    if (favoritesSortable) favoritesSortable.destroy();
-    favoritesSortable = new Sortable(listEl, {
-        animation: 150, handle: '.drag-handle', ghostClass: 'sortable-ghost',
-        onEnd: async () => {
-            favoritesOrder = Array.from(listEl.children).map(li => li.dataset.id);
-            await saveFavorites();
+        
+        try {
+            console.log('📝 Регистрация:', email);
+            const result = await createUserWithEmailAndPassword(auth, email, pass);
+            console.log('✅ Регистрация успешна');
+            closeLoginModal();
+            showToast('🎉 Добро пожаловать! Аккаунт создан', 'success');
+        } catch(e) {
+            console.error('❌ Ошибка регистрации:', e.code, e.message);
+            let errorMsg = 'Ошибка регистрации';
+            if (e.code === 'auth/email-already-in-use') errorMsg = 'Email уже зарегистрирован';
+            if (e.code === 'auth/weak-password') errorMsg = 'Слабый пароль (минимум 6 символов)';
+            if (e.code === 'auth/invalid-email') errorMsg = 'Неверный email';
+            showToast(errorMsg, 'error');
         }
-    });
-}
-
-// ===== TRACKING =====
-function updateBadge(el, count, time) {
-    let badge = el.querySelector('.click-info');
-    if (!badge) { badge = document.createElement('span'); badge.className = 'click-info'; el.appendChild(badge); }
-    badge.textContent = `${count}р • ${formatDate(time)}`;
-}
-
-function updateUI() {
-    document.querySelectorAll('.track-daily').forEach(btn => {
-        const id = btn.getAttribute('data-id'); const rec = arcData[id];
-        btn.classList.remove('daily-active');
-        if (rec) {
-            if (isToday(rec.lastClick)) btn.classList.add('daily-active');
-            if (rec.lastClick) updateBadge(btn, rec.totalClicks || 0, rec.lastClick);
+    };
+    window.logout = function() {
+        signOut(auth).then(() => {
+            console.log('✅ Успешно вышли');
+            showToast('Вы вышли из системы', 'info');
+        }).catch(e => {
+            console.error('❌ Ошибка выхода:', e);
+            showToast('Ошибка при выходе', 'error');
+        });
+    };
+    window.resetAll = async function() { // Делаем глобальной для onclick
+        if (confirm('Сбросить всю статистику?')) {
+            arcData = {}; await saveStats();
+            document.querySelectorAll('.click-info').forEach(el => el.remove());
+            document.querySelectorAll('.link-inline').forEach(l => { l.classList.remove('daily-active', 'visited-once'); });
+            showToast('Прогресс сброшен', 'info');
+            // После сброса статистики, перегружаем UI для полного обновления
+            refreshAllVisuals();
         }
-    });
-    document.querySelectorAll('.track-once').forEach(btn => {
-        const id = btn.getAttribute('data-id'); const rec = arcData[id];
-        if (rec && rec.visited) btn.classList.add('visited-once');
-        else btn.classList.remove('visited-once');
-        if (btn.classList.contains('track-once-info') && rec && rec.lastClick) updateBadge(btn, rec.totalClicks || 0, rec.lastClick);
-    });
-}
-
-function bindTrackingHandler(el) {
-    if (!el || el.dataset.trackingBound === 'true') return;
-    if (!(el.classList.contains('track-daily') || el.classList.contains('track-once'))) return;
-    el.addEventListener('click', handleClick); el.dataset.trackingBound = 'true';
-}
-
-function bindTrackingHandlersToAll() { document.querySelectorAll('.track-daily, .track-once').forEach(bindTrackingHandler); }
-
-function handleClick(e) {
-    const btn = e.currentTarget; const id = btn.getAttribute('data-id');
-    if (!id) return;
-    if (newLinksSet.has(id)) clearNewLink(id);
-    const now = new Date().toISOString();
-    if (!arcData[id]) arcData[id] = {};
-    if (btn.classList.contains('track-daily')) {
-        if (arcData[id].lastClick && isToday(arcData[id].lastClick)) return;
-        arcData[id].totalClicks = (arcData[id].totalClicks || 0) + 1;
-        arcData[id].lastClick = now;
-    } else if (btn.classList.contains('track-once')) {
-        arcData[id].visited = true;
-        if (btn.classList.contains('track-once-info')) {
-            arcData[id].totalClicks = (arcData[id].totalClicks || 0) + 1;
-            arcData[id].lastClick = now;
-        }
-    }
-    saveStats(); updateUI();
-}
-
-window.resetAll = async function() {
-    if (confirm('Сбросить всю статистику?')) {
-        arcData = {}; await saveStats();
-        document.querySelectorAll('.click-info').forEach(el => el.remove());
-        document.querySelectorAll('.link-inline').forEach(l => { l.classList.remove('daily-active', 'visited-once'); });
-        updateUI(); showToast('Прогресс сброшен', 'info');
-    }
-};
-
-// ===== BADGES =====
-function getBadgeHiddenState() { return localStorage.getItem(BADGE_VISIBILITY_KEY) === 'true'; }
-function setBadgeHiddenState(h) { localStorage.setItem(BADGE_VISIBILITY_KEY, h ? 'true' : 'false'); }
-function updateBadgeVisibility() {
-    const hidden = getBadgeHiddenState();
-    document.body.classList.toggle('badges-hidden', hidden);
-    const btn = document.getElementById('toggleBadgesBtn');
-    if (btn) btn.textContent = hidden ? 'Показать бейджи' : 'Скрыть бейджи';
-}
-
-// ===== SECTIONS =====
-function getSectionCollapseState() { return JSON.parse(localStorage.getItem(SECTION_COLLAPSE_KEY) || '{}'); }
-function saveSectionCollapseState(s) { localStorage.setItem(SECTION_COLLAPSE_KEY, JSON.stringify(s)); }
-function applySectionState(sec, collapsed) {
-    sec.classList.toggle('collapsed', collapsed);
-    const t = sec.querySelector('.section-toggle');
-    if (t) { t.textContent = collapsed ? '▸' : '▾'; t.setAttribute('aria-expanded', collapsed ? 'false' : 'true'); }
-}
-
-// ===== NEW LINKS =====
-function detectNewLinks() {
-    const elements = document.querySelectorAll('[data-id]');
-    const currentIds = new Set();
-    elements.forEach(el => { if (el.dataset.id) currentIds.add(el.dataset.id); });
-    const storedKnown = JSON.parse(localStorage.getItem(KNOWN_LINKS_KEY) || '[]');
-    const storedNew = JSON.parse(localStorage.getItem(NEW_LINKS_KEY) || '[]');
-    knownLinksSet = new Set(Array.isArray(storedKnown) ? storedKnown : []);
-    newLinksSet = new Set(Array.isArray(storedNew) ? storedNew : []);
-    const storedVer = localStorage.getItem(PAGE_VERSION_KEY);
-    const isFirstRun = !storedVer && knownLinksSet.size === 0;
-    if (isFirstRun) { knownLinksSet = new Set(currentIds); newLinksSet = new Set(); }
-    else {
-        if (storedVer !== PAGE_VERSION) {
-            knownLinksSet = new Set([...knownLinksSet].filter(id => currentIds.has(id)));
-            newLinksSet = new Set([...newLinksSet].filter(id => currentIds.has(id)));
-        }
-        currentIds.forEach(id => { if (!knownLinksSet.has(id)) { knownLinksSet.add(id); newLinksSet.add(id); } });
-    }
-    newLinksSet = new Set([...newLinksSet].filter(id => currentIds.has(id)));
-    localStorage.setItem(KNOWN_LINKS_KEY, JSON.stringify([...knownLinksSet]));
-    localStorage.setItem(NEW_LINKS_KEY, JSON.stringify([...newLinksSet]));
-    localStorage.setItem(PAGE_VERSION_KEY, PAGE_VERSION);
-    updateNewIndicators();
-}
-
-function updateNewIndicators() {
-    document.querySelectorAll('[data-id]').forEach(el => {
-        const id = el.dataset.id;
-        if (id && newLinksSet.has(id)) {
-            el.setAttribute('data-new', 'true'); el.classList.add('has-new-flag');
-            if (!el.querySelector('.new-flag')) {
-                const flag = document.createElement('span');
-                flag.className = 'new-flag'; flag.innerHTML = '<span class="new-flag-text">New!</span>';
-                el.appendChild(flag);
-            }
-        } else {
-            el.removeAttribute('data-new'); el.classList.remove('has-new-flag');
-            const f = el.querySelector('.new-flag'); if (f) f.remove();
-        }
-    });
-    updateSectionBadges();
-}
-
-function clearNewLink(id) {
-    newLinksSet.delete(id);
-    localStorage.setItem(NEW_LINKS_KEY, JSON.stringify([...newLinksSet]));
-    
-    // === NEW: запоминаем что пользователь кликнул этот элемент ===
-    const clicked = JSON.parse(localStorage.getItem('arc_tracker_clicked_new') || '[]');
-    if (!clicked.includes(id)) {
-        clicked.push(id);
-        localStorage.setItem('arc_tracker_clicked_new', JSON.stringify(clicked));
-    }
-    
-    updateNewIndicators();
-}
-
-function updateSectionBadges() {
-    document.querySelectorAll('.collapsible-section').forEach(sec => {
-        const st = sec.querySelector('.section-status'); if (!st) return;
-        const items = sec.querySelectorAll('[data-id][data-new="true"]');
-        if (items.length > 0) { sec.classList.add('has-new'); st.innerHTML = `<span class="status-dot">${items.length}</span><span class="status-text">New!</span>`; }
-        else { sec.classList.remove('has-new'); st.innerHTML = ''; }
-    });
-}
-
-// ===== LEGEND =====
-function applyLegendState(collapsed) {
-    const legend = document.getElementById('statusLegend');
-    const toggle = document.getElementById('legendToggle');
-    if (!legend || !toggle) return;
-    const isMobile = window.matchMedia('(max-width:768px)').matches;
-    const shouldCollapse = isMobile && collapsed;
-    legend.classList.toggle('legend-collapsed', shouldCollapse);
-    toggle.setAttribute('aria-expanded', shouldCollapse ? 'false' : 'true');
-    toggle.textContent = shouldCollapse ? 'Показать инструкцию ▸' : 'Скрыть инструкцию ▾';
-}
-
-// ============================================================
-//  DYNAMIC ADD SYSTEM (ADMIN ONLY)
-// ============================================================
-const USER_ITEMS_KEY = 'arc_user_items_v1';
-const ZONE_CONFIG = {
-    nft_alze:     { type:'nft-item', label:'NFT в Alze', trackType:'track-once' },
-    nft_caset:    { type:'nft-item', label:'NFT в Caset', trackType:'track-once' },
-    nft_draze:    { type:'nft-item', label:'NFT в Draze', trackType:'track-once' },
-    nft_arkle:    { type:'nft-item', label:'NFT в Arkle', trackType:'track-once' },
-    nft_mintaura: { type:'nft-item', label:'NFT в MintAura', trackType:'track-once' },
-    nft_oku:      { type:'nft-item', label:'NFT в Oku', trackType:'track-once' },
-    nft_clara:    { type:'nft-item', label:'NFT в Clara', trackType:'track-once' },
-    nft_morkie:   { type:'nft-item', label:'NFT в Morkie', trackType:'track-once' },
-    nft_other:    { type:'nft-item', label:'NFT (Прочие)', trackType:'track-once' },
-    deploy_basic:    { type:'link-item', label:'Базовый деплой', trackType:'track-once track-once-info' },
-    deploy_advanced: { type:'link-item', label:'Продвинутый деплой', trackType:'track-once track-once-info' },
-    dapp_bridges:     { type:'link-item', label:'Мосты', trackType:'track-daily' },
-    dapp_dex:         { type:'link-item', label:'DEXs', trackType:'track-daily' },
-    dapp_staking:     { type:'link-item', label:'Staking', trackType:'track-daily' },
-    dapp_domains:     { type:'link-item', label:'Domains', trackType:'track-daily' },
-    dapp_socialfi:    { type:'link-item', label:'SocialFi', trackType:'track-daily' },
-    dapp_predictions: { type:'link-item', label:'Predictions', trackType:'track-daily' },
-    dapp_nft:         { type:'link-item', label:'NFT dApps', trackType:'track-daily' },
-    dapp_checkin:     { type:'link-item', label:'Check-In', trackType:'track-daily' },
-    dapp_games:       { type:'link-item', label:'Games', trackType:'track-daily' },
-    dapp_others:      { type:'link-item', label:'Others', trackType:'track-daily' },
-};
-const SECTION_ZONE_CONFIG = {
-    nfts:   { type:'nft-collection', label:'новую NFT-коллекцию' },
-    deploy: { type:'deploy-group', label:'новую группу деплоя' },
-    dapps:  { type:'dapp-category', label:'новую категорию dApp' },
-};
-
-let userItemsData = { items: {}, collections: [], dappCategories: [] };
-let currentAddContext = null;
-
-function loadUserItems() {
-    try {
-        const raw = localStorage.getItem(USER_ITEMS_KEY);
-        if (raw) { const p = JSON.parse(raw); userItemsData = { items: p.items||{}, collections: p.collections||[], dappCategories: p.dappCategories||[] }; }
-    } catch(e) { console.error(e); }
-}
-
-async function saveUserItems() {
-    // 🔥 ОЧИСТКА ДУБЛИКАТОВ перед сохранением
-    const collectionIds = new Set(
-        (userItemsData.collections || []).map(c => c.id)
-    );
-    const categoryIds = new Set(
-        (userItemsData.dappCategories || []).map(c => c.id)
-    );
-    
-    // Удаляем из items ключи-дубликаты
-    const itemsToSave = {};
-    Object.keys(userItemsData.items || {}).forEach(zone => {
-        if (!collectionIds.has(zone) && !categoryIds.has(zone)) {
-            itemsToSave[zone] = userItemsData.items[zone];
-        } else {
-            console.warn(`[SKIP] Zone "${zone}" - это ID коллекции/категории`);
-        }
-    });
-
-    const cleanedData = {
-        items: itemsToSave,
-        collections: userItemsData.collections || [],
-        dappCategories: userItemsData.dappCategories || []
     };
 
-    localStorage.setItem(USER_ITEMS_KEY, JSON.stringify(cleanedData));
-    
-    if (isAdmin) {
-        try {
-            await setDoc(doc(db, "config", "sharedItems"), { 
-                userItems: cleanedData,
-                newItemIds: [...newLinksSet]
-            });
-            console.log('✅ Сохранено без дублей');
-        } catch (e) { 
-            console.error("Save shared items error:", e); 
-        }
+    // ===== HELPERS =====
+    function getBaseClasses(link) {
+        if (!link) return ['link-inline'];
+        return [...link.classList].filter(cls => !DYNAMIC_CLASS_SET.has(cls));
     }
-}
+    function classesToKey(classes) { return Array.isArray(classes) ? [...classes].sort().join('|') : ''; }
+    function getLinkTitle(link) {
+        const clone = link.cloneNode(true);
+        clone.querySelectorAll('.click-info, .new-flag, .edit-item-btn').forEach(el => el.remove()); // Добавили .edit-item-btn
+        return clone.textContent.trim();
+    }
+    function extractLinkInfo(link) {
+        return { id: link.dataset.id, title: getLinkTitle(link), url: link.href, tooltip: link.getAttribute('data-tooltip') || '', image: link.getAttribute('data-image') || '', classes: getBaseClasses(link) };
+    }
+    function formatDate(iso) {
+        if (!iso) return '';
+        const d = new Date(iso);
+        return `${String(d.getDate()).padStart(2,'0')}.${String(d.getMonth()+1).padStart(2,'0')}`;
+    }
+    function isToday(iso) {
+        if (!iso) return false;
+        const d = new Date(iso), t = new Date();
+        return d.getDate()===t.getDate() && d.getMonth()===t.getMonth() && d.getFullYear()===t.getFullYear();
+    }
 
-function generateId() { return 'u_' + Date.now().toString(36) + '_' + Math.random().toString(36).substr(2, 5); }
+    // ===== FAVORITES =====
+    function ensureLinkWrapper(link) {
+        if (link.parentElement && link.parentElement.classList.contains('link-with-favorite')) return link.parentElement;
+        const w = document.createElement('span'); w.className = 'link-with-favorite';
+        link.parentNode.insertBefore(w, link); w.appendChild(link); return w;
+    }
 
-// ---- MODAL ----
-const overlayEl = () => document.getElementById('addModalOverlay');
-function showFields(fields) {
-    ['fieldTitle','fieldUrl','fieldTooltip','fieldImage','fieldWebsite','fieldTwitter','fieldDescription'].forEach(f => {
-        const el = document.getElementById(f);
-        if (el) el.classList.toggle('field-hidden', !fields.includes(f));
-    });
-}
-function openModal(title, fields) {
-    document.getElementById('addModalTitle').textContent = title;
-    showFields(fields);
-    ['addFieldTitle','addFieldUrl','addFieldTooltip','addFieldImage','addFieldWebsite','addFieldTwitter','addFieldDescription'].forEach(id => {
-        const el = document.getElementById(id); if (el) el.value = '';
-    });
-    overlayEl().classList.add('open');
-}
-function closeModal() {
-    overlayEl().classList.remove('open');
-    currentAddContext = null; currentEditTarget = null;
-    const saveBtn = document.getElementById('addModalSave');
-    saveBtn.textContent = 'Добавить'; delete saveBtn.dataset.editMode;
-}
+    function createFavoriteToggle(id) {
+        const btn = document.createElement('button');
+        btn.type = 'button'; btn.className = 'favorite-toggle';
+        btn.setAttribute('aria-label', 'Добавить в избранное');
+        btn.title = 'Добавить в избранное'; btn.textContent = '☆';
+        btn.addEventListener('click', async (e) => {
+            e.preventDefault(); e.stopPropagation();
+            if (favoritesState[id]) {
+                delete favoritesState[id]; favoritesOrder = favoritesOrder.filter(x => x !== id);
+            } else {
+                const ctrl = favoriteControls.get(id);
+                if (ctrl) { favoritesState[id] = extractLinkInfo(ctrl.link); favoritesOrder.push(id); }
+            }
+            await saveFavorites(); refreshAllVisuals();
+        });
+        return btn;
+    }
 
-document.getElementById('addModalCancel').addEventListener('click', closeModal);
-overlayEl().addEventListener('click', (e) => { if (e.target === overlayEl()) closeModal(); });
-document.addEventListener('keydown', (e) => { if (e.key === 'Escape') { closeModal(); closeLightbox(); } });
+    function refreshAllVisuals() {
+        favoriteControls.forEach((ctrl, id) => {
+            const isFav = Boolean(favoritesState[id]);
+            ctrl.button.classList.toggle('is-favorite', isFav);
+            ctrl.button.textContent = isFav ? '★' : '☆';
+            ctrl.button.setAttribute('aria-label', isFav ? 'Убрать из избранного' : 'Добавить в избранное');
+            ctrl.button.title = isFav ? 'Убрать из избранного' : 'Добавить из избранного';
+        });
+        renderFavoritesList();
+        updateUI(); // Обновление daily/visited статусов
+        updateNewIndicators(); // Обновление NEW флагов
+        initializeTooltips(); // Переинициализация тултипов, так как ссылки могли обновиться
+        initLightbox(); // Переинициализация lightbox
+    }
 
-function normalizeImageUrl(rawUrl) {
-    if (!rawUrl) return rawUrl;
-    try {
-        const u = new URL(rawUrl);
-        if (u.pathname.includes('/_next/image')) {
-            const inner = u.searchParams.get('url');
-            if (inner) { const dec = decodeURIComponent(inner); return dec.startsWith('http') ? dec : u.origin + dec; }
+    function attachFavoriteControls() {
+        favoriteControls.clear(); // Очищаем старые контролы перед пересозданием
+        document.querySelectorAll('a.link-inline[data-id]').forEach(link => {
+            const id = link.dataset.id; if (!id) return;
+            // Проверяем, есть ли уже кнопка избранного, чтобы не дублировать
+            let btn = link.previousElementSibling;
+            if (!btn || !btn.classList.contains('favorite-toggle')) {
+                const wrapper = ensureLinkWrapper(link);
+                btn = createFavoriteToggle(id);
+                wrapper.insertBefore(btn, link); // Вставляем перед ссылкой
+            }
+            favoriteControls.set(id, { button: btn, link });
+        });
+        refreshAllVisuals();
+    }
+
+    function renderFavoritesList() {
+        const listEl = document.getElementById('favoritesList');
+        const emptyEl = document.getElementById('favoritesEmpty');
+        const countEl = document.getElementById('favoritesCount');
+        if (!listEl || !emptyEl || !countEl) return;
+        
+        listEl.innerHTML = '';
+        // Отфильтровываем favoritesOrder, удаляя несуществующие ссылки
+        favoritesOrder = favoritesOrder.filter(id => favoritesState[id]);
+
+        // Добавляем в order все новые избранные, которых там еще нет
+        Object.keys(favoritesState).forEach(id => {
+            if (!favoritesOrder.includes(id)) {
+                favoritesOrder.push(id);
+            }
+        });
+
+        if (favoritesOrder.length === 0) {
+            emptyEl.style.display = 'block'; listEl.style.display = 'none'; countEl.textContent = '0'; return;
         }
-    } catch(e) {}
-    return rawUrl;
-}
+        emptyEl.style.display = 'none'; listEl.style.display = 'flex';
+        favoritesOrder.forEach(id => {
+            const info = favoritesState[id];
+            if (!info) return;
 
-document.getElementById('addModalSave').addEventListener('click', async () => {
-    const saveBtn = document.getElementById('addModalSave');
-    const isEdit = saveBtn.dataset.editMode === 'true';
+            // Проверяем актуальное состояние ссылки на странице
+            const linkElOnPage = document.querySelector(`a[data-id="${id}"]`);
+            const liveInfo = linkElOnPage ? extractLinkInfo(linkElOnPage) : info;
 
-    if (isEdit && currentEditTarget) {
-        const id = currentEditTarget.id; const link = currentEditTarget.link;
-        const newTitle = document.getElementById('addFieldTitle').value.trim();
-        const newUrl = document.getElementById('addFieldUrl').value.trim();
-        const newTooltip = document.getElementById('addFieldTooltip').value.trim();
-        const newImage = normalizeImageUrl(document.getElementById('addFieldImage').value.trim());
-        if (!newTitle || !newUrl) { alert('Название и URL обязательны!'); return; }
-        let isUserItem = false;
-        for (const zone in userItemsData.items) {
-            const items = userItemsData.items[zone]; if (!items) continue;
-            const found = items.find(i => i.id === id);
-            if (found) {
-                found.title = newTitle; found.url = newUrl; found.tooltip = newTooltip; found.image = newImage;
-                isUserItem = true; await saveUserItems(); break;
+            // Обновляем favoritesState, если информация изменилась
+            if (linkElOnPage && (info.title !== liveInfo.title || info.url !== liveInfo.url || info.image !== liveInfo.image || classesToKey(info.classes) !== classesToKey(liveInfo.classes))) {
+                favoritesState[id] = liveInfo;
+                // Сохранять в localStorage здесь не нужно, saveFavorites делает это целиком
+            }
+
+            const li = document.createElement('li'); li.className = 'favorites-item'; li.dataset.id = id;
+            const handle = document.createElement('span'); handle.className = 'drag-handle'; handle.innerHTML = '⋮⋮'; handle.title = 'Перетащить';
+            li.appendChild(handle);
+            const anchor = document.createElement('a');
+            anchor.href = liveInfo.url; anchor.target = '_blank'; anchor.rel = 'noopener';
+            anchor.dataset.id = id; anchor.classList.add('favorite-link');
+            liveInfo.classes.forEach(cls => anchor.classList.add(cls));
+            if (liveInfo.tooltip) anchor.setAttribute('data-tooltip', liveInfo.tooltip);
+            if (liveInfo.image) anchor.setAttribute('data-image', liveInfo.image);
+
+            const record = arcData[id];
+            if (record) {
+                if (record.visited) anchor.classList.add('visited-once');
+                if (isToday(record.lastClick)) anchor.classList.add('daily-active');
+                if (record.totalClicks > 0 || record.lastClick) {
+                    const badge = document.createElement('span'); badge.className = 'click-info';
+                    badge.textContent = `${record.totalClicks || 0}р • ${formatDate(record.lastClick)}`;
+                    anchor.appendChild(badge);
+                }
+            }
+            const titleSpan = document.createElement('span'); titleSpan.className = 'favorite-title'; titleSpan.textContent = liveInfo.title;
+            anchor.appendChild(titleSpan); li.appendChild(anchor);
+            const removeBtn = document.createElement('button');
+            removeBtn.type = 'button'; removeBtn.className = 'remove-fav-btn';
+            removeBtn.innerHTML = '×'; removeBtn.title = 'Удалить из избранного';
+            removeBtn.onclick = async (e) => {
+                e.stopPropagation(); delete favoritesState[id];
+                favoritesOrder = favoritesOrder.filter(x => x !== id);
+                await saveFavorites(); refreshAllVisuals();
+            };
+            li.appendChild(removeBtn); listEl.appendChild(li);
+            bindTrackingHandler(anchor);
+        });
+        countEl.textContent = String(favoritesOrder.length);
+        initSortable(); initializeTooltips(); // Повторная инициализация тултипов для новых элементов
+    }
+
+    function initSortable() {
+        const listEl = document.getElementById('favoritesList');
+        if (!listEl || typeof Sortable === 'undefined') return;
+        if (favoritesSortable) favoritesSortable.destroy(); // Уничтожаем старый экземпляр, если есть
+        favoritesSortable = new Sortable(listEl, {
+            animation: 150, handle: '.drag-handle', ghostClass: 'sortable-ghost',
+            onEnd: async () => {
+                favoritesOrder = Array.from(listEl.children).map(li => li.dataset.id);
+                await saveFavorites();
+            }
+        });
+    }
+
+    // ===== TRACKING =====
+    function updateBadge(el, count, time) {
+        let badge = el.querySelector('.click-info');
+        if (!badge) { badge = document.createElement('span'); badge.className = 'click-info'; el.appendChild(badge); }
+        badge.textContent = `${count}р • ${formatDate(time)}`;
+    }
+
+    function updateUI() {
+        document.querySelectorAll('.track-daily').forEach(btn => {
+            const id = btn.getAttribute('data-id'); const rec = arcData[id];
+            btn.classList.remove('daily-active');
+            // Удаляем старые бейджи перед добавлением новых
+            btn.querySelectorAll('.click-info').forEach(b => b.remove());
+            if (rec) {
+                if (isToday(rec.lastClick)) btn.classList.add('daily-active');
+                if (rec.lastClick) updateBadge(btn, rec.totalClicks || 0, rec.lastClick);
+            }
+        });
+        document.querySelectorAll('.track-once').forEach(btn => {
+            const id = btn.getAttribute('data-id'); const rec = arcData[id];
+            btn.classList.remove('visited-once');
+             // Удаляем старые бейджи перед добавлением новых
+            btn.querySelectorAll('.click-info').forEach(b => b.remove());
+            if (rec && rec.visited) btn.classList.add('visited-once');
+            if (btn.classList.contains('track-once-info') && rec && rec.lastClick) {
+                updateBadge(btn, rec.totalClicks || 0, rec.lastClick);
+            }
+        });
+    }
+
+    function bindTrackingHandler(el) {
+        if (!el || el.dataset.trackingBound === 'true') return;
+        if (!(el.classList.contains('track-daily') || el.classList.contains('track-once'))) return;
+        el.addEventListener('click', handleClick); el.dataset.trackingBound = 'true';
+    }
+
+    function bindTrackingHandlersToAll() {
+         document.querySelectorAll('.track-daily, .track-once').forEach(link => {
+            link.removeEventListener('click', handleClick); // Удаляем, чтобы не дублировать
+            bindTrackingHandler(link); // Добавляем или перепривязываем
+        });
+    }
+
+    function handleClick(e) {
+        const btn = e.currentTarget; const id = btn.getAttribute('data-id');
+        if (!id) return;
+        if (newLinksSet.has(id)) clearNewLink(id);
+        const now = new Date().toISOString();
+        if (!arcData[id]) arcData[id] = {};
+        if (btn.classList.contains('track-daily')) {
+            // Если уже кликали сегодня, не увеличиваем счетчик, только обновляем lastClick
+            if (arcData[id].lastClick && isToday(arcData[id].lastClick)) {
+                 arcData[id].lastClick = now; // Обновляем время последнего клика для "сегодня"
+            } else {
+                arcData[id].totalClicks = (arcData[id].totalClicks || 0) + 1;
+                arcData[id].lastClick = now;
+            }
+        } else if (btn.classList.contains('track-once')) {
+            arcData[id].visited = true;
+            if (btn.classList.contains('track-once-info')) {
+                arcData[id].totalClicks = (arcData[id].totalClicks || 0) + 1;
+                arcData[id].lastClick = now;
             }
         }
-        if (!isUserItem) {
-            editsOverride[id] = { title: newTitle, url: newUrl, tooltip: newTooltip, image: newImage };
-            await saveEditsOverride();
-        }
-        applyOverrideToLink(link, { title: newTitle, url: newUrl, tooltip: newTooltip, image: newImage });
-        if (favoritesState[id]) {
-            favoritesState[id].title = newTitle; favoritesState[id].url = newUrl; favoritesState[id].tooltip = newTooltip;
-            await saveFavorites(); renderFavoritesList();
-        }
-        showToast('Обновлено: ' + newTitle, 'success');
-        closeModal(); initializeTooltips(); initLightbox(); return;
+        saveStats(); updateUI();
     }
 
-    if (!currentAddContext) return;
-    const title = document.getElementById('addFieldTitle').value.trim();
-    const url = document.getElementById('addFieldUrl').value.trim();
-    const tooltip = document.getElementById('addFieldTooltip').value.trim();
-    const image = normalizeImageUrl(document.getElementById('addFieldImage').value.trim());
-    const website = document.getElementById('addFieldWebsite').value.trim();
-    const twitter = document.getElementById('addFieldTwitter').value.trim();
-    const description = document.getElementById('addFieldDescription').value.trim();
-
-    if (currentAddContext.zone) {
-        if (!title || !url) { alert('Название и URL обязательны!'); return; }
-        const config = currentAddContext.config; const id = generateId();
-        const item = { id, title, url, tooltip, image, trackType: config.trackType, addedAt: Date.now() };
-        if (!userItemsData.items[currentAddContext.zone]) userItemsData.items[currentAddContext.zone] = [];
-        userItemsData.items[currentAddContext.zone].push(item);
-        newLinksSet.add(id);
-    knownLinksSet.add(id);
-    localStorage.setItem(NEW_LINKS_KEY, JSON.stringify([...newLinksSet]));
-    localStorage.setItem(KNOWN_LINKS_KEY, JSON.stringify([...knownLinksSet]));
-        await saveUserItems(); renderUserItemInZone(currentAddContext.zone, item);
-        showToast('Добавлено: ' + title, 'success');
-    } else if (currentAddContext.sectionZone) {
-        const sConfig = currentAddContext.config;
-        if (sConfig.type === 'nft-collection') {
-            if (!title) { alert('Название обязательно!'); return; }
-            const collId = generateId();
-            const coll = { id: collId, title, website, twitter, parentZone: currentAddContext.sectionZone, items: [] };
-            userItemsData.collections.push(coll);
-            ZONE_CONFIG[collId] = { type:'nft-item', label:'NFT в '+title, trackType:'track-once' };
-            await saveUserItems(); renderUserCollection(coll);
-            showToast('Коллекция создана: ' + title, 'success');
-        } else if (sConfig.type === 'dapp-category') {
-            if (!title) { alert('Название обязательно!'); return; }
-            const catId = generateId();
-            const cat = { id: catId, title, description, parentZone: currentAddContext.sectionZone, items: [] };
-            userItemsData.dappCategories.push(cat);
-            ZONE_CONFIG[catId] = { type:'link-item', label: title, trackType:'track-daily' };
-            await saveUserItems(); renderUserDappCategory(cat);
-            showToast('Категория создана: ' + title, 'success');
-        } else if (sConfig.type === 'deploy-group') {
-            if (!title) { alert('Название обязательно!'); return; }
-            const grpId = generateId();
-            const grp = { id: grpId, title, parentZone: currentAddContext.sectionZone, items: [] };
-            userItemsData.collections.push(grp);
-            ZONE_CONFIG[grpId] = { type:'link-item', label: title, trackType:'track-once track-once-info' };
-            await saveUserItems(); renderUserDeployGroup(grp);
-            showToast('Группа создана: ' + title, 'success');
-        }
+    // ===== BADGES =====
+    function getBadgeHiddenState() { return localStorage.getItem(BADGE_VISIBILITY_KEY) === 'true'; }
+    function setBadgeHiddenState(h) { localStorage.setItem(BADGE_VISIBILITY_KEY, h ? 'true' : 'false'); }
+    function updateBadgeVisibility() {
+        const hidden = getBadgeHiddenState();
+        document.body.classList.toggle('badges-hidden', hidden);
+        const btn = document.getElementById('toggleBadgesBtn');
+        if (btn) btn.textContent = hidden ? 'Показать бейджи' : 'Скрыть бейджи';
     }
-    closeModal();
-    bindTrackingHandlersToAll(); attachFavoriteControls(); initializeTooltips(); initLightbox(); updateUI();detectNewLinks();
-});
 
-// ---- RENDER USER ITEMS ----
-function createUserLink(item, zone) {
-    const wrapper = document.createElement('span');
-    wrapper.className = 'user-item-wrapper';
-    wrapper.dataset.userItemId = item.id; wrapper.dataset.userItemZone = zone;
-    const link = document.createElement('a');
-    link.href = item.url; link.target = '_blank';
-    link.className = 'link-inline link-compact ' + item.trackType;
-    link.dataset.id = item.id;
-    if (item.tooltip) link.setAttribute('data-tooltip', item.tooltip);
-    if (item.image) link.setAttribute('data-image', item.image);
-    link.textContent = item.title;
-    wrapper.appendChild(link);
-    const delBtn = document.createElement('button');
-    delBtn.type = 'button'; delBtn.className = 'user-item-delete admin-only';
-    delBtn.title = 'Удалить'; delBtn.innerHTML = '×';
-    delBtn.addEventListener('click', async (e) => {
-        e.stopPropagation();
-        if (!confirm(`Удалить «${item.title}»?`)) return;
-        if (userItemsData.items[zone]) userItemsData.items[zone] = userItemsData.items[zone].filter(i => i.id !== item.id);
-        userItemsData.collections.forEach(c => { if (c.items) c.items = c.items.filter(i => i.id !== item.id); });
-        userItemsData.dappCategories.forEach(c => { if (c.items) c.items = c.items.filter(i => i.id !== item.id); });
-        await saveUserItems(); wrapper.remove();
-        if (favoritesState[item.id]) {
-            delete favoritesState[item.id]; favoritesOrder = favoritesOrder.filter(x => x !== item.id);
-            await saveFavorites(); refreshAllVisuals();
-        }
-        showToast(`Удалено: ${item.title}`, 'info');
-    });
-    wrapper.appendChild(delBtn); return wrapper;
-}
-
-function renderUserItemInZone(zone, item) {
-    const container = document.querySelector(`[data-zone="${zone}"]`);
-    if (!container) return;
-    let target;
-    if (container.tagName === 'TR') target = container.querySelector('.dapp-links');
-    else target = container.querySelector('.link-collection') || container.querySelector('.link-row');
-    if (!target) return;
-    const wrapper = createUserLink(item, zone);
-    const addBtn = target.querySelector('.add-item-btn');
-    if (addBtn) target.insertBefore(wrapper, addBtn);
-    else target.appendChild(wrapper);
-}
-
-function renderUserCollection(coll) {
-    const sectionContent = document.querySelector(`[data-section-zone="${coll.parentZone}"]`);
-    if (!sectionContent) return;
-    const grid = sectionContent.querySelector('.resource-grid');
-    if (!grid) return;
-    const card = document.createElement('div');
-    card.className = 'resource-item user-collection-card'; card.dataset.zone = coll.id;
-    const delTop = document.createElement('button');
-    delTop.type = 'button'; delTop.className = 'user-collection-delete-top admin-only';
-    delTop.title = 'Удалить коллекцию'; delTop.innerHTML = '×';
-    delTop.addEventListener('click', async () => {
-        if (!confirm(`Удалить коллекцию «${coll.title}»?`)) return;
-        userItemsData.collections = userItemsData.collections.filter(c => c.id !== coll.id);
-        delete userItemsData.items[coll.id]; delete ZONE_CONFIG[coll.id];
-        await saveUserItems(); card.remove();
-        showToast(`Коллекция удалена: ${coll.title}`, 'info');
-    });
-    card.appendChild(delTop);
-    const header = document.createElement('div'); header.className = 'resource-header';
-    const titleSpan = document.createElement('span'); titleSpan.className = 'resource-title'; titleSpan.textContent = coll.title;
-    header.appendChild(titleSpan);
-    if (coll.website || coll.twitter) {
-        const icons = document.createElement('span'); icons.className = 'social-icons';
-        if (coll.website) icons.innerHTML += `<a href="${coll.website}" target="_blank" class="site-icon" title="Сайт"><i class="fas fa-globe"></i></a>`;
-        if (coll.twitter) icons.innerHTML += `<a href="${coll.twitter}" target="_blank" class="collection-social-link" title="Twitter"><i class="fab fa-x-twitter"></i></a>`;
-        header.appendChild(icons);
+    // ===== SECTIONS =====
+    function getSectionCollapseState() { return JSON.parse(localStorage.getItem(SECTION_COLLAPSE_KEY) || '{}'); }
+    function saveSectionCollapseState(s) { localStorage.setItem(SECTION_COLLAPSE_KEY, JSON.stringify(s)); }
+    function applySectionState(sec, collapsed) {
+        sec.classList.toggle('collapsed', collapsed);
+        const t = sec.querySelector('.section-toggle');
+        if (t) { t.textContent = collapsed ? '▸' : '▾'; t.setAttribute('aria-expanded', collapsed ? 'false' : 'true'); }
     }
-    const addBtn = document.createElement('button');
-    addBtn.type = 'button'; addBtn.className = 'add-item-btn admin-only';
-    addBtn.title = `Добавить NFT в ${coll.title}`;
-    addBtn.innerHTML = '<span class="btn-plus">+</span>';
-    addBtn.addEventListener('click', (e) => {
-        e.stopPropagation();
-        currentAddContext = { zone: coll.id, config: ZONE_CONFIG[coll.id] || { type:'nft-item', label: coll.title, trackType:'track-once' } };
-        openModal(`Добавить: NFT в ${coll.title}`, ['fieldTitle','fieldUrl','fieldImage','fieldTooltip']);
-    });
-    header.appendChild(addBtn); card.appendChild(header);
-    const linkColl = document.createElement('div'); linkColl.className = 'link-collection';
-    card.appendChild(linkColl); grid.appendChild(card);
-    const items = userItemsData.items[coll.id] || [];
-    items.forEach(item => renderUserItemInZone(coll.id, item));
-    requestAnimationFrame(() => card.classList.add('anim-visible'));
-}
 
-function renderUserDappCategory(cat) {
-    const sectionContent = document.querySelector(`[data-section-zone="${cat.parentZone}"]`);
-    if (!sectionContent) return;
-    const table = sectionContent.querySelector('.dapp-table tbody');
-    if (!table) return;
-    const tr = document.createElement('tr'); tr.dataset.zone = cat.id;
-    const tdCat = document.createElement('td'); tdCat.setAttribute('data-label', 'Категория');
-    tdCat.innerHTML = `<strong>${cat.title}</strong>`;
-    const delCatBtn = document.createElement('button');
-    delCatBtn.type = 'button'; delCatBtn.className = 'user-item-delete admin-only'; delCatBtn.style.marginLeft = '8px';
-    delCatBtn.title = 'Удалить категорию'; delCatBtn.innerHTML = '×';
-    delCatBtn.addEventListener('click', async () => {
-        if (!confirm(`Удалить «${cat.title}»?`)) return;
-        userItemsData.dappCategories = userItemsData.dappCategories.filter(c => c.id !== cat.id);
-        delete userItemsData.items[cat.id]; delete ZONE_CONFIG[cat.id];
-        await saveUserItems(); tr.remove();
-        showToast(`Категория удалена: ${cat.title}`, 'info');
-    });
-    tdCat.appendChild(delCatBtn); tr.appendChild(tdCat);
-    const tdLinks = document.createElement('td'); tdLinks.setAttribute('data-label', 'Ссылки'); tdLinks.className = 'dapp-links';
-    const addBtn = document.createElement('button');
-    addBtn.type = 'button'; addBtn.className = 'add-item-btn admin-only';
-    addBtn.title = `Добавить в ${cat.title}`;
-    addBtn.innerHTML = '<span class="btn-plus">+</span>';
-    addBtn.addEventListener('click', (e) => {
-        e.stopPropagation();
-        currentAddContext = { zone: cat.id, config: ZONE_CONFIG[cat.id] || { type:'link-item', label: cat.title, trackType:'track-daily' } };
-        openModal(`Добавить: ${cat.title}`, ['fieldTitle','fieldUrl','fieldImage','fieldTooltip']);
-    });
-    tdLinks.appendChild(addBtn); tr.appendChild(tdLinks);
-    const tdDesc = document.createElement('td'); tdDesc.setAttribute('data-label', 'Действие'); tdDesc.className = 'task-desc';
-    tdDesc.textContent = cat.description || ''; tr.appendChild(tdDesc);
-    table.appendChild(tr);
-    const items = userItemsData.items[cat.id] || [];
-    items.forEach(item => renderUserItemInZone(cat.id, item));
-}
+    // ===== NEW LINKS =====
+    function detectNewLinks() {
+        const elements = document.querySelectorAll('[data-id]');
+        const currentIds = new Set();
+        elements.forEach(el => { if (el.dataset.id) currentIds.add(el.dataset.id); });
 
-function renderUserDeployGroup(grp) {
-    const sectionContent = document.querySelector(`[data-section-zone="${grp.parentZone}"]`);
-    if (!sectionContent) return;
-    const grid = sectionContent.querySelector('.resource-grid');
-    if (!grid) return;
-    const card = document.createElement('div');
-    card.className = 'resource-item user-collection-card'; card.dataset.zone = grp.id;
-    const delTop = document.createElement('button');
-    delTop.type = 'button'; delTop.className = 'user-collection-delete-top admin-only';
-    delTop.title = 'Удалить группу'; delTop.innerHTML = '×';
-    delTop.addEventListener('click', async () => {
-        if (!confirm(`Удалить группу «${grp.title}»?`)) return;
-        userItemsData.collections = userItemsData.collections.filter(c => c.id !== grp.id);
-        delete userItemsData.items[grp.id]; delete ZONE_CONFIG[grp.id];
-        await saveUserItems(); card.remove();
-    });
-    card.appendChild(delTop);
-    const header = document.createElement('div'); header.className = 'resource-header';
-    header.innerHTML = `<span class="resource-title">${grp.title}</span>`;
-    const addBtn = document.createElement('button');
-    addBtn.type = 'button'; addBtn.className = 'add-item-btn admin-only';
-    addBtn.title = `Добавить в ${grp.title}`;
-    addBtn.innerHTML = '<span class="btn-plus">+</span>';
-    addBtn.addEventListener('click', (e) => {
-        e.stopPropagation();
-        currentAddContext = { zone: grp.id, config: ZONE_CONFIG[grp.id] || { type:'link-item', label: grp.title, trackType:'track-once track-once-info' } };
-        openModal(`Добавить: ${grp.title}`, ['fieldTitle','fieldUrl','fieldTooltip']);
-    });
-    header.appendChild(addBtn); card.appendChild(header);
-    const linkColl = document.createElement('div'); linkColl.className = 'link-collection';
-    card.appendChild(linkColl); grid.appendChild(card);
-    const items = userItemsData.items[grp.id] || [];
-    items.forEach(item => renderUserItemInZone(grp.id, item));
-    requestAnimationFrame(() => card.classList.add('anim-visible'));
-}
+        const storedKnown = JSON.parse(localStorage.getItem(KNOWN_LINKS_KEY) || '[]');
+        const storedNew = JSON.parse(localStorage.getItem(NEW_LINKS_KEY) || '[]');
+        
+        knownLinksSet = new Set(Array.isArray(storedKnown) ? storedKnown : []);
+        newLinksSet = new Set(Array.isArray(storedNew) ? storedNew : []);
 
-function injectAddButtons() {
-    document.querySelectorAll('[data-zone]').forEach(container => {
-        const zone = container.dataset.zone; const config = ZONE_CONFIG[zone];
-        if (!config) return;
-        if (container.querySelector('.add-item-btn')) return;
-        const btn = document.createElement('button');
-        btn.type = 'button'; btn.className = 'add-item-btn admin-only';
-        btn.title = `Добавить в ${config.label}`;
-        btn.innerHTML = '<span class="btn-plus">+</span>';
-        btn.addEventListener('click', (e) => {
-            e.stopPropagation();
-            currentAddContext = { zone, config };
-            openModal(`Добавить: ${config.label}`, ['fieldTitle','fieldUrl','fieldImage','fieldTooltip']);
-        });
-        if (container.tagName === 'TR') {
-            const linksCell = container.querySelector('.dapp-links');
-            if (linksCell) linksCell.appendChild(btn);
+        const storedVer = localStorage.getItem(PAGE_VERSION_KEY);
+        
+        // Если это первый запуск или версия страницы изменилась, переинициализируем.
+        // Это предотвратит старые "новые" ссылки, которые уже не "новые" в новой версии.
+        if (!storedVer || storedVer !== PAGE_VERSION || knownLinksSet.size === 0) {
+            console.log('🔄 Инициализация или обновление списка новых ссылок (версия страницы изменилась или первый запуск).');
+            knownLinksSet = new Set(currentIds);
+            newLinksSet = new Set(); // Сбрасываем все "новые" на старте новой версии
         } else {
-            const header = container.querySelector('.resource-header');
-            if (header) header.appendChild(btn);
-            else { const lc = container.querySelector('.link-collection,.link-row'); if (lc) lc.appendChild(btn); }
+            // Добавляем новые ссылки, которые появились с момента последнего посещения
+            currentIds.forEach(id => {
+                if (!knownLinksSet.has(id)) {
+                    knownLinksSet.add(id);
+                    newLinksSet.add(id);
+                }
+            });
         }
-    });
-    document.querySelectorAll('[data-section-zone]').forEach(sectionContent => {
-        const sectionZone = sectionContent.dataset.sectionZone;
-        const sConfig = SECTION_ZONE_CONFIG[sectionZone];
-        if (!sConfig) return;
-        const section = sectionContent.closest('.collapsible-section');
-        if (!section) return;
-        const sectionHeader = section.querySelector('.section-header');
-        if (!sectionHeader || sectionHeader.querySelector('.section-add-btn')) return;
-        const btn = document.createElement('button');
-        btn.type = 'button'; btn.className = 'section-add-btn admin-only';
-        btn.title = `Добавить ${sConfig.label}`;
-        btn.innerHTML = '<span class="btn-plus">+</span>';
-        btn.addEventListener('click', (e) => {
-            e.stopPropagation();
-            currentAddContext = { sectionZone, config: sConfig };
-            if (sConfig.type === 'nft-collection') openModal(`Добавить ${sConfig.label}`, ['fieldTitle','fieldWebsite','fieldTwitter']);
-            else if (sConfig.type === 'dapp-category') openModal(`Добавить ${sConfig.label}`, ['fieldTitle','fieldDescription']);
-            else if (sConfig.type === 'deploy-group') openModal(`Добавить ${sConfig.label}`, ['fieldTitle']);
+        
+        // Удаляем из newLinksSet те, которых больше нет на странице
+        newLinksSet = new Set([...newLinksSet].filter(id => currentIds.has(id)));
+        
+        localStorage.setItem(KNOWN_LINKS_KEY, JSON.stringify([...knownLinksSet]));
+        localStorage.setItem(NEW_LINKS_KEY, JSON.stringify([...newLinksSet]));
+        localStorage.setItem(PAGE_VERSION_KEY, PAGE_VERSION); // Обновляем версию страницы
+        
+        updateNewIndicators();
+    }
+
+    function updateNewIndicators() {
+        document.querySelectorAll('[data-id]').forEach(el => {
+            const id = el.dataset.id;
+            if (id && newLinksSet.has(id)) {
+                el.setAttribute('data-new', 'true'); el.classList.add('has-new-flag');
+                if (!el.querySelector('.new-flag')) {
+                    const flag = document.createElement('span');
+                    flag.className = 'new-flag'; flag.innerHTML = '<span class="new-flag-text">New!</span>';
+                    el.appendChild(flag);
+                }
+            } else {
+                el.removeAttribute('data-new'); el.classList.remove('has-new-flag');
+                const f = el.querySelector('.new-flag'); if (f) f.remove();
+            }
         });
-        const toggle = sectionHeader.querySelector('.section-toggle');
-        if (toggle) sectionHeader.insertBefore(btn, toggle);
-        else sectionHeader.appendChild(btn);
+        updateSectionBadges();
+    }
+
+    function clearNewLink(id) {
+        newLinksSet.delete(id);
+        localStorage.setItem(NEW_LINKS_KEY, JSON.stringify([...newLinksSet]));
+        
+        // === NEW: запоминаем что пользователь кликнул этот элемент ===
+        const clicked = JSON.parse(localStorage.getItem('arc_tracker_clicked_new') || '[]');
+        if (!clicked.includes(id)) {
+            clicked.push(id);
+            localStorage.setItem('arc_tracker_clicked_new', JSON.stringify(clicked));
+        }
+        
+        updateNewIndicators();
+    }
+
+    function updateSectionBadges() {
+        document.querySelectorAll('.collapsible-section').forEach(sec => {
+            const st = sec.querySelector('.section-status'); if (!st) return;
+            const items = sec.querySelectorAll('[data-id][data-new="true"]');
+            if (items.length > 0) { sec.classList.add('has-new'); st.innerHTML = `<span class="status-dot">${items.length}</span><span class="status-text">New!</span>`; }
+            else { sec.classList.remove('has-new'); st.innerHTML = ''; }
+        });
+    }
+
+    // ===== LEGEND =====
+    function applyLegendState(collapsed) {
+        const legend = document.getElementById('statusLegend');
+        const toggle = document.getElementById('legendToggle');
+        if (!legend || !toggle) return;
+        const isMobile = window.matchMedia('(max-width:768px)').matches;
+        const shouldCollapse = isMobile && collapsed;
+        legend.classList.toggle('legend-collapsed', shouldCollapse);
+        toggle.setAttribute('aria-expanded', shouldCollapse ? 'false' : 'true');
+        toggle.textContent = shouldCollapse ? 'Показать инструкцию ▸' : 'Скрыть инструкцию ▾';
+    }
+
+    // ============================================================
+    //  DYNAMIC ADD SYSTEM (ADMIN ONLY)
+    // ============================================================
+    const USER_ITEMS_KEY = 'arc_user_items_v1';
+    const ZONE_CONFIG = {
+        nft_alze:     { type:'nft-item', label:'NFT в Alze', trackType:'track-once' },
+        nft_caset:    { type:'nft-item', label:'NFT в Caset', trackType:'track-once' },
+        nft_draze:    { type:'nft-item', label:'NFT в Draze', trackType:'track-once' },
+        nft_arkle:    { type:'nft-item', label:'NFT в Arkle', trackType:'track-once' },
+        nft_mintaura: { type:'nft-item', label:'NFT в MintAura', trackType:'track-once' },
+        nft_oku:      { type:'nft-item', label:'NFT в Oku', trackType:'track-once' },
+        nft_clara:    { type:'nft-item', label:'NFT в Clara', trackType:'track-once' },
+        nft_morkie:   { type:'nft-item', label:'NFT в Morkie', trackType:'track-once' },
+        nft_other:    { type:'nft-item', label:'NFT (Прочие)', trackType:'track-once' },
+        deploy_basic:    { type:'link-item', label:'Базовый деплой', trackType:'track-once track-once-info' },
+        deploy_advanced: { type:'link-item', label:'Продвинутый деплой', trackType:'track-once track-once-info' },
+        dapp_bridges:     { type:'link-item', label:'Мосты', trackType:'track-daily' },
+        dapp_dex:         { type:'link-item', label:'DEXs', trackType:'track-daily' },
+        dapp_staking:     { type:'link-item', label:'Staking', trackType:'track-daily' },
+        dapp_domains:     { type:'link-item', label:'Domains', trackType:'track-daily' },
+        dapp_socialfi:    { type:'link-item', label:'SocialFi', trackType:'track-daily' },
+        dapp_predictions: { type:'link-item', label:'Predictions', trackType:'track-daily' },
+        dapp_nft:         { type:'link-item', label:'NFT dApps', trackType:'track-daily' },
+        dapp_checkin:     { type:'link-item', label:'Check-In', trackType:'track-daily' },
+        dapp_games:       { type:'link-item', label:'Games', trackType:'track-daily' },
+        dapp_others:      { type:'link-item', label:'Others', trackType:'track-daily' },
+    };
+    const SECTION_ZONE_CONFIG = {
+        nfts:   { type:'nft-collection', label:'новую NFT-коллекцию' },
+        deploy: { type:'deploy-group', label:'новую группу деплоя' },
+        dapps:  { type:'dapp-category', label:'новую категорию dApp' },
+    };
+
+    let userItemsData = { items: {}, collections: [], dappCategories: [] };
+    let currentAddContext = null;
+
+    function loadUserItems() {
+        try {
+            const raw = localStorage.getItem(USER_ITEMS_KEY);
+            if (raw) { const p = JSON.parse(raw); userItemsData = { items: p.items||{}, collections: p.collections||[], dappCategories: p.dappCategories||[] }; }
+            console.log('✅ Пользовательские элементы загружены из LocalStorage:', userItemsData);
+        } catch(e) { console.error("❌ Ошибка загрузки пользовательских элементов из LocalStorage:", e); }
+    }
+
+    async function saveUserItems() {
+        const cleanedData = {
+            items: userItemsData.items || {},
+            collections: userItemsData.collections || [],
+            dappCategories: userItemsData.dappCategories || []
+        };
+
+        localStorage.setItem(USER_ITEMS_KEY, JSON.stringify(cleanedData));
+        console.log('✅ Пользовательские элементы сохранены в LocalStorage.');
+        
+        if (currentUser && isAdmin) { // Только если админ, сохраняем в Firestore
+            try {
+                await setDoc(doc(db, "config", "sharedItems"), {
+                    userItems: cleanedData,
+                    newItemIds: [...newLinksSet] // Сохраняем текущие newLinksSet
+                }, { merge: true });
+                console.log('✅ Пользовательские элементы успешно сохранены в Firestore.');
+            } catch (e) {
+                console.error("❌ Ошибка сохранения пользовательских элементов в Firestore:", e);
+                showToast('Ошибка сохранения общих элементов в облако.', 'error');
+            }
+        }
+    }
+
+    async function loadSharedData() {
+        console.log('🔄 Загрузка общих (shared) данных из Firestore...');
+        try {
+            const itemsSnap = await getDoc(doc(db, "config", "sharedItems"));
+            if (itemsSnap.exists()) {
+                const data = itemsSnap.data();
+                console.log('✅ Общие данные найдены в Firestore:', data);
+
+                if (data.userItems) {
+                    userItemsData = {
+                        items: data.userItems.items || {},
+                        collections: data.userItems.collections || [],
+                        dappCategories: data.userItems.dappCategories || []
+                    };
+                    localStorage.setItem(USER_ITEMS_KEY, JSON.stringify(userItemsData));
+                    console.log('✅ userItemsData обновлены из Firestore.');
+                }
+
+                if (data.newItemIds && Array.isArray(data.newItemIds)) {
+                    const localClicked = JSON.parse(localStorage.getItem('arc_tracker_clicked_new') || '[]');
+                    const clickedSet = new Set(localClicked);
+                    
+                    data.newItemIds.forEach(id => {
+                        if (!clickedSet.has(id)) { // Добавляем только если пользователь еще не кликнул
+                            newLinksSet.add(id);
+                        }
+                    });
+                    localStorage.setItem(NEW_LINKS_KEY, JSON.stringify([...newLinksSet]));
+                    console.log('✅ newLinksSet обновлены из Firestore.');
+                }
+            } else {
+                console.log('ℹ️ Документ sharedItems не найден в Firestore. Загрузка из LocalStorage.');
+                loadUserItems(); // Если нет в облаке, пытаемся загрузить из локального хранилища
+            }
+
+            const editsSnap = await getDoc(doc(db, "config", "sharedEdits"));
+            if (editsSnap.exists()) {
+                const data = editsSnap.data();
+                console.log('✅ Общие изменения (editsOverride) найдены в Firestore:', data);
+                if (data.editsOverride) {
+                    editsOverride = data.editsOverride;
+                    localStorage.setItem(EDITS_OVERRIDE_KEY, JSON.stringify(editsOverride));
+                }
+            } else {
+                console.log('ℹ️ Документ sharedEdits не найден в Firestore. Загрузка из LocalStorage.');
+                loadEditsOverride(); // Если нет в облаке, пытаемся загрузить из локального хранилища
+            }
+        } catch (e) {
+            console.error("❌ Ошибка загрузки общих данных из Firestore:", e);
+            showToast('Ошибка загрузки общих данных.', 'error');
+            loadUserItems(); // Fallback на локальное хранилище при ошибке Firestore
+            loadEditsOverride();
+        }
+    }
+
+
+    function generateId() { return 'u_' + Date.now().toString(36) + '_' + Math.random().toString(36).substr(2, 5); }
+
+    // ---- MODAL ----
+    const overlayEl = () => document.getElementById('addModalOverlay');
+    function showFields(fields) {
+        ['fieldTitle','fieldUrl','fieldTooltip','fieldImage','fieldWebsite','fieldTwitter','fieldDescription'].forEach(f => {
+            const el = document.getElementById(f);
+            if (el) el.classList.toggle('field-hidden', !fields.includes(f));
+        });
+    }
+    function openModal(title, fields) {
+        document.getElementById('addModalTitle').textContent = title;
+        showFields(fields);
+        ['addFieldTitle','addFieldUrl','addFieldTooltip','addFieldImage','addFieldWebsite','addFieldTwitter','addFieldDescription'].forEach(id => {
+            const el = document.getElementById(id); if (el) el.value = '';
+        });
+        overlayEl().classList.add('open');
+    }
+    function closeModal() {
+        overlayEl().classList.remove('open');
+        currentAddContext = null; currentEditTarget = null;
+        const saveBtn = document.getElementById('addModalSave');
+        saveBtn.textContent = 'Добавить'; delete saveBtn.dataset.editMode;
+    }
+
+    document.getElementById('addModalCancel').addEventListener('click', closeModal);
+    overlayEl().addEventListener('click', (e) => { if (e.target === overlayEl()) closeModal(); });
+    // document.addEventListener('keydown', (e) => { if (e.key === 'Escape') { closeModal(); closeLightbox(); } }); // Перемещено в DOMContentLoaded
+
+    function normalizeImageUrl(rawUrl) {
+        if (!rawUrl) return rawUrl;
+        try {
+            const u = new URL(rawUrl);
+            if (u.pathname.includes('/_next/image')) {
+                const inner = u.searchParams.get('url');
+                if (inner) { const dec = decodeURIComponent(inner); return dec.startsWith('http') ? dec : u.origin + dec; }
+            }
+        } catch(e) {}
+        return rawUrl;
+    }
+
+    document.getElementById('addModalSave').addEventListener('click', async () => {
+        const saveBtn = document.getElementById('addModalSave');
+        const isEdit = saveBtn.dataset.editMode === 'true';
+
+        if (isEdit && currentEditTarget) {
+            const id = currentEditTarget.id; const link = currentEditTarget.link;
+            const newTitle = document.getElementById('addFieldTitle').value.trim();
+            const newUrl = document.getElementById('addFieldUrl').value.trim();
+            const newTooltip = document.getElementById('addFieldTooltip').value.trim();
+            const newImage = normalizeImageUrl(document.getElementById('addFieldImage').value.trim());
+            if (!newTitle || !newUrl) { alert('Название и URL обязательны!'); return; }
+            
+            let isUserItem = false;
+            for (const zone in userItemsData.items) {
+                const items = userItemsData.items[zone]; if (!items) continue;
+                const found = items.find(i => i.id === id);
+                if (found) {
+                    found.title = newTitle; found.url = newUrl; found.tooltip = newTooltip; found.image = newImage;
+                    isUserItem = true; await saveUserItems(); break;
+                }
+            }
+            if (!isUserItem) {
+                editsOverride[id] = { title: newTitle, url: newUrl, tooltip: newTooltip, image: newImage };
+                await saveEditsOverride();
+            }
+            applyOverrideToLink(link, { title: newTitle, url: newUrl, tooltip: newTooltip, image: newImage });
+            if (favoritesState[id]) {
+                favoritesState[id].title = newTitle; favoritesState[id].url = newUrl; favoritesState[id].tooltip = newTooltip; favoritesState[id].image = newImage;
+                await saveFavorites(); renderFavoritesList();
+            }
+            showToast('Обновлено: ' + newTitle, 'success');
+            closeModal(); initializeTooltips(); initLightbox(); return;
+        }
+
+        if (!currentAddContext) return;
+        const title = document.getElementById('addFieldTitle').value.trim();
+        const url = document.getElementById('addFieldUrl').value.trim();
+        const tooltip = document.getElementById('addFieldTooltip').value.trim();
+        const image = normalizeImageUrl(document.getElementById('addFieldImage').value.trim());
+        const website = document.getElementById('addFieldWebsite').value.trim();
+        const twitter = document.getElementById('addFieldTwitter').value.trim();
+        const description = document.getElementById('addFieldDescription').value.trim();
+
+        if (currentAddContext.zone) { // Добавление элемента в существующую группу/категорию
+            if (!title || !url) { alert('Название и URL обязательны!'); return; }
+            const config = currentAddContext.config; const id = generateId();
+            const item = { id, title, url, tooltip, image, trackType: config.trackType, addedAt: Date.now() };
+            if (!userItemsData.items[currentAddContext.zone]) userItemsData.items[currentAddContext.zone] = [];
+            userItemsData.items[currentAddContext.zone].push(item);
+            newLinksSet.add(id);
+            knownLinksSet.add(id); // Добавлен в knownLinksSet
+            localStorage.setItem(NEW_LINKS_KEY, JSON.stringify([...newLinksSet]));
+            localStorage.setItem(KNOWN_LINKS_KEY, JSON.stringify([...knownLinksSet]));
+            await saveUserItems(); renderUserItemInZone(currentAddContext.zone, item);
+            showToast('Добавлено: ' + title, 'success');
+        } else if (currentAddContext.sectionZone) { // Добавление новой коллекции/категории
+            const sConfig = currentAddContext.config;
+            if (sConfig.type === 'nft-collection') {
+                if (!title) { alert('Название обязательно!'); return; }
+                const collId = generateId();
+                const coll = { id: collId, title, website, twitter, parentZone: currentAddContext.sectionZone, items: [] };
+                userItemsData.collections.push(coll);
+                ZONE_CONFIG[collId] = { type:'nft-item', label:'NFT в '+title, trackType:'track-once' }; // Динамически добавляем в ZONE_CONFIG
+                await saveUserItems(); renderUserCollection(coll);
+                showToast('Коллекция создана: ' + title, 'success');
+            } else if (sConfig.type === 'dapp-category') {
+                if (!title) { alert('Название обязательно!'); return; }
+                const catId = generateId();
+                const cat = { id: catId, title, description, parentZone: currentAddContext.sectionZone, items: [] };
+                userItemsData.dappCategories.push(cat);
+                ZONE_CONFIG[catId] = { type:'link-item', label: title, trackType:'track-daily' }; // Динамически добавляем в ZONE_CONFIG
+                await saveUserItems(); renderUserDappCategory(cat);
+                showToast('Категория создана: ' + title, 'success');
+            } else if (sConfig.type === 'deploy-group') {
+                if (!title) { alert('Название обязательно!'); return; }
+                const grpId = generateId();
+                const grp = { id: grpId, title, parentZone: currentAddContext.sectionZone, items: [] };
+                userItemsData.collections.push(grp);
+                ZONE_CONFIG[grpId] = { type:'link-item', label: title, trackType:'track-once track-once-info' }; // Динамически добавляем в ZONE_CONFIG
+                await saveUserItems(); renderUserDeployGroup(grp);
+                showToast('Группа создана: ' + title, 'success');
+            }
+        }
+        closeModal();
+        // Обновляем все после добавления нового элемента
+        bindTrackingHandlersToAll(); attachFavoriteControls(); initializeTooltips(); initLightbox(); updateUI();detectNewLinks();
     });
-}
 
+    // ---- RENDER USER ITEMS ----
+    function createUserLink(item, zone) {
+        const wrapper = document.createElement('span');
+        wrapper.className = 'user-item-wrapper';
+        wrapper.dataset.userItemId = item.id; wrapper.dataset.userItemZone = zone;
+        const link = document.createElement('a');
+        link.href = item.url; link.target = '_blank';
+        link.className = 'link-inline link-compact ' + item.trackType;
+        link.dataset.id = item.id;
+        if (item.tooltip) link.setAttribute('data-tooltip', item.tooltip);
+        if (item.image) link.setAttribute('data-image', item.image);
+        link.textContent = item.title;
+        wrapper.appendChild(link);
+        const delBtn = document.createElement('button');
+        delBtn.type = 'button'; delBtn.className = 'user-item-delete admin-only';
+        delBtn.title = 'Удалить'; delBtn.innerHTML = '×';
+        delBtn.addEventListener('click', async (e) => {
+            e.stopPropagation();
+            if (!confirm(`Удалить «${item.title}»?`)) return;
+            // Удаляем элемент из userItemsData
+            if (userItemsData.items[zone]) userItemsData.items[zone] = userItemsData.items[zone].filter(i => i.id !== item.id);
+            // Также проверяем, не является ли это элементом внутри коллекции/категории
+            userItemsData.collections.forEach(c => { if (c.items) c.items = c.items.filter(i => i.id !== item.id); });
+            userItemsData.dappCategories.forEach(c => { if (c.items) c.items = c.items.filter(i => i.id !== item.id); });
 
+            await saveUserItems(); wrapper.remove(); // Сохраняем изменения и удаляем элемент из DOM
+            
+            // Удаляем из избранного, если был избран
+            if (favoritesState[item.id]) {
+                delete favoritesState[item.id]; favoritesOrder = favoritesOrder.filter(x => x !== item.id);
+                await saveFavorites(); refreshAllVisuals();
+            }
+            // Удаляем из newLinksSet
+            newLinksSet.delete(item.id);
+            localStorage.setItem(NEW_LINKS_KEY, JSON.stringify([...newLinksSet]));
+            // Удаляем из knownLinksSet
+            knownLinksSet.delete(item.id);
+            localStorage.setItem(KNOWN_LINKS_KEY, JSON.stringify([...knownLinksSet]));
 
-function renderAllUserItems() {
-    loadUserItems();
-    userItemsData.collections.forEach(coll => {
-        if (!ZONE_CONFIG[coll.id]) {
+            showToast(`Удалено: ${item.title}`, 'info');
+            detectNewLinks(); // Обновляем индикаторы "New!"
+        });
+        wrapper.appendChild(delBtn); return wrapper;
+    }
+
+    function renderUserItemInZone(zone, item) {
+        const container = document.querySelector(`[data-zone="${zone}"]`);
+        if (!container) { console.warn(`Контейнер для зоны ${zone} не найден, не могу отобразить элемент.`, item); return; }
+        let target;
+        if (container.tagName === 'TR') target = container.querySelector('.dapp-links');
+        else target = container.querySelector('.link-collection') || container.querySelector('.link-row');
+        if (!target) { console.warn(`Целевой контейнер для ссылок в зоне ${zone} не найден.`, item); return; }
+        const wrapper = createUserLink(item, zone);
+        const addBtn = target.querySelector('.add-item-btn');
+        if (addBtn) target.insertBefore(wrapper, addBtn); // Добавляем перед кнопкой "Добавить"
+        else target.appendChild(wrapper); // Или просто в конец
+        
+        // Применяем tracking и favorite controls для нового элемента
+        bindTrackingHandler(wrapper.querySelector('a'));
+        attachFavoriteControls(); // Чтобы новый элемент сразу мог быть добавлен в избранное
+        initializeTooltips();
+        initLightbox();
+    }
+
+    function renderUserCollection(coll) {
+        const sectionContent = document.querySelector(`[data-section-zone="${coll.parentZone}"]`);
+        if (!sectionContent) { console.warn(`Раздел для коллекции ${coll.title} не найден.`); return; }
+        const grid = sectionContent.querySelector('.resource-grid');
+        if (!grid) { console.warn(`Сетка ресурсов для коллекции ${coll.title} не найдена.`); return; }
+        
+        // Проверяем, существует ли уже такая карточка
+        if (document.querySelector(`.resource-item[data-zone="${coll.id}"]`)) {
+            console.log(`Коллекция ${coll.title} уже отображена, пропуск.`);
+            return;
+        }
+
+        const card = document.createElement('div');
+        card.className = 'resource-item user-collection-card'; card.dataset.zone = coll.id;
+        const delTop = document.createElement('button');
+        delTop.type = 'button'; delTop.className = 'user-collection-delete-top admin-only';
+        delTop.title = 'Удалить коллекцию'; delTop.innerHTML = '×';
+        delTop.addEventListener('click', async () => {
+            if (!confirm(`Удалить коллекцию «${coll.title}»? Все NFT в ней также будут удалены.`)) return;
+            userItemsData.collections = userItemsData.collections.filter(c => c.id !== coll.id);
+            // Удаляем все NFT, которые были в этой коллекции
+            if (userItemsData.items[coll.id]) {
+                 userItemsData.items[coll.id].forEach(item => {
+                    newLinksSet.delete(item.id);
+                    knownLinksSet.delete(item.id);
+                    if (favoritesState[item.id]) {
+                        delete favoritesState[item.id];
+                        favoritesOrder = favoritesOrder.filter(x => x !== item.id);
+                    }
+                 });
+                 delete userItemsData.items[coll.id];
+            }
+            delete ZONE_CONFIG[coll.id]; // Удаляем из динамического конфига
+            await saveUserItems(); card.remove();
+            await saveFavorites(); // Сохраняем изменения в избранном
+            localStorage.setItem(NEW_LINKS_KEY, JSON.stringify([...newLinksSet]));
+            localStorage.setItem(KNOWN_LINKS_KEY, JSON.stringify([...knownLinksSet]));
+
+            showToast(`Коллекция удалена: ${coll.title}`, 'info');
+            refreshAllVisuals();
+            detectNewLinks();
+        });
+        card.appendChild(delTop);
+        const header = document.createElement('div'); header.className = 'resource-header';
+        const titleSpan = document.createElement('span'); titleSpan.className = 'resource-title'; titleSpan.textContent = coll.title;
+        header.appendChild(titleSpan);
+        if (coll.website || coll.twitter) {
+            const icons = document.createElement('span'); icons.className = 'social-icons';
+            if (coll.website) icons.innerHTML += `<a href="${coll.website}" target="_blank" class="site-icon" title="Сайт"><i class="fas fa-globe"></i></a>`;
+            if (coll.twitter) icons.innerHTML += `<a href="${coll.twitter}" target="_blank" class="collection-social-link" title="Twitter"><i class="fab fa-x-twitter"></i></a>`;
+            header.appendChild(icons);
+        }
+        const addBtn = document.createElement('button');
+        addBtn.type = 'button'; addBtn.className = 'add-item-btn admin-only';
+        addBtn.title = `Добавить NFT в ${coll.title}`;
+        addBtn.innerHTML = '<span class="btn-plus">+</span>';
+        addBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            currentAddContext = { zone: coll.id, config: ZONE_CONFIG[coll.id] || { type:'nft-item', label: coll.title, trackType:'track-once' } };
+            openModal(`Добавить: NFT в ${coll.title}`, ['fieldTitle','fieldUrl','fieldImage','fieldTooltip']);
+        });
+        header.appendChild(addBtn); card.appendChild(header);
+        const linkColl = document.createElement('div'); linkColl.className = 'link-collection';
+        card.appendChild(linkColl); grid.appendChild(card);
+        const items = userItemsData.items[coll.id] || [];
+        items.forEach(item => renderUserItemInZone(coll.id, item));
+        requestAnimationFrame(() => card.classList.add('anim-visible'));
+    }
+
+    function renderUserDappCategory(cat) {
+        const sectionContent = document.querySelector(`[data-section-zone="${cat.parentZone}"]`);
+        if (!sectionContent) { console.warn(`Раздел для категории dApp ${cat.title} не найден.`); return; }
+        const table = sectionContent.querySelector('.dapp-table tbody');
+        if (!table) { console.warn(`Таблица dApp для категории ${cat.title} не найдена.`); return; }
+
+        // Проверяем, существует ли уже такая строка категории
+        if (document.querySelector(`tr[data-zone="${cat.id}"]`)) {
+            console.log(`Категория dApp ${cat.title} уже отображена, пропуск.`);
+            return;
+        }
+
+        const tr = document.createElement('tr'); tr.dataset.zone = cat.id;
+        const tdCat = document.createElement('td'); tdCat.setAttribute('data-label', 'Категория');
+        tdCat.innerHTML = `<strong>${cat.title}</strong>`;
+        const delCatBtn = document.createElement('button');
+        delCatBtn.type = 'button'; delCatBtn.className = 'user-item-delete admin-only'; delCatBtn.style.marginLeft = '8px';
+        delCatBtn.title = 'Удалить категорию'; delCatBtn.innerHTML = '×';
+        delCatBtn.addEventListener('click', async () => {
+            if (!confirm(`Удалить «${cat.title}»? Все ссылки в ней также будут удалены.`)) return;
+            userItemsData.dappCategories = userItemsData.dappCategories.filter(c => c.id !== cat.id);
+            if (userItemsData.items[cat.id]) {
+                userItemsData.items[cat.id].forEach(item => {
+                    newLinksSet.delete(item.id);
+                    knownLinksSet.delete(item.id);
+                     if (favoritesState[item.id]) {
+                        delete favoritesState[item.id];
+                        favoritesOrder = favoritesOrder.filter(x => x !== item.id);
+                    }
+                });
+                delete userItemsData.items[cat.id];
+            }
+            delete ZONE_CONFIG[cat.id];
+            await saveUserItems(); tr.remove();
+            await saveFavorites();
+            localStorage.setItem(NEW_LINKS_KEY, JSON.stringify([...newLinksSet]));
+            localStorage.setItem(KNOWN_LINKS_KEY, JSON.stringify([...knownLinksSet]));
+            showToast(`Категория удалена: ${cat.title}`, 'info');
+            refreshAllVisuals();
+            detectNewLinks();
+        });
+        tdCat.appendChild(delCatBtn); tr.appendChild(tdCat);
+        const tdLinks = document.createElement('td'); tdLinks.setAttribute('data-label', 'Ссылки'); tdLinks.className = 'dapp-links';
+        const addBtn = document.createElement('button');
+        addBtn.type = 'button'; addBtn.className = 'add-item-btn admin-only';
+        addBtn.title = `Добавить в ${cat.title}`;
+        addBtn.innerHTML = '<span class="btn-plus">+</span>';
+        addBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            currentAddContext = { zone: cat.id, config: ZONE_CONFIG[cat.id] || { type:'link-item', label: cat.title, trackType:'track-daily' } };
+            openModal(`Добавить: ${cat.title}`, ['fieldTitle','fieldUrl','fieldImage','fieldTooltip']);
+        });
+        tdLinks.appendChild(addBtn); tr.appendChild(tdLinks);
+        const tdDesc = document.createElement('td'); tdDesc.setAttribute('data-label', 'Действие'); tdDesc.className = 'task-desc';
+        tdDesc.textContent = cat.description || ''; tr.appendChild(tdDesc);
+        table.appendChild(tr);
+        const items = userItemsData.items[cat.id] || [];
+        items.forEach(item => renderUserItemInZone(cat.id, item));
+    }
+
+    function renderUserDeployGroup(grp) {
+        const sectionContent = document.querySelector(`[data-section-zone="${grp.parentZone}"]`);
+        if (!sectionContent) { console.warn(`Раздел для группы деплоя ${grp.title} не найден.`); return; }
+        const grid = sectionContent.querySelector('.resource-grid');
+        if (!grid) { console.warn(`Сетка ресурсов для группы деплоя ${grp.title} не найдена.`); return; }
+
+        // Проверяем, существует ли уже такая карточка
+        if (document.querySelector(`.resource-item[data-zone="${grp.id}"]`)) {
+            console.log(`Группа деплоя ${grp.title} уже отображена, пропуск.`);
+            return;
+        }
+
+        const card = document.createElement('div');
+        card.className = 'resource-item user-collection-card'; card.dataset.zone = grp.id;
+        const delTop = document.createElement('button');
+        delTop.type = 'button'; delTop.className = 'user-collection-delete-top admin-only';
+        delTop.title = 'Удалить группу'; delTop.innerHTML = '×';
+        delTop.addEventListener('click', async () => {
+            if (!confirm(`Удалить группу «${grp.title}»? Все ссылки в ней также будут удалены.`)) return;
+            userItemsData.collections = userItemsData.collections.filter(c => c.id !== grp.id);
+            if (userItemsData.items[grp.id]) {
+                userItemsData.items[grp.id].forEach(item => {
+                    newLinksSet.delete(item.id);
+                    knownLinksSet.delete(item.id);
+                     if (favoritesState[item.id]) {
+                        delete favoritesState[item.id];
+                        favoritesOrder = favoritesOrder.filter(x => x !== item.id);
+                    }
+                });
+                delete userItemsData.items[grp.id];
+            }
+            delete ZONE_CONFIG[grp.id];
+            await saveUserItems(); card.remove();
+            await saveFavorites();
+            localStorage.setItem(NEW_LINKS_KEY, JSON.stringify([...newLinksSet]));
+            localStorage.setItem(KNOWN_LINKS_KEY, JSON.stringify([...knownLinksSet]));
+            showToast(`Группа деплоя удалена: ${grp.title}`, 'info');
+            refreshAllVisuals();
+            detectNewLinks();
+        });
+        card.appendChild(delTop);
+        const header = document.createElement('div'); header.className = 'resource-header';
+        header.innerHTML = `<span class="resource-title">${grp.title}</span>`;
+        const addBtn = document.createElement('button');
+        addBtn.type = 'button'; addBtn.className = 'add-item-btn admin-only';
+        addBtn.title = `Добавить в ${grp.title}`;
+        addBtn.innerHTML = '<span class="btn-plus">+</span>';
+        addBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            currentAddContext = { zone: grp.id, config: ZONE_CONFIG[grp.id] || { type:'link-item', label: grp.title, trackType:'track-once track-once-info' } };
+            openModal(`Добавить: ${grp.title}`, ['fieldTitle','fieldUrl','fieldTooltip']);
+        });
+        header.appendChild(addBtn); card.appendChild(header);
+        const linkColl = document.createElement('div'); linkColl.className = 'link-collection';
+        card.appendChild(linkColl); grid.appendChild(card);
+        const items = userItemsData.items[grp.id] || [];
+        items.forEach(item => renderUserItemInZone(grp.id, item));
+        requestAnimationFrame(() => card.classList.add('anim-visible'));
+    }
+
+    function injectAddButtons() {
+        if (!isAdmin) return; // Только для админов
+
+        // Для существующих статичных зон
+        document.querySelectorAll('[data-zone]').forEach(container => {
+            const zone = container.dataset.zone;
+            // Пропускаем динамически созданные зоны коллекций, так как у них уже есть кнопка
+            if (zone.startsWith('u_')) return;
+
+            const config = ZONE_CONFIG[zone];
+            if (!config) { /* console.warn(`Нет конфигурации для зоны ${zone}`); */ return; }
+
+            // Проверяем, существует ли уже кнопка "Добавить"
+            if (container.querySelector('.add-item-btn')) return;
+
+            const btn = document.createElement('button');
+            btn.type = 'button'; btn.className = 'add-item-btn admin-only';
+            btn.title = `Добавить в ${config.label}`;
+            btn.innerHTML = '<span class="btn-plus">+</span>';
+            btn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                currentAddContext = { zone, config };
+                // Какие поля показывать зависит от типа элемента
+                let fieldsToShow = ['fieldTitle','fieldUrl','fieldTooltip'];
+                if (config.type === 'nft-item') fieldsToShow.push('fieldImage');
+                openModal(`Добавить: ${config.label}`, fieldsToShow);
+            });
+
+            if (container.tagName === 'TR') {
+                const linksCell = container.querySelector('.dapp-links');
+                if (linksCell) linksCell.appendChild(btn);
+            } else {
+                const header = container.querySelector('.resource-header');
+                if (header) header.appendChild(btn);
+                else { // Fallback, если нет заголовка (например, для простых div с link-row)
+                    const linkCollection = container.querySelector('.link-collection, .link-row');
+                    if (linkCollection) linkCollection.appendChild(btn);
+                }
+            }
+        });
+
+        // Для секций, чтобы добавлять новые коллекции/категории
+        document.querySelectorAll('[data-section-zone]').forEach(sectionContent => {
+            const sectionZone = sectionContent.dataset.sectionZone;
+            const sConfig = SECTION_ZONE_CONFIG[sectionZone];
+            if (!sConfig) return;
+            const section = sectionContent.closest('.collapsible-section');
+            if (!section) return;
+            const sectionHeader = section.querySelector('.section-header');
+            if (!sectionHeader || sectionHeader.querySelector('.section-add-btn')) return; // Проверяем, есть ли уже кнопка
+
+            const btn = document.createElement('button');
+            btn.type = 'button'; btn.className = 'section-add-btn admin-only';
+            btn.title = `Добавить ${sConfig.label}`;
+            btn.innerHTML = '<span class="btn-plus">+</span>';
+            btn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                currentAddContext = { sectionZone, config: sConfig };
+                if (sConfig.type === 'nft-collection') openModal(`Добавить ${sConfig.label}`, ['fieldTitle','fieldWebsite','fieldTwitter']);
+                else if (sConfig.type === 'dapp-category') openModal(`Добавить ${sConfig.label}`, ['fieldTitle','fieldDescription']);
+                else if (sConfig.type === 'deploy-group') openModal(`Добавить ${sConfig.label}`, ['fieldTitle']);
+            });
+            const toggle = sectionHeader.querySelector('.section-toggle');
+            if (toggle) sectionHeader.insertBefore(btn, toggle);
+            else sectionHeader.appendChild(btn);
+        });
+    }
+
+    function renderAllUserItems() {
+        console.log('🔄 Рендеринг всех пользовательских элементов...');
+        // Очищаем существующие динамически добавленные элементы, чтобы избежать дублирования при пере-рендеринге
+        document.querySelectorAll('.user-item-wrapper, .user-collection-card, tr[data-zone^="u_"]').forEach(el => el.remove());
+        
+        // Пересоздаем динамические ZONE_CONFIG для пользовательских коллекций/категорий
+        userItemsData.collections.forEach(coll => {
             const isNft = coll.parentZone === 'nfts';
             ZONE_CONFIG[coll.id] = { type: isNft ? 'nft-item' : 'link-item', label: coll.title, trackType: isNft ? 'track-once' : 'track-once track-once-info' };
+        });
+        userItemsData.dappCategories.forEach(cat => {
+            ZONE_CONFIG[cat.id] = { type:'link-item', label: cat.title, trackType:'track-daily' };
+        });
+
+        // Сначала рендерим коллекции/категории
+        userItemsData.collections.forEach(coll => {
+            if (coll.parentZone === 'nfts') renderUserCollection(coll);
+            else if (coll.parentZone === 'deploy') renderUserDeployGroup(coll);
+        });
+        userItemsData.dappCategories.forEach(cat => renderUserDappCategory(cat));
+
+        // Затем рендерим отдельные элементы
+        Object.keys(userItemsData.items).forEach(zone => {
+            const items = userItemsData.items[zone];
+            if (!items || !items.length) return;
+            items.forEach(item => renderUserItemInZone(zone, item));
+        });
+        
+        // Внедряем кнопки добавления (после того, как все элементы отрендерены)
+        injectAddButtons();
+        
+        // Обновляем состояние UI
+        bindTrackingHandlersToAll();
+        attachFavoriteControls();
+        initializeTooltips();
+        initLightbox();
+        updateUI();
+        detectNewLinks();
+        console.log('✅ Рендеринг пользовательских элементов завершен.');
+    }
+
+    // ===== EDIT MODE =====
+    function loadEditsOverride() {
+        try { editsOverride = JSON.parse(localStorage.getItem(EDITS_OVERRIDE_KEY) || '{}');
+            console.log('✅ Edits override загружены из LocalStorage:', editsOverride);
         }
-    });
-    userItemsData.dappCategories.forEach(cat => {
-        if (!ZONE_CONFIG[cat.id]) ZONE_CONFIG[cat.id] = { type:'link-item', label: cat.title, trackType:'track-daily' };
-    });
-    userItemsData.collections.forEach(coll => {
-        if (coll.parentZone === 'nfts') renderUserCollection(coll);
-        else if (coll.parentZone === 'deploy') renderUserDeployGroup(coll);
-    });
-    userItemsData.dappCategories.forEach(cat => renderUserDappCategory(cat));
-    Object.keys(userItemsData.items).forEach(zone => {
-        const items = userItemsData.items[zone];
-        if (!items || !items.length) return;
-        items.forEach(item => renderUserItemInZone(zone, item));
-    });
-    injectAddButtons();
-    bindTrackingHandlersToAll(); attachFavoriteControls(); initializeTooltips(); initLightbox(); updateUI();
-}
-
-// ===== EDIT MODE =====
-function loadEditsOverride() {
-    try { editsOverride = JSON.parse(localStorage.getItem(EDITS_OVERRIDE_KEY) || '{}'); }
-    catch(e) { editsOverride = {}; }
-}
-
-async function saveEditsOverride() {
-    localStorage.setItem(EDITS_OVERRIDE_KEY, JSON.stringify(editsOverride));
-    if (isAdmin) {
-        try {
-            await setDoc(doc(db, "config", "sharedEdits"), { editsOverride });
-        } catch (e) { console.error("Save shared edits error:", e); }
+        catch(e) { console.error("❌ Ошибка загрузки edits override:", e); editsOverride = {}; }
     }
-}
 
-function applyOverrideToLink(link, ov) {
-    if (!link || !ov) return;
-    if (ov.title) {
-        Array.from(link.childNodes).forEach(n => { if (n.nodeType === Node.TEXT_NODE) n.remove(); });
-        link.insertBefore(document.createTextNode(ov.title), link.firstChild);
-    }
-    if (ov.url) link.href = ov.url;
-    if (ov.tooltip !== undefined) {
-        if (ov.tooltip) link.setAttribute('data-tooltip', ov.tooltip);
-        else link.removeAttribute('data-tooltip');
-    }
-    if (ov.image !== undefined) {
-        if (ov.image) link.setAttribute('data-image', ov.image);
-        else link.removeAttribute('data-image');
-    }
-}
-
-function applyAllOverrides() {
-    loadEditsOverride();
-    Object.keys(editsOverride).forEach(id => {
-        const link = document.querySelector(`a.link-inline[data-id="${id}"]`);
-        if (link) applyOverrideToLink(link, editsOverride[id]);
-    });
-}
-
-function toggleEditMode() {
-    editModeActive = !editModeActive;
-    document.body.classList.toggle('edit-mode', editModeActive);
-    const btn = document.getElementById('editModeBtn');
-    if (btn) {
-        btn.classList.toggle('active', editModeActive);
-        btn.innerHTML = editModeActive ? '<i class="fas fa-check"></i> Завершить' : '<i class="fas fa-pen"></i> Редактирование';
-    }
-    if (editModeActive) { injectEditButtons(); showToast('Нажмите ✎ рядом со ссылкой для изменения', 'info'); }
-    else { removeEditButtons(); showToast('Редактирование завершено', 'info'); }
-}
-
-function injectEditButtons() {
-    document.querySelectorAll('a.link-inline[data-id]').forEach(link => {
-        if (link.dataset.editBtnBound) return;
-        const editBtn = document.createElement('button');
-        editBtn.type = 'button'; editBtn.className = 'edit-item-btn';
-        editBtn.title = 'Редактировать'; editBtn.innerHTML = '<i class="fas fa-pen"></i>';
-        editBtn.addEventListener('click', (e) => { e.preventDefault(); e.stopPropagation(); openEditModal(link); });
-        const wrapper = link.closest('.link-with-favorite') || link.closest('.user-item-wrapper');
-        if (wrapper) wrapper.appendChild(editBtn);
-        else link.parentNode.insertBefore(editBtn, link.nextSibling);
-        link.dataset.editBtnBound = 'true';
-    });
-}
-
-function removeEditButtons() {
-    document.querySelectorAll('.edit-item-btn').forEach(btn => btn.remove());
-    document.querySelectorAll('[data-edit-btn-bound]').forEach(el => delete el.dataset.editBtnBound);
-}
-
-function openEditModal(link) {
-    const id = link.dataset.id; const title = getLinkTitle(link);
-    currentEditTarget = { id, link };
-    document.getElementById('addModalTitle').textContent = 'Редактировать: ' + title;
-    showFields(['fieldTitle', 'fieldUrl', 'fieldTooltip', 'fieldImage']);
-    document.getElementById('addFieldTitle').value = title;
-    document.getElementById('addFieldUrl').value = link.href;
-    document.getElementById('addFieldTooltip').value = link.getAttribute('data-tooltip') || '';
-    document.getElementById('addFieldImage').value = link.getAttribute('data-image') || '';
-    const saveBtn = document.getElementById('addModalSave');
-    saveBtn.textContent = 'Сохранить'; saveBtn.dataset.editMode = 'true';
-    overlayEl().classList.add('open');
-}
-
-// ===== DOM CONTENT LOADED =====
-document.addEventListener('DOMContentLoaded', () => {
-    loadTheme(); loadEditsOverride(); applyAllOverrides();
-    attachFavoriteControls(); bindTrackingHandlersToAll();
-    initLightbox(); initCardAnimations(); initLazyLoading();
-
-    document.getElementById('themeToggleBtn').addEventListener('click', toggleTheme);
-    document.getElementById('toggleBadgesBtn').addEventListener('click', () => { setBadgeHiddenState(!getBadgeHiddenState()); updateBadgeVisibility(); });
-
-    const editBtn = document.getElementById('editModeBtn');
-    if (editBtn) editBtn.addEventListener('click', toggleEditMode);
-
-    document.getElementById('exportBtn').addEventListener('click', exportJSON);
-    document.getElementById('importBtn').addEventListener('click', () => document.getElementById('importFileInput').click());
-    document.getElementById('importFileInput').addEventListener('change', (e) => {
-        if (e.target.files[0]) { importJSON(e.target.files[0]); e.target.value = ''; }
-    });
-
-    const sectionState = getSectionCollapseState();
-    document.querySelectorAll('.collapsible-section').forEach(sec => {
-        const sid = sec.getAttribute('data-section-id');
-        const collapsed = sectionState[sid] === true;
-        applySectionState(sec, collapsed);
-        const toggle = sec.querySelector('.section-toggle');
-        if (toggle) {
-            toggle.addEventListener('click', () => {
-                const isCol = sec.classList.contains('collapsed');
-                applySectionState(sec, !isCol);
-                if (!isCol) sectionState[sid] = true; else delete sectionState[sid];
-                saveSectionCollapseState(sectionState);
-            });
+    async function saveEditsOverride() {
+        localStorage.setItem(EDITS_OVERRIDE_KEY, JSON.stringify(editsOverride));
+        console.log('✅ Edits override сохранены в LocalStorage.');
+        if (currentUser && isAdmin) {
+            try {
+                await setDoc(doc(db, "config", "sharedEdits"), { editsOverride }, { merge: true });
+                console.log('✅ Edits override успешно сохранены в Firestore.');
+            } catch (e) { console.error("❌ Ошибка сохранения shared edits в Firestore:", e); showToast('Ошибка сохранения изменений в облако.', 'error'); }
         }
-    });
+    }
 
-    let isMobile = window.innerWidth <= 768;
-    let storedLegend = localStorage.getItem(LEGEND_COLLAPSE_KEY);
-    let isLegendCollapsed = storedLegend === 'true';
-    if (storedLegend === null && isMobile) isLegendCollapsed = true;
-    const legendToggle = document.getElementById('legendToggle');
-    if (legendToggle) {
-        legendToggle.addEventListener('click', () => {
-            if (window.innerWidth <= 768) {
-                isLegendCollapsed = !isLegendCollapsed;
-                localStorage.setItem(LEGEND_COLLAPSE_KEY, isLegendCollapsed ? 'true' : 'false');
-                applyLegendState(isLegendCollapsed);
-            }
+    function applyOverrideToLink(link, ov) {
+        if (!link || !ov) return;
+        if (ov.title !== undefined) { // Проверяем на undefined, чтобы не перезаписывать пустой строкой, если нет изменения
+            Array.from(link.childNodes).forEach(n => { if (n.nodeType === Node.TEXT_NODE) n.remove(); });
+            link.insertBefore(document.createTextNode(ov.title), link.firstChild);
+        }
+        if (ov.url !== undefined) link.href = ov.url;
+        if (ov.tooltip !== undefined) {
+            if (ov.tooltip) link.setAttribute('data-tooltip', ov.tooltip);
+            else link.removeAttribute('data-tooltip');
+        }
+        if (ov.image !== undefined) {
+            if (ov.image) link.setAttribute('data-image', ov.image);
+            else link.removeAttribute('data-image');
+        }
+    }
+
+    function applyAllOverrides() {
+        loadEditsOverride();
+        Object.keys(editsOverride).forEach(id => {
+            const link = document.querySelector(`a.link-inline[data-id="${id}"]`);
+            if (link) applyOverrideToLink(link, editsOverride[id]);
+        });
+        console.log('✅ Все overrides применены.');
+    }
+
+    function toggleEditMode() {
+        if (!isAdmin) { showToast('У вас нет прав для режима редактирования.', 'error'); return; }
+        editModeActive = !editModeActive;
+        document.body.classList.toggle('edit-mode', editModeActive);
+        const btn = document.getElementById('editModeBtn');
+        if (btn) {
+            btn.classList.toggle('active', editModeActive);
+            btn.innerHTML = editModeActive ? '<i class="fas fa-check"></i> Завершить' : '<i class="fas fa-pen"></i> Редактирование';
+        }
+        if (editModeActive) { injectEditButtons(); showToast('Нажмите ✎ рядом со ссылкой для изменения', 'info'); }
+        else { removeEditButtons(); showToast('Редактирование завершено', 'info'); }
+    }
+
+    function injectEditButtons() {
+        if (!isAdmin) return;
+        document.querySelectorAll('a.link-inline[data-id]').forEach(link => {
+            if (link.dataset.editBtnBound) return;
+            const editBtn = document.createElement('button');
+            editBtn.type = 'button'; editBtn.className = 'edit-item-btn admin-only';
+            editBtn.title = 'Редактировать'; editBtn.innerHTML = '<i class="fas fa-pen"></i>';
+            editBtn.addEventListener('click', (e) => { e.preventDefault(); e.stopPropagation(); openEditModal(link); });
+            const wrapper = link.closest('.link-with-favorite') || link.closest('.user-item-wrapper');
+            if (wrapper) wrapper.appendChild(editBtn);
+            else link.parentNode.insertBefore(editBtn, link.nextSibling);
+            link.dataset.editBtnBound = 'true';
         });
     }
-    window.addEventListener('resize', () => {
-        const wasMobile = isMobile; isMobile = window.innerWidth <= 768;
-        if (isMobile && !wasMobile) { storedLegend = localStorage.getItem(LEGEND_COLLAPSE_KEY); isLegendCollapsed = storedLegend === 'true' || storedLegend === null; }
-        if (!isMobile) isLegendCollapsed = false;
-        applyLegendState(isLegendCollapsed);
-    });
-    applyLegendState(isLegendCollapsed);
 
-    initializeTooltips(); detectNewLinks(); updateBadgeVisibility();
-});
-   // ============================================================
-//  TWITTER MONITOR (Загрузка из JSON)
-// ============================================================
+    function removeEditButtons() {
+        document.querySelectorAll('.edit-item-btn').forEach(btn => btn.remove());
+        document.querySelectorAll('[data-edit-btn-bound]').forEach(el => delete el.dataset.editBtnBound);
+    }
 
-async function loadTwitterResults() {
-    const list = document.getElementById('monitorList');
-    const status = document.getElementById('monitorStatus');
-    const badge = document.getElementById('monitorBadge');
-    
-    if (!list || !status || !badge) return;
-    
-    try {
-        // 🔥 Добавляем timestamp чтобы избежать кэширования
-        const response = await fetch('twitter_results.json?' + Date.now());
+    function openEditModal(link) {
+        const id = link.dataset.id;
+        const currentTitle = getLinkTitle(link);
+        currentEditTarget = { id, link }; // Сохраняем ссылку на изменяемый элемент
+
+        document.getElementById('addModalTitle').textContent = 'Редактировать: ' + currentTitle;
         
-        if (!response.ok) {
-            throw new Error(`HTTP ${response.status}`);
+        // Определяем, какие поля показывать для редактирования
+        let fieldsToShow = ['fieldTitle', 'fieldUrl', 'fieldTooltip', 'fieldImage'];
+        // Дополнительные поля для userItems, если это коллекция или категория
+        const itemData = userItemsData.items[currentEditTarget.link.dataset.userItemZone]?.find(i => i.id === id);
+        if (itemData) {
+            // Если это NFT или ссылка, поля такие же.
+            // Если мы редактируем саму коллекцию/категорию, это будет отдельный механизм.
+            // Сейчас редактируем только ссылки.
+        } else { // Это статическая ссылка, возможно, с override
+            // Проверяем, есть ли Twitter/Website в оригинальной ссылке, чтобы дать возможность редактировать
+            // Этот логики нет в текущем шаблоне для 'link-inline', так что пока оставим только основные.
+        }
+
+        showFields(fieldsToShow);
+        document.getElementById('addFieldTitle').value = currentTitle;
+        document.getElementById('addFieldUrl').value = link.href;
+        document.getElementById('addFieldTooltip').value = link.getAttribute('data-tooltip') || '';
+        document.getElementById('addFieldImage').value = link.getAttribute('data-image') || '';
+
+        const saveBtn = document.getElementById('addModalSave');
+        saveBtn.textContent = 'Сохранить';
+        saveBtn.dataset.editMode = 'true'; // Устанавливаем режим редактирования для кнопки
+        overlayEl().classList.add('open');
+    }
+
+    // ===== DOM CONTENT LOADED (Запускается после загрузки DOM, но данные загружаются по onAuthStateChanged) =====
+    document.addEventListener('DOMContentLoaded', () => {
+        console.log('🌐 DOMContentLoaded: Инициализация статических элементов UI...');
+        
+        loadTheme();
+        updateBadgeVisibility();
+        
+        // Только статические привязки, которые не зависят от user/shared данных
+        initCardAnimations();
+        initLazyLoading();
+
+        // Привязка событий к кнопкам sidebar
+        document.getElementById('themeToggleBtn').addEventListener('click', toggleTheme);
+        document.getElementById('toggleBadgesBtn').addEventListener('click', () => { setBadgeHiddenState(!getBadgeHiddenState()); updateBadgeVisibility(); });
+
+        const editBtn = document.getElementById('editModeBtn');
+        if (editBtn) editBtn.addEventListener('click', toggleEditMode);
+
+        document.getElementById('exportBtn').addEventListener('click', exportJSON);
+        document.getElementById('importBtn').addEventListener('click', () => document.getElementById('importFileInput').click());
+        document.getElementById('importFileInput').addEventListener('change', (e) => {
+            if (e.target.files[0]) { importJSON(e.target.files[0]); e.target.value = ''; }
+        });
+
+        // Инициализация коллапсируемых секций
+        const sectionState = getSectionCollapseState();
+        document.querySelectorAll('.collapsible-section').forEach(sec => {
+            const sid = sec.getAttribute('data-section-id');
+            const collapsed = sectionState[sid] === true;
+            applySectionState(sec, collapsed);
+            const toggle = sec.querySelector('.section-toggle');
+            if (toggle) {
+                toggle.addEventListener('click', () => {
+                    const isCol = sec.classList.contains('collapsed');
+                    applySectionState(sec, !isCol);
+                    if (!isCol) sectionState[sid] = true; else delete sectionState[sid];
+                    saveSectionCollapseState(sectionState);
+                });
+            }
+        });
+
+        // Логика для сворачивания легенды на мобильных
+        let isMobile = window.innerWidth <= 768;
+        let storedLegend = localStorage.getItem(LEGEND_COLLAPSE_KEY);
+        let isLegendCollapsed = storedLegend === 'true'; // По умолчанию true, если есть в localstorage
+        if (storedLegend === null && isMobile) { // Если нет в localstorage и это мобильное устройство, сворачиваем
+            isLegendCollapsed = true;
+        }
+
+        const legendToggle = document.getElementById('legendToggle');
+        if (legendToggle) {
+            legendToggle.addEventListener('click', () => {
+                isLegendCollapsed = !isLegendCollapsed; // Переключаем состояние
+                localStorage.setItem(LEGEND_COLLAPSE_KEY, isLegendCollapsed ? 'true' : 'false');
+                applyLegendState(isLegendCollapsed);
+            });
+        }
+        // Обработчик изменения размера окна для легенды
+        window.addEventListener('resize', () => {
+            const wasMobile = isMobile;
+            isMobile = window.innerWidth <= 768;
+            if (isMobile && !wasMobile) { // Если только что стали мобильными
+                storedLegend = localStorage.getItem(LEGEND_COLLAPSE_KEY);
+                isLegendCollapsed = storedLegend === 'true' || storedLegend === null;
+            } else if (!isMobile && wasMobile) { // Если только что вышли из мобильного режима
+                isLegendCollapsed = false; // Разворачиваем на десктопе
+            }
+            applyLegendState(isLegendCollapsed);
+        });
+        applyLegendState(isLegendCollapsed); // Применяем начальное состояние легенды
+
+        // Общие обработчики событий для модалей и лайтбокса
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape') {
+                closeModal();
+                closeLightbox();
+            }
+        });
+        const loginModal = document.getElementById('loginModal');
+        if (loginModal) {
+            loginModal.addEventListener('click', (e) => {
+                if (e.target === loginModal) {
+                    closeLoginModal();
+                }
+            });
         }
         
-        const data = await response.json();
+        console.log('✅ DOMContentLoaded: Инициализация статических элементов завершена.');
+        // Остальная динамическая инициализация (данные пользователя, Twitter Monitor)
+        // будет выполнена после получения состояния аутентификации в onAuthStateChanged.
+    });
+
+    // ============================================================
+    //  TWITTER MONITOR (Загрузка из JSON)
+    // ============================================================
+
+    async function loadTwitterResults() {
+        const list = document.getElementById('monitorList');
+        const status = document.getElementById('monitorStatus');
+        const badge = document.getElementById('monitorBadge');
         
-        if (data.nfts && data.nfts.length > 0) {
-            list.innerHTML = '';
+        if (!list || !status || !badge) return;
+        
+        try {
+            const response = await fetch('twitter_results.json?' + Date.now()); // Добавляем timestamp для обхода кэша
             
-            // 🔥 Сортируем по времени (новые первые)
-            const sortedNfts = [...data.nfts].sort((a, b) => {
-                const timeA = new Date(a.datetime || 0).getTime();
-                const timeB = new Date(b.datetime || 0).getTime();
-                return timeB - timeA; // Новые сверху
-            });
-            
-            sortedNfts.forEach(nft => {
-                const li = document.createElement('li');
-                li.className = 'monitor-item';
-                
-                // 🔥 Безопасное получение времени
-                let timeAgo = 'недавно';
-                try {
-                    if (nft.time_ago) {
-                        // Используем готовое значение из Python
-                        timeAgo = nft.time_ago;
-                    } else if (nft.datetime) {
-                        const date = new Date(nft.datetime);
-                        if (!isNaN(date.getTime())) {
-                            timeAgo = getTimeAgo(date);
-                        }
-                    }
-                } catch (e) {
-                    console.error('Time parsing error:', e);
+            if (!response.ok) {
+                if (response.status === 404) {
+                    throw new Error('Файл twitter_results.json не найден. Запустите twitter_parser.py');
                 }
-                
-                // 🔥 Безопасное получение ссылки
-                const tweetUrl = nft.url || `https://twitter.com/${nft.twitter}`;
-                
-                // 🔥 Безопасное получение текста
-                const tweetText = (nft.text || 'NFT пост').substring(0, 120);
-                const truncated = (nft.text || '').length > 120 ? '...' : '';
-                
-                // 🔥 Название проекта с эмодзи
-                const projectEmoji = {
-                    'morkie': '🐾',
-                    'clara': '✨',
-                    'oku': '🌸',
-                    'mintaura': '💫',
-                    'arkle': '🎨',
-                    'draze': '🌙',
-                    'caset': '🎵',
-                    'alze': '⚡'
-                };
-                const emoji = projectEmoji[nft.project] || '🆕';
-                const projectName = nft.project.charAt(0).toUpperCase() + nft.project.slice(1);
-                
-                li.innerHTML = `
-                    <div class="monitor-item-header">
-                        <span class="monitor-item-project">${emoji} ${projectName}</span>
-                        <span class="monitor-item-time">${timeAgo}</span>
-                    </div>
-                    <div class="monitor-item-text">${tweetText}${truncated}</div>
-                    <div style="display: flex; gap: 12px; margin-top: 8px; align-items: center;">
-                        <a href="${tweetUrl}" target="_blank" rel="noopener" class="monitor-item-link">
-                            <i class="fab fa-twitter"></i> Открыть твит
-                        </a>
-                        ${nft.likes ? `<span style="font-size: 0.75rem; color: #64748b;">❤️ ${nft.likes}</span>` : ''}
-                        ${nft.retweets ? `<span style="font-size: 0.75rem; color: #64748b;">🔁 ${nft.retweets}</span>` : ''}
-                    </div>
-                `;
-                
-                list.appendChild(li);
-            });
+                throw new Error(`HTTP ошибка: ${response.status}`);
+            }
             
-            badge.textContent = sortedNfts.length;
-            badge.classList.remove('empty');
+            const data = await response.json();
             
-            // 🔥 Обновляем статус с последним временем проверки
-            if (data.timestamp) {
-                try {
-                    const lastCheck = new Date(data.timestamp);
-                    if (!isNaN(lastCheck.getTime())) {
-                        const checkTime = lastCheck.toLocaleString('ru', {
-                            day: '2-digit',
-                            month: '2-digit',
-                            hour: '2-digit',
-                            minute: '2-digit'
-                        });
-                        status.innerHTML = `<i class="fas fa-check-circle"></i> Обновлено: ${checkTime}`;
+            if (data.nfts && data.nfts.length > 0) {
+                list.innerHTML = '';
+                
+                const sortedNfts = [...data.nfts].sort((a, b) => {
+                    const timeA = new Date(a.datetime || 0).getTime();
+                    const timeB = new Date(b.datetime || 0).getTime();
+                    return timeB - timeA; // Новые сверху
+                });
+                
+                sortedNfts.forEach(nft => {
+                    const li = document.createElement('li');
+                    li.className = 'monitor-item';
+                    
+                    let timeAgo = 'недавно';
+                    try {
+                        if (nft.time_ago) {
+                            timeAgo = nft.time_ago;
+                        } else if (nft.datetime) {
+                            const date = new Date(nft.datetime);
+                            if (!isNaN(date.getTime())) {
+                                timeAgo = getTimeAgo(date);
+                            }
+                        }
+                    } catch (e) {
+                        console.error('Time parsing error:', e);
+                    }
+                    
+                    const tweetUrl = nft.url || `https://twitter.com/${nft.twitter}`;
+                    
+                    const tweetText = (nft.text || 'NFT пост').substring(0, 120);
+                    const truncated = (nft.text || '').length > 120 ? '...' : '';
+                    
+                    const projectEmoji = {
+                        'morkie': '🐾', 'clara': '✨', 'oku': '🌸', 'mintaura': '💫',
+                        'arkle': '🎨', 'draze': '🌙', 'caset': '🎵', 'alze': '⚡'
+                    };
+                    const emoji = projectEmoji[nft.project] || '🆕';
+                    const projectName = nft.project.charAt(0).toUpperCase() + nft.project.slice(1);
+                    
+                    li.innerHTML = `
+                        <div class="monitor-item-header">
+                            <span class="monitor-item-project">${emoji} ${projectName}</span>
+                            <span class="monitor-item-time">${timeAgo}</span>
+                        </div>
+                        <div class="monitor-item-text">${tweetText}${truncated}</div>
+                        <div style="display: flex; gap: 12px; margin-top: 8px; align-items: center;">
+                            <a href="${tweetUrl}" target="_blank" rel="noopener" class="monitor-item-link">
+                                <i class="fab fa-twitter"></i> Открыть твит
+                            </a>
+                            ${nft.likes ? `<span style="font-size: 0.75rem; color: #64748b;">❤️ ${nft.likes}</span>` : ''}
+                            ${nft.retweets ? `<span style="font-size: 0.75rem; color: #64748b;">🔁 ${nft.retweets}</span>` : ''}
+                        </div>
+                    `;
+                    
+                    list.appendChild(li);
+                });
+                
+                badge.textContent = sortedNfts.length;
+                badge.classList.remove('empty');
+                
+                if (data.timestamp) {
+                    try {
+                        const lastCheck = new Date(data.timestamp);
+                        if (!isNaN(lastCheck.getTime())) {
+                            const checkTime = lastCheck.toLocaleString('ru', {
+                                day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit'
+                            });
+                            status.innerHTML = `<i class="fas fa-check-circle"></i> Обновлено: ${checkTime}`;
+                            status.style.color = '#22c55e';
+                        }
+                    } catch(e) {
+                        status.innerHTML = '<i class="fas fa-check-circle"></i> Данные загружены';
                         status.style.color = '#22c55e';
                     }
-                } catch(e) {
+                } else {
                     status.innerHTML = '<i class="fas fa-check-circle"></i> Данные загружены';
                     status.style.color = '#22c55e';
                 }
+                
             } else {
-                status.innerHTML = '<i class="fas fa-check-circle"></i> Данные загружены';
-                status.style.color = '#22c55e';
+                showEmptyState();
             }
             
-        } else {
-            showEmptyState();
+        } catch (error) {
+            console.error('❌ Ошибка загрузки Twitter результатов:', error);
+            showEmptyState(error.message); // Передаем сообщение об ошибке
+        }
+    }
+
+    function showEmptyState(errorMessage = null) {
+        const list = document.getElementById('monitorList');
+        const status = document.getElementById('monitorStatus');
+        const badge = document.getElementById('monitorBadge');
+        
+        if (!list || !status || !badge) return;
+        
+        list.innerHTML = `
+            <li style="text-align: center; padding: 20px; color: #64748b; font-size: 0.9rem;">
+                <i class="fas fa-info-circle" style="font-size: 2rem; margin-bottom: 10px; opacity: 0.5;"></i>
+                <p>${errorMessage || 'Новых постов пока нет'}</p>
+                <p style="font-size: 0.75rem; margin-top: 5px;">${errorMessage ? 'Проверьте консоль для деталей' : 'Запустите <code>twitter_parser.py</code> или нажмите "Обновить"'}</p>
+            </li>
+        `;
+        badge.textContent = '0';
+        badge.classList.add('empty');
+        status.innerHTML = '<i class="fas fa-clock"></i> Ожидание обновления';
+        status.style.color = '#94a3b8';
+    }
+
+    function getTimeAgo(date) {
+        if (!(date instanceof Date) || isNaN(date.getTime())) {
+            return 'недавно';
         }
         
-    } catch (error) {
-        console.error('Twitter results load error:', error);
-        showEmptyState();
+        const now = new Date();
+        const seconds = Math.floor((now - date) / 1000);
+        
+        if (seconds < 0) return 'только что';
+        
+        if (seconds < 60) return 'только что';
+        if (seconds < 3600) {
+            const mins = Math.floor(seconds / 60);
+            return `${mins} мин назад`;
+        }
+        if (seconds < 86400) {
+            const hours = Math.floor(seconds / 3600);
+            return `${hours} ч назад`;
+        }
+        if (seconds < 604800) {
+            const days = Math.floor(seconds / 86400);
+            return `${days} д назад`;
+        }
+        
+        const weeks = Math.floor(seconds / 604800);
+        return `${weeks} нед назад`;
     }
-}
 
-function showEmptyState() {
-    const list = document.getElementById('monitorList');
-    const status = document.getElementById('monitorStatus');
-    const badge = document.getElementById('monitorBadge');
-    
-    if (!list || !status || !badge) return;
-    
-    list.innerHTML = `
-        <li style="text-align: center; padding: 20px; color: #64748b; font-size: 0.9rem;">
-            <i class="fas fa-info-circle" style="font-size: 2rem; margin-bottom: 10px; opacity: 0.5;"></i>
-            <p>Нажми "🔄 Обновить" для запуска парсинга</p>
-            <p style="font-size: 0.75rem; margin-top: 5px;">Или запусти <code>twitter_parser.py</code></p>
-        </li>
-    `;
-    badge.textContent = '0';
-    badge.classList.add('empty');
-    status.innerHTML = '<i class="fas fa-clock"></i> Ожидание обновления';
-    status.style.color = '#94a3b8';
-}
+    function initTwitterMonitor() {
+        if (!isAdmin) {
+             const twitterMonitorPanel = document.getElementById('twitterMonitorPanel');
+             if (twitterMonitorPanel) twitterMonitorPanel.style.display = 'none'; // Скрываем, если не админ
+             return;
+        } else {
+             const twitterMonitorPanel = document.getElementById('twitterMonitorPanel');
+             if (twitterMonitorPanel) twitterMonitorPanel.style.display = 'flex'; // Показываем
+        }
+        
+        const refreshBtn = document.getElementById('monitorRefreshBtn');
+        if (!refreshBtn) return;
+        
+        loadTwitterResults(); // Загружаем данные при старте
+        
+        // Кнопка обновления
+        refreshBtn.removeEventListener('click', handleMonitorRefresh); // Удаляем, чтобы не дублировать
+        refreshBtn.addEventListener('click', handleMonitorRefresh);
+        
+        // Автообновление каждые 5 минут
+        setInterval(loadTwitterResults, 5 * 60 * 1000);
+    }
 
-function getTimeAgo(date) {
-    // 🔥 Защита от NaN и невалидных дат
-    if (!(date instanceof Date) || isNaN(date.getTime())) {
-        return 'недавно';
-    }
-    
-    const now = new Date();
-    const seconds = Math.floor((now - date) / 1000);
-    
-    // 🔥 Защита от отрицательных значений (твит из будущего?)
-    if (seconds < 0) return 'только что';
-    
-    if (seconds < 60) return 'только что';
-    if (seconds < 3600) {
-        const mins = Math.floor(seconds / 60);
-        return `${mins} мин назад`;
-    }
-    if (seconds < 86400) {
-        const hours = Math.floor(seconds / 3600);
-        return `${hours} ч назад`;
-    }
-    if (seconds < 604800) {
-        const days = Math.floor(seconds / 86400);
-        return `${days} д назад`;
-    }
-    
-    // Для старых постов
-    const weeks = Math.floor(seconds / 604800);
-    return `${weeks} нед назад`;
-}
-
-function initTwitterMonitor() {
-    if (!isAdmin) return;
-    
-    const refreshBtn = document.getElementById('monitorRefreshBtn');
-    
-    if (!refreshBtn) return;
-    
-    // 🔥 Загружаем данные при старте
-    loadTwitterResults();
-    
-    // 🔥 Кнопка обновления
-    refreshBtn.addEventListener('click', async () => {
+    async function handleMonitorRefresh() {
+        const refreshBtn = document.getElementById('monitorRefreshBtn');
         const originalHTML = refreshBtn.innerHTML;
         refreshBtn.disabled = true;
         refreshBtn.innerHTML = '<i class="fas fa-sync-alt fa-spin"></i> Обновление...';
         
-        await loadTwitterResults();
+        await runTwitterMonitor(); // Вызываем runTwitterMonitor для мониторинга Nitter
+        await loadTwitterResults(); // Затем загружаем результаты из twitter_results.json
         
         setTimeout(() => {
             refreshBtn.disabled = false;
             refreshBtn.innerHTML = originalHTML;
-            showToast('Данные обновлены!', 'success');
+            showToast('Данные мониторинга обновлены!', 'success');
         }, 1000);
-    });
-    
-    // 🔥 Автообновление каждые 5 минут
-    setInterval(loadTwitterResults, 5 * 60 * 1000);
-}
-// 🔥 Автоматическая очистка при загрузке
-// 🔥 Автоматическая очистка при загрузке
-async function cleanupDuplicatesAuto() {
-    if (!isAdmin) return;
-    
-    try {
-        console.log("🧹 Автоматическая очистка дубликатов...");
-        
-        const collectionIds = new Set(
-            (userItemsData.collections || []).map(c => c.id)
-        );
-        const categoryIds = new Set(
-            (userItemsData.dappCategories || []).map(c => c.id)
-        );
-
-        let removed = 0;
-        
-        // === ПЕРЕМЕЩАЕМ ITEMS В КОЛЛЕКЦИИ/КАТЕГОРИИ ===
-        Object.keys(userItemsData.items).forEach(zone => {
-            if (collectionIds.has(zone)) {
-                // Это пользовательская коллекция
-                const collection = userItemsData.collections.find(c => c.id === zone);
-                if (collection && userItemsData.items[zone]?.length > 0) {
-                    console.log(`📦 Перемещаю ${userItemsData.items[zone].length} items в коллекцию "${collection.title}"`);
-                    collection.items = [...(collection.items || []), ...userItemsData.items[zone]];
-                }
-                delete userItemsData.items[zone];
-                removed++;
-            } else if (categoryIds.has(zone)) {
-                // Это пользовательская категория
-                const category = userItemsData.dappCategories.find(c => c.id === zone);
-                if (category && userItemsData.items[zone]?.length > 0) {
-                    console.log(`📦 Перемещаю ${userItemsData.items[zone].length} items в категорию "${category.title}"`);
-                    category.items = [...(category.items || []), ...userItemsData.items[zone]];
-                }
-                delete userItemsData.items[zone];
-                removed++;
-            }
-        });
-
-        if (removed > 0) {
-            await saveUserItems();
-            console.log(`✅ Очищено! Перемещено зон: ${removed}`);
-            showToast(`✅ Данные организованы (${removed} зон), ничего не потеряно`, 'success');
-        }
-    } catch (err) {
-        console.error("❌ Ошибка очистки:", err);
     }
-}
-
-// 🔥 Ручная очистка (вызывается из консоли)
-window.cleanupDuplicatesManual = async function() {
-    if (!isAdmin) {
-        showToast("❌ Требуется доступ администратора!", "error");
-        return;
-    }
-
-    try {
-        console.log("⚙️ Запуск ручной очистки дубликатов...");
-
-        const collectionIds = new Set(
-            (userItemsData.collections || []).map(c => c.id)
-        );
-        const categoryIds = new Set(
-            (userItemsData.dappCategories || []).map(c => c.id)
-        );
-
-        console.log("📦 Коллекции:", [...collectionIds]);
-        console.log("📦 Категории:", [...categoryIds]);
-        console.log("📦 Текущие zone в items:", Object.keys(userItemsData.items || {}));
-
-        let removed = 0;
-        const removedZones = [];
-        const movedItems = {};
-
-        Object.keys(userItemsData.items).forEach(zone => {
-            if (collectionIds.has(zone)) {
-                const collection = userItemsData.collections.find(c => c.id === zone);
-                const itemsCount = userItemsData.items[zone]?.length || 0;
-                
-                if (collection && itemsCount > 0) {
-                    console.log(`📦 Перемещаю ${itemsCount} items в коллекцию "${collection.title}"`);
-                    collection.items = [...(collection.items || []), ...userItemsData.items[zone]];
-                    movedItems[zone] = itemsCount;
-                }
-                
-                delete userItemsData.items[zone];
-                removed++;
-                removedZones.push(zone);
-            } else if (categoryIds.has(zone)) {
-                const category = userItemsData.dappCategories.find(c => c.id === zone);
-                const itemsCount = userItemsData.items[zone]?.length || 0;
-                
-                if (category && itemsCount > 0) {
-                    console.log(`📦 Перемещаю ${itemsCount} items в категорию "${category.title}"`);
-                    category.items = [...(category.items || []), ...userItemsData.items[zone]];
-                    movedItems[zone] = itemsCount;
-                }
-                
-                delete userItemsData.items[zone];
-                removed++;
-                removedZones.push(zone);
-            }
-        });
-
-        if (removed > 0) {
-            await saveUserItems();
-            console.log(`✅ Успешно очищено!`);
-            console.log(`   Перемещено зон: ${removed}`);
-            console.log(`   Перемещённые items:`);
-            Object.entries(movedItems).forEach(([zone, count]) => {
-                console.log(`     - ${zone}: ${count} items`);
-            });
-            console.log(`   Удалённые zone: ${removedZones.join(', ')}`);
-            console.log(`   Оставленные коллекции: ${[...collectionIds].join(', ')}`);
-            console.log(`   Оставленные категории: ${[...categoryIds].join(', ')}`);
-            showToast(`✅ Данные организованы! Перемещено: ${removed} зон`, 'success');
-            setTimeout(() => location.reload(), 1500);
-        } else {
-            console.log("✅ Дубликатов не найдено!");
-            console.log(`   Коллекции: ${[...collectionIds].join(', ')}`);
-            console.log(`   Категории: ${[...categoryIds].join(', ')}`);
-            showToast('✅ Всё чистo!', 'info');
-        }
-
-    } catch (err) {
-        console.error("❌ Ошибка:", err);
-        showToast('❌ Ошибка: ' + err.message, 'error');
-    }
-};
-
-// 🔥 Ручная очистка (вызывается из консоли)
-window.cleanupDuplicatesManual = async function() {
-    if (!isAdmin) {
-        showToast("❌ Требуется доступ администратора!", "error");
-        return;
-    }
-
-    try {
-        console.log("⚙️ Запуск ручной очистки дубликатов...");
-
-        const collectionIds = new Set(
-            (userItemsData.collections || []).map(c => c.id)
-        );
-        const categoryIds = new Set(
-            (userItemsData.dappCategories || []).map(c => c.id)
-        );
-
-        console.log("📦 Коллекции:", [...collectionIds]);
-        console.log("📦 Категории:", [...categoryIds]);
-        console.log("📦 Текущие zone в items:", Object.keys(userItemsData.items || {}));
-
-        let removed = 0;
-        const removedZones = [];
-
-        Object.keys(userItemsData.items).forEach(zone => {
-            if (collectionIds.has(zone) || categoryIds.has(zone)) {
-                const itemsCount = userItemsData.items[zone]?.length || 0;
-                console.log(`🗑️ Удаляю zone: ${zone} (было ${itemsCount} items, оставляю коллекцию)`);
-                delete userItemsData.items[zone];
-                removed++;
-                removedZones.push(zone);
-            }
-        });
-
-        if (removed > 0) {
-            await saveUserItems();
-            console.log(`✅ Успешно очищено!`);
-            console.log(`   Удалено дублирующих zone: ${removed}`);
-            console.log(`   Удалённые zone: ${removedZones.join(', ')}`);
-            console.log(`   Оставленные коллекции: ${[...collectionIds].join(', ')}`);
-            console.log(`   Оставленные категории: ${[...categoryIds].join(', ')}`);
-            showToast(`✅ Очищено! Удалено дублей: ${removed}`, 'success');
-            setTimeout(() => location.reload(), 1500);
-        } else {
-            console.log("✅ Дубликатов не найдено!");
-            console.log(`   Коллекции: ${[...collectionIds].join(', ')}`);
-            console.log(`   Категории: ${[...categoryIds].join(', ')}`);
-            showToast('✅ Дубликатов не найдено!', 'info');
-        }
-
-    } catch (err) {
-        console.error("❌ Ошибка:", err);
-        showToast('❌ Ошибка: ' + err.message, 'error');
-    }
-};
 </script>
 <!-- ====== LOGIN MODAL ====== -->
 <div id="loginModal" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.8); backdrop-filter:blur(8px); z-index:1000; align-items:center; justify-content:center; padding:20px;">
