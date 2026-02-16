@@ -2851,6 +2851,7 @@ function initTwitterMonitor() {
     setInterval(loadTwitterResults, 5 * 60 * 1000);
 }
 // 🔥 Автоматическая очистка при загрузке
+// 🔥 Автоматическая очистка при загрузке
 async function cleanupDuplicatesAuto() {
     if (!isAdmin) return;
     
@@ -2865,12 +2866,25 @@ async function cleanupDuplicatesAuto() {
         );
 
         let removed = 0;
+        
+        // === ПЕРЕМЕЩАЕМ ITEMS В КОЛЛЕКЦИИ/КАТЕГОРИИ ===
         Object.keys(userItemsData.items).forEach(zone => {
-            if (collectionIds.has(zone) || categoryIds.has(zone)) {
-                console.log(`🗑️ Удаляю дублирующий zone: ${zone} (оставляю коллекцию/категорию)`);
-                // Проверяем есть ли там items
-                const itemsCount = userItemsData.items[zone]?.length || 0;
-                console.log(`   - Удалено ${itemsCount} items`);
+            if (collectionIds.has(zone)) {
+                // Это пользовательская коллекция
+                const collection = userItemsData.collections.find(c => c.id === zone);
+                if (collection && userItemsData.items[zone]?.length > 0) {
+                    console.log(`📦 Перемещаю ${userItemsData.items[zone].length} items в коллекцию "${collection.title}"`);
+                    collection.items = [...(collection.items || []), ...userItemsData.items[zone]];
+                }
+                delete userItemsData.items[zone];
+                removed++;
+            } else if (categoryIds.has(zone)) {
+                // Это пользовательская категория
+                const category = userItemsData.dappCategories.find(c => c.id === zone);
+                if (category && userItemsData.items[zone]?.length > 0) {
+                    console.log(`📦 Перемещаю ${userItemsData.items[zone].length} items в категорию "${category.title}"`);
+                    category.items = [...(category.items || []), ...userItemsData.items[zone]];
+                }
                 delete userItemsData.items[zone];
                 removed++;
             }
@@ -2878,13 +2892,94 @@ async function cleanupDuplicatesAuto() {
 
         if (removed > 0) {
             await saveUserItems();
-            console.log(`✅ Очищено! Удалено зон: ${removed}`);
-            showToast(`✅ Дубликаты удалены (${removed}), коллекции сохранены`, 'success');
+            console.log(`✅ Очищено! Перемещено зон: ${removed}`);
+            showToast(`✅ Данные организованы (${removed} зон), ничего не потеряно`, 'success');
         }
     } catch (err) {
         console.error("❌ Ошибка очистки:", err);
     }
 }
+
+// 🔥 Ручная очистка (вызывается из консоли)
+window.cleanupDuplicatesManual = async function() {
+    if (!isAdmin) {
+        showToast("❌ Требуется доступ администратора!", "error");
+        return;
+    }
+
+    try {
+        console.log("⚙️ Запуск ручной очистки дубликатов...");
+
+        const collectionIds = new Set(
+            (userItemsData.collections || []).map(c => c.id)
+        );
+        const categoryIds = new Set(
+            (userItemsData.dappCategories || []).map(c => c.id)
+        );
+
+        console.log("📦 Коллекции:", [...collectionIds]);
+        console.log("📦 Категории:", [...categoryIds]);
+        console.log("📦 Текущие zone в items:", Object.keys(userItemsData.items || {}));
+
+        let removed = 0;
+        const removedZones = [];
+        const movedItems = {};
+
+        Object.keys(userItemsData.items).forEach(zone => {
+            if (collectionIds.has(zone)) {
+                const collection = userItemsData.collections.find(c => c.id === zone);
+                const itemsCount = userItemsData.items[zone]?.length || 0;
+                
+                if (collection && itemsCount > 0) {
+                    console.log(`📦 Перемещаю ${itemsCount} items в коллекцию "${collection.title}"`);
+                    collection.items = [...(collection.items || []), ...userItemsData.items[zone]];
+                    movedItems[zone] = itemsCount;
+                }
+                
+                delete userItemsData.items[zone];
+                removed++;
+                removedZones.push(zone);
+            } else if (categoryIds.has(zone)) {
+                const category = userItemsData.dappCategories.find(c => c.id === zone);
+                const itemsCount = userItemsData.items[zone]?.length || 0;
+                
+                if (category && itemsCount > 0) {
+                    console.log(`📦 Перемещаю ${itemsCount} items в категорию "${category.title}"`);
+                    category.items = [...(category.items || []), ...userItemsData.items[zone]];
+                    movedItems[zone] = itemsCount;
+                }
+                
+                delete userItemsData.items[zone];
+                removed++;
+                removedZones.push(zone);
+            }
+        });
+
+        if (removed > 0) {
+            await saveUserItems();
+            console.log(`✅ Успешно очищено!`);
+            console.log(`   Перемещено зон: ${removed}`);
+            console.log(`   Перемещённые items:`);
+            Object.entries(movedItems).forEach(([zone, count]) => {
+                console.log(`     - ${zone}: ${count} items`);
+            });
+            console.log(`   Удалённые zone: ${removedZones.join(', ')}`);
+            console.log(`   Оставленные коллекции: ${[...collectionIds].join(', ')}`);
+            console.log(`   Оставленные категории: ${[...categoryIds].join(', ')}`);
+            showToast(`✅ Данные организованы! Перемещено: ${removed} зон`, 'success');
+            setTimeout(() => location.reload(), 1500);
+        } else {
+            console.log("✅ Дубликатов не найдено!");
+            console.log(`   Коллекции: ${[...collectionIds].join(', ')}`);
+            console.log(`   Категории: ${[...categoryIds].join(', ')}`);
+            showToast('✅ Всё чистo!', 'info');
+        }
+
+    } catch (err) {
+        console.error("❌ Ошибка:", err);
+        showToast('❌ Ошибка: ' + err.message, 'error');
+    }
+};
 
 // 🔥 Ручная очистка (вызывается из консоли)
 window.cleanupDuplicatesManual = async function() {
