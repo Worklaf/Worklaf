@@ -2152,11 +2152,27 @@ function loadUserItems() {
 
 async function saveUserItems() {
     localStorage.setItem(USER_ITEMS_KEY, JSON.stringify(userItemsData));
+    
+    // 🔥 ОЧИСТКА перед сохранением в Firebase
+    const collectionIds = new Set(
+        (userItemsData.collections || []).map(c => c.id)
+    );
+    const categoryIds = new Set(
+        (userItemsData.dappCategories || []).map(c => c.id)
+    );
+    
+    // Удаляем дублирующиеся ключи
+    Object.keys(userItemsData.items).forEach(zone => {
+        if (collectionIds.has(zone) || categoryIds.has(zone)) {
+            delete userItemsData.items[zone];
+        }
+    });
+    
     if (isAdmin) {
         try {
             await setDoc(doc(db, "config", "sharedItems"), { 
                 userItems: userItemsData,
-                newItemIds: [...newLinksSet] // <-- синхронизируем NEW метки
+                newItemIds: [...newLinksSet]
             });
         } catch (e) { console.error("Save shared items error:", e); }
     }
@@ -2377,10 +2393,21 @@ function renderAllUserItems() {
 
     loadUserItems();
 
-    // 🔥 ПОЛНАЯ ОЧИСТКА ВСЕХ ПОЛЬЗОВАТЕЛЬСКИХ ЭЛЕМЕНТОВ ПЕРЕД РЕНДЕРОМ
-    document.querySelectorAll('.user-item-wrapper').forEach(el => el.remove());
-    document.querySelectorAll('.user-collection-card').forEach(el => el.remove());
-    document.querySelectorAll('[data-user-category-id]').forEach(el => el.remove());
+    // 🔥 Очищаем старые элементы
+    document.querySelectorAll('[data-user-item-id]').forEach(el => {
+        const found = Object.values(savedData.items || {})
+            .flat()
+            .some(item => item.id === el.dataset.userItemId);
+        if (!found) el.remove();
+    });
+
+    // 🔥 ВАЖНО: собираем ID коллекций и категорий (исключим их из итерации)
+    const collectionIds = new Set(
+        (userItemsData.collections || []).map(c => c.id)
+    );
+    const categoryIds = new Set(
+        (userItemsData.dappCategories || []).map(c => c.id)
+    );
 
     // Рендерим коллекции
     userItemsData.collections.forEach(coll => {
@@ -2389,30 +2416,30 @@ function renderAllUserItems() {
         }
     });
     
-    // Рендерим категории dApp
+    // Рендерим категории
     userItemsData.dappCategories.forEach(cat => {
         if (!document.querySelector(`[data-user-category-id="${cat.id}"]`)) {
             renderUserDappCategory(cat);
         }
     });
 
-    // 🔥 Рендерим элементы по зонам (теперь без дубликатов, так как DOM чистый)
+    // 🔥 ИСПРАВЛЕНИЕ: итерируем ТОЛЬКО стандартные зоны, исключаем коллекции/категории
     Object.keys(userItemsData.items).forEach(zone => {
+        // Пропускаем ID коллекций и категорий
+        if (collectionIds.has(zone) || categoryIds.has(zone)) {
+            console.log(`[SKIP] ${zone} - это ID коллекции/категории, не зона`);
+            return;
+        }
+
         const items = userItemsData.items[zone];
-        if (!items) return;
+        if (!items || !Array.isArray(items)) return;
         
         items.forEach(item => {
-            // Проверяем, существует ли уже элемент в этой зоне
-            const container = document.querySelector(`[data-zone="${zone}"]`);
-            if (container) {
-                const exists = container.querySelector(`[data-user-item-id="${item.id}"]`);
-                if (!exists) {
-                    renderUserItemInZone(zone, item);
-                } else {
-                    console.log(`[SKIP] Элемент ${item.id} уже существует в зоне ${zone}`);
-                }
-            } else {
-                console.warn(`[WARN] Контейнер для зоны ${zone} не найден`);
+            const selector = `[data-zone="${zone}"] [data-user-item-id="${item.id}"]`;
+            const exists = document.querySelector(selector);
+            
+            if (!exists) {
+                renderUserItemInZone(zone, item);
             }
         });
     });
