@@ -1158,9 +1158,13 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/9.22.2/firebas
 import { getFirestore, doc, getDoc, setDoc } from "https://www.gstatic.com/firebasejs/9.22.2/firebase-firestore.js";
 
 // ✅ Экспортируем в глобальную область
+// 🔥 Делаем переменные доступными глобально
+window.isAdmin = isAdmin;
+window.db = db;
 window.doc = doc;
 window.getDoc = getDoc;
 window.setDoc = setDoc;
+window.showToast = showToast;
     let newLinksSet = new Set();
 import {
   getAuth, signInWithPopup, GoogleAuthProvider, TwitterAuthProvider,
@@ -3111,25 +3115,52 @@ function initTwitterMonitor() {
 
 </script>
 	<script>
-  // 🔥 Глобальная функция для консоли
+  // Глобальная функция для удаления дубликатов
   window.cleanupDuplicates = async function() {
     try {
+      // 🔥 Проверяем, есть ли доступ к переменным
+      if (typeof window.isAdmin === 'undefined') {
+        console.error("❌ Переменная isAdmin не доступна!");
+        alert("Ошибка: не удалось проверить права администратора.");
+        return;
+      }
+
+      // Проверка прав администратора
+      if (!window.isAdmin) {
+        console.log("❌ Требуется доступ администратора!");
+        window.showToast("❌ Требуется доступ администратора!", "error");
+        return;
+      }
+
       console.log("⚙️ Запуск очистки дубликатов...");
 
-      // Используем существующие переменные db, doc, getDoc, setDoc из модуля
-      const docRef = doc(db, "config", "sharedItems");
-      const snap = await getDoc(docRef);
+      // Проверяем, инициализирован ли Firebase
+      if (typeof window.db === 'undefined') {
+        console.error("❌ Firebase не инициализирован!");
+        alert("Ошибка: Firebase не инициализирован.");
+        return;
+      }
+
+      const docRef = window.doc(window.db, "config", "sharedItems");
+      const snap = await window.getDoc(docRef);
 
       if (!snap.exists()) {
         console.log("❌ Документ config/sharedItems не найден");
+        window.showToast("❌ Документ не найден!", "error");
         return;
       }
 
       const data = snap.data();
       let userItems = data.userItems || {};
 
+      // 🔥 Проверяем структуру данных
+      if (!userItems.items) {
+        console.log("⚠️  Поле userItems.items не найдено");
+        userItems.items = {};
+      }
+
       const collectionIds = new Set((userItems.collections || []).map(c => c.id));
-      const categoryIds   = new Set((userItems.dappCategories || []).map(c => c.id));
+      const categoryIds = new Set((userItems.dappCategories || []).map(c => c.id));
 
       console.log("📦 Коллекции:", [...collectionIds]);
       console.log("📦 Категории:", [...categoryIds]);
@@ -3138,28 +3169,29 @@ function initTwitterMonitor() {
       const removedZones = [];
 
       // Удаляем дубликаты
-      Object.keys(userItems.items || {}).forEach(zone => {
-        if (collectionIds.has(zone) || categoryIds.has(zone)) {
-          console.log(`🗑️ Удаляю дублирующий zone: ${zone}`);
-          delete userItems.items[zone];
-          removed++;
-          removedZones.push(zone);
-        }
-      });
+      if (userItems.items) {
+        Object.keys(userItems.items).forEach(zone => {
+          if (collectionIds.has(zone) || categoryIds.has(zone)) {
+            console.log(`🗑️ Удаляю дублирующий zone: ${zone}`);
+            delete userItems.items[zone];
+            removed++;
+            removedZones.push(zone);
+          }
+        });
+      }
 
-      // Сохраняем изменения
-      await setDoc(docRef, { userItems }, { merge: true });
+      // Сохраняем изменения в Firebase
+      await window.setDoc(docRef, { userItems }, { merge: true });
 
       console.log(`✅ Успешно очищено! Удалено дублей: ${removed}`);
       console.log(`   Удалённые зоны: ${removedZones.join(', ')}`);
-      console.log("🔄 Перезагружаю страницу...");
-      
-      showToast('✅ Дубликаты удалены! Перезагрузка...', 'success');
+
+      window.showToast('✅ Дубликаты удалены! Перезагрузка...', 'success');
       setTimeout(() => location.reload(), 1500);
 
     } catch (err) {
       console.error("❌ Ошибка:", err);
-      showToast('❌ Ошибка очистки: ' + err.message, 'error');
+      window.showToast('❌ Ошибка очистки: ' + err.message, 'error');
     }
   };
 </script>
