@@ -1700,8 +1700,9 @@ async function loadSharedData() {
                     .some(zone => collectionIds.has(zone) || categoryIds.has(zone));
                 
                 if (hasDuplicates) {
-    console.warn("⚠️ ОБНАРУЖЕНЫ ДУБЛИКАТЫ! Они будут автоматически отфильтрованы при рендеринге.");
-}
+                    console.warn("⚠️ ОБНАРУЖЕНЫ ДУБЛИКАТЫ!");
+                    await cleanupDuplicatesAuto();
+                }
             }
             if (data.newItemIds && Array.isArray(data.newItemIds)) {
                 const localClicked = JSON.parse(localStorage.getItem('arc_tracker_clicked_new') || '[]');
@@ -2098,33 +2099,42 @@ function loadUserItems() {
 }
 
 async function saveUserItems() {
-    // 🔥 ИСПРАВЛЕНИЕ: разделяем зоны и коллекции
-    const collectionIds = new Set((userItemsData.collections || []).map(c => c.id));
-    const categoryIds = new Set((userItemsData.dappCategories || []).map(c => c.id));
+    // 🔥 ОЧИСТКА ДУБЛИКАТОВ перед сохранением
+    const collectionIds = new Set(
+        (userItemsData.collections || []).map(c => c.id)
+    );
+    const categoryIds = new Set(
+        (userItemsData.dappCategories || []).map(c => c.id)
+    );
     
-    // Очищаем items от ID коллекций/категорий
-    const cleanItems = {};
+    // Удаляем из items ключи-дубликаты
+    const itemsToSave = {};
     Object.keys(userItemsData.items || {}).forEach(zone => {
         if (!collectionIds.has(zone) && !categoryIds.has(zone)) {
-            cleanItems[zone] = userItemsData.items[zone];
+            itemsToSave[zone] = userItemsData.items[zone];
+        } else {
+            console.warn(`[SKIP] Zone "${zone}" - это ID коллекции/категории`);
         }
     });
-    
+
     const cleanedData = {
-        items: cleanItems,
+        items: itemsToSave,
         collections: userItemsData.collections || [],
         dappCategories: userItemsData.dappCategories || []
     };
-    
+
     localStorage.setItem(USER_ITEMS_KEY, JSON.stringify(cleanedData));
     
     if (isAdmin) {
         try {
             await setDoc(doc(db, "config", "sharedItems"), { 
-                userItems: cleanedData, 
-                newItemIds: [...newLinksSet] 
+                userItems: cleanedData,
+                newItemIds: [...newLinksSet]
             });
-        } catch (e) { console.error("Save shared items error:", e); }
+            console.log('✅ Сохранено без дублей');
+        } catch (e) { 
+            console.error("Save shared items error:", e); 
+        }
     }
 }
 
@@ -2290,19 +2300,10 @@ function createUserLink(item, zone) {
 function renderUserItemInZone(zone, item) {
     const container = document.querySelector(`[data-zone="${zone}"]`);
     if (!container) return;
-    
-    // 🔥 ИСПРАВЛЕНИЕ: проверяем дубликаты
-    const existingItem = container.querySelector(`[data-user-item-id="${item.id}"]`);
-    if (existingItem) {
-        console.log(`Пропускаем дубликат: ${item.id} в зоне ${zone}`);
-        return;
-    }
-    
     let target;
     if (container.tagName === 'TR') target = container.querySelector('.dapp-links');
     else target = container.querySelector('.link-collection') || container.querySelector('.link-row');
     if (!target) return;
-    
     const wrapper = createUserLink(item, zone);
     const addBtn = target.querySelector('.add-item-btn');
     if (addBtn) target.insertBefore(wrapper, addBtn);
@@ -2358,16 +2359,9 @@ function renderUserDappCategory(cat) {
     if (!sectionContent) return;
     const table = sectionContent.querySelector('.dapp-table tbody');
     if (!table) return;
-    
-    // 🔥 ИСПРАВЛЕНИЕ: проверяем дубликаты
-    const existingTr = table.querySelector(`tr[data-zone="${cat.id}"]`);
-    if (existingTr) {
-        console.log(`Пропускаем дубликат: ${cat.id} в зоне ${cat.parentZone}`);
-        return;
-    }
-    
     const tr = document.createElement('tr'); tr.dataset.zone = cat.id;
-    const tdCat = document.createElement('td'); tdCat.setAttribute('data-label', 'Категория'); tdCat.innerHTML = `<strong>${cat.title}</strong>`;
+    const tdCat = document.createElement('td'); tdCat.setAttribute('data-label', 'Категория');
+    tdCat.innerHTML = `<strong>${cat.title}</strong>`;
     const delCatBtn = document.createElement('button');
     delCatBtn.type = 'button'; delCatBtn.className = 'user-item-delete admin-only'; delCatBtn.style.marginLeft = '8px';
     delCatBtn.title = 'Удалить категорию'; delCatBtn.innerHTML = '×';
@@ -2379,7 +2373,7 @@ function renderUserDappCategory(cat) {
         showToast(`Категория удалена: ${cat.title}`, 'info');
     });
     tdCat.appendChild(delCatBtn); tr.appendChild(tdCat);
-    const tdLinks = document.createElement('td'); tdLinks.setAttribute('data-label', 'Ссылки'; tdLinks.className = 'dapp-links';
+    const tdLinks = document.createElement('td'); tdLinks.setAttribute('data-label', 'Ссылки'); tdLinks.className = 'dapp-links';
     const addBtn = document.createElement('button');
     addBtn.type = 'button'; addBtn.className = 'add-item-btn admin-only';
     addBtn.title = `Добавить в ${cat.title}`;
@@ -2387,10 +2381,10 @@ function renderUserDappCategory(cat) {
     addBtn.addEventListener('click', (e) => {
         e.stopPropagation();
         currentAddContext = { zone: cat.id, config: ZONE_CONFIG[cat.id] || { type:'link-item', label: cat.title, trackType:'track-daily' } };
-    openModal(`Добавить: ${cat.title}`, ['fieldTitle','fieldUrl','fieldImage','fieldTooltip']);
+        openModal(`Добавить: ${cat.title}`, ['fieldTitle','fieldUrl','fieldImage','fieldTooltip']);
     });
     tdLinks.appendChild(addBtn); tr.appendChild(tdLinks);
-    const tdDesc = document.createElement('td'); tdDesc.setAttribute('data-label', 'Действие'; tdDesc.className = 'task-desc';
+    const tdDesc = document.createElement('td'); tdDesc.setAttribute('data-label', 'Действие'); tdDesc.className = 'task-desc';
     tdDesc.textContent = cat.description || ''; tr.appendChild(tdDesc);
     table.appendChild(tr);
     const items = userItemsData.items[cat.id] || [];
@@ -2485,40 +2479,25 @@ function injectAddButtons() {
 
 function renderAllUserItems() {
     loadUserItems();
-    
-    // 🔥 ИСПРАВЛЕНИЕ: создаем множества для проверки дублей
-    const collectionIds = new Set((userItemsData.collections || []).map(c => c.id));
-    const categoryIds = new Set((userItemsData.dappCategories || []).map(c => c.id));
-    
-    // 🔥 РЕНДЕРИМ КОЛЛЕКЦИИ
+    userItemsData.collections.forEach(coll => {
+        if (!ZONE_CONFIG[coll.id]) {
+            const isNft = coll.parentZone === 'nfts';
+            ZONE_CONFIG[coll.id] = { type: isNft ? 'nft-item' : 'link-item', label: coll.title, trackType: isNft ? 'track-once' : 'track-once track-once-info' };
+        }
+    });
+    userItemsData.dappCategories.forEach(cat => {
+        if (!ZONE_CONFIG[cat.id]) ZONE_CONFIG[cat.id] = { type:'link-item', label: cat.title, trackType:'track-daily' };
+    });
     userItemsData.collections.forEach(coll => {
         if (coll.parentZone === 'nfts') renderUserCollection(coll);
         else if (coll.parentZone === 'deploy') renderUserDeployGroup(coll);
     });
-    
-    // 🔥 РЕНДЕРИМ КАТЕГОРИИ
-
-    userItemsData.dappCategories.forEach(cat => {
-        // 🔥 ПРОВЕРКА: не создаём дубликаты
-        if (!ZONE_CONFIG[coll.id]) {
-            const isNft = coll.parentZone === 'nfts';
-            ZONE_CONFIG[coll.id] = { type: isNft ? 'nft-item' : 'link-item', label: coll.title, trackType: isNft ? 'track-once' : 'track-once track-once-info' } };
-        }
-    });
-    
-    // 🔥 РЕНДЕРИМ ОБЫЧНЫЕ ЗОНЫ (не коллекции/категории)
-
+    userItemsData.dappCategories.forEach(cat => renderUserDappCategory(cat));
     Object.keys(userItemsData.items).forEach(zone => {
-        if (collectionIds.has(zone) || categoryIds.has(zone)) {
-            console.log(`Пропускаем зону-дубликат: ${zone}`);
-            return;
-        }
-        
         const items = userItemsData.items[zone];
         if (!items || !items.length) return;
         items.forEach(item => renderUserItemInZone(zone, item));
     });
-    
     injectAddButtons();
     bindTrackingHandlersToAll(); attachFavoriteControls(); initializeTooltips(); initLightbox(); updateUI();
 }
@@ -2871,51 +2850,192 @@ function initTwitterMonitor() {
     // 🔥 Автообновление каждые 5 минут
     setInterval(loadTwitterResults, 5 * 60 * 1000);
 }
-    // 🔥 ДОБАВИТЬ В КОНЕЦ КОДА (перед DOMContentLoaded):
-// Автоматическая проверка при загрузке
-function checkForDuplicatesOnLoad() {
+// 🔥 Автоматическая очистка при загрузке
+// 🔥 Автоматическая очистка при загрузке
+async function cleanupDuplicatesAuto() {
     if (!isAdmin) return;
     
-    const collectionIds = new Set((userItemsData.collections || []).map(c => c.id));
-    const categoryIds = new Set((userItemsData.dappCategories || []).map(c => c.id));
-    
-    console.log("🔍 Проверка на дубликаты при загрузке...");
-    
-    let foundDuplicates = false;
-    
-    Object.keys(userItemsData.items).forEach(zone => {
-        if (collectionIds.has(zone) || categoryIds.has(zone)) {
-            console.log(`⚠️ Обнаружена зона-дубликат: ${zone}`);
-        foundDuplicates = true;
-    });
-    
-    if (foundDuplicates) {
-        console.log("🔄 Перестраиваем структуру данных...");
+    try {
+        console.log("🧹 Автоматическая очистка дубликатов...");
         
-        // Автоматически перемещаем items в коллекции/категории
-        const cleanItems = {};
-        Object.keys(userItemsData.items || {}).forEach(zone => {
-            if (!collectionIds.has(zone) && !categoryIds.has(zone)) {
-            cleanItems[zone] = userItemsData.items[zone];
+        const collectionIds = new Set(
+            (userItemsData.collections || []).map(c => c.id)
+        );
+        const categoryIds = new Set(
+            (userItemsData.dappCategories || []).map(c => c.id)
+        );
+
+        let removed = 0;
+        
+        // === ПЕРЕМЕЩАЕМ ITEMS В КОЛЛЕКЦИИ/КАТЕГОРИИ ===
+        Object.keys(userItemsData.items).forEach(zone => {
+            if (collectionIds.has(zone)) {
+                // Это пользовательская коллекция
+                const collection = userItemsData.collections.find(c => c.id === zone);
+                if (collection && userItemsData.items[zone]?.length > 0) {
+                    console.log(`📦 Перемещаю ${userItemsData.items[zone].length} items в коллекцию "${collection.title}"`);
+                    collection.items = [...(collection.items || []), ...userItemsData.items[zone]];
+                }
+                delete userItemsData.items[zone];
+                removed++;
+            } else if (categoryIds.has(zone)) {
+                // Это пользовательская категория
+                const category = userItemsData.dappCategories.find(c => c.id === zone);
+                if (category && userItemsData.items[zone]?.length > 0) {
+                    console.log(`📦 Перемещаю ${userItemsData.items[zone].length} items в категорию "${category.title}"`);
+                    category.items = [...(category.items || []), ...userItemsData.items[zone]];
+                }
+                delete userItemsData.items[zone];
+                removed++;
+            }
+        });
+
+        if (removed > 0) {
+            await saveUserItems();
+            console.log(`✅ Очищено! Перемещено зон: ${removed}`);
+            showToast(`✅ Данные организованы (${removed} зон), ничего не потеряно`, 'success');
         }
-    });
-    
-    const cleanedData = {
-        items: cleanItems,
-        collections: userItemsData.collections || [],
-        dappCategories: userItemsData.dappCategories || []
-    };
-    
-    localStorage.setItem(USER_ITEMS_KEY, JSON.stringify(cleanedData));
+    } catch (err) {
+        console.error("❌ Ошибка очистки:", err);
     }
 }
 
-// Вызываем при загрузке
-document.addEventListener('DOMContentLoaded', () => {
-    // ... существующий код
-    
-    checkForDuplicatesOnLoad();
-});
+// 🔥 Ручная очистка (вызывается из консоли)
+window.cleanupDuplicatesManual = async function() {
+    if (!isAdmin) {
+        showToast("❌ Требуется доступ администратора!", "error");
+        return;
+    }
+
+    try {
+        console.log("⚙️ Запуск ручной очистки дубликатов...");
+
+        const collectionIds = new Set(
+            (userItemsData.collections || []).map(c => c.id)
+        );
+        const categoryIds = new Set(
+            (userItemsData.dappCategories || []).map(c => c.id)
+        );
+
+        console.log("📦 Коллекции:", [...collectionIds]);
+        console.log("📦 Категории:", [...categoryIds]);
+        console.log("📦 Текущие zone в items:", Object.keys(userItemsData.items || {}));
+
+        let removed = 0;
+        const removedZones = [];
+        const movedItems = {};
+
+        Object.keys(userItemsData.items).forEach(zone => {
+            if (collectionIds.has(zone)) {
+                const collection = userItemsData.collections.find(c => c.id === zone);
+                const itemsCount = userItemsData.items[zone]?.length || 0;
+                
+                if (collection && itemsCount > 0) {
+                    console.log(`📦 Перемещаю ${itemsCount} items в коллекцию "${collection.title}"`);
+                    collection.items = [...(collection.items || []), ...userItemsData.items[zone]];
+                    movedItems[zone] = itemsCount;
+                }
+                
+                delete userItemsData.items[zone];
+                removed++;
+                removedZones.push(zone);
+            } else if (categoryIds.has(zone)) {
+                const category = userItemsData.dappCategories.find(c => c.id === zone);
+                const itemsCount = userItemsData.items[zone]?.length || 0;
+                
+                if (category && itemsCount > 0) {
+                    console.log(`📦 Перемещаю ${itemsCount} items в категорию "${category.title}"`);
+                    category.items = [...(category.items || []), ...userItemsData.items[zone]];
+                    movedItems[zone] = itemsCount;
+                }
+                
+                delete userItemsData.items[zone];
+                removed++;
+                removedZones.push(zone);
+            }
+        });
+
+        if (removed > 0) {
+            await saveUserItems();
+            console.log(`✅ Успешно очищено!`);
+            console.log(`   Перемещено зон: ${removed}`);
+            console.log(`   Перемещённые items:`);
+            Object.entries(movedItems).forEach(([zone, count]) => {
+                console.log(`     - ${zone}: ${count} items`);
+            });
+            console.log(`   Удалённые zone: ${removedZones.join(', ')}`);
+            console.log(`   Оставленные коллекции: ${[...collectionIds].join(', ')}`);
+            console.log(`   Оставленные категории: ${[...categoryIds].join(', ')}`);
+            showToast(`✅ Данные организованы! Перемещено: ${removed} зон`, 'success');
+            setTimeout(() => location.reload(), 1500);
+        } else {
+            console.log("✅ Дубликатов не найдено!");
+            console.log(`   Коллекции: ${[...collectionIds].join(', ')}`);
+            console.log(`   Категории: ${[...categoryIds].join(', ')}`);
+            showToast('✅ Всё чистo!', 'info');
+        }
+
+    } catch (err) {
+        console.error("❌ Ошибка:", err);
+        showToast('❌ Ошибка: ' + err.message, 'error');
+    }
+};
+
+// 🔥 Ручная очистка (вызывается из консоли)
+window.cleanupDuplicatesManual = async function() {
+    if (!isAdmin) {
+        showToast("❌ Требуется доступ администратора!", "error");
+        return;
+    }
+
+    try {
+        console.log("⚙️ Запуск ручной очистки дубликатов...");
+
+        const collectionIds = new Set(
+            (userItemsData.collections || []).map(c => c.id)
+        );
+        const categoryIds = new Set(
+            (userItemsData.dappCategories || []).map(c => c.id)
+        );
+
+        console.log("📦 Коллекции:", [...collectionIds]);
+        console.log("📦 Категории:", [...categoryIds]);
+        console.log("📦 Текущие zone в items:", Object.keys(userItemsData.items || {}));
+
+        let removed = 0;
+        const removedZones = [];
+
+        Object.keys(userItemsData.items).forEach(zone => {
+            if (collectionIds.has(zone) || categoryIds.has(zone)) {
+                const itemsCount = userItemsData.items[zone]?.length || 0;
+                console.log(`🗑️ Удаляю zone: ${zone} (было ${itemsCount} items, оставляю коллекцию)`);
+                delete userItemsData.items[zone];
+                removed++;
+                removedZones.push(zone);
+            }
+        });
+
+        if (removed > 0) {
+            await saveUserItems();
+            console.log(`✅ Успешно очищено!`);
+            console.log(`   Удалено дублирующих zone: ${removed}`);
+            console.log(`   Удалённые zone: ${removedZones.join(', ')}`);
+            console.log(`   Оставленные коллекции: ${[...collectionIds].join(', ')}`);
+            console.log(`   Оставленные категории: ${[...categoryIds].join(', ')}`);
+            showToast(`✅ Очищено! Удалено дублей: ${removed}`, 'success');
+            setTimeout(() => location.reload(), 1500);
+        } else {
+            console.log("✅ Дубликатов не найдено!");
+            console.log(`   Коллекции: ${[...collectionIds].join(', ')}`);
+            console.log(`   Категории: ${[...categoryIds].join(', ')}`);
+            showToast('✅ Дубликатов не найдено!', 'info');
+        }
+
+    } catch (err) {
+        console.error("❌ Ошибка:", err);
+        showToast('❌ Ошибка: ' + err.message, 'error');
+    }
+};
 </script>
 <!-- ====== LOGIN MODAL ====== -->
 <div id="loginModal" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.8); backdrop-filter:blur(8px); z-index:1000; align-items:center; justify-content:center; padding:20px;">
