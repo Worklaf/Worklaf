@@ -2377,21 +2377,10 @@ function renderAllUserItems() {
 
     loadUserItems();
 
-    // 🔥 Очищаем старые элементы
-    document.querySelectorAll('[data-user-item-id]').forEach(el => {
-        const found = Object.values(savedData.items || {})
-            .flat()
-            .some(item => item.id === el.dataset.userItemId);
-        if (!found) el.remove();
-    });
-
-    // 🔥 ВАЖНО: собираем ID коллекций и категорий (исключим их из итерации)
-    const collectionIds = new Set(
-        (userItemsData.collections || []).map(c => c.id)
-    );
-    const categoryIds = new Set(
-        (userItemsData.dappCategories || []).map(c => c.id)
-    );
+    // 🔥 ПОЛНАЯ ОЧИСТКА ВСЕХ ПОЛЬЗОВАТЕЛЬСКИХ ЭЛЕМЕНТОВ ПЕРЕД РЕНДЕРОМ
+    document.querySelectorAll('.user-item-wrapper').forEach(el => el.remove());
+    document.querySelectorAll('.user-collection-card').forEach(el => el.remove());
+    document.querySelectorAll('[data-user-category-id]').forEach(el => el.remove());
 
     // Рендерим коллекции
     userItemsData.collections.forEach(coll => {
@@ -2400,30 +2389,30 @@ function renderAllUserItems() {
         }
     });
     
-    // Рендерим категории
+    // Рендерим категории dApp
     userItemsData.dappCategories.forEach(cat => {
         if (!document.querySelector(`[data-user-category-id="${cat.id}"]`)) {
             renderUserDappCategory(cat);
         }
     });
 
-    // 🔥 ИСПРАВЛЕНИЕ: итерируем ТОЛЬКО стандартные зоны, исключаем коллекции/категории
+    // 🔥 Рендерим элементы по зонам (теперь без дубликатов, так как DOM чистый)
     Object.keys(userItemsData.items).forEach(zone => {
-        // Пропускаем ID коллекций и категорий
-        if (collectionIds.has(zone) || categoryIds.has(zone)) {
-            console.log(`[SKIP] ${zone} - это ID коллекции/категории, не зона`);
-            return;
-        }
-
         const items = userItemsData.items[zone];
-        if (!items || !Array.isArray(items)) return;
+        if (!items) return;
         
         items.forEach(item => {
-            const selector = `[data-zone="${zone}"] [data-user-item-id="${item.id}"]`;
-            const exists = document.querySelector(selector);
-            
-            if (!exists) {
-                renderUserItemInZone(zone, item);
+            // Проверяем, существует ли уже элемент в этой зоне
+            const container = document.querySelector(`[data-zone="${zone}"]`);
+            if (container) {
+                const exists = container.querySelector(`[data-user-item-id="${item.id}"]`);
+                if (!exists) {
+                    renderUserItemInZone(zone, item);
+                } else {
+                    console.log(`[SKIP] Элемент ${item.id} уже существует в зоне ${zone}`);
+                }
+            } else {
+                console.warn(`[WARN] Контейнер для зоны ${zone} не найден`);
             }
         });
     });
