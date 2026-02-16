@@ -843,6 +843,9 @@ body.light-theme .monitor-item {
             <button class="edit-mode-btn admin-only" id="editModeBtn" type="button"><i class="fas fa-pen"></i> Режим редактирования</button>
             <button class="export-btn admin-only" id="exportBtn" type="button"><i class="fas fa-download"></i> Экспорт JSON</button>
             <button class="import-btn admin-only" id="importBtn" type="button"><i class="fas fa-upload"></i> Импорт JSON</button>
+			<button onclick="uploadToGitHub(localStorage.getItem('arc_user_items_v1'))">
+  Загрузить на GitHub
+</button>
             <button class="reset-btn" type="button" onclick="resetAll()">Сбросить прогресс</button>
         </div>
 
@@ -2192,43 +2195,15 @@ function loadUserItems() {
 }
 
 async function saveUserItems() {
-    // 🔥 ОЧИСТКА перед сохранением
-    const collectionIds = new Set(
-        (userItemsData.collections || []).map(c => c.id)
-    );
-    const categoryIds = new Set(
-        (userItemsData.dappCategories || []).map(c => c.id)
-    );
-    
-    // Удаляем из items ключи, которые являются ID коллекций/категорий
-    const itemsToSave = {};
-    Object.keys(userItemsData.items || {}).forEach(zone => {
-        if (!collectionIds.has(zone) && !categoryIds.has(zone)) {
-            itemsToSave[zone] = userItemsData.items[zone];
-        } else {
-            console.warn(`[SKIP SAVE] Ключ "${zone}" - это ID коллекции/категории`);
-        }
-    });
-
+    // сохраняем локально только
     const cleanedData = {
-        items: itemsToSave,
+        items: userItemsData.items || {},
         collections: userItemsData.collections || [],
         dappCategories: userItemsData.dappCategories || []
     };
 
-    localStorage.setItem(USER_ITEMS_KEY, JSON.stringify(cleanedData));
-    
-    if (isAdmin) {
-        try {
-            await setDoc(doc(db, "config", "sharedItems"), { 
-                userItems: cleanedData,
-                newItemIds: [...newLinksSet]
-            });
-            console.log('✅ Сохранено в Firebase без дублей');
-        } catch (e) { 
-            console.error("Save shared items error:", e); 
-        }
-    }
+    localStorage.setItem('arc_user_items_v1', JSON.stringify(cleanedData));
+    console.log('💾 Сохранено локально (GitHub загрузка отдельно)');
 }
 
 function generateId() { return 'u_' + Date.now().toString(36) + '_' + Math.random().toString(36).substr(2, 5); }
@@ -3280,6 +3255,32 @@ function initTwitterMonitor() {
 // Делаем функцию глобальной
 window.cleanupFirebaseDuplicates = cleanupFirebaseDuplicates;
 window.userItemsData = userItemsData;
+		
+</script>
+	<script>
+async function uploadToGitHub(data) {
+  try {
+    // Готовим контент в base64
+    const content = btoa(unescape(encodeURIComponent(JSON.stringify(data))));
+
+    const response = await fetch("https://arc-proxy.vercel.app/api/upload", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ content })
+    });
+
+    const result = await response.json();
+    if (result.status === "ok") {
+      alert("✅ Данные успешно обновлены на GitHub!");
+    } else {
+      console.error(result);
+      alert("⚠️ Ошибка при обновлении данных");
+    }
+  } catch (err) {
+    console.error(err);
+    alert("Ошибка соединения: " + err.message);
+  }
+}
 </script>
 <!-- ====== LOGIN MODAL ====== -->
 <div id="loginModal" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.8); backdrop-filter:blur(8px); z-index:1000; align-items:center; justify-content:center; padding:20px;">
