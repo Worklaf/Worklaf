@@ -2215,27 +2215,8 @@ document.getElementById('addModalSave').addEventListener('click', async () => {
         if (!title || !url) { alert('Название и URL обязательны!'); return; }
         const config = currentAddContext.config; const id = generateId();
         const item = { id, title, url, tooltip, image, trackType: config.trackType, addedAt: Date.now() };
-        // 🔥 ИСПРАВЛЕНИЕ: добавляем в правильное место
-const config = currentAddContext.config;
-if (config.type === 'nft-item' && currentAddContext.zone.startsWith('u_')) {
-    // Если это пользовательская коллекция - добавляем в items коллекции
-    const collection = userItemsData.collections.find(c => c.id === currentAddContext.zone);
-    if (collection) {
-        if (!collection.items) collection.items = [];
-        collection.items.push(item);
-    }
-} else if (config.type === 'link-item' && currentAddContext.zone.startsWith('u_')) {
-    // Если это пользовательская категория - добавляем в items категории  
-    const category = userItemsData.dappCategories.find(c => c.id === currentAddContext.zone);
-    if (category) {
-        if (!category.items) category.items = [];
-        category.items.push(item);
-    }
-} else {
-    // Для обычных зон - как было
-    if (!userItemsData.items[currentAddContext.zone]) userItemsData.items[currentAddContext.zone] = [];
-    userItemsData.items[currentAddContext.zone].push(item);
-}
+        if (!userItemsData.items[currentAddContext.zone]) userItemsData.items[currentAddContext.zone] = [];
+        userItemsData.items[currentAddContext.zone].push(item);
         newLinksSet.add(id);
     knownLinksSet.add(id);
     localStorage.setItem(NEW_LINKS_KEY, JSON.stringify([...newLinksSet]));
@@ -2293,23 +2274,9 @@ function createUserLink(item, zone) {
     delBtn.addEventListener('click', async (e) => {
         e.stopPropagation();
         if (!confirm(`Удалить «${item.title}»?`)) return;
-        // 🔥 ИСПРАВЛЕНИЕ: правильное удаление из нужного места
-const isUserZone = zone.startsWith('u_');
-if (isUserZone) {
-    // Удаляем из коллекции или категории
-    userItemsData.collections.forEach(c => { 
-        if (c.id === zone && c.items) c.items = c.items.filter(i => i.id !== item.id); 
-    });
-    userItemsData.dappCategories.forEach(c => { 
-        if (c.id === zone && c.items) c.items = c.items.filter(i => i.id !== item.id); 
-    });
-} else {
-    // Удаляем из обычных зон
-    if (userItemsData.items[zone]) userItemsData.items[zone] = userItemsData.items[zone].filter(i => i.id !== item.id);
-}
-// Дополнительная очистка на всякий случай
-userItemsData.collections.forEach(c => { if (c.items) c.items = c.items.filter(i => i.id !== item.id); });
-userItemsData.dappCategories.forEach(c => { if (c.items) c.items = c.items.filter(i => i.id !== item.id); });
+        if (userItemsData.items[zone]) userItemsData.items[zone] = userItemsData.items[zone].filter(i => i.id !== item.id);
+        userItemsData.collections.forEach(c => { if (c.items) c.items = c.items.filter(i => i.id !== item.id); });
+        userItemsData.dappCategories.forEach(c => { if (c.items) c.items = c.items.filter(i => i.id !== item.id); });
         await saveUserItems(); wrapper.remove();
         if (favoritesState[item.id]) {
             delete favoritesState[item.id]; favoritesOrder = favoritesOrder.filter(x => x !== item.id);
@@ -2381,8 +2348,8 @@ function renderUserCollection(coll) {
     header.appendChild(addBtn); card.appendChild(header);
     const linkColl = document.createElement('div'); linkColl.className = 'link-collection';
     card.appendChild(linkColl); grid.appendChild(card);
-    const items = coll.items || [];
-items.forEach(item => renderUserItemInZone(coll.id, item));
+    const items = userItemsData.items[coll.id] || [];
+    items.forEach(item => renderUserItemInZone(coll.id, item));
     requestAnimationFrame(() => card.classList.add('anim-visible'));
 }
 
@@ -2391,9 +2358,16 @@ function renderUserDappCategory(cat) {
     if (!sectionContent) return;
     const table = sectionContent.querySelector('.dapp-table tbody');
     if (!table) return;
+    
+    // 🔥 ИСПРАВЛЕНИЕ: проверяем дубликаты
+    const existingTr = table.querySelector(`tr[data-zone="${cat.id}"]`);
+    if (existingTr) {
+        console.log(`Пропускаем дубликат: ${cat.id} в зоне ${cat.parentZone}`);
+        return;
+    }
+    
     const tr = document.createElement('tr'); tr.dataset.zone = cat.id;
-    const tdCat = document.createElement('td'); tdCat.setAttribute('data-label', 'Категория');
-    tdCat.innerHTML = `<strong>${cat.title}</strong>`;
+    const tdCat = document.createElement('td'); tdCat.setAttribute('data-label', 'Категория'); tdCat.innerHTML = `<strong>${cat.title}</strong>`;
     const delCatBtn = document.createElement('button');
     delCatBtn.type = 'button'; delCatBtn.className = 'user-item-delete admin-only'; delCatBtn.style.marginLeft = '8px';
     delCatBtn.title = 'Удалить категорию'; delCatBtn.innerHTML = '×';
@@ -2405,7 +2379,7 @@ function renderUserDappCategory(cat) {
         showToast(`Категория удалена: ${cat.title}`, 'info');
     });
     tdCat.appendChild(delCatBtn); tr.appendChild(tdCat);
-    const tdLinks = document.createElement('td'); tdLinks.setAttribute('data-label', 'Ссылки'); tdLinks.className = 'dapp-links';
+    const tdLinks = document.createElement('td'); tdLinks.setAttribute('data-label', 'Ссылки'; tdLinks.className = 'dapp-links';
     const addBtn = document.createElement('button');
     addBtn.type = 'button'; addBtn.className = 'add-item-btn admin-only';
     addBtn.title = `Добавить в ${cat.title}`;
@@ -2413,14 +2387,14 @@ function renderUserDappCategory(cat) {
     addBtn.addEventListener('click', (e) => {
         e.stopPropagation();
         currentAddContext = { zone: cat.id, config: ZONE_CONFIG[cat.id] || { type:'link-item', label: cat.title, trackType:'track-daily' } };
-        openModal(`Добавить: ${cat.title}`, ['fieldTitle','fieldUrl','fieldImage','fieldTooltip']);
+    openModal(`Добавить: ${cat.title}`, ['fieldTitle','fieldUrl','fieldImage','fieldTooltip']);
     });
     tdLinks.appendChild(addBtn); tr.appendChild(tdLinks);
-    const tdDesc = document.createElement('td'); tdDesc.setAttribute('data-label', 'Действие'); tdDesc.className = 'task-desc';
+    const tdDesc = document.createElement('td'); tdDesc.setAttribute('data-label', 'Действие'; tdDesc.className = 'task-desc';
     tdDesc.textContent = cat.description || ''; tr.appendChild(tdDesc);
     table.appendChild(tr);
-    const items = cat.items || [];
-items.forEach(item => renderUserItemInZone(cat.id, item));
+    const items = userItemsData.items[cat.id] || [];
+    items.forEach(item => renderUserItemInZone(cat.id, item));
 }
 
 function renderUserDeployGroup(grp) {
@@ -2454,8 +2428,8 @@ function renderUserDeployGroup(grp) {
     header.appendChild(addBtn); card.appendChild(header);
     const linkColl = document.createElement('div'); linkColl.className = 'link-collection';
     card.appendChild(linkColl); grid.appendChild(card);
-    const items = grp.items || [];
-items.forEach(item => renderUserItemInZone(grp.id, item));
+    const items = userItemsData.items[grp.id] || [];
+    items.forEach(item => renderUserItemInZone(grp.id, item));
     requestAnimationFrame(() => card.classList.add('anim-visible'));
 }
 
@@ -2516,16 +2490,6 @@ function renderAllUserItems() {
     const collectionIds = new Set((userItemsData.collections || []).map(c => c.id));
     const categoryIds = new Set((userItemsData.dappCategories || []).map(c => c.id));
     
-    userItemsData.collections.forEach(coll => {
-        if (!ZONE_CONFIG[coll.id]) {
-            const isNft = coll.parentZone === 'nfts';
-            ZONE_CONFIG[coll.id] = { type: isNft ? 'nft-item' : 'link-item', label: coll.title, trackType: isNft ? 'track-once' : 'track-once track-once-info' };
-        }
-    });
-    userItemsData.dappCategories.forEach(cat => {
-        if (!ZONE_CONFIG[cat.id]) ZONE_CONFIG[cat.id] = { type:'link-item', label: cat.title, trackType:'track-daily' };
-    });
-    
     // 🔥 РЕНДЕРИМ КОЛЛЕКЦИИ
     userItemsData.collections.forEach(coll => {
         if (coll.parentZone === 'nfts') renderUserCollection(coll);
@@ -2533,13 +2497,21 @@ function renderAllUserItems() {
     });
     
     // 🔥 РЕНДЕРИМ КАТЕГОРИИ
-    userItemsData.dappCategories.forEach(cat => renderUserDappCategory(cat));
+
+    userItemsData.dappCategories.forEach(cat => {
+        // 🔥 ПРОВЕРКА: не создаём дубликаты
+        if (!ZONE_CONFIG[coll.id]) {
+            const isNft = coll.parentZone === 'nfts';
+            ZONE_CONFIG[coll.id] = { type: isNft ? 'nft-item' : 'link-item', label: coll.title, trackType: isNft ? 'track-once' : 'track-once track-once-info' } };
+        }
+    });
     
-    // 🔥 РЕНДЕРИМ ТОЛЬКО ОБЫЧНЫЕ ЗОНЫ (не коллекции/категории)
+    // 🔥 РЕНДЕРИМ ОБЫЧНЫЕ ЗОНЫ (не коллекции/категории)
+
     Object.keys(userItemsData.items).forEach(zone => {
         if (collectionIds.has(zone) || categoryIds.has(zone)) {
             console.log(`Пропускаем зону-дубликат: ${zone}`);
-            return; // Пропускаем зоны-дубликаты
+            return;
         }
         
         const items = userItemsData.items[zone];
@@ -2899,6 +2871,51 @@ function initTwitterMonitor() {
     // 🔥 Автообновление каждые 5 минут
     setInterval(loadTwitterResults, 5 * 60 * 1000);
 }
+    // 🔥 ДОБАВИТЬ В КОНЕЦ КОДА (перед DOMContentLoaded):
+// Автоматическая проверка при загрузке
+function checkForDuplicatesOnLoad() {
+    if (!isAdmin) return;
+    
+    const collectionIds = new Set((userItemsData.collections || []).map(c => c.id));
+    const categoryIds = new Set((userItemsData.dappCategories || []).map(c => c.id));
+    
+    console.log("🔍 Проверка на дубликаты при загрузке...");
+    
+    let foundDuplicates = false;
+    
+    Object.keys(userItemsData.items).forEach(zone => {
+        if (collectionIds.has(zone) || categoryIds.has(zone)) {
+            console.log(`⚠️ Обнаружена зона-дубликат: ${zone}`);
+        foundDuplicates = true;
+    });
+    
+    if (foundDuplicates) {
+        console.log("🔄 Перестраиваем структуру данных...");
+        
+        // Автоматически перемещаем items в коллекции/категории
+        const cleanItems = {};
+        Object.keys(userItemsData.items || {}).forEach(zone => {
+            if (!collectionIds.has(zone) && !categoryIds.has(zone)) {
+            cleanItems[zone] = userItemsData.items[zone];
+        }
+    });
+    
+    const cleanedData = {
+        items: cleanItems,
+        collections: userItemsData.collections || [],
+        dappCategories: userItemsData.dappCategories || []
+    };
+    
+    localStorage.setItem(USER_ITEMS_KEY, JSON.stringify(cleanedData));
+    }
+}
+
+// Вызываем при загрузке
+document.addEventListener('DOMContentLoaded', () => {
+    // ... существующий код
+    
+    checkForDuplicatesOnLoad();
+});
 </script>
 <!-- ====== LOGIN MODAL ====== -->
 <div id="loginModal" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.8); backdrop-filter:blur(8px); z-index:1000; align-items:center; justify-content:center; padding:20px;">
