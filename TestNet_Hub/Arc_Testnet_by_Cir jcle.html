@@ -2654,41 +2654,6 @@ async function uploadConfigToGithub() {
             }
         );
 
-        // 6. Обновляем editsOverride.json
-        const putEditsResp = await fetch(
-            `https://api.github.com/repos/${GITHUB_OWNER}/${GITHUB_REPO}/contents/${GITHUB_EDITS_PATH}`,
-            {
-                method: 'PUT',
-                headers: {
-                    'Authorization': `Bearer ${token}`,
-                    'Accept': 'application/vnd.github+json',
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify({
-                    message: 'Update editsOverride via Arc admin UI',
-                    content: encodeContent(editsPayload),
-                    branch: GITHUB_BRANCH,
-                    sha: editsSha || undefined
-                })
-            }
-        );
-
-        showToast('Изменения загружены на GitHub!', 'success');
-
-        // 🔥 ПРИНУДИТЕЛЬНО ПЕРЕЗАГРУЖАЕМ ДАННЫЕ ПОСЛЕ ЗАГРУЗКИ
-        setTimeout(async () => {
-            await loadSharedData();
-            renderAllUserItems();
-            showToast('Данные обновлены на странице!', 'info');
-        }, 2000);
-
-    } catch (e) {
-        console.error(e);
-        showToast('Ошибка загрузки на GitHub: ' + e.message, 'error');
-    }
-}
-
-
         if (!putItemsResp.ok) {
             const errText = await putItemsResp.text();
             throw new Error(`GitHub items update failed: ${putItemsResp.status} ${errText}`);
@@ -2719,11 +2684,20 @@ async function uploadConfigToGithub() {
         }
 
         showToast('Изменения загружены на GitHub!', 'success');
+
+        // 🔥 ПРИНУДИТЕЛЬНО ПЕРЕЗАГРУЖАЕМ ДАННЫЕ ПОСЛЕ ЗАГРУЗКИ
+        setTimeout(async () => {
+            await loadSharedData();
+            renderAllUserItems();
+            showToast('Данные обновлены на странице!', 'info');
+        }, 2000);
+
     } catch (e) {
         console.error(e);
         showToast('Ошибка загрузки на GitHub: ' + e.message, 'error');
     }
 }
+
 // ===== DOM CONTENT LOADED =====
 document.addEventListener('DOMContentLoaded', () => {
     loadTheme(); loadEditsOverride(); applyAllOverrides();
