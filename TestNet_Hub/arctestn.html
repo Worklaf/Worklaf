@@ -3374,22 +3374,88 @@ function initTwitterMonitor() {
     
     // 🔥 Кнопка обновления
     refreshBtn.addEventListener('click', async () => {
-        const originalHTML = refreshBtn.innerHTML;
-        refreshBtn.disabled = true;
-        refreshBtn.innerHTML = '<i class="fas fa-sync-alt fa-spin"></i> Обновление...';
+    const originalHTML = refreshBtn.innerHTML;
+    refreshBtn.disabled = true;
+    refreshBtn.innerHTML = '<i class="fas fa-rocket fa-spin"></i> Запуск парсера...';
+    
+    try {
+        // 🔥 Получаем GitHub токен от админа
+        const token = prompt(
+            '🔑 Введите GitHub Personal Access Token для запуска парсера:\n' +
+            '(Токен используется только в этой сессии и не сохраняется)'
+        );
         
+        if (!token) {
+            throw new Error('Токен не предоставлен');
+        }
+        
+        // 🔥 Запускаем GitHub Action
+        const response = await fetch(`https://api.github.com/repos/Worklaf/Worklaf/dispatches`, {
+            method: 'POST',
+            headers: {
+                'Authorization': `Bearer ${token}`,
+                'Accept': 'application/vnd.github+json',
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                event_type: 'run-twitter-parser',
+                client_payload: {
+                    triggered_by: 'admin_ui',
+                    timestamp: Date.now(),
+                    user_agent: navigator.userAgent
+                }
+            })
+        });
+
+        if (response.ok) {
+            showToast('🚀 Парсер запущен в GitHub Actions!', 'success');
+            refreshBtn.innerHTML = '<i class="fas fa-clock"></i> Ожидание (2-3 мин)';
+            
+            // 🔥 Проверяем результаты каждые 30 секунд
+            let checkCount = 0;
+            const checkInterval = setInterval(async () => {
+                checkCount++;
+                try {
+                    const checkResp = await fetch('twitter_results.json?' + Date.now());
+                    if (checkResp.ok) {
+                        const data = await checkResp.json();
+                        const resultTime = new Date(data.timestamp);
+                        const now = new Date();
+                        
+                        // Если результат свежее 5 минут - обновляем
+                        if ((now - resultTime) < 5 * 60 * 1000) {
+                            await loadTwitterResults();
+                            showToast('✅ Новые данные загружены!', 'success');
+                            clearInterval(checkInterval);
+                            return;
+                        }
+                    }
+                } catch(e) {}
+                
+                // Останавливаем через 6 попыток (3 минуты)
+                if (checkCount >= 6) {
+                    showToast('⏱️ Парсер работает. Обновите страницу через пару минут.', 'info');
+                    clearInterval(checkInterval);
+                }
+            }, 30000);
+            
+        } else {
+            const errorText = await response.text();
+            throw new Error(`GitHub API ошибка: ${response.status} - ${errorText}`);
+        }
+        
+    } catch (error) {
+        console.error('Parser trigger error:', error);
+        showToast('❌ Ошибка: ' + error.message, 'error');
+        
+        // Fallback: просто обновляем существующие данные
         await loadTwitterResults();
         
-        setTimeout(() => {
-            refreshBtn.disabled = false;
-            refreshBtn.innerHTML = originalHTML;
-            showToast('Данные обновлены!', 'success');
-        }, 1000);
-    });
-    
-    // 🔥 Автообновление каждые 5 минут
-    setInterval(loadTwitterResults, 5 * 60 * 1000);
-}
+    } finally {
+        refreshBtn.disabled = false;
+        refreshBtn.innerHTML = originalHTML;
+    }
+});
 
 </script>
 <!-- ====== LOGIN MODAL ====== -->
