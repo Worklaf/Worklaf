@@ -815,13 +815,12 @@ body.light-theme .monitor-item {
         </p>
     </div>
     <div id="arcLoggedInView" style="display:none;">
-        <div class="user-info-arc" id="arcUserName">User</div>
-        <div id="adminBadgeContainer"></div>
-        <div class="sync-status">
-            <i class="fas fa-check-circle"></i> Данные синхронизированы
-        </div>
-        <button onclick="logout()" class="auth-btn-arc auth-btn-logout">Выйти</button>
+    <div class="user-info-arc" id="arcUserName">User</div>
+    <div id="adminBadgeContainer"></div>
+    <div class="sync-status" id="syncStatus">
+        <i class="fas fa-check-circle"></i> <span id="syncStatusText">Данные синхронизированы</span>
     </div>
+    <button onclick="logout()" class="auth-btn-arc auth-btn-logout">Выйти</button>
 </div>
        <!-- 🐦 TWITTER МОНИТОРИНГ (ADMIN ONLY) -->
 <div class="twitter-monitor-panel admin-only" id="twitterMonitorPanel">
@@ -1582,47 +1581,123 @@ async function loadAllData() {
     const localStats = JSON.parse(localStorage.getItem(STORAGE_KEY) || '{}');
     const localFav = JSON.parse(localStorage.getItem(FAVORITES_KEY) || '{}');
     const localOrder = JSON.parse(localStorage.getItem(FAVORITES_ORDER_KEY) || '[]');
-    const localTimestamp = parseInt(localStorage.getItem(FAVORITES_TIMESTAMP_KEY) || '0', 10);
-    arcData = localStats; favoritesState = localFav; favoritesOrder = localOrder;
+    const localItems = JSON.parse(localStorage.getItem(USER_ITEMS_KEY) || '{}');
+    const localEdits = JSON.parse(localStorage.getItem(EDITS_OVERRIDE_KEY) || '{}');
+    
+    // Устанавливаем локальные данные по умолчанию
+    arcData = localStats;
+    favoritesState = localFav;
+    favoritesOrder = localOrder;
+    userItemsData = {
+        items: localItems.items || {},
+        collections: localItems.collections || [],
+        dappCategories: localItems.dappCategories || []
+    };
+    editsOverride = localEdits;
+
     if (currentUser) {
         try {
             const docRef = doc(db, "users", currentUser.uid);
             const docSnap = await getDoc(docRef);
+            
             if (docSnap.exists()) {
                 const cloudData = docSnap.data();
-                const cloudFav = cloudData.favoritesState || {};
-                const cloudOrder = cloudData.favoritesOrder || [];
-                const cloudTs = parseInt(cloudData.favoritesTimestamp || '0', 10);
-                const localHasFav = Object.keys(localFav).length > 0 || localOrder.length > 0;
-                const cloudHasFav = Object.keys(cloudFav).length > 0 || cloudOrder.length > 0;
-                if (cloudHasFav) {
-                    if (cloudTs > localTimestamp) {
-                        favoritesState = cloudFav; favoritesOrder = cloudOrder;
-                        localStorage.setItem(FAVORITES_KEY, JSON.stringify(favoritesState));
-                        localStorage.setItem(FAVORITES_ORDER_KEY, JSON.stringify(favoritesOrder));
-                        localStorage.setItem(FAVORITES_TIMESTAMP_KEY, String(cloudTs));
-                    } else {
-                        await saveToCloud({ favoritesState: localFav, favoritesOrder: localOrder, favoritesTimestamp: localTimestamp });
-                    }
-                } else if (localHasFav) {
-                    await saveToCloud({ favoritesState: localFav, favoritesOrder: localOrder, favoritesTimestamp: localTimestamp });
-                }
+                
+                // Синхронизируем статистику
                 if (cloudData.arcGuideStats && Object.keys(cloudData.arcGuideStats).length > 0) {
                     arcData = cloudData.arcGuideStats;
                     localStorage.setItem(STORAGE_KEY, JSON.stringify(arcData));
                 }
-            } else if (Object.keys(localFav).length > 0) {
-                await saveToCloud({ favoritesState: localFav, favoritesOrder: localOrder, favoritesTimestamp: localTimestamp });
+                
+                // Синхронизируем избранное
+                if (cloudData.favoritesState) {
+                    const cloudTs = parseInt(cloudData.favoritesTimestamp || '0', 10);
+                    const localTs = parseInt(localStorage.getItem(FAVORITES_TIMESTAMP_KEY) || '0', 10);
+                    
+                    if (cloudTs > localTs) {
+                        favoritesState = cloudData.favoritesState;
+                        favoritesOrder = cloudData.favoritesOrder || [];
+                        localStorage.setItem(FAVORITES_KEY, JSON.stringify(favoritesState));
+                        localStorage.setItem(FAVORITES_ORDER_KEY, JSON.stringify(favoritesOrder));
+                    }
+                }
+                
+                // 🔥 НОВОЕ: Синхронизируем пользовательские элементы
+                if (cloudData.userItems) {
+                    const cloudItemsTs = parseInt(cloudData.timestamp || '0', 10);
+                    const localItemsTs = parseInt(localStorage.getItem('arc_user_items_timestamp') || '0', 10);
+                    
+                    if (cloudItemsTs > localItemsTs) {
+                        userItemsData = {
+                            items: cloudData.userItems.items || {},
+                            collections: cloudData.userItems.collections || [],
+                            dappCategories: cloudData.userItems.dappCategories || []
+                        };
+                        localStorage.setItem(USER_ITEMS_KEY, JSON.stringify(userItemsData));
+                        localStorage.setItem('arc_user_items_timestamp', String(cloudItemsTs));
+                        showToast('🔄 Элементы обновлены из облака', 'info');
+                    }
+                }
+                
+                // 🔥 НОВОЕ: Синхронизируем правки
+                if (cloudData.editsOverride) {
+                    const cloudEditsTs = parseInt(cloudData.editsTimestamp || '0', 10);
+                    const localEditsTs = parseInt(localStorage.getItem('arc_edits_timestamp') || '0', 10);
+                    
+                    if (cloudEditsTs > localEditsTs) {
+                        editsOverride = cloudData.editsOverride;
+                        localStorage.setItem(EDITS_OVERRIDE_KEY, JSON.stringify(editsOverride));
+                        localStorage.setItem('arc_edits_timestamp', String(cloudEditsTs));
+                    }
+                }
             }
-        } catch (e) { console.error("Cloud load error:", e); }
+        } catch (e) {
+            console.error("Cloud load error:", e);
+            showToast('⚠️ Не удалось синхронизировать с облаком', 'error');
+        }
     }
-    refreshAllVisuals(); applyAllOverrides();
+    
+    refreshAllVisuals();
+    applyAllOverrides();
 }
-
+function updateSyncStatus(status, message) {
+    const statusEl = document.getElementById('syncStatus');
+    const textEl = document.getElementById('syncStatusText');
+    
+    if (!statusEl || !textEl) return;
+    
+    switch (status) {
+        case 'syncing':
+            statusEl.innerHTML = '<i class="fas fa-sync-alt fa-spin"></i> <span>Синхронизация...</span>';
+            statusEl.style.color = '#3b82f6';
+            break;
+        case 'success':
+            statusEl.innerHTML = '<i class="fas fa-check-circle"></i> <span>Данные синхронизированы</span>';
+            statusEl.style.color = '#22c55e';
+            break;
+        case 'error':
+            statusEl.innerHTML = '<i class="fas fa-exclamation-triangle"></i> <span>Ошибка синхронизации</span>';
+            statusEl.style.color = '#ef4444';
+            break;
+        case 'offline':
+            statusEl.innerHTML = '<i class="fas fa-wifi-slash"></i> <span>Работаем локально</span>';
+            statusEl.style.color = '#f59e0b';
+            break;
+    }
+}
 async function saveToCloud(data) {
     if (!currentUser) return;
-    try { await setDoc(doc(db, "users", currentUser.uid), data, { merge: true }); }
-    catch (e) { console.error("Cloud save error:", e); }
+    
+    updateSyncStatus('syncing');
+    
+    try {
+        await setDoc(doc(db, "users", currentUser.uid), data, { merge: true });
+        updateSyncStatus('success');
+    } catch (e) {
+        console.error("Cloud save error:", e);
+        updateSyncStatus('error');
+        throw e;
+    }
 }
 
 async function saveStats() {
@@ -2107,22 +2182,20 @@ function loadUserItems() {
 }
 
 async function saveUserItems() {
-    // Сохраняем локально
+    // 1. Локальное сохранение (для быстрого доступа)
     localStorage.setItem(USER_ITEMS_KEY, JSON.stringify(userItemsData));
     
-    // Синхронизируем с Firebase только для админа
-    if (isAdmin && currentUser) {
+    // 2. Сохранение в Firebase (если пользователь авторизован)
+    if (currentUser) {
         try {
-            // 🔥 Используем merge: true для предотвращения перезаписи
-            await setDoc(doc(db, "config", "sharedItems"), { 
+            await saveToCloud({ 
                 userItems: userItemsData,
-                newItemIds: [...newLinksSet],
-                lastUpdated: new Date().toISOString()
-            }, { merge: true });
-            
-            console.log("✅ User items saved to Firebase successfully");
-        } catch (e) { 
-            console.error("❌ Save shared items error:", e); 
+                timestamp: Date.now()
+            });
+            showToast('✅ Изменения синхронизированы с облаком', 'success');
+        } catch (e) {
+            console.error("Firebase save error:", e);
+            showToast('⚠️ Локально сохранено, но не синхронизировано с облаком', 'error');
         }
     }
 }
@@ -2180,90 +2253,215 @@ document.getElementById('addModalSave').addEventListener('click', async () => {
     const saveBtn = document.getElementById('addModalSave');
     const isEdit = saveBtn.dataset.editMode === 'true';
 
-    if (isEdit && currentEditTarget) {
-        const id = currentEditTarget.id; const link = currentEditTarget.link;
-        const newTitle = document.getElementById('addFieldTitle').value.trim();
-        const newUrl = document.getElementById('addFieldUrl').value.trim();
-        const newTooltip = document.getElementById('addFieldTooltip').value.trim();
-        const newImage = normalizeImageUrl(document.getElementById('addFieldImage').value.trim());
-        if (!newTitle || !newUrl) { alert('Название и URL обязательны!'); return; }
-        let isUserItem = false;
-        for (const zone in userItemsData.items) {
-            const items = userItemsData.items[zone]; if (!items) continue;
-            const found = items.find(i => i.id === id);
-            if (found) {
-                found.title = newTitle; found.url = newUrl; found.tooltip = newTooltip; found.image = newImage;
-                isUserItem = true; await saveUserItems(); break;
+    // Показываем процесс сохранения
+    const originalText = saveBtn.textContent;
+    saveBtn.disabled = true;
+    saveBtn.textContent = '💾 Сохранение...';
+
+    try {
+        if (isEdit && currentEditTarget) {
+            // Логика редактирования остается такой же
+            const id = currentEditTarget.id;
+            const link = currentEditTarget.link;
+            const newTitle = document.getElementById('addFieldTitle').value.trim();
+            const newUrl = document.getElementById('addFieldUrl').value.trim();
+            const newTooltip = document.getElementById('addFieldTooltip').value.trim();
+            const newImage = normalizeImageUrl(document.getElementById('addFieldImage').value.trim());
+            
+            if (!newTitle || !newUrl) {
+                alert('Название и URL обязательны!');
+                return;
+            }
+
+            let isUserItem = false;
+            for (const zone in userItemsData.items) {
+                const items = userItemsData.items[zone];
+                if (!items) continue;
+                const found = items.find(i => i.id === id);
+                if (found) {
+                    found.title = newTitle;
+                    found.url = newUrl;
+                    found.tooltip = newTooltip;
+                    found.image = newImage;
+                    isUserItem = true;
+                    
+                    // 🔥 АВТОМАТИЧЕСКОЕ СОХРАНЕНИЕ В FIREBASE
+                    await saveUserItems();
+                    break;
+                }
+            }
+
+            if (!isUserItem) {
+                editsOverride[id] = { title: newTitle, url: newUrl, tooltip: newTooltip, image: newImage };
+                
+                // 🔥 АВТОМАТИЧЕСКОЕ СОХРАНЕНИЕ ПРАВОК В FIREBASE
+                await saveEditsOverride();
+            }
+
+            applyOverrideToLink(link, { title: newTitle, url: newUrl, tooltip: newTooltip, image: newImage });
+            
+            if (favoritesState[id]) {
+                favoritesState[id].title = newTitle;
+                favoritesState[id].url = newUrl;
+                favoritesState[id].tooltip = newTooltip;
+                await saveFavorites();
+                renderFavoritesList();
+            }
+
+            showToast('✅ Элемент обновлен и синхронизирован', 'success');
+            closeModal();
+            return;
+        }
+
+        // Добавление нового элемента
+        if (!currentAddContext) return;
+        
+        const title = document.getElementById('addFieldTitle').value.trim();
+        const url = document.getElementById('addFieldUrl').value.trim();
+        const tooltip = document.getElementById('addFieldTooltip').value.trim();
+        const image = normalizeImageUrl(document.getElementById('addFieldImage').value.trim());
+        const website = document.getElementById('addFieldWebsite').value.trim();
+        const twitter = document.getElementById('addFieldTwitter').value.trim();
+        const description = document.getElementById('addFieldDescription').value.trim();
+
+        if (currentAddContext.zone) {
+            if (!title || !url) {
+                alert('Название и URL обязательны!');
+                return;
+            }
+            
+            const config = currentAddContext.config;
+            const id = generateId();
+            const item = { 
+                id, title, url, tooltip, image, 
+                trackType: config.trackType, 
+                addedAt: Date.now() 
+            };
+            
+            if (!userItemsData.items[currentAddContext.zone]) {
+                userItemsData.items[currentAddContext.zone] = [];
+            }
+            userItemsData.items[currentAddContext.zone].push(item);
+            
+            newLinksSet.add(id);
+            knownLinksSet.add(id);
+            localStorage.setItem(NEW_LINKS_KEY, JSON.stringify([...newLinksSet]));
+            localStorage.setItem(KNOWN_LINKS_KEY, JSON.stringify([...knownLinksSet]));
+            
+            // 🔥 АВТОМАТИЧЕСКОЕ СОХРАНЕНИЕ В FIREBASE
+            await saveUserItems();
+            
+            renderUserItemInZone(currentAddContext.zone, item);
+            showToast('✅ Элемент добавлен и синхронизирован', 'success');
+            
+        } else if (currentAddContext.sectionZone) {
+            const sConfig = currentAddContext.config;
+            
+            if (sConfig.type === 'nft-collection') {
+                if (!title) {
+                    alert('Название обязательно!');
+                    return;
+                }
+                
+                const collId = generateId();
+                const coll = { 
+                    id: collId, 
+                    title, 
+                    website, 
+                    twitter, 
+                    parentZone: currentAddContext.sectionZone, 
+                    items: [],
+                    addedAt: Date.now()
+                };
+                
+                userItemsData.collections.push(coll);
+                ZONE_CONFIG[collId] = { 
+                    type: 'nft-item', 
+                    label: 'NFT в ' + title, 
+                    trackType: 'track-once' 
+                };
+                
+                // 🔥 АВТОМАТИЧЕСКОЕ СОХРАНЕНИЕ В FIREBASE
+                await saveUserItems();
+                
+                renderUserCollection(coll);
+                showToast('✅ Коллекция создана и синхронизирована', 'success');
+                
+            } else if (sConfig.type === 'dapp-category') {
+                if (!title) {
+                    alert('Название обязательно!');
+                    return;
+                }
+                
+                const catId = generateId();
+                const cat = { 
+                    id: catId, 
+                    title, 
+                    description, 
+                    parentZone: currentAddContext.sectionZone, 
+                    items: [],
+                    addedAt: Date.now()
+                };
+                
+                userItemsData.dappCategories.push(cat);
+                ZONE_CONFIG[catId] = { 
+                    type: 'link-item', 
+                    label: title, 
+                    trackType: 'track-daily' 
+                };
+                
+                // 🔥 АВТОМАТИЧЕСКОЕ СОХРАНЕНИЕ В FIREBASE
+                await saveUserItems();
+                
+                renderUserDappCategory(cat);
+                showToast('✅ Категория создана и синхронизирована', 'success');
+                
+            } else if (sConfig.type === 'deploy-group') {
+                if (!title) {
+                    alert('Название обязательно!');
+                    return;
+                }
+                
+                const grpId = generateId();
+                const grp = { 
+                    id: grpId, 
+                    title, 
+                    parentZone: currentAddContext.sectionZone, 
+                    items: [],
+                    addedAt: Date.now()
+                };
+                
+                userItemsData.collections.push(grp);
+                ZONE_CONFIG[grpId] = { 
+                    type: 'link-item', 
+                    label: title, 
+                    trackType: 'track-once track-once-info' 
+                };
+                
+                // 🔥 АВТОМАТИЧЕСКОЕ СОХРАНЕНИЕ В FIREBASE
+                await saveUserItems();
+                
+                renderUserDeployGroup(grp);
+                showToast('✅ Группа создана и синхронизирована', 'success');
             }
         }
-        if (!isUserItem) {
-            editsOverride[id] = { title: newTitle, url: newUrl, tooltip: newTooltip, image: newImage };
-            await saveEditsOverride();
-        }
-        applyOverrideToLink(link, { title: newTitle, url: newUrl, tooltip: newTooltip, image: newImage });
-        if (favoritesState[id]) {
-            favoritesState[id].title = newTitle; favoritesState[id].url = newUrl; favoritesState[id].tooltip = newTooltip;
-            await saveFavorites(); renderFavoritesList();
-        }
-        showToast('Обновлено: ' + newTitle, 'success');
-        closeModal(); initializeTooltips(); initLightbox(); return;
-    }
 
-    if (!currentAddContext) return;
-    const title = document.getElementById('addFieldTitle').value.trim();
-    const url = document.getElementById('addFieldUrl').value.trim();
-    const tooltip = document.getElementById('addFieldTooltip').value.trim();
-    const image = normalizeImageUrl(document.getElementById('addFieldImage').value.trim());
-    const website = document.getElementById('addFieldWebsite').value.trim();
-    const twitter = document.getElementById('addFieldTwitter').value.trim();
-    const description = document.getElementById('addFieldDescription').value.trim();
-
-    if (currentAddContext.zone) {
-        if (!title || !url) { alert('Название и URL обязательны!'); return; }
-      if (isItemAlreadyExists(currentAddContext.zone, url, title)) {
-        alert('Элемент с таким названием или URL уже существует!');
-        return;
+        closeModal();
+        bindTrackingHandlersToAll();
+        attachFavoriteControls();
+        initializeTooltips();
+        initLightbox();
+        updateUI();
+        detectNewLinks();
+        
+    } catch (error) {
+        console.error('Save error:', error);
+        showToast('❌ Ошибка сохранения: ' + error.message, 'error');
+    } finally {
+        // Восстанавливаем кнопку
+        saveBtn.disabled = false;
+        saveBtn.textContent = originalText;
     }
-        const config = currentAddContext.config; const id = generateId();
-        const item = { id, title, url, tooltip, image, trackType: config.trackType, addedAt: Date.now() };
-        if (!userItemsData.items[currentAddContext.zone]) userItemsData.items[currentAddContext.zone] = [];
-        userItemsData.items[currentAddContext.zone].push(item);
-        newLinksSet.add(id);
-    knownLinksSet.add(id);
-    localStorage.setItem(NEW_LINKS_KEY, JSON.stringify([...newLinksSet]));
-    localStorage.setItem(KNOWN_LINKS_KEY, JSON.stringify([...knownLinksSet]));
-        await saveUserItems(); renderUserItemInZone(currentAddContext.zone, item);
-        showToast('Добавлено: ' + title, 'success');
-    } else if (currentAddContext.sectionZone) {
-        const sConfig = currentAddContext.config;
-        if (sConfig.type === 'nft-collection') {
-            if (!title) { alert('Название обязательно!'); return; }
-            const collId = generateId();
-            const coll = { id: collId, title, website, twitter, parentZone: currentAddContext.sectionZone, items: [] };
-            userItemsData.collections.push(coll);
-            ZONE_CONFIG[collId] = { type:'nft-item', label:'NFT в '+title, trackType:'track-once' };
-            await saveUserItems(); renderUserCollection(coll);
-            showToast('Коллекция создана: ' + title, 'success');
-        } else if (sConfig.type === 'dapp-category') {
-            if (!title) { alert('Название обязательно!'); return; }
-            const catId = generateId();
-            const cat = { id: catId, title, description, parentZone: currentAddContext.sectionZone, items: [] };
-            userItemsData.dappCategories.push(cat);
-            ZONE_CONFIG[catId] = { type:'link-item', label: title, trackType:'track-daily' };
-            await saveUserItems(); renderUserDappCategory(cat);
-            showToast('Категория создана: ' + title, 'success');
-        } else if (sConfig.type === 'deploy-group') {
-            if (!title) { alert('Название обязательно!'); return; }
-            const grpId = generateId();
-            const grp = { id: grpId, title, parentZone: currentAddContext.sectionZone, items: [] };
-            userItemsData.collections.push(grp);
-            ZONE_CONFIG[grpId] = { type:'link-item', label: title, trackType:'track-once track-once-info' };
-            await saveUserItems(); renderUserDeployGroup(grp);
-            showToast('Группа создана: ' + title, 'success');
-        }
-    }
-    closeModal();
-    bindTrackingHandlersToAll(); attachFavoriteControls(); initializeTooltips(); initLightbox(); updateUI();detectNewLinks();
 });
 
 // ---- RENDER USER ITEMS ----
@@ -2283,18 +2481,48 @@ function createUserLink(item, zone) {
     delBtn.type = 'button'; delBtn.className = 'user-item-delete admin-only';
     delBtn.title = 'Удалить'; delBtn.innerHTML = '×';
     delBtn.addEventListener('click', async (e) => {
-        e.stopPropagation();
-        if (!confirm(`Удалить «${item.title}»?`)) return;
-        if (userItemsData.items[zone]) userItemsData.items[zone] = userItemsData.items[zone].filter(i => i.id !== item.id);
-        userItemsData.collections.forEach(c => { if (c.items) c.items = c.items.filter(i => i.id !== item.id); });
-        userItemsData.dappCategories.forEach(c => { if (c.items) c.items = c.items.filter(i => i.id !== item.id); });
-        await saveUserItems(); wrapper.remove();
-        if (favoritesState[item.id]) {
-            delete favoritesState[item.id]; favoritesOrder = favoritesOrder.filter(x => x !== item.id);
-            await saveFavorites(); refreshAllVisuals();
+    e.stopPropagation();
+    if (!confirm(`Удалить «${item.title}»?`)) return;
+    
+    // Показываем процесс удаления
+    delBtn.disabled = true;
+    delBtn.innerHTML = '⏳';
+    
+    try {
+        // Удаляем из локальных данных
+        if (userItemsData.items[zone]) {
+            userItemsData.items[zone] = userItemsData.items[zone].filter(i => i.id !== item.id);
         }
-        showToast(`Удалено: ${item.title}`, 'info');
-    });
+        userItemsData.collections.forEach(c => {
+            if (c.items) c.items = c.items.filter(i => i.id !== item.id);
+        });
+        userItemsData.dappCategories.forEach(c => {
+            if (c.items) c.items = c.items.filter(i => i.id !== item.id);
+        });
+        
+        // 🔥 АВТОМАТИЧЕСКОЕ СОХРАНЕНИЕ В FIREBASE
+        await saveUserItems();
+        
+        // Удаляем из DOM
+        wrapper.remove();
+        
+        // Удаляем из избранного, если есть
+        if (favoritesState[item.id]) {
+            delete favoritesState[item.id];
+            favoritesOrder = favoritesOrder.filter(x => x !== item.id);
+            await saveFavorites();
+            refreshAllVisuals();
+        }
+        
+        showToast(`✅ Удалено и синхронизировано: ${item.title}`, 'info');
+    } catch (error) {
+        console.error('Delete error:', error);
+        showToast('❌ Ошибка удаления: ' + error.message, 'error');
+        // Восстанавливаем кнопку при ошибке
+        delBtn.disabled = false;
+        delBtn.innerHTML = '×';
+    }
+});
     wrapper.appendChild(delBtn); return wrapper;
 }
 
@@ -2524,21 +2752,18 @@ function loadEditsOverride() {
 }
 
 async function saveEditsOverride() {
-    // Сохраняем локально
+    // 1. Локальное сохранение
     localStorage.setItem(EDITS_OVERRIDE_KEY, JSON.stringify(editsOverride));
     
-    // Синхронизируем с Firebase только для админа
-    if (isAdmin && currentUser) {
+    // 2. Сохранение в Firebase
+    if (currentUser) {
         try {
-            // 🔥 Используем merge: true
-            await setDoc(doc(db, "config", "sharedEdits"), { 
-                editsOverride,
-                lastUpdated: new Date().toISOString()
-            }, { merge: true });
-            
-            console.log("✅ Edits override saved to Firebase successfully");
-        } catch (e) { 
-            console.error("❌ Save shared edits error:", e); 
+            await saveToCloud({ 
+                editsOverride: editsOverride,
+                editsTimestamp: Date.now()
+            });
+        } catch (e) {
+            console.error("Firebase edits save error:", e);
         }
     }
 }
