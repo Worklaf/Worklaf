@@ -754,17 +754,6 @@ body.light-theme .monitor-item {
     opacity: 0.5;
     cursor: not-allowed;
 }
-		.monitor-status-info {
-    background: rgba(59,130,246,0.12);
-    border-color: rgba(59,130,246,0.3);
-    color: #60a5fa;
-}
-
-.monitor-status-info:hover {
-    background: rgba(59,130,246,0.2);
-    border-color: rgba(59,130,246,0.5);
-    color: #fff;
-}
     </style>
 </head>
 <body>
@@ -845,8 +834,8 @@ body.light-theme .monitor-item {
     </div>
     <ul class="monitor-list" id="monitorList"></ul>
     <button type="button" class="monitor-refresh-btn" id="monitorRefreshBtn">
-    <i class="fas fa-redo"></i> Обновить через GitHub Actions
-</button>
+        <i class="fas fa-redo"></i> Обновить
+    </button>
 </div>
         <div class="sidebar-controls">
             <button class="theme-toggle-btn" id="themeToggleBtn" type="button"><i class="fas fa-sun"></i> Светлая тема</button>
@@ -1860,91 +1849,7 @@ if (!isDataLoaded) {
     isDataLoaded = true;
 }
 });
-function initTwitterMonitor() {
-    if (!isAdmin) return;
 
-    const refreshBtn = document.getElementById('monitorRefreshBtn');
-
-    if (!refreshBtn) return;
-	// Показываем статус последнего запуска при загрузке
-    showWorkflowStatus();
-
-    // 🔥 Загружаем данные при старте
-    loadTwitterResults();
-
-    // 🔥 Кнопка обновления
-    refreshBtn.addEventListener('click', async () => {
-        const originalHTML = refreshBtn.innerHTML;
-        refreshBtn.disabled = true;
-        refreshBtn.innerHTML = '<i class="fas fa-sync-alt fa-spin"></i> Запуск GitHub Actions...';
-
-        const success = await triggerGitHubActions();
-
-        if (success) {
-            // Показываем вращающийся индикатор ожидания
-            refreshBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Ожидание данных...';
-
-            // Пытаемся загрузить данные каждые 10 секунд (максимум 6 раз = 1 минута)
-            let attempts = 0;
-            const maxAttempts = 6;
-
-            const checkInterval = setInterval(async () => {
-                if (attempts >= maxAttempts) {
-                    clearInterval(checkInterval);
-                    refreshBtn.disabled = false;
-                    refreshBtn.innerHTML = originalHTML;
-                    showToast('⏱️ Время ожидания истекло. Попробуйте позже.', 'error');
-                    return;
-                }
-
-                attempts++;
-
-                try {
-                    const response = await fetch('twitter_results.json?' + Date.now());
-
-                    if (response.ok) {
-                        clearInterval(checkInterval);
-                        await loadTwitterResults();
-                        refreshBtn.disabled = false;
-                        refreshBtn.innerHTML = originalHTML;
-                        showToast('✅ Данные обновлены из GitHub Actions!', 'success');
-                    } else {
-                        console.log(`Попытка ${attempts}: данные еще не готовы`);
-                    }
-                } catch (e) {
-                    console.log(`Попытка ${attempts}: ошибка загрузки`, e);
-                }
-            }, 10000);
-        } else {
-            refreshBtn.disabled = false;
-            refreshBtn.innerHTML = originalHTML;
-        }
-    });
-
-    // 🔥 Автообновление каждые 5 минут
-    setInterval(loadTwitterResults, 5 * 60 * 1000);
-
-    // 🔥 Кнопка "Показать статус GitHub Actions"
-    const statusBtn = document.createElement('button');
-    statusBtn.type = 'button';
-    statusBtn.className = 'monitor-refresh-btn';
-    statusBtn.innerHTML = '<i class="fas fa-info-circle"></i> Статус GitHub Actions';
-    statusBtn.addEventListener('click', async () => {
-        await showWorkflowStatus();
-    });
-
-    // Добавляем кнопку после основной кнопки обновления
-    refreshBtn.parentNode.insertBefore(statusBtn, refreshBtn.nextSibling);
-}
-	// Конфигурация прокси
-const GITHUB_API_PROXY = 'https://api.allorigins.win/raw?url=';
-// или ваш собственный CORS прокси
-
-async function githubApiFetch(url) {
-    const fullUrl = GITHUB_API_PROXY + encodeURIComponent(url);
-    const response = await fetch(fullUrl);
-    return response.json();
-}
 // ===== HELPERS =====
 function getBaseClasses(link) {
     if (!link) return ['link-inline'];
@@ -3281,56 +3186,128 @@ if (isDataLoaded) {
     initializeTooltips(); updateBadgeVisibility();
 });
    // ============================================================
-let cachedGithubPAT = null; // PAT хранится только в памяти сессии
+//  TWITTER MONITOR (Загрузка из JSON)
+// ============================================================
 
-async function getGithubPAT() {
-    if (cachedGithubPAT) return cachedGithubPAT;
-    const token = prompt(
-        'Введите GitHub Personal Access Token\n' +
-        '(нужны права: workflow)\n\n' +
-        'Токен НЕ сохраняется на диск.'
-    );
-    if (token && token.trim()) {
-        cachedGithubPAT = token.trim();
-    }
-    return cachedGithubPAT;
-}
-
-async function triggerGitHubActions() {
+async function loadTwitterResults() {
+    const list = document.getElementById('monitorList');
+    const status = document.getElementById('monitorStatus');
+    const badge = document.getElementById('monitorBadge');
+    
+    if (!list || !status || !badge) return;
+    
     try {
-        const token = await getGithubPAT();
-        if (!token) {
-            showToast('❌ Токен не введён', 'error');
-            return false;
+        // 🔥 Добавляем timestamp чтобы избежать кэширования
+        const response = await fetch('twitter_results.json?' + Date.now());
+        
+        if (!response.ok) {
+            throw new Error(`HTTP ${response.status}`);
         }
-
-        const response = await fetch(
-            `https://api.github.com/repos/${GITHUB_OWNER}/${GITHUB_REPO}/actions/workflows/twitter-parser.yml/dispatches`,
-            {
-                method: 'POST',
-                headers: {
-                    'Authorization': `Bearer ${token}`,
-                    'Accept': 'application/vnd.github.v3+json',
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify({ ref: GITHUB_BRANCH })
+        
+        const data = await response.json();
+        
+        if (data.nfts && data.nfts.length > 0) {
+            list.innerHTML = '';
+            
+            // 🔥 Сортируем по времени (новые первые)
+            const sortedNfts = [...data.nfts].sort((a, b) => {
+                const timeA = new Date(a.datetime || 0).getTime();
+                const timeB = new Date(b.datetime || 0).getTime();
+                return timeB - timeA; // Новые сверху
+            });
+            
+            sortedNfts.forEach(nft => {
+                const li = document.createElement('li');
+                li.className = 'monitor-item';
+                
+                // 🔥 Безопасное получение времени
+                let timeAgo = 'недавно';
+                try {
+                    if (nft.time_ago) {
+                        // Используем готовое значение из Python
+                        timeAgo = nft.time_ago;
+                    } else if (nft.datetime) {
+                        const date = new Date(nft.datetime);
+                        if (!isNaN(date.getTime())) {
+                            timeAgo = getTimeAgo(date);
+                        }
+                    }
+                } catch (e) {
+                    console.error('Time parsing error:', e);
+                }
+                
+                // 🔥 Безопасное получение ссылки
+                const tweetUrl = nft.url || `https://twitter.com/${nft.twitter}`;
+                
+                // 🔥 Безопасное получение текста
+                const tweetText = (nft.text || 'NFT пост').substring(0, 120);
+                const truncated = (nft.text || '').length > 120 ? '...' : '';
+                
+                // 🔥 Название проекта с эмодзи
+                const projectEmoji = {
+                    'morkie': '🐾',
+                    'clara': '✨',
+                    'oku': '🌸',
+                    'mintaura': '💫',
+                    'arkle': '🎨',
+                    'draze': '🌙',
+                    'caset': '🎵',
+                    'alze': '⚡'
+                };
+                const emoji = projectEmoji[nft.project] || '🆕';
+                const projectName = nft.project.charAt(0).toUpperCase() + nft.project.slice(1);
+                
+                li.innerHTML = `
+                    <div class="monitor-item-header">
+                        <span class="monitor-item-project">${emoji} ${projectName}</span>
+                        <span class="monitor-item-time">${timeAgo}</span>
+                    </div>
+                    <div class="monitor-item-text">${tweetText}${truncated}</div>
+                    <div style="display: flex; gap: 12px; margin-top: 8px; align-items: center;">
+                        <a href="${tweetUrl}" target="_blank" rel="noopener" class="monitor-item-link">
+                            <i class="fab fa-twitter"></i> Открыть твит
+                        </a>
+                        ${nft.likes ? `<span style="font-size: 0.75rem; color: #64748b;">❤️ ${nft.likes}</span>` : ''}
+                        ${nft.retweets ? `<span style="font-size: 0.75rem; color: #64748b;">🔁 ${nft.retweets}</span>` : ''}
+                    </div>
+                `;
+                
+                list.appendChild(li);
+            });
+            
+            badge.textContent = sortedNfts.length;
+            badge.classList.remove('empty');
+            
+            // 🔥 Обновляем статус с последним временем проверки
+            if (data.timestamp) {
+                try {
+                    const lastCheck = new Date(data.timestamp);
+                    if (!isNaN(lastCheck.getTime())) {
+                        const checkTime = lastCheck.toLocaleString('ru', {
+                            day: '2-digit',
+                            month: '2-digit',
+                            hour: '2-digit',
+                            minute: '2-digit'
+                        });
+                        status.innerHTML = `<i class="fas fa-check-circle"></i> Обновлено: ${checkTime}`;
+                        status.style.color = '#22c55e';
+                    }
+                } catch(e) {
+                    status.innerHTML = '<i class="fas fa-check-circle"></i> Данные загружены';
+                    status.style.color = '#22c55e';
+                }
+            } else {
+                status.innerHTML = '<i class="fas fa-check-circle"></i> Данные загружены';
+                status.style.color = '#22c55e';
             }
-        );
-
-        // GitHub возвращает 204 No Content при успехе
-        if (response.ok) {
-            showToast('🚀 GitHub Actions запущен! Данные обновятся через ~1 мин', 'success');
-            return true;
+            
         } else {
-            const err = await response.json().catch(() => ({ message: response.statusText }));
-            // Если 401 — токен неверный, сбрасываем кэш
-            if (response.status === 401) cachedGithubPAT = null;
-            throw new Error(`${response.status}: ${err.message || 'Unknown error'}`);
+            showEmptyState();
         }
+        
     } catch (error) {
-        console.error('GitHub Actions trigger error:', error);
-        showToast('❌ Ошибка запуска Actions: ' + error.message, 'error');
-        return false;
+        console.error('Twitter results load error:', error);
+        showEmptyState();
     }
 }
 
@@ -3385,39 +3362,76 @@ function getTimeAgo(date) {
     return `${weeks} нед назад`;
 }
 
-
-	// Получает последний запуск workflow
-async function getLastWorkflowRun() {
+// Обновляем инициализацию монитора
+function initTwitterMonitor() {
+    if (!isAdmin) return;
+    
+    const refreshBtn = document.getElementById('monitorRefreshBtn');
+    if (!refreshBtn) return;
+    
+    // Загружаем данные при старте
+    loadTwitterResults();
+    
+    // Назначаем новый обработчик
+    refreshBtn.addEventListener('click', runLocalParser);
+    
+    // Автообновление данных каждые 5 минут
+    setInterval(loadTwitterResults, 5 * 60 * 1000);
+}
+// Новая функция для запуска .bat файла
+// Новая функция для запуска парсера
+async function runLocalParser() {
+    const refreshBtn = document.getElementById('monitorRefreshBtn');
+    if (!refreshBtn) return;
+    
+    const originalText = refreshBtn.innerHTML;
+    refreshBtn.disabled = true;
+    refreshBtn.innerHTML = '<i class="fas fa-sync-alt fa-spin"></i> Запуск парсера...';
+    
     try {
-        const token = await getGithubPAT();
-        if (!token) return null;
-
-        const response = await fetch(
-            `https://api.github.com/repos/${GITHUB_OWNER}/${GITHUB_REPO}/actions/runs?per_page=1`,
-            {
-                headers: {
-                    'Authorization': `Bearer ${token}`,
-                    'Accept': 'application/vnd.github.v3+json'
-                }
-            }
+        // 1. Инициируем запуск парсера (эмулируем поведение запуска батника)
+        showToast('⚠️ Запустите run_parser.bat вручную', 'info');
+        
+        // 2. Показываем инструкцию (альтернатива реальному запуску)
+        const confirmLaunch = confirm(
+            'После закрытия этого окна:\n' +
+            '1. Откройте папку с twitter_parser.py\n' +
+            '2. Запустите файл run_parser.bat\n' +
+            '3. Вернитесь на эту страницу\n\n' +
+            'Нажмите OK для продолжения'
         );
-        if (!response.ok) return null;
-        const data = await response.json();
-        return data.workflow_runs?.[0] || null;
-    } catch (e) {
-        console.error('Get last workflow error:', e);
-        return null;
+        
+        if (confirmLaunch) {
+            // 3. После ручного запуска ждем и проверяем обновления
+            let checksLeft = 12; // 12 попыток с интервалом 5 сек = 1 минута
+            const checkInterval = setInterval(async () => {
+                try {
+                    await loadTwitterResults();
+                    checksLeft--;
+                    
+                    if (checksLeft <= 0) {
+                        clearInterval(checkInterval);
+                        refreshBtn.disabled = false;
+                        refreshBtn.innerHTML = originalText;
+                        showToast('✅ Проверка обновлений завершена', 'success');
+                    }
+                } catch (e) {
+                    console.error('Update check error:', e);
+                }
+            }, 5000);
+        } else {
+            refreshBtn.disabled = false;
+            refreshBtn.innerHTML = originalText;
+        }
+    } catch (error) {
+        console.error('Parser run error:', error);
+        refreshBtn.disabled = false;
+        refreshBtn.innerHTML = originalText;
+        showToast('❌ Ошибка: ' + error.message, 'error');
     }
 }
 
-async function showWorkflowStatus() {
-    const run = await getLastWorkflowRun();
-    if (!run) return;
-    const map = { success: '✅ Успешно', failure: '❌ Ошибка', in_progress: '🔄 Выполняется' };
-    const status = map[run.conclusion || run.status] || run.status;
-    showToast(`GitHub Actions: ${status}`, 'info');
-}
-console.log('Script loaded successfully');
+
 </script>
 <!-- ====== LOGIN MODAL ====== -->
 <div id="loginModal" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.8); backdrop-filter:blur(8px); z-index:1000; align-items:center; justify-content:center; padding:20px;">
@@ -3450,4 +3464,4 @@ console.log('Script loaded successfully');
   </div>
 </div>
 </body>
-</html> 
+</html>
