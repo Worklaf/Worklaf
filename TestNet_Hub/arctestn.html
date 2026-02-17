@@ -1163,7 +1163,7 @@ import {
   signOut, onAuthStateChanged
 } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
 import {
-  getFirestore, doc, setDoc, getDoc, onSnapshot
+  getFirestore, doc, setDoc, getDoc
 } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
 const firebaseConfig = {
@@ -1187,37 +1187,23 @@ let arcData = {};
 let favoritesState = {};
 let favoritesOrder = [];
 
-// ===== БАЗОВЫЕ КОНСТАНТЫ (БЕЗ ИЗМЕНЕНИЙ) =====
-// ===== КОНСТАНТЫ =====
 const STORAGE_KEY = 'arc_tracker_v3';
 const BADGE_VISIBILITY_KEY = 'arc_tracker_badges_hidden';
 const SECTION_COLLAPSE_KEY = 'arc_tracker_sections';
+const KNOWN_LINKS_KEY = 'arc_tracker_known_links_v2';
+const NEW_LINKS_KEY = 'arc_tracker_new_links_v2';
+const PAGE_VERSION_KEY = 'arc_tracker_page_version_v2';
 const LEGEND_COLLAPSE_KEY = 'arc_tracker_legend_collapsed';
 const FAVORITES_KEY = 'arc_tracker_favorites_v1';
 const FAVORITES_ORDER_KEY = 'arc_tracker_favorites_order_v1';
 const FAVORITES_TIMESTAMP_KEY = 'arc_tracker_favorites_timestamp_v1';
 const THEME_KEY = 'arc_tracker_theme';
-const PAGE_VERSION = '2026-02-17-v5';
-const GITHUB_OWNER = 'Worklaf';
-const GITHUB_REPO = 'Worklaf';
-const GITHUB_BRANCH = 'main';
+const PAGE_VERSION = '2026-02-14-v4';
+const GITHUB_OWNER = 'Worklaf';      // ваш GitHub логин
+const GITHUB_REPO = 'Worklaf';       // ваш репозиторий
+const GITHUB_BRANCH = 'main';        // если у вас master — замените на 'master'
 
-// ===== NEW СИСТЕМА =====
-const CONFIG_COLLECTION = 'config';
-const SHARED_ITEMS_DOC = 'shared_items';
-const SHARED_EDITS_DOC = 'shared_edits';  
-const NEW_INDICATORS_DOC = 'new_indicators_global';
-const NEW_INDICATORS_KEY = 'arc_tracker_new_indicators_v2';
-	const KNOWN_LINKS_KEY = 'arc_tracker_known_links_v2'; 
-const NEW_LINKS_KEY = 'arc_tracker_new_links_v2';
-const PAGE_VERSION_KEY = 'arc_tracker_page_version_v2';
-
-let newIndicatorsState = {
-    globalNew: new Set(),
-    clickedByUser: new Set(),
-    lastSync: 0
-};
-
+// Пути файлов в репозитории (от корня репо)
 const GITHUB_ITEMS_PATH = 'TestNet_Hub/data/arc_shared_items.json';
 const GITHUB_EDITS_PATH = 'TestNet_Hub/data/arc_shared_edits.json';
 	// Получить sha файла в репозитории (нужно для PUT в GitHub API)
@@ -1717,69 +1703,7 @@ async function saveToCloud(data) {
     try { await setDoc(doc(db, "users", currentUser.uid), data, { merge: true }); }
     catch (e) { console.error("Cloud save error:", e); }
 }
-// 🔥 НОВАЯ функция сохранения в config коллекцию
-async function saveToConfig(docId, data) {
-    if (!currentUser || !isAdmin) return;
-    
-    try {
-        await setDoc(doc(db, CONFIG_COLLECTION, docId), {
-            ...data,
-            lastUpdated: Date.now(),
-            updatedBy: currentUser.uid
-        }, { merge: true });
-        console.log(`✅ Saved to config/${docId}`);
-    } catch (e) {
-        console.error(`Config save error for ${docId}:`, e);
-        throw e;
-    }
-}
 
-// 🔥 ЗАГРУЗКА из config коллекции
-async function loadFromConfig() {
-    try {
-        // 1. Загружаем общие элементы
-        const sharedItemsRef = doc(db, CONFIG_COLLECTION, SHARED_ITEMS_DOC);
-        const sharedItemsSnap = await getDoc(sharedItemsRef);
-        
-        if (sharedItemsSnap.exists()) {
-            const data = sharedItemsSnap.data();
-            userItemsData = {
-                items: data.items || {},
-                collections: data.collections || [],
-                dappCategories: data.dappCategories || []
-            };
-            localStorage.setItem(USER_ITEMS_KEY, JSON.stringify(userItemsData));
-            console.log('✅ Loaded shared items from config');
-        }
-        
-        // 2. Загружаем правки
-        const editsRef = doc(db, CONFIG_COLLECTION, SHARED_EDITS_DOC);
-        const editsSnap = await getDoc(editsRef);
-        
-        if (editsSnap.exists()) {
-            const data = editsSnap.data();
-            editsOverride = data.editsOverride || {};
-            localStorage.setItem(EDITS_OVERRIDE_KEY, JSON.stringify(editsOverride));
-            console.log('✅ Loaded shared edits from config');
-        }
-        
-        // 3. 🔥 Загружаем глобальные NEW элементы
-        const newIndicatorsRef = doc(db, CONFIG_COLLECTION, NEW_INDICATORS_DOC);
-        const newIndicatorsSnap = await getDoc(newIndicatorsRef);
-        
-        if (newIndicatorsSnap.exists()) {
-            const data = newIndicatorsSnap.data();
-            newIndicatorsState.globalNew = new Set(data.globalNew || []);
-            console.log('✅ Loaded global NEW indicators from config');
-        }
-        
-    } catch (e) {
-        console.error("Config load error:", e);
-        // Fallback к локальной загрузке
-        loadUserItems();
-        loadEditsOverride();
-    }
-}
 async function saveStats() {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(arcData));
     if (currentUser) await saveToCloud({ arcGuideStats: arcData });
@@ -1831,47 +1755,38 @@ window.handleRegister = async function() {
 window.logout = function() { signOut(auth); };
 // ===== SHARED DATA — админские элементы видны всем =====
 async function loadSharedData() {
-    console.log('🔄 Loading shared data from config collection...');
-    
+    // 1) Пытаемся загрузить общие элементы из GitHub
     try {
-        // 🔥 Приоритет: Firebase config коллекция
-        await loadFromConfig();
-    } catch (configError) {
-        console.log('⚠️ Config load failed, trying GitHub fallback...', configError);
-        
-        // Fallback: GitHub JSON файлы
-        try {
-            const itemsResp = await fetch('arc_shared_items.json?' + Date.now());
-            if (itemsResp.ok) {
-                const data = await itemsResp.json();
-                userItemsData = {
-                    items: data.items || {},
-                    collections: data.collections || [],
-                    dappCategories: data.dappCategories || []
-                };
-                localStorage.setItem(USER_ITEMS_KEY, JSON.stringify(userItemsData));
-            } else {
-                loadUserItems();
-            }
-        } catch (e) {
-            console.error("GitHub fallback failed:", e);
+        const itemsResp = await fetch('arc_shared_items.json?' + Date.now());
+        if (itemsResp.ok) {
+            const data = await itemsResp.json();
+            userItemsData = {
+                items: data.items || {},
+                collections: data.collections || [],
+                dappCategories: data.dappCategories || []
+            };
+            localStorage.setItem(USER_ITEMS_KEY, JSON.stringify(userItemsData));
+        } else {
             loadUserItems();
         }
+    } catch (e) {
+        console.error("Load shared items error:", e);
+        loadUserItems();
+    }
 
-        // Правки
-        try {
-            const editsResp = await fetch('arc_shared_edits.json?' + Date.now());
-            if (editsResp.ok) {
-                const data = await editsResp.json();
-                editsOverride = data.editsOverride || {};
-                localStorage.setItem(EDITS_OVERRIDE_KEY, JSON.stringify(editsOverride));
-            } else {
-                loadEditsOverride();
-            }
-        } catch (e) {
-            console.error("GitHub edits fallback failed:", e);
+    // 2) Загружаем правки
+    try {
+        const editsResp = await fetch('arc_shared_edits.json?' + Date.now());
+        if (editsResp.ok) {
+            const data = await editsResp.json();
+            editsOverride = data.editsOverride || {};
+            localStorage.setItem(EDITS_OVERRIDE_KEY, JSON.stringify(editsOverride));
+        } else {
             loadEditsOverride();
         }
+    } catch (e) {
+        console.error("Load shared edits error:", e);
+        loadEditsOverride();
     }
 }
 let isDataLoaded = false;
@@ -1887,8 +1802,8 @@ onAuthStateChanged(auth, async (user) => {
         loggedIn.style.display = '';
         nameEl.textContent = user.displayName || user.email?.split('@')[0] || 'User';
         checkAdmin(user);
-		
-        initNewIndicatorsRealtime();
+        
+        // Запуск мониторинга для админа
         if (user.uid === ADMIN_UID) {
             setTimeout(initTwitterMonitor, 1000);
         }
@@ -1898,11 +1813,10 @@ onAuthStateChanged(auth, async (user) => {
         checkAdmin(null);
     }
     
-    // 🔥 НОВАЯ последовательность загрузки данных
+    // 🔥 ЗАГРУЖАЕМ ДАННЫЕ ТОЛЬКО ОДИН РАЗ
     if (!isDataLoaded) {
-        await loadSharedData();          // Загружаем из config/GitHub
-        await loadNewIndicators();       // 🔥 Загружаем NEW состояние  
-        await loadAllData();             // Загружаем персональные данные
+        await loadSharedData();
+        await loadAllData();
         renderAllUserItems();
         isDataLoaded = true;
     }
@@ -2081,13 +1995,9 @@ function bindTrackingHandler(el) {
 function bindTrackingHandlersToAll() { document.querySelectorAll('.track-daily, .track-once').forEach(bindTrackingHandler); }
 
 function handleClick(e) {
-    const btn = e.currentTarget; 
-    const id = btn.getAttribute('data-id');
+    const btn = e.currentTarget; const id = btn.getAttribute('data-id');
     if (!id) return;
-    
-    // 🔥 Используем новую систему для проверки и очистки NEW
-    if (newIndicatorsState.globalNew.has(id) && !newIndicatorsState.clickedByUser.has(id)) {
-        clearNewLink(id);
+    if (newLinksSet.has(id)) clearNewLink(id);
     const now = new Date().toISOString();
     if (!arcData[id]) arcData[id] = {};
     if (btn.classList.contains('track-daily')) {
@@ -2158,142 +2068,38 @@ function detectNewLinks() {
     updateNewIndicators();
 }
 
-// 🔥 ОБНОВЛЕННАЯ функция с синхронизацией между устройствами
 function updateNewIndicators() {
     document.querySelectorAll('[data-id]').forEach(el => {
         const id = el.dataset.id;
-        
-        // 🔥 Показываем NEW, только если:
-        // 1. Элемент глобально новый (из config) И
-        // 2. Пользователь на него ещё не кликал
-        const shouldShowNew = newIndicatorsState.globalNew.has(id) && 
-                             !newIndicatorsState.clickedByUser.has(id);
-        
-        if (shouldShowNew) {
-            el.setAttribute('data-new', 'true');
-            el.classList.add('has-new-flag');
-            
+        if (id && newLinksSet.has(id)) {
+            el.setAttribute('data-new', 'true'); el.classList.add('has-new-flag');
             if (!el.querySelector('.new-flag')) {
                 const flag = document.createElement('span');
-                flag.className = 'new-flag';
-                flag.innerHTML = '<span class="new-flag-text">New!</span>';
+                flag.className = 'new-flag'; flag.innerHTML = '<span class="new-flag-text">New!</span>';
                 el.appendChild(flag);
             }
         } else {
-            el.removeAttribute('data-new');
-            el.classList.remove('has-new-flag');
-            const flag = el.querySelector('.new-flag');
-            if (flag) flag.remove();
+            el.removeAttribute('data-new'); el.classList.remove('has-new-flag');
+            const f = el.querySelector('.new-flag'); if (f) f.remove();
         }
     });
-    
     updateSectionBadges();
 }
 
-// 🔥 УЛУЧШЕННАЯ функция с синхронизацией между устройствами
-async function clearNewLink(id) {
-    // 1. Добавляем в кликнутые этим пользователем
-    newIndicatorsState.clickedByUser.add(id);
-    newIndicatorsState.lastSync = Date.now();
+function clearNewLink(id) {
+    newLinksSet.delete(id);
+    localStorage.setItem(NEW_LINKS_KEY, JSON.stringify([...newLinksSet]));
     
-    // 2. Сохраняем локально
-    const saveData = {
-        globalNew: [...newIndicatorsState.globalNew],
-        clickedByUser: [...newIndicatorsState.clickedByUser],
-        lastSync: newIndicatorsState.lastSync
-    };
-    localStorage.setItem(NEW_INDICATORS_KEY, JSON.stringify(saveData));
-    
-    // 3. 🔥 Сохраняем в Firebase для синхронизации между устройствами
-    if (currentUser) {
-        try {
-            await saveToCloud({ 
-                newIndicators: saveData,
-                newIndicatorsTimestamp: newIndicatorsState.lastSync
-            });
-            console.log('✅ NEW click synced to cloud');
-        } catch (e) {
-            console.error("NEW click sync error:", e);
-        }
-    }
-    
-    // 4. Обновляем UI
-    updateNewIndicators();
-    
-    showToast('🔄 Отметка "NEW" синхронизирована между устройствами', 'info');
-}
-// 🔥 НОВАЯ функция загрузки NEW состояния
-async function loadNewIndicators() {
-    // Загружаем локальные данные
-    const localData = JSON.parse(localStorage.getItem(NEW_INDICATORS_KEY) || '{}');
-    
-    newIndicatorsState = {
-        globalNew: new Set(localData.globalNew || []),
-        clickedByUser: new Set(localData.clickedByUser || []),
-        lastSync: localData.lastSync || 0
-    };
-    
-    // Синхронизируем с облаком если пользователь авторизован
-    if (currentUser) {
-        try {
-            const docRef = doc(db, "users", currentUser.uid);
-            const docSnap = await getDoc(docRef);
-            
-            if (docSnap.exists()) {
-                const cloudData = docSnap.data();
-                
-                if (cloudData.newIndicators) {
-                    const cloudTs = cloudData.newIndicatorsTimestamp || 0;
-                    const localTs = newIndicatorsState.lastSync;
-                    
-                    if (cloudTs > localTs) {
-                        // Облачные данные новее — берем их
-                        newIndicatorsState = {
-                            globalNew: new Set(cloudData.newIndicators.globalNew || []),
-                            clickedByUser: new Set(cloudData.newIndicators.clickedByUser || []),
-                            lastSync: cloudTs
-                        };
-                        localStorage.setItem(NEW_INDICATORS_KEY, JSON.stringify(cloudData.newIndicators));
-                        
-                        showToast('🔄 NEW-индикаторы синхронизированы из облака', 'info');
-                    }
-                }
-            }
-        } catch (e) {
-            console.error("NEW indicators sync error:", e);
-        }
+    // === NEW: запоминаем что пользователь кликнул этот элемент ===
+    const clicked = JSON.parse(localStorage.getItem('arc_tracker_clicked_new') || '[]');
+    if (!clicked.includes(id)) {
+        clicked.push(id);
+        localStorage.setItem('arc_tracker_clicked_new', JSON.stringify(clicked));
     }
     
     updateNewIndicators();
 }
-	// 🔥 РЕАЛ-ТАЙМ синхронизация NEW индикаторов
-function initNewIndicatorsRealtime() {
-    if (!currentUser) return;
-    
-    // Слушаем изменения глобальных NEW элементов
-    const newIndicatorsRef = doc(db, CONFIG_COLLECTION, NEW_INDICATORS_DOC);
-    
-    const unsubscribe = onSnapshot(newIndicatorsRef, (doc) => {
-        if (doc.exists()) {
-            const data = doc.data();
-            const globalNew = new Set(data.globalNew || []);
-            
-            // Проверяем, есть ли изменения
-            const hasChanges = [...globalNew].some(id => !newIndicatorsState.globalNew.has(id)) ||
-                              [...newIndicatorsState.globalNew].some(id => !globalNew.has(id));
-            
-            if (hasChanges) {
-                newIndicatorsState.globalNew = globalNew;
-                updateNewIndicators();
-                showToast('🔄 NEW элементы обновлены в реальном времени', 'info');
-            }
-        }
-    }, (error) => {
-        console.error("NEW indicators realtime error:", error);
-    });
-    
-    return unsubscribe;
-}
+
 function updateSectionBadges() {
     document.querySelectorAll('.collapsible-section').forEach(sec => {
         const st = sec.querySelector('.section-status'); if (!st) return;
@@ -2360,73 +2166,24 @@ function loadUserItems() {
 
 // ===== ОБНОВЛЕННЫЕ ФУНКЦИИ СОХРАНЕНИЯ =====
 async function saveUserItems() {
-    // 1. Локальное сохранение
+    // 1. Локальное сохранение (для быстрого доступа)
     localStorage.setItem(USER_ITEMS_KEY, JSON.stringify(userItemsData));
     
-    // 2. Сохраняем в персональные данные пользователя
+    // 2. 🔥 АВТОМАТИЧЕСКОЕ СОХРАНЕНИЕ В FIREBASE
     if (currentUser) {
-        await saveToCloud({ 
-            userItems: userItemsData,
-            userItemsTimestamp: Date.now()
-        });
-    }
-    
-    // 3. 🔥 ADMIN: также сохраняем в общую config коллекцию
-if (isAdmin) {
-    try {
-        // Сохраняем элементы
-        await saveToConfig(SHARED_ITEMS_DOC, {
-            items: userItemsData.items,
-            collections: userItemsData.collections,
-            dappCategories: userItemsData.dappCategories
-        });
-        
-        // 🔥 ВАЖНО: Обновляем глобальные NEW индикаторы 
-        await updateGlobalNewIndicators();
-        
-        console.log('✅ Admin data saved to config collection');
-    } catch (e) {
-        console.error("Config save error:", e);
-        showToast('⚠️ Не удалось сохранить в общую конфигурацию', 'error');
-    }
-}
-// 🔥 НОВАЯ ФУНКЦИЯ: Обновление глобальных NEW индикаторов
-async function updateGlobalNewIndicators() {
-    if (!isAdmin) return;
-    
-    try {
-        // Собираем все ID элементов из пользовательских данных
-        const allUserItemIds = new Set();
-        
-        Object.keys(userItemsData.items).forEach(zone => {
-            const items = userItemsData.items[zone] || [];
-            items.forEach(item => {
-                if (item.id && item.id.startsWith('u_')) {
-                    allUserItemIds.add(item.id);
-                }
+        try {
+            await saveToCloud({ 
+                userItems: userItemsData,
+                userItemsTimestamp: Date.now()
             });
-        });
-        
-        // Объединяем с существующими глобальными NEW
-        const updatedGlobalNew = new Set([
-            ...newIndicatorsState.globalNew,
-            ...allUserItemIds
-        ]);
-        
-        // Сохраняем в Firebase config
-        await saveToConfig(NEW_INDICATORS_DOC, {
-            globalNew: [...updatedGlobalNew]
-        });
-        
-        // Обновляем локальное состояние
-        newIndicatorsState.globalNew = updatedGlobalNew;
-        
-        console.log(`✅ Updated global NEW indicators: +${allUserItemIds.size} items`);
-        
-    } catch (e) {
-        console.error("Failed to update global NEW indicators:", e);
+            console.log('✅ Данные сохранены в Firebase автоматически');
+        } catch (e) {
+            console.error("Firebase auto-save error:", e);
+            showToast('⚠️ Локально сохранено, облако недоступно', 'error');
+        }
     }
 }
+
 async function saveEditsOverride() {
     // 1. Локальное сохранение
     localStorage.setItem(EDITS_OVERRIDE_KEY, JSON.stringify(editsOverride));
@@ -2576,13 +2333,14 @@ document.getElementById('addModalSave').addEventListener('click', async () => {
             };
             
             if (!userItemsData.items[currentAddContext.zone]) {
-    userItemsData.items[currentAddContext.zone] = [];
-}
-userItemsData.items[currentAddContext.zone].push(item);
-
-// 🔥 ПРАВИЛЬНОЕ добавление в NEW систему
-newIndicatorsState.globalNew.add(id);
-console.log('✅ Added to NEW indicators:', id);
+                userItemsData.items[currentAddContext.zone] = [];
+            }
+            userItemsData.items[currentAddContext.zone].push(item);
+            
+            newLinksSet.add(id);
+            knownLinksSet.add(id);
+            localStorage.setItem(NEW_LINKS_KEY, JSON.stringify([...newLinksSet]));
+            localStorage.setItem(KNOWN_LINKS_KEY, JSON.stringify([...knownLinksSet]));
             
             // 🔥 АВТОМАТИЧЕСКОЕ СОХРАНЕНИЕ В FIREBASE
             await saveUserItems();
@@ -2763,13 +2521,6 @@ function renderUserItemInZone(zone, item) {
     const addBtn = target.querySelector('.add-item-btn');
     if (addBtn) target.insertBefore(wrapper, addBtn);
     else target.appendChild(wrapper);
-    
-    // 🔥 ПРИНУДИТЕЛЬНО вызываем обновление NEW после рендера
-    setTimeout(() => {
-        updateNewIndicators();
-        bindTrackingHandler(wrapper.querySelector('a'));
-        attachFavoriteControls();
-    }, 100);
 }
 
 function renderUserCollection(coll) {
