@@ -2081,9 +2081,13 @@ function bindTrackingHandler(el) {
 function bindTrackingHandlersToAll() { document.querySelectorAll('.track-daily, .track-once').forEach(bindTrackingHandler); }
 
 function handleClick(e) {
-    const btn = e.currentTarget; const id = btn.getAttribute('data-id');
+    const btn = e.currentTarget; 
+    const id = btn.getAttribute('data-id');
     if (!id) return;
-    if (newLinksSet.has(id)) clearNewLink(id);
+    
+    // 🔥 Используем новую систему для проверки и очистки NEW
+    if (newIndicatorsState.globalNew.has(id) && !newIndicatorsState.clickedByUser.has(id)) {
+        clearNewLink(id);
     const now = new Date().toISOString();
     if (!arcData[id]) arcData[id] = {};
     if (btn.classList.contains('track-daily')) {
@@ -2368,21 +2372,61 @@ async function saveUserItems() {
     }
     
     // 3. 🔥 ADMIN: также сохраняем в общую config коллекцию
-    if (isAdmin) {
-        try {
-            await saveToConfig(SHARED_ITEMS_DOC, {
-                items: userItemsData.items,
-                collections: userItemsData.collections,
-                dappCategories: userItemsData.dappCategories
-            });
-            console.log('✅ Admin data saved to config collection');
-        } catch (e) {
-            console.error("Config save error:", e);
-            showToast('⚠️ Не удалось сохранить в общую конфигурацию', 'error');
-        }
+if (isAdmin) {
+    try {
+        // Сохраняем элементы
+        await saveToConfig(SHARED_ITEMS_DOC, {
+            items: userItemsData.items,
+            collections: userItemsData.collections,
+            dappCategories: userItemsData.dappCategories
+        });
+        
+        // 🔥 ВАЖНО: Обновляем глобальные NEW индикаторы 
+        await updateGlobalNewIndicators();
+        
+        console.log('✅ Admin data saved to config collection');
+    } catch (e) {
+        console.error("Config save error:", e);
+        showToast('⚠️ Не удалось сохранить в общую конфигурацию', 'error');
     }
 }
-
+// 🔥 НОВАЯ ФУНКЦИЯ: Обновление глобальных NEW индикаторов
+async function updateGlobalNewIndicators() {
+    if (!isAdmin) return;
+    
+    try {
+        // Собираем все ID элементов из пользовательских данных
+        const allUserItemIds = new Set();
+        
+        Object.keys(userItemsData.items).forEach(zone => {
+            const items = userItemsData.items[zone] || [];
+            items.forEach(item => {
+                if (item.id && item.id.startsWith('u_')) {
+                    allUserItemIds.add(item.id);
+                }
+            });
+        });
+        
+        // Объединяем с существующими глобальными NEW
+        const updatedGlobalNew = new Set([
+            ...newIndicatorsState.globalNew,
+            ...allUserItemIds
+        ]);
+        
+        // Сохраняем в Firebase config
+        await saveToConfig(NEW_INDICATORS_DOC, {
+            globalNew: [...updatedGlobalNew]
+        });
+        
+        // Обновляем локальное состояние
+        newIndicatorsState.globalNew = updatedGlobalNew;
+        
+        console.log(`✅ Updated global NEW indicators: +${allUserItemIds.size} items`);
+        
+    } catch (e) {
+        console.error("Failed to update global NEW indicators:", e);
+    }
+}
 async function saveEditsOverride() {
     // 1. Локальное сохранение
     localStorage.setItem(EDITS_OVERRIDE_KEY, JSON.stringify(editsOverride));
@@ -2532,14 +2576,13 @@ document.getElementById('addModalSave').addEventListener('click', async () => {
             };
             
             if (!userItemsData.items[currentAddContext.zone]) {
-                userItemsData.items[currentAddContext.zone] = [];
-            }
-            userItemsData.items[currentAddContext.zone].push(item);
-            
-            newLinksSet.add(id);
-            knownLinksSet.add(id);
-            localStorage.setItem(NEW_LINKS_KEY, JSON.stringify([...newLinksSet]));
-            localStorage.setItem(KNOWN_LINKS_KEY, JSON.stringify([...knownLinksSet]));
+    userItemsData.items[currentAddContext.zone] = [];
+}
+userItemsData.items[currentAddContext.zone].push(item);
+
+// 🔥 ПРАВИЛЬНОЕ добавление в NEW систему
+newIndicatorsState.globalNew.add(id);
+console.log('✅ Added to NEW indicators:', id);
             
             // 🔥 АВТОМАТИЧЕСКОЕ СОХРАНЕНИЕ В FIREBASE
             await saveUserItems();
@@ -2720,6 +2763,13 @@ function renderUserItemInZone(zone, item) {
     const addBtn = target.querySelector('.add-item-btn');
     if (addBtn) target.insertBefore(wrapper, addBtn);
     else target.appendChild(wrapper);
+    
+    // 🔥 ПРИНУДИТЕЛЬНО вызываем обновление NEW после рендера
+    setTimeout(() => {
+        updateNewIndicators();
+        bindTrackingHandler(wrapper.querySelector('a'));
+        attachFavoriteControls();
+    }, 100);
 }
 
 function renderUserCollection(coll) {
