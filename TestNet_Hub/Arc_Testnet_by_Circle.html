@@ -1369,7 +1369,7 @@ let editModeActive = false;
 let currentEditTarget = null;
 const EDITS_OVERRIDE_KEY = 'arc_tracker_edits_v1';
 let editsOverride = {};
-
+let isDataLoaded = false;
 // ===== TOAST =====
 function showToast(message, type = 'info') {
     const container = document.getElementById('toastContainer');
@@ -1737,9 +1737,13 @@ onAuthStateChanged(auth, async (user) => {
         checkAdmin(null);
     }
     
-    await loadSharedData();
-    await loadAllData();
-    renderAllUserItems();
+    // 🔥 ЗАГРУЖАЕМ ДАННЫЕ ТОЛЬКО ОДИН РАЗ
+    if (!isDataLoaded) {
+        await loadSharedData();
+        await loadAllData();
+        renderAllUserItems();
+        isDataLoaded = true;
+    }
 });
 
 // ===== HELPERS =====
@@ -2076,7 +2080,25 @@ const SECTION_ZONE_CONFIG = {
 
 let userItemsData = { items: {}, collections: [], dappCategories: [] };
 let currentAddContext = null;
-
+// 🔥 Очистка всех пользовательских элементов перед рендерингом
+function clearAllUserItems() {
+    // Удаляем все пользовательские элементы (wrapper'ы)
+    document.querySelectorAll('.user-item-wrapper').forEach(el => el.remove());
+    
+    // Удаляем все пользовательские коллекции и категории
+    document.querySelectorAll('.user-collection-card').forEach(el => el.remove());
+    
+    // Удаляем строки пользовательских категорий из таблицы dApps
+    document.querySelectorAll('.dapp-table tbody tr').forEach(tr => {
+        const zone = tr.dataset.zone;
+        if (zone && zone.startsWith('u_')) {
+            tr.remove();
+        }
+    });
+    
+    // Удаляем все кнопки "+" (будем пересоздавать)
+    document.querySelectorAll('.add-item-btn, .section-add-btn').forEach(btn => btn.remove());
+}
 function loadUserItems() {
     try {
         const raw = localStorage.getItem(USER_ITEMS_KEY);
@@ -2085,14 +2107,23 @@ function loadUserItems() {
 }
 
 async function saveUserItems() {
+    // Сохраняем локально
     localStorage.setItem(USER_ITEMS_KEY, JSON.stringify(userItemsData));
-    if (isAdmin) {
+    
+    // Синхронизируем с Firebase только для админа
+    if (isAdmin && currentUser) {
         try {
+            // 🔥 Используем merge: true для предотвращения перезаписи
             await setDoc(doc(db, "config", "sharedItems"), { 
                 userItems: userItemsData,
-                newItemIds: [...newLinksSet] // <-- синхронизируем NEW метки
-            });
-        } catch (e) { console.error("Save shared items error:", e); }
+                newItemIds: [...newLinksSet],
+                lastUpdated: new Date().toISOString()
+            }, { merge: true });
+            
+            console.log("✅ User items saved to Firebase successfully");
+        } catch (e) { 
+            console.error("❌ Save shared items error:", e); 
+        }
     }
 }
 
@@ -2105,6 +2136,14 @@ function showFields(fields) {
         const el = document.getElementById(f);
         if (el) el.classList.toggle('field-hidden', !fields.includes(f));
     });
+}
+  // 🔥 Проверяка существования элемента ПЕРЕД добавлением
+function isItemAlreadyExists(zone, url, title) {
+    const items = userItemsData.items[zone] || [];
+    return items.some(item => 
+        item.url === url || // Дубликат по URL
+        item.title === title // Дубликат по названию
+    );
 }
 function openModal(title, fields) {
     document.getElementById('addModalTitle').textContent = title;
@@ -2181,6 +2220,10 @@ document.getElementById('addModalSave').addEventListener('click', async () => {
 
     if (currentAddContext.zone) {
         if (!title || !url) { alert('Название и URL обязательны!'); return; }
+      if (isItemAlreadyExists(currentAddContext.zone, url, title)) {
+        alert('Элемент с таким названием или URL уже существует!');
+        return;
+    }
         const config = currentAddContext.config; const id = generateId();
         const item = { id, title, url, tooltip, image, trackType: config.trackType, addedAt: Date.now() };
         if (!userItemsData.items[currentAddContext.zone]) userItemsData.items[currentAddContext.zone] = [];
@@ -2258,6 +2301,15 @@ function createUserLink(item, zone) {
 function renderUserItemInZone(zone, item) {
     const container = document.querySelector(`[data-zone="${zone}"]`);
     if (!container) return;
+    
+    // 🔥 ПРОВЕРЯЕМ, НЕ СУЩЕСТВУЕТ ЛИ УЖЕ ЭЛЕМЕНТ С ТАКИМ ID
+    const existingItem = container.querySelector(`[data-user-item-id="${item.id}"]`);
+    if (existingItem) {
+        console.log(`Item ${item.id} already exists, skipping render`);
+        return;
+    }
+    
+    // Остальной код функции остаётся без изменений
     let target;
     if (container.tagName === 'TR') target = container.querySelector('.dapp-links');
     else target = container.querySelector('.link-collection') || container.querySelector('.link-row');
@@ -2437,6 +2489,11 @@ function injectAddButtons() {
 
 function renderAllUserItems() {
     loadUserItems();
+    
+    // 🔥 ОЧИЩАЕМ ВСЕ ПОЛЬЗОВАТЕЛЬСКИЕ ЭЛЕМЕНТЫ ПЕРЕД РЕНДЕРОМ
+    clearAllUserItems();
+    
+    // Остальной код остаётся без изменений...
     userItemsData.collections.forEach(coll => {
         if (!ZONE_CONFIG[coll.id]) {
             const isNft = coll.parentZone === 'nfts';
@@ -2467,11 +2524,22 @@ function loadEditsOverride() {
 }
 
 async function saveEditsOverride() {
+    // Сохраняем локально
     localStorage.setItem(EDITS_OVERRIDE_KEY, JSON.stringify(editsOverride));
-    if (isAdmin) {
+    
+    // Синхронизируем с Firebase только для админа
+    if (isAdmin && currentUser) {
         try {
-            await setDoc(doc(db, "config", "sharedEdits"), { editsOverride });
-        } catch (e) { console.error("Save shared edits error:", e); }
+            // 🔥 Используем merge: true
+            await setDoc(doc(db, "config", "sharedEdits"), { 
+                editsOverride,
+                lastUpdated: new Date().toISOString()
+            }, { merge: true });
+            
+            console.log("✅ Edits override saved to Firebase successfully");
+        } catch (e) { 
+            console.error("❌ Save shared edits error:", e); 
+        }
     }
 }
 
