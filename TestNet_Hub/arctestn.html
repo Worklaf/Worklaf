@@ -1815,8 +1815,10 @@ onAuthStateChanged(auth, async (user) => {
     checkAdmin(user);
     
     // 🔥 НОВОЕ: Инициализируем реал-тайм синхронизацию NEW
-    initNewIndicatorsRealtime();
     
+    setTimeout(() => {
+            initNewIndicatorsRealtime();
+        }, 2000);
     if (user.uid === ADMIN_UID) {
         setTimeout(initTwitterMonitor, 1000);
     }
@@ -2146,7 +2148,7 @@ async function clearNewLink(id) {
 
 	// 🔥 ЗАГРУЗКА NEW состояния
 async function loadNewIndicators() {
-    // 1. Загружаем локальные данные
+    // Загружаем локальные данные ПЕРВЫМИ
     const localData = JSON.parse(localStorage.getItem(NEW_INDICATORS_KEY) || '{}');
     
     newIndicatorsState = {
@@ -2155,7 +2157,13 @@ async function loadNewIndicators() {
         lastSync: localData.lastSync || 0
     };
     
-    // 2. Синхронизируем с облаком если авторизован
+    console.log('💾 Local NEW state loaded:', {
+        globalNew: [...newIndicatorsState.globalNew],
+        clickedByUser: [...newIndicatorsState.clickedByUser],
+        lastSync: new Date(newIndicatorsState.lastSync).toLocaleString()
+    });
+    
+    // Синхронизируем с облаком только если авторизован
     if (currentUser) {
         try {
             const docRef = doc(db, "users", currentUser.uid);
@@ -2168,17 +2176,15 @@ async function loadNewIndicators() {
                     const cloudTs = cloudData.newIndicatorsTimestamp || 0;
                     
                     if (cloudTs > newIndicatorsState.lastSync) {
-                        // Облачные данные новее — берем их
+                        console.log('☁️ Using cloud NEW data (newer)');
                         newIndicatorsState = {
                             globalNew: new Set(cloudData.newIndicators.globalNew || []),
                             clickedByUser: new Set(cloudData.newIndicators.clickedByUser || []),
                             lastSync: cloudTs
                         };
-
-                        // Сохраняем облачные данные локально
                         localStorage.setItem(NEW_INDICATORS_KEY, JSON.stringify(cloudData.newIndicators));
-
-                        showToast('🔄 NEW-индикаторы синхронизированы из облака', 'info');
+                    } else {
+                        console.log('💾 Keeping local NEW data (newer or equal)');
                     }
                 }
             }
@@ -2186,6 +2192,16 @@ async function loadNewIndicators() {
             console.error("NEW indicators sync error:", e);
         }
     }
+    
+    // 🔥 УСТАНАВЛИВАЕМ ФЛАГ ГОТОВНОСТИ
+    newIndicatorsState.lastSync = newIndicatorsState.lastSync || Date.now();
+    
+    console.log('✅ NEW indicators final state:', {
+        globalNew: [...newIndicatorsState.globalNew],
+        clickedByUser: [...newIndicatorsState.clickedByUser],
+        ready: true
+    });
+}
 
     // 3. 🔥 ВАЖНОЕ ДОБАВЛЕНИЕ: сохраняем состояние локально после загрузки
     const saveData = {
@@ -2207,7 +2223,6 @@ async function loadNewIndicators() {
 function initNewIndicatorsRealtime() {
     if (!currentUser) return;
     
-    // Слушаем изменения глобальных NEW элементов
     const newIndicatorsRef = doc(db, CONFIG_COLLECTION, NEW_INDICATORS_DOC);
     
     newIndicatorsUnsubscribe = onSnapshot(newIndicatorsRef, (doc) => {
@@ -2215,12 +2230,32 @@ function initNewIndicatorsRealtime() {
             const data = doc.data();
             const globalNew = new Set(data.globalNew || []);
             
-            // Проверяем, есть ли изменения
-            const hasChanges = [...globalNew].some(id => !newIndicatorsState.globalNew.has(id)) ||
-                              [...newIndicatorsState.globalNew].some(id => !globalNew.has(id));
+            // 🔥 ЗАЩИТА ОТ ГОНКИ УСЛОВИЙ: проверяем, что локальные данные уже загружены
+            if (newIndicatorsState.lastSync === 0) {
+                console.log('⚠️ Skipping realtime update - local data not ready');
+                return;
+            }
             
-            if (hasChanges) {
+            // 🔥 ПРОВЕРКА НА РЕАЛЬНЫЕ ИЗМЕНЕНИЯ (не просто обновление timestamp)
+            const hasRealChanges = [...globalNew].some(id => !newIndicatorsState.globalNew.has(id)) ||
+                                  [...newIndicatorsState.globalNew].some(id => !globalNew.has(id));
+            
+            if (hasRealChanges) {
+                console.log('🔄 Real-time NEW update:', {
+                    before: [...newIndicatorsState.globalNew],
+                    after: [...globalNew]
+                });
+                
                 newIndicatorsState.globalNew = globalNew;
+                
+                // Сохраняем в localStorage
+                const saveData = {
+                    globalNew: [...newIndicatorsState.globalNew],
+                    clickedByUser: [...newIndicatorsState.clickedByUser],
+                    lastSync: Date.now()
+                };
+                localStorage.setItem(NEW_INDICATORS_KEY, JSON.stringify(saveData));
+                
                 updateNewIndicators();
                 showToast('🔄 NEW элементы обновлены в реальном времени', 'info');
             }
@@ -2235,6 +2270,12 @@ async function addToGlobalNewIndicators(itemId) {
     if (!isAdmin) return;
     
     try {
+        // 🔥 ЗАЩИТА ОТ ДУБЛИКАТОВ: проверяем, не существует ли уже
+        if (newIndicatorsState.globalNew.has(itemId)) {
+            console.log('⚠️ Item already in global NEW:', itemId);
+            return;
+        }
+        
         newIndicatorsState.globalNew.add(itemId);
         
         // Сохраняем в Firebase config для всех пользователей
@@ -2243,6 +2284,14 @@ async function addToGlobalNewIndicators(itemId) {
             lastUpdated: Date.now(),
             updatedBy: currentUser.uid
         }, { merge: true });
+        
+        // 🔥 ЛОКАЛЬНОЕ СОХРАНЕНИЕ СРАЗУ
+        const saveData = {
+            globalNew: [...newIndicatorsState.globalNew],
+            clickedByUser: [...newIndicatorsState.clickedByUser],
+            lastSync: Date.now()
+        };
+        localStorage.setItem(NEW_INDICATORS_KEY, JSON.stringify(saveData));
         
         updateNewIndicators();
         console.log('✅ Added to global NEW indicators:', itemId);
