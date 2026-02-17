@@ -1832,12 +1832,18 @@ onAuthStateChanged(auth, async (user) => {
     }
 }
     // 🔥 ЗАГРУЖАЕМ ДАННЫЕ ТОЛЬКО ОДИН РАЗ
+// 🔥 ЗАГРУЖАЕМ ДАННЫЕ ТОЛЬКО ОДИН РАЗ
 if (!isDataLoaded) {
     await loadSharedData();
-    await loadNewIndicators();  // 🔥 НОВОЕ: загружаем NEW состояние
+    await loadNewIndicators();  
     await loadAllData();
     renderAllUserItems();
-	updateNewIndicators();
+    
+    // 🔥 ВАЖНО: Применяем NEW индикаторы ТОЛЬКО после полной загрузки DOM
+    setTimeout(() => {
+        updateNewIndicators();
+    }, 100);
+    
     isDataLoaded = true;
 }
 });
@@ -2071,6 +2077,15 @@ function applySectionState(sec, collapsed) {
 
 
 function updateNewIndicators() {
+	if (!newIndicatorsState || !newIndicatorsState.globalNew) {
+        console.log('⚠️ NEW indicators state not ready');
+        return;
+    }
+    
+    console.log('🔄 Updating NEW indicators:', {
+        globalNew: [...newIndicatorsState.globalNew],
+        clickedByUser: [...newIndicatorsState.clickedByUser]
+    });
     document.querySelectorAll('[data-id]').forEach(el => {
         const id = el.dataset.id;
         
@@ -2131,7 +2146,7 @@ async function clearNewLink(id) {
 
 	// 🔥 ЗАГРУЗКА NEW состояния
 async function loadNewIndicators() {
-    // Загружаем локальные данные
+    // 1. Загружаем локальные данные
     const localData = JSON.parse(localStorage.getItem(NEW_INDICATORS_KEY) || '{}');
     
     newIndicatorsState = {
@@ -2140,7 +2155,7 @@ async function loadNewIndicators() {
         lastSync: localData.lastSync || 0
     };
     
-    // Синхронизируем с облаком если авторизован
+    // 2. Синхронизируем с облаком если авторизован
     if (currentUser) {
         try {
             const docRef = doc(db, "users", currentUser.uid);
@@ -2159,8 +2174,10 @@ async function loadNewIndicators() {
                             clickedByUser: new Set(cloudData.newIndicators.clickedByUser || []),
                             lastSync: cloudTs
                         };
+
+                        // Сохраняем облачные данные локально
                         localStorage.setItem(NEW_INDICATORS_KEY, JSON.stringify(cloudData.newIndicators));
-                        
+
                         showToast('🔄 NEW-индикаторы синхронизированы из облака', 'info');
                     }
                 }
@@ -2169,7 +2186,22 @@ async function loadNewIndicators() {
             console.error("NEW indicators sync error:", e);
         }
     }
+
+    // 3. 🔥 ВАЖНОЕ ДОБАВЛЕНИЕ: сохраняем состояние локально после загрузки
+    const saveData = {
+        globalNew: [...newIndicatorsState.globalNew],
+        clickedByUser: [...newIndicatorsState.clickedByUser],
+        lastSync: newIndicatorsState.lastSync
+    };
+
+    localStorage.setItem(NEW_INDICATORS_KEY, JSON.stringify(saveData));
+
+    console.log('✅ NEW indicators loaded:', {
+        globalNew: [...newIndicatorsState.globalNew],
+        clickedByUser: [...newIndicatorsState.clickedByUser]
+    });
 }
+
 
 // 🔥 РЕАЛ-ТАЙМ синхронизация NEW элементов
 function initNewIndicatorsRealtime() {
@@ -3032,17 +3064,27 @@ document.addEventListener('DOMContentLoaded', () => {
     loadEditsOverride(); 
     applyAllOverrides();
     
-    // 🔥 ВАЖНО: Загружаем NEW индикаторы ДО всего остального
-    loadNewIndicators().then(() => {
-        attachFavoriteControls(); 
-        bindTrackingHandlersToAll();
-        initLightbox(); 
-        initCardAnimations(); 
-        initLazyLoading();
-        
-        // 🔥 Применяем NEW индикаторы после загрузки DOM
-        updateNewIndicators();
+    // 🔥 Сначала инициализируем весь DOM
+attachFavoriteControls(); 
+bindTrackingHandlersToAll();
+initLightbox(); 
+initCardAnimations(); 
+initLazyLoading();
+const localData = JSON.parse(localStorage.getItem(NEW_INDICATORS_KEY) || '{}');
+    newIndicatorsState = {
+        globalNew: new Set(localData.globalNew || []),
+        clickedByUser: new Set(localData.clickedByUser || []),
+        lastSync: localData.lastSync || 0
+    };
+    
+    console.log('🎯 Initial NEW state loaded:', {
+        globalNew: [...newIndicatorsState.globalNew],
+        clickedByUser: [...newIndicatorsState.clickedByUser]
     });
+// 🔥 Затем применяем NEW состояние если уже загружено
+if (isDataLoaded) {
+    updateNewIndicators();
+}
 
     document.getElementById('themeToggleBtn').addEventListener('click', toggleTheme);
     
