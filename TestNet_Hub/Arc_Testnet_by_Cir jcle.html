@@ -1749,6 +1749,8 @@ async function loadSharedData() {
         loadEditsOverride();
     }
 }
+let isDataLoaded = false;
+
 onAuthStateChanged(auth, async (user) => {
     currentUser = user;
     const loggedOut = document.getElementById('arcLoggedOutView');
@@ -1771,9 +1773,13 @@ onAuthStateChanged(auth, async (user) => {
         checkAdmin(null);
     }
     
-    await loadSharedData();
-    await loadAllData();
-    renderAllUserItems();
+    // 🔥 ЗАГРУЖАЕМ ДАННЫЕ ТОЛЬКО ОДИН РАЗ
+    if (!isDataLoaded) {
+        await loadSharedData();
+        await loadAllData();
+        renderAllUserItems();
+        isDataLoaded = true;
+    }
 });
 
 // ===== HELPERS =====
@@ -2286,6 +2292,14 @@ function createUserLink(item, zone) {
 function renderUserItemInZone(zone, item) {
     const container = document.querySelector(`[data-zone="${zone}"]`);
     if (!container) return;
+    
+    // 🔥 ПРОВЕРЯЕМ, НЕ СУЩЕСТВУЕТ ЛИ УЖЕ ЭЛЕМЕНТ С ТАКИМ ID
+    const existingItem = container.querySelector(`[data-user-item-id="${item.id}"]`);
+    if (existingItem) {
+        console.log(`Item ${item.id} already exists, skipping render`);
+        return;
+    }
+    
     let target;
     if (container.tagName === 'TR') target = container.querySelector('.dapp-links');
     else target = container.querySelector('.link-collection') || container.querySelector('.link-row');
@@ -2462,9 +2476,30 @@ function injectAddButtons() {
 }
 
 
-
+function clearAllUserItems() {
+    // Удаляем все пользовательские элементы (wrapper'ы)
+    document.querySelectorAll('.user-item-wrapper').forEach(el => el.remove());
+    
+    // Удаляем все пользовательские коллекции и категории
+    document.querySelectorAll('.user-collection-card').forEach(el => el.remove());
+    
+    // Удаляем строки пользовательских категорий из таблицы dApps
+    document.querySelectorAll('.dapp-table tbody tr').forEach(tr => {
+        const zone = tr.dataset.zone;
+        if (zone && zone.startsWith('u_')) {
+            tr.remove();
+        }
+    });
+    
+    // Удаляем все кнопки "+" (будем пересоздавать)
+    document.querySelectorAll('.add-item-btn, .section-add-btn').forEach(btn => btn.remove());
+}
 function renderAllUserItems() {
     loadUserItems();
+    
+    // 🔥 ОЧИЩАЕМ ВСЕ ПОЛЬЗОВАТЕЛЬСКИЕ ЭЛЕМЕНТЫ ПЕРЕД РЕНДЕРОМ
+    clearAllUserItems();
+    
     userItemsData.collections.forEach(coll => {
         if (!ZONE_CONFIG[coll.id]) {
             const isNft = coll.parentZone === 'nfts';
@@ -2618,6 +2653,41 @@ async function uploadConfigToGithub() {
                 })
             }
         );
+
+        // 6. Обновляем editsOverride.json
+        const putEditsResp = await fetch(
+            `https://api.github.com/repos/${GITHUB_OWNER}/${GITHUB_REPO}/contents/${GITHUB_EDITS_PATH}`,
+            {
+                method: 'PUT',
+                headers: {
+                    'Authorization': `Bearer ${token}`,
+                    'Accept': 'application/vnd.github+json',
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    message: 'Update editsOverride via Arc admin UI',
+                    content: encodeContent(editsPayload),
+                    branch: GITHUB_BRANCH,
+                    sha: editsSha || undefined
+                })
+            }
+        );
+
+        showToast('Изменения загружены на GitHub!', 'success');
+
+        // 🔥 ПРИНУДИТЕЛЬНО ПЕРЕЗАГРУЖАЕМ ДАННЫЕ ПОСЛЕ ЗАГРУЗКИ
+        setTimeout(async () => {
+            await loadSharedData();
+            renderAllUserItems();
+            showToast('Данные обновлены на странице!', 'info');
+        }, 2000);
+
+    } catch (e) {
+        console.error(e);
+        showToast('Ошибка загрузки на GitHub: ' + e.message, 'error');
+    }
+}
+
 
         if (!putItemsResp.ok) {
             const errText = await putItemsResp.text();
