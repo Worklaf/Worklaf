@@ -1768,7 +1768,7 @@ window.logout = function() { signOut(auth); };
 async function loadSharedData() {
     // 1) Пытаемся загрузить общие элементы из GitHub
     try {
-        const itemsResp = await fetch('arc_shared_items.json?' + Date.now());
+        const itemsResp = await fetch('data/arc_shared_items.json?' + Date.now());
         if (itemsResp.ok) {
             const data = await itemsResp.json();
             userItemsData = {
@@ -1787,7 +1787,7 @@ async function loadSharedData() {
 
     // 2) Загружаем правки
     try {
-        const editsResp = await fetch('arc_shared_edits.json?' + Date.now());
+        const editsResp = await fetch('data/arc_shared_edits.json?' + Date.now());
         if (editsResp.ok) {
             const data = await editsResp.json();
             editsOverride = data.editsOverride || {};
@@ -3362,75 +3362,34 @@ function getTimeAgo(date) {
     return `${weeks} нед назад`;
 }
 
-// Обновляем инициализацию монитора
 function initTwitterMonitor() {
     if (!isAdmin) return;
     
     const refreshBtn = document.getElementById('monitorRefreshBtn');
+    
     if (!refreshBtn) return;
     
-    // Загружаем данные при старте
+    // 🔥 Загружаем данные при старте
     loadTwitterResults();
     
-    // Назначаем новый обработчик
-    refreshBtn.addEventListener('click', runLocalParser);
+    // 🔥 Кнопка обновления
+    refreshBtn.addEventListener('click', async () => {
+        const originalHTML = refreshBtn.innerHTML;
+        refreshBtn.disabled = true;
+        refreshBtn.innerHTML = '<i class="fas fa-sync-alt fa-spin"></i> Обновление...';
+        
+        await loadTwitterResults();
+        
+        setTimeout(() => {
+            refreshBtn.disabled = false;
+            refreshBtn.innerHTML = originalHTML;
+            showToast('Данные обновлены!', 'success');
+        }, 1000);
+    });
     
-    // Автообновление данных каждые 5 минут
+    // 🔥 Автообновление каждые 5 минут
     setInterval(loadTwitterResults, 5 * 60 * 1000);
 }
-// Новая функция для запуска .bat файла
-// Новая функция для запуска парсера
-async function runLocalParser() {
-    const refreshBtn = document.getElementById('monitorRefreshBtn');
-    if (!refreshBtn) return;
-    
-    const originalText = refreshBtn.innerHTML;
-    refreshBtn.disabled = true;
-    refreshBtn.innerHTML = '<i class="fas fa-sync-alt fa-spin"></i> Запуск парсера...';
-    
-    try {
-        // 1. Инициируем запуск парсера (эмулируем поведение запуска батника)
-        showToast('⚠️ Запустите run_parser.bat вручную', 'info');
-        
-        // 2. Показываем инструкцию (альтернатива реальному запуску)
-        const confirmLaunch = confirm(
-            'После закрытия этого окна:\n' +
-            '1. Откройте папку с twitter_parser.py\n' +
-            '2. Запустите файл run_parser.bat\n' +
-            '3. Вернитесь на эту страницу\n\n' +
-            'Нажмите OK для продолжения'
-        );
-        
-        if (confirmLaunch) {
-            // 3. После ручного запуска ждем и проверяем обновления
-            let checksLeft = 12; // 12 попыток с интервалом 5 сек = 1 минута
-            const checkInterval = setInterval(async () => {
-                try {
-                    await loadTwitterResults();
-                    checksLeft--;
-                    
-                    if (checksLeft <= 0) {
-                        clearInterval(checkInterval);
-                        refreshBtn.disabled = false;
-                        refreshBtn.innerHTML = originalText;
-                        showToast('✅ Проверка обновлений завершена', 'success');
-                    }
-                } catch (e) {
-                    console.error('Update check error:', e);
-                }
-            }, 5000);
-        } else {
-            refreshBtn.disabled = false;
-            refreshBtn.innerHTML = originalText;
-        }
-    } catch (error) {
-        console.error('Parser run error:', error);
-        refreshBtn.disabled = false;
-        refreshBtn.innerHTML = originalText;
-        showToast('❌ Ошибка: ' + error.message, 'error');
-    }
-}
-
 
 </script>
 <!-- ====== LOGIN MODAL ====== -->
