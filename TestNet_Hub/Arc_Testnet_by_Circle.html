@@ -843,6 +843,9 @@ body.light-theme .monitor-item {
             <button class="edit-mode-btn admin-only" id="editModeBtn" type="button"><i class="fas fa-pen"></i> Режим редактирования</button>
             <button class="export-btn admin-only" id="exportBtn" type="button"><i class="fas fa-download"></i> Экспорт JSON</button>
             <button class="import-btn admin-only" id="importBtn" type="button"><i class="fas fa-upload"></i> Импорт JSON</button>
+			<button class="import-btn admin-only" id="githubUploadBtn" type="button">
+    <i class="fab fa-github"></i> Загрузить на GitHub
+</button>
             <button class="reset-btn" type="button" onclick="resetAll()">Сбросить прогресс</button>
         </div>
 
@@ -1160,7 +1163,7 @@ import {
   signOut, onAuthStateChanged
 } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
 import {
-  getFirestore, doc, setDoc, getDoc
+  getFirestore, doc, setDoc, getDoc, onSnapshot
 } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
 const firebaseConfig = {
@@ -1196,7 +1199,53 @@ const FAVORITES_ORDER_KEY = 'arc_tracker_favorites_order_v1';
 const FAVORITES_TIMESTAMP_KEY = 'arc_tracker_favorites_timestamp_v1';
 const THEME_KEY = 'arc_tracker_theme';
 const PAGE_VERSION = '2026-02-14-v4';
+const GITHUB_OWNER = 'Worklaf';      // ваш GitHub логин
+const GITHUB_REPO = 'Worklaf';       // ваш репозиторий
+const GITHUB_BRANCH = 'main';        // если у вас master — замените на 'master'
 
+// Пути файлов в репозитории (от корня репо)
+const GITHUB_ITEMS_PATH = 'TestNet_Hub/data/arc_shared_items.json';
+const GITHUB_EDITS_PATH = 'TestNet_Hub/data/arc_shared_edits.json';
+	// Получить sha файла в репозитории (нужно для PUT в GitHub API)
+	const CONFIG_COLLECTION = 'arc_config';
+const NEW_INDICATORS_DOC = 'new_indicators_global';
+const NEW_INDICATORS_KEY = 'arc_tracker_new_indicators_v2';
+
+let newIndicatorsState = {
+    globalNew: new Set(),      // Глобальные NEW элементы (от админа)
+    clickedByUser: new Set(),  // Какие пользователь уже кликнул
+    lastSync: 0
+};
+
+let newIndicatorsUnsubscribe = null;
+async function githubGetFileSha(path, token) {
+    const url = `https://api.github.com/repos/${GITHUB_OWNER}/${GITHUB_REPO}/contents/${path}?ref=${GITHUB_BRANCH}`;
+    const resp = await fetch(url, {
+        headers: {
+            'Authorization': `Bearer ${token}`,
+            'Accept': 'application/vnd.github+json'
+        }
+    });
+
+    if (resp.status === 404) {
+        // Файл ещё не существует — sha не нужен
+        return null;
+    }
+
+    if (!resp.ok) {
+        throw new Error(`GitHub GET ${path} failed: ${resp.status}`);
+    }
+
+    const data = await resp.json();
+    return data.sha || null;
+}
+
+// Кодирование JSON в base64 для GitHub
+function encodeContent(obj) {
+    const json = JSON.stringify(obj, null, 2);
+    // Корректная base64‑кодировка для Unicode
+    return btoa(unescape(encodeURIComponent(json)));
+}
 // ============================================================
 //  TWITTER RSS MONITOR (ADMIN ONLY)
 // ============================================================
@@ -1369,7 +1418,7 @@ let editModeActive = false;
 let currentEditTarget = null;
 const EDITS_OVERRIDE_KEY = 'arc_tracker_edits_v1';
 let editsOverride = {};
-let isDataLoaded = false;
+
 // ===== TOAST =====
 function showToast(message, type = 'info') {
     const container = document.getElementById('toastContainer');
@@ -1583,40 +1632,81 @@ async function loadAllData() {
     const localFav = JSON.parse(localStorage.getItem(FAVORITES_KEY) || '{}');
     const localOrder = JSON.parse(localStorage.getItem(FAVORITES_ORDER_KEY) || '[]');
     const localTimestamp = parseInt(localStorage.getItem(FAVORITES_TIMESTAMP_KEY) || '0', 10);
-    arcData = localStats; favoritesState = localFav; favoritesOrder = localOrder;
+    
+    // Устанавливаем локальные данные
+    arcData = localStats; 
+    favoritesState = localFav; 
+    favoritesOrder = localOrder;
+    
     if (currentUser) {
         try {
             const docRef = doc(db, "users", currentUser.uid);
             const docSnap = await getDoc(docRef);
+            
             if (docSnap.exists()) {
                 const cloudData = docSnap.data();
-                const cloudFav = cloudData.favoritesState || {};
-                const cloudOrder = cloudData.favoritesOrder || [];
-                const cloudTs = parseInt(cloudData.favoritesTimestamp || '0', 10);
-                const localHasFav = Object.keys(localFav).length > 0 || localOrder.length > 0;
-                const cloudHasFav = Object.keys(cloudFav).length > 0 || cloudOrder.length > 0;
-                if (cloudHasFav) {
-                    if (cloudTs > localTimestamp) {
-                        favoritesState = cloudFav; favoritesOrder = cloudOrder;
-                        localStorage.setItem(FAVORITES_KEY, JSON.stringify(favoritesState));
-                        localStorage.setItem(FAVORITES_ORDER_KEY, JSON.stringify(favoritesOrder));
-                        localStorage.setItem(FAVORITES_TIMESTAMP_KEY, String(cloudTs));
-                    } else {
-                        await saveToCloud({ favoritesState: localFav, favoritesOrder: localOrder, favoritesTimestamp: localTimestamp });
-                    }
-                } else if (localHasFav) {
-                    await saveToCloud({ favoritesState: localFav, favoritesOrder: localOrder, favoritesTimestamp: localTimestamp });
-                }
+                
+                // Синхронизируем статистику
                 if (cloudData.arcGuideStats && Object.keys(cloudData.arcGuideStats).length > 0) {
                     arcData = cloudData.arcGuideStats;
                     localStorage.setItem(STORAGE_KEY, JSON.stringify(arcData));
                 }
-            } else if (Object.keys(localFav).length > 0) {
-                await saveToCloud({ favoritesState: localFav, favoritesOrder: localOrder, favoritesTimestamp: localTimestamp });
+                
+                // Синхронизируем избранное
+                if (cloudData.favoritesState) {
+                    const cloudTs = parseInt(cloudData.favoritesTimestamp || '0', 10);
+                    if (cloudTs > localTimestamp) {
+                        favoritesState = cloudData.favoritesState;
+                        favoritesOrder = cloudData.favoritesOrder || [];
+                        localStorage.setItem(FAVORITES_KEY, JSON.stringify(favoritesState));
+                        localStorage.setItem(FAVORITES_ORDER_KEY, JSON.stringify(favoritesOrder));
+                        localStorage.setItem(FAVORITES_TIMESTAMP_KEY, String(cloudTs));
+                    }
+                } else if (Object.keys(localFav).length > 0) {
+                    await saveToCloud({ 
+                        favoritesState: localFav, 
+                        favoritesOrder: localOrder, 
+                        favoritesTimestamp: localTimestamp 
+                    });
+                }
+                
+                // 🔥 НОВОЕ: Синхронизируем пользовательские элементы
+                if (cloudData.userItems) {
+                    const cloudItemsTs = parseInt(cloudData.userItemsTimestamp || '0', 10);
+                    const localItemsTs = parseInt(localStorage.getItem('arc_user_items_timestamp') || '0', 10);
+                    
+                    if (cloudItemsTs > localItemsTs) {
+                        userItemsData = {
+                            items: cloudData.userItems.items || {},
+                            collections: cloudData.userItems.collections || [],
+                            dappCategories: cloudData.userItems.dappCategories || []
+                        };
+                        localStorage.setItem(USER_ITEMS_KEY, JSON.stringify(userItemsData));
+                        localStorage.setItem('arc_user_items_timestamp', String(cloudItemsTs));
+                        showToast('🔄 Элементы синхронизированы из облака', 'info');
+                    }
+                }
+                
+                // 🔥 НОВОЕ: Синхронизируем правки
+                if (cloudData.editsOverride) {
+                    const cloudEditsTs = parseInt(cloudData.editsTimestamp || '0', 10);
+                    const localEditsTs = parseInt(localStorage.getItem('arc_edits_timestamp') || '0', 10);
+                    
+                    if (cloudEditsTs > localEditsTs) {
+                        editsOverride = cloudData.editsOverride;
+                        localStorage.setItem(EDITS_OVERRIDE_KEY, JSON.stringify(editsOverride));
+                        localStorage.setItem('arc_edits_timestamp', String(cloudEditsTs));
+                    }
+                }
             }
-        } catch (e) { console.error("Cloud load error:", e); }
+        } catch (e) {
+            console.error("Cloud load error:", e);
+            showToast('⚠️ Не удалось синхронизировать с облаком', 'error');
+        }
     }
-    refreshAllVisuals(); applyAllOverrides();
+    
+    refreshAllVisuals(); 
+    applyAllOverrides();
 }
 
 async function saveToCloud(data) {
@@ -1676,45 +1766,42 @@ window.handleRegister = async function() {
 window.logout = function() { signOut(auth); };
 // ===== SHARED DATA — админские элементы видны всем =====
 async function loadSharedData() {
+    // 1) Пытаемся загрузить общие элементы из GitHub
     try {
-        const itemsSnap = await getDoc(doc(db, "config", "sharedItems"));
-        if (itemsSnap.exists()) {
-            const data = itemsSnap.data();
-            if (data.userItems) {
-                userItemsData = {
-                    items: data.userItems.items || {},
-                    collections: data.userItems.collections || [],
-                    dappCategories: data.userItems.dappCategories || []
-                };
-                localStorage.setItem(USER_ITEMS_KEY, JSON.stringify(userItemsData));
-            }
-            // === NEW: загружаем глобальные NEW метки ===
-            if (data.newItemIds && Array.isArray(data.newItemIds)) {
-                const localClicked = JSON.parse(localStorage.getItem('arc_tracker_clicked_new') || '[]');
-                const clickedSet = new Set(localClicked);
-                // Добавляем в newLinksSet те ID, которые пользователь ещё НЕ кликал
-                data.newItemIds.forEach(id => {
-                    if (!clickedSet.has(id)) {
-                        newLinksSet.add(id);
-                    }
-                });
-                localStorage.setItem(NEW_LINKS_KEY, JSON.stringify([...newLinksSet]));
-            }
-        }
-        const editsSnap = await getDoc(doc(db, "config", "sharedEdits"));
-        if (editsSnap.exists()) {
-            const data = editsSnap.data();
-            if (data.editsOverride) {
-                editsOverride = data.editsOverride;
-                localStorage.setItem(EDITS_OVERRIDE_KEY, JSON.stringify(editsOverride));
-            }
+        const itemsResp = await fetch('arc_shared_items.json?' + Date.now());
+        if (itemsResp.ok) {
+            const data = await itemsResp.json();
+            userItemsData = {
+                items: data.items || {},
+                collections: data.collections || [],
+                dappCategories: data.dappCategories || []
+            };
+            localStorage.setItem(USER_ITEMS_KEY, JSON.stringify(userItemsData));
+        } else {
+            loadUserItems();
         }
     } catch (e) {
-        console.error("Load shared data error:", e);
+        console.error("Load shared items error:", e);
         loadUserItems();
+    }
+
+    // 2) Загружаем правки
+    try {
+        const editsResp = await fetch('arc_shared_edits.json?' + Date.now());
+        if (editsResp.ok) {
+            const data = await editsResp.json();
+            editsOverride = data.editsOverride || {};
+            localStorage.setItem(EDITS_OVERRIDE_KEY, JSON.stringify(editsOverride));
+        } else {
+            loadEditsOverride();
+        }
+    } catch (e) {
+        console.error("Load shared edits error:", e);
         loadEditsOverride();
     }
 }
+let isDataLoaded = false;
+
 onAuthStateChanged(auth, async (user) => {
     currentUser = user;
     const loggedOut = document.getElementById('arcLoggedOutView');
@@ -1722,28 +1809,45 @@ onAuthStateChanged(auth, async (user) => {
     const nameEl = document.getElementById('arcUserName');
     
     if (user) {
-        loggedOut.style.display = 'none';
-        loggedIn.style.display = '';
-        nameEl.textContent = user.displayName || user.email?.split('@')[0] || 'User';
-        checkAdmin(user);
-        
-        // Запуск мониторинга для админа
-        if (user.uid === ADMIN_UID) {
-            setTimeout(initTwitterMonitor, 1000);
-        }
-    } else {
-        loggedOut.style.display = '';
-        loggedIn.style.display = 'none';
-        checkAdmin(null);
-    }
+    loggedOut.style.display = 'none';
+    loggedIn.style.display = '';
+    nameEl.textContent = user.displayName || user.email?.split('@')[0] || 'User';
+    checkAdmin(user);
     
-    // 🔥 ЗАГРУЖАЕМ ДАННЫЕ ТОЛЬКО ОДИН РАЗ
-    if (!isDataLoaded) {
-        await loadSharedData();
-        await loadAllData();
-        renderAllUserItems();
-        isDataLoaded = true;
+    // 🔥 НОВОЕ: Инициализируем реал-тайм синхронизацию NEW
+    
+    setTimeout(() => {
+            initNewIndicatorsRealtime();
+        }, 2000);
+    if (user.uid === ADMIN_UID) {
+        setTimeout(initTwitterMonitor, 1000);
     }
+} else {
+    loggedOut.style.display = '';
+    loggedIn.style.display = 'none';
+    checkAdmin(null);
+    
+    // 🔥 Отключаем слушатель при выходе
+    if (newIndicatorsUnsubscribe) {
+        newIndicatorsUnsubscribe();
+        newIndicatorsUnsubscribe = null;
+    }
+}
+    // 🔥 ЗАГРУЖАЕМ ДАННЫЕ ТОЛЬКО ОДИН РАЗ
+// 🔥 ЗАГРУЖАЕМ ДАННЫЕ ТОЛЬКО ОДИН РАЗ
+if (!isDataLoaded) {
+    await loadSharedData();
+    await loadNewIndicators();  
+    await loadAllData();
+    renderAllUserItems();
+    
+    // 🔥 ВАЖНО: Применяем NEW индикаторы ТОЛЬКО после полной загрузки DOM
+    setTimeout(() => {
+        updateNewIndicators();
+    }, 100);
+    
+    isDataLoaded = true;
+}
 });
 
 // ===== HELPERS =====
@@ -1919,9 +2023,15 @@ function bindTrackingHandler(el) {
 function bindTrackingHandlersToAll() { document.querySelectorAll('.track-daily, .track-once').forEach(bindTrackingHandler); }
 
 function handleClick(e) {
-    const btn = e.currentTarget; const id = btn.getAttribute('data-id');
+    const btn = e.currentTarget; 
+    const id = btn.getAttribute('data-id');
     if (!id) return;
-    if (newLinksSet.has(id)) clearNewLink(id);
+    
+    // 🔥 Используем новую систему для очистки NEW
+    if (newIndicatorsState.globalNew.has(id) && !newIndicatorsState.clickedByUser.has(id)) {
+        clearNewLink(id);
+    }
+    
     const now = new Date().toISOString();
     if (!arcData[id]) arcData[id] = {};
     if (btn.classList.contains('track-daily')) {
@@ -1966,64 +2076,216 @@ function applySectionState(sec, collapsed) {
     if (t) { t.textContent = collapsed ? '▸' : '▾'; t.setAttribute('aria-expanded', collapsed ? 'false' : 'true'); }
 }
 
-// ===== NEW LINKS =====
-function detectNewLinks() {
-    const elements = document.querySelectorAll('[data-id]');
-    const currentIds = new Set();
-    elements.forEach(el => { if (el.dataset.id) currentIds.add(el.dataset.id); });
-    const storedKnown = JSON.parse(localStorage.getItem(KNOWN_LINKS_KEY) || '[]');
-    const storedNew = JSON.parse(localStorage.getItem(NEW_LINKS_KEY) || '[]');
-    knownLinksSet = new Set(Array.isArray(storedKnown) ? storedKnown : []);
-    newLinksSet = new Set(Array.isArray(storedNew) ? storedNew : []);
-    const storedVer = localStorage.getItem(PAGE_VERSION_KEY);
-    const isFirstRun = !storedVer && knownLinksSet.size === 0;
-    if (isFirstRun) { knownLinksSet = new Set(currentIds); newLinksSet = new Set(); }
-    else {
-        if (storedVer !== PAGE_VERSION) {
-            knownLinksSet = new Set([...knownLinksSet].filter(id => currentIds.has(id)));
-            newLinksSet = new Set([...newLinksSet].filter(id => currentIds.has(id)));
-        }
-        currentIds.forEach(id => { if (!knownLinksSet.has(id)) { knownLinksSet.add(id); newLinksSet.add(id); } });
-    }
-    newLinksSet = new Set([...newLinksSet].filter(id => currentIds.has(id)));
-    localStorage.setItem(KNOWN_LINKS_KEY, JSON.stringify([...knownLinksSet]));
-    localStorage.setItem(NEW_LINKS_KEY, JSON.stringify([...newLinksSet]));
-    localStorage.setItem(PAGE_VERSION_KEY, PAGE_VERSION);
-    updateNewIndicators();
-}
+
 
 function updateNewIndicators() {
+	if (!newIndicatorsState || !newIndicatorsState.globalNew) {
+        console.log('⚠️ NEW indicators state not ready');
+        return;
+    }
+    
+    console.log('🔄 Updating NEW indicators:', {
+        globalNew: [...newIndicatorsState.globalNew],
+        clickedByUser: [...newIndicatorsState.clickedByUser]
+    });
     document.querySelectorAll('[data-id]').forEach(el => {
         const id = el.dataset.id;
-        if (id && newLinksSet.has(id)) {
-            el.setAttribute('data-new', 'true'); el.classList.add('has-new-flag');
+        
+        // 🔥 NEW показывается только если:
+        // 1. Элемент глобально новый (добавлен админом) И
+        // 2. Пользователь на него ещё не кликал
+        const shouldShowNew = newIndicatorsState.globalNew.has(id) && 
+                             !newIndicatorsState.clickedByUser.has(id);
+        
+        if (shouldShowNew) {
+            el.setAttribute('data-new', 'true'); 
+            el.classList.add('has-new-flag');
             if (!el.querySelector('.new-flag')) {
                 const flag = document.createElement('span');
-                flag.className = 'new-flag'; flag.innerHTML = '<span class="new-flag-text">New!</span>';
+                flag.className = 'new-flag'; 
+                flag.innerHTML = '<span class="new-flag-text">New!</span>';
                 el.appendChild(flag);
             }
         } else {
-            el.removeAttribute('data-new'); el.classList.remove('has-new-flag');
-            const f = el.querySelector('.new-flag'); if (f) f.remove();
+            el.removeAttribute('data-new'); 
+            el.classList.remove('has-new-flag');
+            const f = el.querySelector('.new-flag'); 
+            if (f) f.remove();
         }
     });
     updateSectionBadges();
 }
 
-function clearNewLink(id) {
-    newLinksSet.delete(id);
-    localStorage.setItem(NEW_LINKS_KEY, JSON.stringify([...newLinksSet]));
+async function clearNewLink(id) {
+    // 🔥 Добавляем в кликнутые этим пользователем
+    newIndicatorsState.clickedByUser.add(id);
+    newIndicatorsState.lastSync = Date.now();
     
-    // === NEW: запоминаем что пользователь кликнул этот элемент ===
-    const clicked = JSON.parse(localStorage.getItem('arc_tracker_clicked_new') || '[]');
-    if (!clicked.includes(id)) {
-        clicked.push(id);
-        localStorage.setItem('arc_tracker_clicked_new', JSON.stringify(clicked));
+    // Сохраняем локально
+    const saveData = {
+        globalNew: [...newIndicatorsState.globalNew],
+        clickedByUser: [...newIndicatorsState.clickedByUser],
+        lastSync: newIndicatorsState.lastSync
+    };
+    localStorage.setItem(NEW_INDICATORS_KEY, JSON.stringify(saveData));
+    
+    // 🔥 Синхронизируем с Firebase для других устройств
+    if (currentUser) {
+        try {
+            await saveToCloud({ 
+                newIndicators: saveData,
+                newIndicatorsTimestamp: newIndicatorsState.lastSync
+            });
+            console.log('✅ NEW click synced to cloud');
+        } catch (e) {
+            console.error("NEW click sync error:", e);
+        }
     }
     
     updateNewIndicators();
+    showToast('🔄 Отметка NEW синхронизирована', 'info');
 }
 
+	// 🔥 ЗАГРУЗКА NEW состояния
+async function loadNewIndicators() {
+    // Загружаем локальные данные ПЕРВЫМИ
+    const localData = JSON.parse(localStorage.getItem(NEW_INDICATORS_KEY) || '{}');
+    
+    newIndicatorsState = {
+        globalNew: new Set(localData.globalNew || []),
+        clickedByUser: new Set(localData.clickedByUser || []),
+        lastSync: localData.lastSync || 0
+    };
+    
+    console.log('💾 Local NEW state loaded:', {
+        globalNew: [...newIndicatorsState.globalNew],
+        clickedByUser: [...newIndicatorsState.clickedByUser],
+        lastSync: new Date(newIndicatorsState.lastSync).toLocaleString()
+    });
+    
+    // Синхронизируем с облаком только если авторизован
+    if (currentUser) {
+        try {
+            const docRef = doc(db, "users", currentUser.uid);
+            const docSnap = await getDoc(docRef);
+            
+            if (docSnap.exists()) {
+                const cloudData = docSnap.data();
+                
+                if (cloudData.newIndicators) {
+                    const cloudTs = cloudData.newIndicatorsTimestamp || 0;
+                    
+                    if (cloudTs > newIndicatorsState.lastSync) {
+                        console.log('☁️ Using cloud NEW data (newer)');
+                        newIndicatorsState = {
+                            globalNew: new Set(cloudData.newIndicators.globalNew || []),
+                            clickedByUser: new Set(cloudData.newIndicators.clickedByUser || []),
+                            lastSync: cloudTs
+                        };
+                        localStorage.setItem(NEW_INDICATORS_KEY, JSON.stringify(cloudData.newIndicators));
+                    } else {
+                        console.log('💾 Keeping local NEW data (newer or equal)');
+                    }
+                }
+            }
+        } catch (e) {
+            console.error("NEW indicators sync error:", e);
+        }
+    }
+    
+    // 🔥 УСТАНАВЛИВАЕМ ФЛАГ ГОТОВНОСТИ
+    newIndicatorsState.lastSync = newIndicatorsState.lastSync || Date.now();
+    
+    console.log('✅ NEW indicators final state:', {
+        globalNew: [...newIndicatorsState.globalNew],
+        clickedByUser: [...newIndicatorsState.clickedByUser],
+        ready: true
+    });
+}
+
+
+// 🔥 РЕАЛ-ТАЙМ синхронизация NEW элементов
+function initNewIndicatorsRealtime() {
+    if (!currentUser) return;
+    
+    const newIndicatorsRef = doc(db, CONFIG_COLLECTION, NEW_INDICATORS_DOC);
+    
+    newIndicatorsUnsubscribe = onSnapshot(newIndicatorsRef, (doc) => {
+        if (doc.exists()) {
+            const data = doc.data();
+            const globalNew = new Set(data.globalNew || []);
+            
+            // 🔥 ЗАЩИТА ОТ ГОНКИ УСЛОВИЙ: проверяем, что локальные данные уже загружены
+            if (newIndicatorsState.lastSync === 0) {
+                console.log('⚠️ Skipping realtime update - local data not ready');
+                return;
+            }
+            
+            // 🔥 ПРОВЕРКА НА РЕАЛЬНЫЕ ИЗМЕНЕНИЯ (не просто обновление timestamp)
+            const hasRealChanges = [...globalNew].some(id => !newIndicatorsState.globalNew.has(id)) ||
+                                  [...newIndicatorsState.globalNew].some(id => !globalNew.has(id));
+            
+            if (hasRealChanges) {
+                console.log('🔄 Real-time NEW update:', {
+                    before: [...newIndicatorsState.globalNew],
+                    after: [...globalNew]
+                });
+                
+                newIndicatorsState.globalNew = globalNew;
+                
+                // Сохраняем в localStorage
+                const saveData = {
+                    globalNew: [...newIndicatorsState.globalNew],
+                    clickedByUser: [...newIndicatorsState.clickedByUser],
+                    lastSync: Date.now()
+                };
+                localStorage.setItem(NEW_INDICATORS_KEY, JSON.stringify(saveData));
+                
+                updateNewIndicators();
+                showToast('🔄 NEW элементы обновлены в реальном времени', 'info');
+            }
+        }
+    }, (error) => {
+        console.error("NEW indicators realtime error:", error);
+    });
+}
+
+// 🔥 АДМИНСКАЯ функция для добавления NEW элементов
+async function addToGlobalNewIndicators(itemId) {
+    if (!isAdmin) return;
+    
+    try {
+        // 🔥 ЗАЩИТА ОТ ДУБЛИКАТОВ: проверяем, не существует ли уже
+        if (newIndicatorsState.globalNew.has(itemId)) {
+            console.log('⚠️ Item already in global NEW:', itemId);
+            return;
+        }
+        
+        newIndicatorsState.globalNew.add(itemId);
+        
+        // Сохраняем в Firebase config для всех пользователей
+        await setDoc(doc(db, CONFIG_COLLECTION, NEW_INDICATORS_DOC), {
+            globalNew: [...newIndicatorsState.globalNew],
+            lastUpdated: Date.now(),
+            updatedBy: currentUser.uid
+        }, { merge: true });
+        
+        // 🔥 ЛОКАЛЬНОЕ СОХРАНЕНИЕ СРАЗУ
+        const saveData = {
+            globalNew: [...newIndicatorsState.globalNew],
+            clickedByUser: [...newIndicatorsState.clickedByUser],
+            lastSync: Date.now()
+        };
+        localStorage.setItem(NEW_INDICATORS_KEY, JSON.stringify(saveData));
+        
+        updateNewIndicators();
+        console.log('✅ Added to global NEW indicators:', itemId);
+        
+    } catch (e) {
+        console.error("Failed to add to global NEW:", e);
+        showToast('❌ Ошибка добавления NEW индикатора', 'error');
+    }
+}
 function updateSectionBadges() {
     document.querySelectorAll('.collapsible-section').forEach(sec => {
         const st = sec.querySelector('.section-status'); if (!st) return;
@@ -2080,25 +2342,7 @@ const SECTION_ZONE_CONFIG = {
 
 let userItemsData = { items: {}, collections: [], dappCategories: [] };
 let currentAddContext = null;
-// 🔥 Очистка всех пользовательских элементов перед рендерингом
-function clearAllUserItems() {
-    // Удаляем все пользовательские элементы (wrapper'ы)
-    document.querySelectorAll('.user-item-wrapper').forEach(el => el.remove());
-    
-    // Удаляем все пользовательские коллекции и категории
-    document.querySelectorAll('.user-collection-card').forEach(el => el.remove());
-    
-    // Удаляем строки пользовательских категорий из таблицы dApps
-    document.querySelectorAll('.dapp-table tbody tr').forEach(tr => {
-        const zone = tr.dataset.zone;
-        if (zone && zone.startsWith('u_')) {
-            tr.remove();
-        }
-    });
-    
-    // Удаляем все кнопки "+" (будем пересоздавать)
-    document.querySelectorAll('.add-item-btn, .section-add-btn').forEach(btn => btn.remove());
-}
+
 function loadUserItems() {
     try {
         const raw = localStorage.getItem(USER_ITEMS_KEY);
@@ -2106,23 +2350,39 @@ function loadUserItems() {
     } catch(e) { console.error(e); }
 }
 
+// ===== ОБНОВЛЕННЫЕ ФУНКЦИИ СОХРАНЕНИЯ =====
 async function saveUserItems() {
-    // Сохраняем локально
+    // 1. Локальное сохранение (для быстрого доступа)
     localStorage.setItem(USER_ITEMS_KEY, JSON.stringify(userItemsData));
     
-    // Синхронизируем с Firebase только для админа
-    if (isAdmin && currentUser) {
+    // 2. 🔥 АВТОМАТИЧЕСКОЕ СОХРАНЕНИЕ В FIREBASE
+    if (currentUser) {
         try {
-            // 🔥 Используем merge: true для предотвращения перезаписи
-            await setDoc(doc(db, "config", "sharedItems"), { 
+            await saveToCloud({ 
                 userItems: userItemsData,
-                newItemIds: [...newLinksSet],
-                lastUpdated: new Date().toISOString()
-            }, { merge: true });
-            
-            console.log("✅ User items saved to Firebase successfully");
-        } catch (e) { 
-            console.error("❌ Save shared items error:", e); 
+                userItemsTimestamp: Date.now()
+            });
+            console.log('✅ Данные сохранены в Firebase автоматически');
+        } catch (e) {
+            console.error("Firebase auto-save error:", e);
+            showToast('⚠️ Локально сохранено, облако недоступно', 'error');
+        }
+    }
+}
+
+async function saveEditsOverride() {
+    // 1. Локальное сохранение
+    localStorage.setItem(EDITS_OVERRIDE_KEY, JSON.stringify(editsOverride));
+    
+    // 2. 🔥 АВТОМАТИЧЕСКОЕ СОХРАНЕНИЕ В FIREBASE
+    if (currentUser) {
+        try {
+            await saveToCloud({ 
+                editsOverride: editsOverride,
+                editsTimestamp: Date.now()
+            });
+        } catch (e) {
+            console.error("Firebase edits save error:", e);
         }
     }
 }
@@ -2136,14 +2396,6 @@ function showFields(fields) {
         const el = document.getElementById(f);
         if (el) el.classList.toggle('field-hidden', !fields.includes(f));
     });
-}
-  // 🔥 Проверяка существования элемента ПЕРЕД добавлением
-function isItemAlreadyExists(zone, url, title) {
-    const items = userItemsData.items[zone] || [];
-    return items.some(item => 
-        item.url === url || // Дубликат по URL
-        item.title === title // Дубликат по названию
-    );
 }
 function openModal(title, fields) {
     document.getElementById('addModalTitle').textContent = title;
@@ -2179,91 +2431,198 @@ function normalizeImageUrl(rawUrl) {
 document.getElementById('addModalSave').addEventListener('click', async () => {
     const saveBtn = document.getElementById('addModalSave');
     const isEdit = saveBtn.dataset.editMode === 'true';
+    
+    // Показываем процесс сохранения
+    const originalText = saveBtn.textContent;
+    saveBtn.disabled = true;
+    saveBtn.textContent = isEdit ? '💾 Сохранение...' : '💾 Добавление...';
 
-    if (isEdit && currentEditTarget) {
-        const id = currentEditTarget.id; const link = currentEditTarget.link;
-        const newTitle = document.getElementById('addFieldTitle').value.trim();
-        const newUrl = document.getElementById('addFieldUrl').value.trim();
-        const newTooltip = document.getElementById('addFieldTooltip').value.trim();
-        const newImage = normalizeImageUrl(document.getElementById('addFieldImage').value.trim());
-        if (!newTitle || !newUrl) { alert('Название и URL обязательны!'); return; }
-        let isUserItem = false;
-        for (const zone in userItemsData.items) {
-            const items = userItemsData.items[zone]; if (!items) continue;
-            const found = items.find(i => i.id === id);
-            if (found) {
-                found.title = newTitle; found.url = newUrl; found.tooltip = newTooltip; found.image = newImage;
-                isUserItem = true; await saveUserItems(); break;
+    try {
+        if (isEdit && currentEditTarget) {
+            const id = currentEditTarget.id; 
+            const link = currentEditTarget.link;
+            const newTitle = document.getElementById('addFieldTitle').value.trim();
+            const newUrl = document.getElementById('addFieldUrl').value.trim();
+            const newTooltip = document.getElementById('addFieldTooltip').value.trim();
+            const newImage = normalizeImageUrl(document.getElementById('addFieldImage').value.trim());
+            
+            if (!newTitle || !newUrl) { 
+                alert('Название и URL обязательны!'); 
+                return; 
+            }
+
+            let isUserItem = false;
+            for (const zone in userItemsData.items) {
+                const items = userItemsData.items[zone];
+                if (!items) continue;
+                const found = items.find(i => i.id === id);
+                if (found) {
+                    found.title = newTitle; 
+                    found.url = newUrl; 
+                    found.tooltip = newTooltip; 
+                    found.image = newImage;
+                    isUserItem = true;
+                    
+                    // 🔥 АВТОМАТИЧЕСКОЕ СОХРАНЕНИЕ В FIREBASE
+                    await saveUserItems();
+                    break;
+                }
+            }
+
+            if (!isUserItem) {
+                editsOverride[id] = { title: newTitle, url: newUrl, tooltip: newTooltip, image: newImage };
+                
+                // 🔥 АВТОМАТИЧЕСКОЕ СОХРАНЕНИЕ ПРАВОК В FIREBASE
+                await saveEditsOverride();
+            }
+
+            applyOverrideToLink(link, { title: newTitle, url: newUrl, tooltip: newTooltip, image: newImage });
+            
+            if (favoritesState[id]) {
+                favoritesState[id].title = newTitle; 
+                favoritesState[id].url = newUrl; 
+                favoritesState[id].tooltip = newTooltip;
+                await saveFavorites(); 
+                renderFavoritesList();
+            }
+
+            showToast('✅ Элемент обновлен и синхронизирован', 'success');
+            closeModal(); 
+            initializeTooltips(); 
+            initLightbox(); 
+            return;
+        }
+
+        // Добавление нового элемента
+        if (!currentAddContext) return;
+        
+        const title = document.getElementById('addFieldTitle').value.trim();
+        const url = document.getElementById('addFieldUrl').value.trim();
+        const tooltip = document.getElementById('addFieldTooltip').value.trim();
+        const image = normalizeImageUrl(document.getElementById('addFieldImage').value.trim());
+        const website = document.getElementById('addFieldWebsite').value.trim();
+        const twitter = document.getElementById('addFieldTwitter').value.trim();
+        const description = document.getElementById('addFieldDescription').value.trim();
+
+        if (currentAddContext.zone) {
+            if (!title || !url) { 
+                alert('Название и URL обязательны!'); 
+                return; 
+            }
+            
+            const config = currentAddContext.config; 
+            const id = generateId();
+            const item = { 
+                id, title, url, tooltip, image, 
+                trackType: config.trackType, 
+                addedAt: Date.now() 
+            };
+            
+            if (!userItemsData.items[currentAddContext.zone]) {
+                userItemsData.items[currentAddContext.zone] = [];
+            }
+            userItemsData.items[currentAddContext.zone].push(item);
+            
+           if (isAdmin) {
+    await addToGlobalNewIndicators(id);
+}
+            
+            // 🔥 АВТОМАТИЧЕСКОЕ СОХРАНЕНИЕ В FIREBASE
+            await saveUserItems();
+            
+            renderUserItemInZone(currentAddContext.zone, item);
+            showToast('✅ Элемент добавлен и синхронизирован', 'success');
+            
+        } else if (currentAddContext.sectionZone) {
+            const sConfig = currentAddContext.config;
+            
+            if (sConfig.type === 'nft-collection') {
+                if (!title) { alert('Название обязательно!'); return; }
+                
+                const collId = generateId();
+                const coll = { 
+                    id: collId, title, website, twitter, 
+                    parentZone: currentAddContext.sectionZone, 
+                    items: [], addedAt: Date.now()
+                };
+                
+                userItemsData.collections.push(coll);
+                ZONE_CONFIG[collId] = { 
+                    type: 'nft-item', 
+                    label: 'NFT в ' + title, 
+                    trackType: 'track-once' 
+                };
+                
+                // 🔥 АВТОМАТИЧЕСКОЕ СОХРАНЕНИЕ В FIREBASE
+                await saveUserItems();
+                
+                renderUserCollection(coll);
+                showToast('✅ Коллекция создана и синхронизирована', 'success');
+                
+            } else if (sConfig.type === 'dapp-category') {
+                if (!title) { alert('Название обязательно!'); return; }
+                
+                const catId = generateId();
+                const cat = { 
+                    id: catId, title, description, 
+                    parentZone: currentAddContext.sectionZone, 
+                    items: [], addedAt: Date.now()
+                };
+                
+                userItemsData.dappCategories.push(cat);
+                ZONE_CONFIG[catId] = { 
+                    type: 'link-item', 
+                    label: title, 
+                    trackType: 'track-daily' 
+                };
+                
+                // 🔥 АВТОМАТИЧЕСКОЕ СОХРАНЕНИЕ В FIREBASE
+                await saveUserItems();
+                
+                renderUserDappCategory(cat);
+                showToast('✅ Категория создана и синхронизирована', 'success');
+                
+            } else if (sConfig.type === 'deploy-group') {
+                if (!title) { alert('Название обязательно!'); return; }
+                
+                const grpId = generateId();
+                const grp = { 
+                    id: grpId, title, 
+                    parentZone: currentAddContext.sectionZone, 
+                    items: [], addedAt: Date.now()
+                };
+                
+                userItemsData.collections.push(grp);
+                ZONE_CONFIG[grpId] = { 
+                    type: 'link-item', 
+                    label: title, 
+                    trackType: 'track-once track-once-info' 
+                };
+                
+                // 🔥 АВТОМАТИЧЕСКОЕ СОХРАНЕНИЕ В FIREBASE
+                await saveUserItems();
+                
+                renderUserDeployGroup(grp);
+                showToast('✅ Группа создана и синхронизирована', 'success');
             }
         }
-        if (!isUserItem) {
-            editsOverride[id] = { title: newTitle, url: newUrl, tooltip: newTooltip, image: newImage };
-            await saveEditsOverride();
-        }
-        applyOverrideToLink(link, { title: newTitle, url: newUrl, tooltip: newTooltip, image: newImage });
-        if (favoritesState[id]) {
-            favoritesState[id].title = newTitle; favoritesState[id].url = newUrl; favoritesState[id].tooltip = newTooltip;
-            await saveFavorites(); renderFavoritesList();
-        }
-        showToast('Обновлено: ' + newTitle, 'success');
-        closeModal(); initializeTooltips(); initLightbox(); return;
-    }
 
-    if (!currentAddContext) return;
-    const title = document.getElementById('addFieldTitle').value.trim();
-    const url = document.getElementById('addFieldUrl').value.trim();
-    const tooltip = document.getElementById('addFieldTooltip').value.trim();
-    const image = normalizeImageUrl(document.getElementById('addFieldImage').value.trim());
-    const website = document.getElementById('addFieldWebsite').value.trim();
-    const twitter = document.getElementById('addFieldTwitter').value.trim();
-    const description = document.getElementById('addFieldDescription').value.trim();
-
-    if (currentAddContext.zone) {
-        if (!title || !url) { alert('Название и URL обязательны!'); return; }
-      if (isItemAlreadyExists(currentAddContext.zone, url, title)) {
-        alert('Элемент с таким названием или URL уже существует!');
-        return;
+        closeModal();
+        bindTrackingHandlersToAll(); 
+        attachFavoriteControls(); 
+        initializeTooltips(); 
+        initLightbox(); 
+        updateUI();
+       updateNewIndicators();
+        
+    } catch (error) {
+        console.error('Save error:', error);
+        showToast('❌ Ошибка сохранения: ' + error.message, 'error');
+    } finally {
+        // Восстанавливаем кнопку
+        saveBtn.disabled = false;
+        saveBtn.textContent = originalText;
     }
-        const config = currentAddContext.config; const id = generateId();
-        const item = { id, title, url, tooltip, image, trackType: config.trackType, addedAt: Date.now() };
-        if (!userItemsData.items[currentAddContext.zone]) userItemsData.items[currentAddContext.zone] = [];
-        userItemsData.items[currentAddContext.zone].push(item);
-        newLinksSet.add(id);
-    knownLinksSet.add(id);
-    localStorage.setItem(NEW_LINKS_KEY, JSON.stringify([...newLinksSet]));
-    localStorage.setItem(KNOWN_LINKS_KEY, JSON.stringify([...knownLinksSet]));
-        await saveUserItems(); renderUserItemInZone(currentAddContext.zone, item);
-        showToast('Добавлено: ' + title, 'success');
-    } else if (currentAddContext.sectionZone) {
-        const sConfig = currentAddContext.config;
-        if (sConfig.type === 'nft-collection') {
-            if (!title) { alert('Название обязательно!'); return; }
-            const collId = generateId();
-            const coll = { id: collId, title, website, twitter, parentZone: currentAddContext.sectionZone, items: [] };
-            userItemsData.collections.push(coll);
-            ZONE_CONFIG[collId] = { type:'nft-item', label:'NFT в '+title, trackType:'track-once' };
-            await saveUserItems(); renderUserCollection(coll);
-            showToast('Коллекция создана: ' + title, 'success');
-        } else if (sConfig.type === 'dapp-category') {
-            if (!title) { alert('Название обязательно!'); return; }
-            const catId = generateId();
-            const cat = { id: catId, title, description, parentZone: currentAddContext.sectionZone, items: [] };
-            userItemsData.dappCategories.push(cat);
-            ZONE_CONFIG[catId] = { type:'link-item', label: title, trackType:'track-daily' };
-            await saveUserItems(); renderUserDappCategory(cat);
-            showToast('Категория создана: ' + title, 'success');
-        } else if (sConfig.type === 'deploy-group') {
-            if (!title) { alert('Название обязательно!'); return; }
-            const grpId = generateId();
-            const grp = { id: grpId, title, parentZone: currentAddContext.sectionZone, items: [] };
-            userItemsData.collections.push(grp);
-            ZONE_CONFIG[grpId] = { type:'link-item', label: title, trackType:'track-once track-once-info' };
-            await saveUserItems(); renderUserDeployGroup(grp);
-            showToast('Группа создана: ' + title, 'success');
-        }
-    }
-    closeModal();
-    bindTrackingHandlersToAll(); attachFavoriteControls(); initializeTooltips(); initLightbox(); updateUI();detectNewLinks();
 });
 
 // ---- RENDER USER ITEMS ----
@@ -2283,18 +2642,48 @@ function createUserLink(item, zone) {
     delBtn.type = 'button'; delBtn.className = 'user-item-delete admin-only';
     delBtn.title = 'Удалить'; delBtn.innerHTML = '×';
     delBtn.addEventListener('click', async (e) => {
-        e.stopPropagation();
-        if (!confirm(`Удалить «${item.title}»?`)) return;
-        if (userItemsData.items[zone]) userItemsData.items[zone] = userItemsData.items[zone].filter(i => i.id !== item.id);
-        userItemsData.collections.forEach(c => { if (c.items) c.items = c.items.filter(i => i.id !== item.id); });
-        userItemsData.dappCategories.forEach(c => { if (c.items) c.items = c.items.filter(i => i.id !== item.id); });
-        await saveUserItems(); wrapper.remove();
-        if (favoritesState[item.id]) {
-            delete favoritesState[item.id]; favoritesOrder = favoritesOrder.filter(x => x !== item.id);
-            await saveFavorites(); refreshAllVisuals();
+    e.stopPropagation();
+    if (!confirm(`Удалить «${item.title}»?`)) return;
+    
+    // Показываем процесс удаления
+    delBtn.disabled = true;
+    delBtn.innerHTML = '⏳';
+    
+    try {
+        // Удаляем из локальных данных
+        if (userItemsData.items[zone]) {
+            userItemsData.items[zone] = userItemsData.items[zone].filter(i => i.id !== item.id);
         }
-        showToast(`Удалено: ${item.title}`, 'info');
-    });
+        userItemsData.collections.forEach(c => {
+            if (c.items) c.items = c.items.filter(i => i.id !== item.id);
+        });
+        userItemsData.dappCategories.forEach(c => {
+            if (c.items) c.items = c.items.filter(i => i.id !== item.id);
+        });
+        
+        // 🔥 АВТОМАТИЧЕСКОЕ СОХРАНЕНИЕ В FIREBASE
+        await saveUserItems();
+        
+        // Удаляем из DOM
+        wrapper.remove();
+        
+        // Удаляем из избранного, если есть
+        if (favoritesState[item.id]) {
+            delete favoritesState[item.id];
+            favoritesOrder = favoritesOrder.filter(x => x !== item.id);
+            await saveFavorites();
+            refreshAllVisuals();
+        }
+        
+        showToast(`✅ Удалено и синхронизировано: ${item.title}`, 'info');
+    } catch (error) {
+        console.error('Delete error:', error);
+        showToast('❌ Ошибка удаления: ' + error.message, 'error');
+        // Восстанавливаем кнопку при ошибке
+        delBtn.disabled = false;
+        delBtn.innerHTML = '×';
+    }
+});
     wrapper.appendChild(delBtn); return wrapper;
 }
 
@@ -2309,7 +2698,6 @@ function renderUserItemInZone(zone, item) {
         return;
     }
     
-    // Остальной код функции остаётся без изменений
     let target;
     if (container.tagName === 'TR') target = container.querySelector('.dapp-links');
     else target = container.querySelector('.link-collection') || container.querySelector('.link-row');
@@ -2486,14 +2874,30 @@ function injectAddButtons() {
 }
 
 
-
+function clearAllUserItems() {
+    // Удаляем все пользовательские элементы (wrapper'ы)
+    document.querySelectorAll('.user-item-wrapper').forEach(el => el.remove());
+    
+    // Удаляем все пользовательские коллекции и категории
+    document.querySelectorAll('.user-collection-card').forEach(el => el.remove());
+    
+    // Удаляем строки пользовательских категорий из таблицы dApps
+    document.querySelectorAll('.dapp-table tbody tr').forEach(tr => {
+        const zone = tr.dataset.zone;
+        if (zone && zone.startsWith('u_')) {
+            tr.remove();
+        }
+    });
+    
+    // Удаляем все кнопки "+" (будем пересоздавать)
+    document.querySelectorAll('.add-item-btn, .section-add-btn').forEach(btn => btn.remove());
+}
 function renderAllUserItems() {
     loadUserItems();
     
     // 🔥 ОЧИЩАЕМ ВСЕ ПОЛЬЗОВАТЕЛЬСКИЕ ЭЛЕМЕНТЫ ПЕРЕД РЕНДЕРОМ
     clearAllUserItems();
     
-    // Остальной код остаётся без изменений...
     userItemsData.collections.forEach(coll => {
         if (!ZONE_CONFIG[coll.id]) {
             const isNft = coll.parentZone === 'nfts';
@@ -2523,25 +2927,7 @@ function loadEditsOverride() {
     catch(e) { editsOverride = {}; }
 }
 
-async function saveEditsOverride() {
-    // Сохраняем локально
-    localStorage.setItem(EDITS_OVERRIDE_KEY, JSON.stringify(editsOverride));
-    
-    // Синхронизируем с Firebase только для админа
-    if (isAdmin && currentUser) {
-        try {
-            // 🔥 Используем merge: true
-            await setDoc(doc(db, "config", "sharedEdits"), { 
-                editsOverride,
-                lastUpdated: new Date().toISOString()
-            }, { merge: true });
-            
-            console.log("✅ Edits override saved to Firebase successfully");
-        } catch (e) { 
-            console.error("❌ Save shared edits error:", e); 
-        }
-    }
-}
+
 
 function applyOverrideToLink(link, ov) {
     if (!link || !ov) return;
@@ -2612,21 +2998,149 @@ function openEditModal(link) {
     saveBtn.textContent = 'Сохранить'; saveBtn.dataset.editMode = 'true';
     overlayEl().classList.add('open');
 }
+async function uploadConfigToGithub() {
+    try {
+        // 1. Убеждаемся, что локальные данные записаны в localStorage
+        saveUserItems();
+        saveEditsOverride();
+
+        // 2. Просим у админа GitHub Personal Access Token
+        const token = prompt(
+            'Введите ваш GitHub Personal Access Token (с правами repo).\n' +
+            'Токен НЕ сохраняется и используется только в этой вкладке.'
+        );
+        if (!token) return;
+
+        showToast('Загрузка на GitHub начата...', 'info');
+
+        // 3. Формируем полезную нагрузку
+        const itemsPayload = {
+            items: userItemsData.items || {},
+            collections: userItemsData.collections || [],
+            dappCategories: userItemsData.dappCategories || []
+        };
+        const editsPayload = {
+            editsOverride: editsOverride || {}
+        };
+
+        // 4. Получаем текущий sha файлов (если существуют)
+        const [itemsSha, editsSha] = await Promise.all([
+            githubGetFileSha(GITHUB_ITEMS_PATH, token),
+            githubGetFileSha(GITHUB_EDITS_PATH, token)
+        ]);
+
+        // 5. Обновляем arc_shared_items.json
+        const putItemsResp = await fetch(
+            `https://api.github.com/repos/${GITHUB_OWNER}/${GITHUB_REPO}/contents/${GITHUB_ITEMS_PATH}`,
+            {
+                method: 'PUT',
+                headers: {
+                    'Authorization': `Bearer ${token}`,
+                    'Accept': 'application/vnd.github+json',
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    message: 'Update arc_shared_items via Arc admin UI',
+                    content: encodeContent(itemsPayload),
+                    branch: GITHUB_BRANCH,
+                    sha: itemsSha || undefined
+                })
+            }
+        );
+
+        if (!putItemsResp.ok) {
+            const errText = await putItemsResp.text();
+            throw new Error(`GitHub items update failed: ${putItemsResp.status} ${errText}`);
+        }
+
+        // 6. Обновляем arc_shared_edits.json
+        const putEditsResp = await fetch(
+            `https://api.github.com/repos/${GITHUB_OWNER}/${GITHUB_REPO}/contents/${GITHUB_EDITS_PATH}`,
+            {
+                method: 'PUT',
+                headers: {
+                    'Authorization': `Bearer ${token}`,
+                    'Accept': 'application/vnd.github+json',
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    message: 'Update arc_shared_edits via Arc admin UI',
+                    content: encodeContent(editsPayload),
+                    branch: GITHUB_BRANCH,
+                    sha: editsSha || undefined
+                })
+            }
+        );
+
+        if (!putEditsResp.ok) {
+            const errText = await putEditsResp.text();
+            throw new Error(`GitHub edits update failed: ${putEditsResp.status} ${errText}`);
+        }
+
+        showToast('Изменения загружены на GitHub!', 'success');
+
+        // 🔥 ПРИНУДИТЕЛЬНО ПЕРЕЗАГРУЖАЕМ ДАННЫЕ ПОСЛЕ ЗАГРУЗКИ
+        setTimeout(async () => {
+            await loadSharedData();
+            renderAllUserItems();
+            showToast('Данные обновлены на странице!', 'info');
+        }, 2000);
+
+    } catch (e) {
+        console.error(e);
+        showToast('Ошибка загрузки на GitHub: ' + e.message, 'error');
+    }
+}
 
 // ===== DOM CONTENT LOADED =====
 document.addEventListener('DOMContentLoaded', () => {
-    loadTheme(); loadEditsOverride(); applyAllOverrides();
-    attachFavoriteControls(); bindTrackingHandlersToAll();
-    initLightbox(); initCardAnimations(); initLazyLoading();
+    loadTheme(); 
+    loadEditsOverride(); 
+    applyAllOverrides();
+    
+    // 🔥 Сначала инициализируем весь DOM
+attachFavoriteControls(); 
+bindTrackingHandlersToAll();
+initLightbox(); 
+initCardAnimations(); 
+initLazyLoading();
+const localData = JSON.parse(localStorage.getItem(NEW_INDICATORS_KEY) || '{}');
+    newIndicatorsState = {
+        globalNew: new Set(localData.globalNew || []),
+        clickedByUser: new Set(localData.clickedByUser || []),
+        lastSync: localData.lastSync || 0
+    };
+    
+    console.log('🎯 Initial NEW state loaded:', {
+        globalNew: [...newIndicatorsState.globalNew],
+        clickedByUser: [...newIndicatorsState.clickedByUser]
+    });
+// 🔥 Затем применяем NEW состояние если уже загружено
+if (isDataLoaded) {
+    updateNewIndicators();
+}
 
     document.getElementById('themeToggleBtn').addEventListener('click', toggleTheme);
-    document.getElementById('toggleBadgesBtn').addEventListener('click', () => { setBadgeHiddenState(!getBadgeHiddenState()); updateBadgeVisibility(); });
+    
+    // 🔥 ИСПРАВЛЕННАЯ функция для кнопки бейджей
+    document.getElementById('toggleBadgesBtn').addEventListener('click', () => { 
+        const currentlyHidden = getBadgeHiddenState();
+        setBadgeHiddenState(!currentlyHidden); 
+        updateBadgeVisibility(); 
+        showToast(currentlyHidden ? 'Бейджи показаны' : 'Бейджи скрыты', 'info');
+    });
 
     const editBtn = document.getElementById('editModeBtn');
     if (editBtn) editBtn.addEventListener('click', toggleEditMode);
 
     document.getElementById('exportBtn').addEventListener('click', exportJSON);
     document.getElementById('importBtn').addEventListener('click', () => document.getElementById('importFileInput').click());
+
+    const githubUploadBtn = document.getElementById('githubUploadBtn');
+    if (githubUploadBtn) {
+        githubUploadBtn.addEventListener('click', uploadConfigToGithub);
+    }
+    
     document.getElementById('importFileInput').addEventListener('change', (e) => {
         if (e.target.files[0]) { importJSON(e.target.files[0]); e.target.value = ''; }
     });
@@ -2669,7 +3183,7 @@ document.addEventListener('DOMContentLoaded', () => {
     });
     applyLegendState(isLegendCollapsed);
 
-    initializeTooltips(); detectNewLinks(); updateBadgeVisibility();
+    initializeTooltips(); updateBadgeVisibility();
 });
    // ============================================================
 //  TWITTER MONITOR (Загрузка из JSON)
