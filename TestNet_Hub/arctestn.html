@@ -1837,6 +1837,7 @@ if (!isDataLoaded) {
     await loadNewIndicators();  // 🔥 НОВОЕ: загружаем NEW состояние
     await loadAllData();
     renderAllUserItems();
+	updateNewIndicators();
     isDataLoaded = true;
 }
 });
@@ -2546,7 +2547,7 @@ document.getElementById('addModalSave').addEventListener('click', async () => {
         initializeTooltips(); 
         initLightbox(); 
         updateUI();
-        detectNewLinks();
+       updateNewIndicators();
         
     } catch (error) {
         console.error('Save error:', error);
@@ -3027,12 +3028,31 @@ async function uploadConfigToGithub() {
 
 // ===== DOM CONTENT LOADED =====
 document.addEventListener('DOMContentLoaded', () => {
-    loadTheme(); loadEditsOverride(); applyAllOverrides();
-    attachFavoriteControls(); bindTrackingHandlersToAll();
-    initLightbox(); initCardAnimations(); initLazyLoading();
+    loadTheme(); 
+    loadEditsOverride(); 
+    applyAllOverrides();
+    
+    // 🔥 ВАЖНО: Загружаем NEW индикаторы ДО всего остального
+    loadNewIndicators().then(() => {
+        attachFavoriteControls(); 
+        bindTrackingHandlersToAll();
+        initLightbox(); 
+        initCardAnimations(); 
+        initLazyLoading();
+        
+        // 🔥 Применяем NEW индикаторы после загрузки DOM
+        updateNewIndicators();
+    });
 
     document.getElementById('themeToggleBtn').addEventListener('click', toggleTheme);
-    document.getElementById('toggleBadgesBtn').addEventListener('click', () => { setBadgeHiddenState(!getBadgeHiddenState()); updateBadgeVisibility(); });
+    
+    // 🔥 ИСПРАВЛЕННАЯ функция для кнопки бейджей
+    document.getElementById('toggleBadgesBtn').addEventListener('click', () => { 
+        const currentlyHidden = getBadgeHiddenState();
+        setBadgeHiddenState(!currentlyHidden); 
+        updateBadgeVisibility(); 
+        showToast(currentlyHidden ? 'Бейджи показаны' : 'Бейджи скрыты', 'info');
+    });
 
     const editBtn = document.getElementById('editModeBtn');
     if (editBtn) editBtn.addEventListener('click', toggleEditMode);
@@ -3044,6 +3064,7 @@ document.addEventListener('DOMContentLoaded', () => {
     if (githubUploadBtn) {
         githubUploadBtn.addEventListener('click', uploadConfigToGithub);
     }
+    
     document.getElementById('importFileInput').addEventListener('change', (e) => {
         if (e.target.files[0]) { importJSON(e.target.files[0]); e.target.value = ''; }
     });
@@ -3086,7 +3107,7 @@ document.addEventListener('DOMContentLoaded', () => {
     });
     applyLegendState(isLegendCollapsed);
 
-    initializeTooltips(); detectNewLinks(); updateBadgeVisibility();
+    initializeTooltips(); updateBadgeVisibility();
 });
    // ============================================================
 //  TWITTER MONITOR (Загрузка из JSON)
