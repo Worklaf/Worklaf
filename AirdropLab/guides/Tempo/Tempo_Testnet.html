@@ -1153,7 +1153,6 @@ body.light-theme .monitor-item {
         <ul class="favorites-list" id="favoritesList"></ul>
     </aside>
 </div>
-
 <script type="module">
     let newLinksSet = new Set();
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
@@ -1183,7 +1182,7 @@ const db = getFirestore(app);
 const ADMIN_UID = 'SAkz4mdW9reDaIsvqigCNZhEKJR2';
 let isAdmin = false;
 let currentUser = null;
-let arcData = {};
+let tempoData = {};
 let favoritesState = {};
 let favoritesOrder = [];
 
@@ -1196,25 +1195,26 @@ const FAVORITES_ORDER_KEY = 'tempo_favorites_order_v1';
 const FAVORITES_TIMESTAMP_KEY = 'tempo_favorites_timestamp_v1';
 const THEME_KEY = 'tempo_theme';
 const PAGE_VERSION = '2026-02-18-tempo-v1';
-const GITHUB_OWNER = 'Worklaf';      // ваш GitHub логин
-const GITHUB_REPO = 'Worklaf';       // ваш репозиторий
-const GITHUB_BRANCH = 'main';        // если у вас master — замените на 'master'
+const GITHUB_OWNER = 'Worklaf';
+const GITHUB_REPO = 'Worklaf';
+const GITHUB_BRANCH = 'main';
 
-// Пути файлов в репозитории (от корня репо)
 const GITHUB_ITEMS_PATH = 'TestNet_Hub/guides/Tempo/tempo_shared_items.json';
 const GITHUB_EDITS_PATH = 'TestNet_Hub/guides/Tempo/tempo_shared_edits.json';
-	// Получить sha файла в репозитории (нужно для PUT в GitHub API)
-	const CONFIG_COLLECTION = 'tempo_config';
+const CONFIG_COLLECTION = 'tempo_config';
 const NEW_INDICATORS_DOC = 'tempo_new_indicators_global';
 const NEW_INDICATORS_KEY = 'tempo_new_indicators_v1';
+const USER_ITEMS_KEY = 'tempo_user_items_v1';
+const EDITS_OVERRIDE_KEY = 'tempo_edits_v1';
 
 let newIndicatorsState = {
-    globalNew: new Set(),      // Глобальные NEW элементы (от админа)
-    clickedByUser: new Set(),  // Какие пользователь уже кликнул
+    globalNew: new Set(),
+    clickedByUser: new Set(),
     lastSync: 0
 };
 
 let newIndicatorsUnsubscribe = null;
+
 async function githubGetFileSha(path, token) {
     const url = `https://api.github.com/repos/${GITHUB_OWNER}/${GITHUB_REPO}/contents/${path}?ref=${GITHUB_BRANCH}`;
     const resp = await fetch(url, {
@@ -1223,29 +1223,16 @@ async function githubGetFileSha(path, token) {
             'Accept': 'application/vnd.github+json'
         }
     });
-
-    if (resp.status === 404) {
-        // Файл ещё не существует — sha не нужен
-        return null;
-    }
-
-    if (!resp.ok) {
-        throw new Error(`GitHub GET ${path} failed: ${resp.status}`);
-    }
-
+    if (resp.status === 404) return null;
+    if (!resp.ok) throw new Error(`GitHub GET ${path} failed: ${resp.status}`);
     const data = await resp.json();
     return data.sha || null;
 }
 
-// Кодирование JSON в base64 для GitHub
 function encodeContent(obj) {
     const json = JSON.stringify(obj, null, 2);
-    // Корректная base64‑кодировка для Unicode
     return btoa(unescape(encodeURIComponent(json)));
 }
-// ============================================================
-//  TWITTER RSS MONITOR (ADMIN ONLY)
-// ============================================================
 
 const TWITTER_MONITOR_CONFIG = {
     morkie:   { username: '_morkie',     zone: 'nft_morkie',   triggerText: 'NFT On Tempo Testnet' },
@@ -1258,150 +1245,6 @@ const TWITTER_MONITOR_CONFIG = {
     alze:     { username: '0xAlze',       zone: 'nft_alze',     triggerText: 'NFT On Tempo Testnet' }
 };
 
-
-
-async function autoAddNewNFT(projectKey, config, tweet) {
-    const tweetLink = tweet.link;
-    const tweetId = tweetLink.split('/').pop().split('?')[0];
-    const internalId = `tw_${projectKey}_${tweetId}`;
-
-    // 1. Проверяем дубликаты
-    if (arcData[internalId] || isAlreadyInList(config.zone, tweetLink)) {
-        return; 
-    }
-
-    // 2. Сохраняем в список мониторинга
-    const monitorItem = {
-        id: internalId,
-        project: projectKey,
-        text: tweet.title.substring(0, 100) + '...',
-        link: tweetLink,
-        timestamp: Date.now(),
-        zone: config.zone
-    };
-    
-    twitterMonitorData.unshift(monitorItem);
-    if (twitterMonitorData.length > 20) twitterMonitorData = twitterMonitorData.slice(0, 20);
-    localStorage.setItem(TWITTER_MONITOR_STORAGE, JSON.stringify(twitterMonitorData));
-    
-    updateMonitorUI();
-
-    // 3. Создаем NFT
-    const newItem = {
-        id: internalId,
-        title: `🆕 ${config.triggerText.split(' on ')[0]}`,
-        url: tweetLink,
-        tooltip: `Авто-обнаружение из Twitter @${config.username} (${new Date(tweet.pubDate || Date.now()).toLocaleDateString()})`,
-        image: "",
-        trackType: 'track-once',
-        addedAt: Date.now()
-    };
-
-    if (!userItemsData.items[config.zone]) userItemsData.items[config.zone] = [];
-    userItemsData.items[config.zone].unshift(newItem);
-    
-    if (typeof newLinksSet !== 'undefined') {
-        newLinksSet.add(internalId);
-        localStorage.setItem('tempo_new_links_v2', JSON.stringify([...newLinksSet]));
-    }
-
-    await saveUserItems();
-    renderUserItemInZone(config.zone, newItem);
-    
-    showToast(`🐦 Найден новый пост у ${projectKey}!`, 'success');
-}
-
-// Проверка на дубликаты по ссылке
-function isAlreadyInList(zone, url) {
-    const items = userItemsData.items[zone] || [];
-    return items.some(item => item.url === url);
-}
-// ===== TWITTER RSS MONITORING =====
-function parseRSS(xmlText) {
-    const parser = new DOMParser();
-    const xmlDoc = parser.parseFromString(xmlText, "text/xml");
-    const items = Array.from(xmlDoc.querySelectorAll("item"));
-    
-    return items.map(item => {
-        const title = item.querySelector("title")?.textContent || "";
-        const link = item.querySelector("link")?.textContent || "";
-        const pubDate = item.querySelector("pubDate")?.textContent || "";
-        const dcDate = item.getElementsByTagNameNS("*", "date")[0]?.textContent;
-        
-        return {
-            title: title,
-            link: link,
-            pubDate: pubDate || dcDate || new Date().toISOString()
-        };
-    });
-}
-
-async function runTwitterMonitor() {
-    if (!isAdmin) return;
-
-    const nitterInstances = [
-        'https://nitter.privacydev.net',
-        'https://nitter.lucabased.xyz',
-        'https://nitter.poast.org',
-        'https://xcancel.com'
-    ];
-
-    const corsProxies = [
-        (url) => `https://api.allorigins.win/raw?url=${encodeURIComponent(url)}`,
-        (url) => `https://corsproxy.io/?${encodeURIComponent(url)}`
-    ];
-
-    console.log("🚀 Запуск мониторинга Twitter...");
-
-    for (const [key, config] of Object.entries(TWITTER_MONITOR_CONFIG)) {
-        let success = false;
-
-        for (const instance of nitterInstances) {
-            const rssUrl = `${instance}/${config.username}/rss`;
-
-            for (const proxyGen of corsProxies) {
-                try {
-                    const fetchUrl = proxyGen(rssUrl);
-                    const controller = new AbortController();
-                    const timeoutId = setTimeout(() => controller.abort(), 5000);
-
-                    const response = await fetch(fetchUrl, { 
-                        signal: controller.signal,
-                        cache: "no-store"
-                    });
-                    clearTimeout(timeoutId);
-
-                    if (!response.ok) continue;
-
-                    const textData = await response.text();
-                    if (!textData.includes('<rss') && !textData.includes('<feed')) continue;
-
-                    const tweets = parseRSS(textData);
-
-                    if (tweets.length > 0) {
-                        console.log(`✅ [${key}] Успех`);
-                        
-                        tweets.forEach(tweet => {
-                            if (tweet.title && tweet.title.toLowerCase().includes(config.triggerText.toLowerCase())) {
-                                autoAddNewNFT(key, config, tweet);
-                            }
-                        });
-
-                        success = true;
-                        break;
-                    }
-
-                } catch (e) {
-                    continue;
-                }
-            }
-            if (success) break;
-        }
-        
-        await new Promise(r => setTimeout(r, 1500));
-    }
-}
-// Twitter Monitor State
 let twitterMonitorData = [];
 const TWITTER_MONITOR_STORAGE = 'tempo_twitter_monitor_v1';
     
@@ -1413,10 +1256,8 @@ let tooltipEl = null;
 let activeTooltipTarget = null;
 let editModeActive = false;
 let currentEditTarget = null;
-const EDITS_OVERRIDE_KEY = 'tempo_edits_v1';
 let editsOverride = {};
 
-// ===== TOAST =====
 function showToast(message, type = 'info') {
     const container = document.getElementById('toastContainer');
     const toast = document.createElement('div');
@@ -1426,7 +1267,6 @@ function showToast(message, type = 'info') {
     setTimeout(() => { toast.style.opacity = '0'; toast.style.transform = 'translateY(20px)'; setTimeout(() => toast.remove(), 300); }, 3000);
 }
 
-// ===== ADMIN CHECK =====
 function checkAdmin(user) {
     isAdmin = user && user.uid === ADMIN_UID;
     document.body.classList.toggle('is-admin', isAdmin);
@@ -1436,7 +1276,6 @@ function checkAdmin(user) {
     }
 }
 
-// ===== THEME =====
 function loadTheme() {
     const saved = localStorage.getItem(THEME_KEY);
     if (saved === 'light') document.body.classList.add('light-theme');
@@ -1458,7 +1297,7 @@ function updateThemeBtn() {
     btn.innerHTML = isLight ? '<i class="fas fa-moon"></i> Тёмная тема' : '<i class="fas fa-sun"></i> Светлая тема';
 }
 
-// ===== LIGHTBOX =====
+// ========== LIGHTBOX ==========
 function openLightbox(imageUrl, title, tooltip, linkUrl, linkLabel, linkIcon) {
     const overlay = document.getElementById('lightboxOverlay');
     const img = document.getElementById('lightboxImage');
@@ -1490,21 +1329,20 @@ function initLightbox() {
     document.querySelectorAll('.link-inline[data-image]').forEach(link => {
         if (link.dataset.lightboxBound) return;
         link.addEventListener('contextmenu', (e) => {
-    const imageUrl = link.getAttribute('data-image');
-    if (!imageUrl) return;
-    e.preventDefault();
-    const title = getLinkTitle(link);
-    const tooltip = link.getAttribute('data-tooltip') || '';
-    const isNftMint = link.classList.contains('track-once') && !link.classList.contains('track-once-info') && !link.classList.contains('track-daily');
-    const linkLabel = isNftMint ? 'Перейти к минту' : 'Перейти на Website';
-    const linkIcon = isNftMint ? 'external-link-alt' : 'globe';
-    openLightbox(imageUrl, title, tooltip, link.href, linkLabel, linkIcon);
-});
+            const imageUrl = link.getAttribute('data-image');
+            if (!imageUrl) return;
+            e.preventDefault();
+            const title = getLinkTitle(link);
+            const tooltip = link.getAttribute('data-tooltip') || '';
+            const isNftMint = link.classList.contains('track-once') && !link.classList.contains('track-once-info') && !link.classList.contains('track-daily');
+            const linkLabel = isNftMint ? 'Перейти к минту' : 'Перейти на Website';
+            const linkIcon = isNftMint ? 'external-link-alt' : 'globe';
+            openLightbox(imageUrl, title, tooltip, link.href, linkLabel, linkIcon);
+        });
         link.dataset.lightboxBound = 'true';
     });
 }
 
-// ===== CARD ANIMATIONS =====
 function initCardAnimations() {
     const observer = new IntersectionObserver((entries) => {
         entries.forEach((entry, index) => {
@@ -1517,7 +1355,6 @@ function initCardAnimations() {
     document.querySelectorAll('.resource-item').forEach(card => observer.observe(card));
 }
 
-// ===== LAZY LOADING =====
 function initLazyLoading() {
     const imgObserver = new IntersectionObserver((entries) => {
         entries.forEach(entry => {
@@ -1531,7 +1368,6 @@ function initLazyLoading() {
     document.querySelectorAll('img[loading="lazy"]').forEach(img => imgObserver.observe(img));
 }
 
-// ===== TOOLTIP =====
 function ensureTooltipElement() {
     if (!tooltipEl) { tooltipEl = document.createElement('div'); tooltipEl.className = 'floating-tooltip'; document.body.appendChild(tooltipEl); }
 }
@@ -1586,18 +1422,22 @@ function initializeTooltips() {
 document.addEventListener('scroll', () => { if (activeTooltipTarget) positionTooltip(activeTooltipTarget); }, true);
 window.addEventListener('resize', () => { if (activeTooltipTarget) positionTooltip(activeTooltipTarget); });
 
-// ===== EXPORT / IMPORT =====
 function exportJSON() {
     const exportData = {
-        version: PAGE_VERSION, exportDate: new Date().toISOString(), arcData, favoritesState, favoritesOrder,
-        userItems: JSON.parse(localStorage.getItem('tempo_user_items_v1') || '{}'),
+        version: PAGE_VERSION, 
+        exportDate: new Date().toISOString(), 
+        tempoData, 
+        favoritesState, 
+        favoritesOrder,
+        userItems: JSON.parse(localStorage.getItem(USER_ITEMS_KEY) || '{}'),
         sections: JSON.parse(localStorage.getItem(SECTION_COLLAPSE_KEY) || '{}'),
-        badgesHidden: localStorage.getItem(BADGE_VISIBILITY_KEY), theme: localStorage.getItem(THEME_KEY)
+        badgesHidden: localStorage.getItem(BADGE_VISIBILITY_KEY), 
+        theme: localStorage.getItem(THEME_KEY)
     };
     const blob = new Blob([JSON.stringify(exportData, null, 2)], { type: 'application/json' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a'); a.href = url;
-    a.download = `arc-tracker-backup-${new Date().toISOString().slice(0, 10)}.json`;
+    a.download = `tempo-tracker-backup-${new Date().toISOString().slice(0, 10)}.json`;
     a.click(); URL.revokeObjectURL(url);
     showToast('Данные экспортированы!', 'success');
 }
@@ -1607,11 +1447,11 @@ function importJSON(file) {
     reader.onload = async (e) => {
         try {
             const data = JSON.parse(e.target.result);
-            if (!data.arcData && !data.favoritesState) throw new Error('Неверный формат');
-            if (data.arcData) { arcData = data.arcData; localStorage.setItem(STORAGE_KEY, JSON.stringify(arcData)); }
+            if (!data.tempoData && !data.favoritesState) throw new Error('Неверный формат');
+            if (data.tempoData) { tempoData = data.tempoData; localStorage.setItem(STORAGE_KEY, JSON.stringify(tempoData)); }
             if (data.favoritesState) { favoritesState = data.favoritesState; localStorage.setItem(FAVORITES_KEY, JSON.stringify(favoritesState)); }
             if (data.favoritesOrder) { favoritesOrder = data.favoritesOrder; localStorage.setItem(FAVORITES_ORDER_KEY, JSON.stringify(favoritesOrder)); }
-            if (data.userItems) { localStorage.setItem('tempo_user_items_v1', JSON.stringify(data.userItems)); }
+            if (data.userItems) { localStorage.setItem(USER_ITEMS_KEY, JSON.stringify(data.userItems)); }
             if (data.sections) { localStorage.setItem(SECTION_COLLAPSE_KEY, JSON.stringify(data.sections)); }
             if (data.badgesHidden != null) localStorage.setItem(BADGE_VISIBILITY_KEY, data.badgesHidden);
             if (data.theme) { localStorage.setItem(THEME_KEY, data.theme); if (data.theme === 'light') document.body.classList.add('light-theme'); else document.body.classList.remove('light-theme'); updateThemeBtn(); }
@@ -1623,15 +1463,13 @@ function importJSON(file) {
     reader.readAsText(file);
 }
 
-// ===== DATA MANAGEMENT =====
 async function loadAllData() {
     const localStats = JSON.parse(localStorage.getItem(STORAGE_KEY) || '{}');
     const localFav = JSON.parse(localStorage.getItem(FAVORITES_KEY) || '{}');
     const localOrder = JSON.parse(localStorage.getItem(FAVORITES_ORDER_KEY) || '[]');
     const localTimestamp = parseInt(localStorage.getItem(FAVORITES_TIMESTAMP_KEY) || '0', 10);
     
-    // Устанавливаем локальные данные
-    arcData = localStats; 
+    tempoData = localStats; 
     favoritesState = localFav; 
     favoritesOrder = localOrder;
     
@@ -1643,56 +1481,56 @@ async function loadAllData() {
             if (docSnap.exists()) {
                 const cloudData = docSnap.data();
                 
-                // Синхронизируем статистику
-                if (cloudData.arcGuideStats && Object.keys(cloudData.arcGuideStats).length > 0) {
-                    arcData = cloudData.arcGuideStats;
-                    localStorage.setItem(STORAGE_KEY, JSON.stringify(arcData));
+                // Синхронизируем статистику TEMPO
+                if (cloudData.tempoGuideStats && Object.keys(cloudData.tempoGuideStats).length > 0) {
+                    tempoData = cloudData.tempoGuideStats;
+                    localStorage.setItem(STORAGE_KEY, JSON.stringify(tempoData));
                 }
                 
-                // Синхронизируем избранное
-                if (cloudData.favoritesState) {
-                    const cloudTs = parseInt(cloudData.favoritesTimestamp || '0', 10);
+                // Синхронизируем избранное TEMPO
+                if (cloudData.tempoFavoritesState) {
+                    const cloudTs = parseInt(cloudData.tempoFavoritesTimestamp || '0', 10);
                     if (cloudTs > localTimestamp) {
-                        favoritesState = cloudData.favoritesState;
-                        favoritesOrder = cloudData.favoritesOrder || [];
+                        favoritesState = cloudData.tempoFavoritesState;
+                        favoritesOrder = cloudData.tempoFavoritesOrder || [];
                         localStorage.setItem(FAVORITES_KEY, JSON.stringify(favoritesState));
                         localStorage.setItem(FAVORITES_ORDER_KEY, JSON.stringify(favoritesOrder));
                         localStorage.setItem(FAVORITES_TIMESTAMP_KEY, String(cloudTs));
                     }
                 } else if (Object.keys(localFav).length > 0) {
                     await saveToCloud({ 
-                        favoritesState: localFav, 
-                        favoritesOrder: localOrder, 
-                        favoritesTimestamp: localTimestamp 
+                        tempoFavoritesState: localFav, 
+                        tempoFavoritesOrder: localOrder, 
+                        tempoFavoritesTimestamp: localTimestamp 
                     });
                 }
                 
-                // 🔥 НОВОЕ: Синхронизируем пользовательские элементы
-                if (cloudData.userItems) {
-                    const cloudItemsTs = parseInt(cloudData.userItemsTimestamp || '0', 10);
+                // Синхронизируем пользовательские элементы TEMPO
+                if (cloudData.tempoUserItems) {
+                    const cloudItemsTs = parseInt(cloudData.tempoUserItemsTimestamp || '0', 10);
                     const localItemsTs = parseInt(localStorage.getItem('tempo_user_items_timestamp') || '0', 10);
                     
                     if (cloudItemsTs > localItemsTs) {
                         userItemsData = {
-                            items: cloudData.userItems.items || {},
-                            collections: cloudData.userItems.collections || [],
-                            dappCategories: cloudData.userItems.dappCategories || []
+                            items: cloudData.tempoUserItems.items || {},
+                            collections: cloudData.tempoUserItems.collections || [],
+                            dappCategories: cloudData.tempoUserItems.dappCategories || []
                         };
                         localStorage.setItem(USER_ITEMS_KEY, JSON.stringify(userItemsData));
-                        localStorage.setItem('arc_user_items_timestamp', String(cloudItemsTs));
+                        localStorage.setItem('tempo_user_items_timestamp', String(cloudItemsTs));
                         showToast('🔄 Элементы синхронизированы из облака', 'info');
                     }
                 }
                 
-                // 🔥 НОВОЕ: Синхронизируем правки
-                if (cloudData.editsOverride) {
-                    const cloudEditsTs = parseInt(cloudData.editsTimestamp || '0', 10);
-                    const localEditsTs = parseInt(localStorage.getItem('arc_edits_timestamp') || '0', 10);
+                // Синхронизируем правки TEMPO
+                if (cloudData.tempoEditsOverride) {
+                    const cloudEditsTs = parseInt(cloudData.tempoEditsTimestamp || '0', 10);
+                    const localEditsTs = parseInt(localStorage.getItem('tempo_edits_timestamp') || '0', 10);
                     
                     if (cloudEditsTs > localEditsTs) {
-                        editsOverride = cloudData.editsOverride;
+                        editsOverride = cloudData.tempoEditsOverride;
                         localStorage.setItem(EDITS_OVERRIDE_KEY, JSON.stringify(editsOverride));
-                        localStorage.setItem('arc_edits_timestamp', String(cloudEditsTs));
+                        localStorage.setItem('tempo_edits_timestamp', String(cloudEditsTs));
                     }
                 }
             }
@@ -1713,8 +1551,8 @@ async function saveToCloud(data) {
 }
 
 async function saveStats() {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(arcData));
-    if (currentUser) await saveToCloud({ arcGuideStats: arcData });
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(tempoData));
+    if (currentUser) await saveToCloud({ tempoGuideStats: tempoData });
 }
 
 async function saveFavorites() {
@@ -1722,81 +1560,46 @@ async function saveFavorites() {
     localStorage.setItem(FAVORITES_KEY, JSON.stringify(favoritesState));
     localStorage.setItem(FAVORITES_ORDER_KEY, JSON.stringify(favoritesOrder));
     localStorage.setItem(FAVORITES_TIMESTAMP_KEY, String(ts));
-    if (currentUser) await saveToCloud({ favoritesState, favoritesOrder, favoritesTimestamp: ts });
+    if (currentUser) await saveToCloud({ tempoFavoritesState: favoritesState, tempoFavoritesOrder: favoritesOrder, tempoFavoritesTimestamp: ts });
 }
 
 // ===== AUTH =====
-window.openLoginModal = function() {
-    document.getElementById('loginModal').style.display = 'flex';
-};
-window.closeLoginModal = function() {
-    document.getElementById('loginModal').style.display = 'none';
-};
-window.loginGoogle = async function() {
-    try {
-        await signInWithPopup(auth, new GoogleAuthProvider());
-        closeLoginModal();
-    } catch(e) { alert('Ошибка: ' + e.message); }
-};
-window.loginTwitter = async function() {
-    try {
-        await signInWithPopup(auth, new TwitterAuthProvider());
-        closeLoginModal();
-    } catch(e) { alert('Ошибка: ' + e.message); }
-};
+window.openLoginModal = function() { document.getElementById('loginModal').style.display = 'flex'; };
+window.closeLoginModal = function() { document.getElementById('loginModal').style.display = 'none'; };
+window.loginGoogle = async function() { try { await signInWithPopup(auth, new GoogleAuthProvider()); closeLoginModal(); } catch(e) { alert('Ошибка: ' + e.message); } };
+window.loginTwitter = async function() { try { await signInWithPopup(auth, new TwitterAuthProvider()); closeLoginModal(); } catch(e) { alert('Ошибка: ' + e.message); } };
 window.handleEmailLogin = async function() {
     const email = document.getElementById('emailInput').value;
     const pass = document.getElementById('passInput').value;
-    try {
-        await signInWithEmailAndPassword(auth, email, pass);
-        closeLoginModal();
-    } catch(e) { alert('Ошибка: ' + e.message); }
+    try { await signInWithEmailAndPassword(auth, email, pass); closeLoginModal(); } catch(e) { alert('Ошибка: ' + e.message); }
 };
 window.handleRegister = async function() {
     const email = document.getElementById('emailInput').value;
     const pass = document.getElementById('passInput').value;
-    try {
-        await createUserWithEmailAndPassword(auth, email, pass);
-        closeLoginModal();
-    } catch(e) { alert('Ошибка: ' + e.message); }
+    try { await createUserWithEmailAndPassword(auth, email, pass); closeLoginModal(); } catch(e) { alert('Ошибка: ' + e.message); }
 };
 window.logout = function() { signOut(auth); };
-// ===== SHARED DATA — админские элементы видны всем =====
+
 async function loadSharedData() {
-    // 1) Пытаемся загрузить общие элементы из GitHub
     try {
         const itemsResp = await fetch('tempo_shared_items.json?' + Date.now());
         if (itemsResp.ok) {
             const data = await itemsResp.json();
-            userItemsData = {
-                items: data.items || {},
-                collections: data.collections || [],
-                dappCategories: data.dappCategories || []
-            };
+            userItemsData = { items: data.items || {}, collections: data.collections || [], dappCategories: data.dappCategories || [] };
             localStorage.setItem(USER_ITEMS_KEY, JSON.stringify(userItemsData));
-        } else {
-            loadUserItems();
-        }
-    } catch (e) {
-        console.error("Load shared items error:", e);
-        loadUserItems();
-    }
+        } else { loadUserItems(); }
+    } catch (e) { console.error("Load shared items error:", e); loadUserItems(); }
 
-    // 2) Загружаем правки
     try {
-       const editsResp = await fetch('tempo_shared_edits.json?' + Date.now());
+        const editsResp = await fetch('tempo_shared_edits.json?' + Date.now());
         if (editsResp.ok) {
             const data = await editsResp.json();
             editsOverride = data.editsOverride || {};
             localStorage.setItem(EDITS_OVERRIDE_KEY, JSON.stringify(editsOverride));
-        } else {
-            loadEditsOverride();
-        }
-    } catch (e) {
-        console.error("Load shared edits error:", e);
-        loadEditsOverride();
-    }
+        } else { loadEditsOverride(); }
+    } catch (e) { console.error("Load shared edits error:", e); loadEditsOverride(); }
 }
+
 let isDataLoaded = false;
 
 onAuthStateChanged(auth, async (user) => {
@@ -1806,45 +1609,28 @@ onAuthStateChanged(auth, async (user) => {
     const nameEl = document.getElementById('arcUserName');
     
     if (user) {
-    loggedOut.style.display = 'none';
-    loggedIn.style.display = '';
-    nameEl.textContent = user.displayName || user.email?.split('@')[0] || 'User';
-    checkAdmin(user);
-    
-    // 🔥 НОВОЕ: Инициализируем реал-тайм синхронизацию NEW
-    
-    setTimeout(() => {
-            initNewIndicatorsRealtime();
-        }, 2000);
-    if (user.uid === ADMIN_UID) {
-        setTimeout(initTwitterMonitor, 1000);
+        loggedOut.style.display = 'none';
+        loggedIn.style.display = '';
+        nameEl.textContent = user.displayName || user.email?.split('@')[0] || 'User';
+        checkAdmin(user);
+        
+        setTimeout(() => { initNewIndicatorsRealtime(); }, 2000);
+        if (user.uid === ADMIN_UID) { setTimeout(initTwitterMonitor, 1000); }
+    } else {
+        loggedOut.style.display = '';
+        loggedIn.style.display = 'none';
+        checkAdmin(null);
+        if (newIndicatorsUnsubscribe) { newIndicatorsUnsubscribe(); newIndicatorsUnsubscribe = null; }
     }
-} else {
-    loggedOut.style.display = '';
-    loggedIn.style.display = 'none';
-    checkAdmin(null);
     
-    // 🔥 Отключаем слушатель при выходе
-    if (newIndicatorsUnsubscribe) {
-        newIndicatorsUnsubscribe();
-        newIndicatorsUnsubscribe = null;
+    if (!isDataLoaded) {
+        await loadSharedData();
+        await loadNewIndicators();  
+        await loadAllData();
+        renderAllUserItems();
+        setTimeout(() => { updateNewIndicators(); }, 100);
+        isDataLoaded = true;
     }
-}
-    // 🔥 ЗАГРУЖАЕМ ДАННЫЕ ТОЛЬКО ОДИН РАЗ
-// 🔥 ЗАГРУЖАЕМ ДАННЫЕ ТОЛЬКО ОДИН РАЗ
-if (!isDataLoaded) {
-    await loadSharedData();
-    await loadNewIndicators();  
-    await loadAllData();
-    renderAllUserItems();
-    
-    // 🔥 ВАЖНО: Применяем NEW индикаторы ТОЛЬКО после полной загрузки DOM
-    setTimeout(() => {
-        updateNewIndicators();
-    }, 100);
-    
-    isDataLoaded = true;
-}
 });
 
 // ===== HELPERS =====
@@ -1947,7 +1733,7 @@ function renderFavoritesList() {
         anchor.dataset.id = id; anchor.classList.add('favorite-link');
         liveInfo.classes.forEach(cls => anchor.classList.add(cls));
         if (liveInfo.tooltip) anchor.setAttribute('data-tooltip', liveInfo.tooltip);
-        const record = arcData[id];
+        const record = tempoData[id];
         if (record) {
             if (record.visited) anchor.classList.add('visited-once');
             if (isToday(record.lastClick)) anchor.classList.add('daily-active');
@@ -1996,7 +1782,7 @@ function updateBadge(el, count, time) {
 
 function updateUI() {
     document.querySelectorAll('.track-daily').forEach(btn => {
-        const id = btn.getAttribute('data-id'); const rec = arcData[id];
+        const id = btn.getAttribute('data-id'); const rec = tempoData[id];
         btn.classList.remove('daily-active');
         if (rec) {
             if (isToday(rec.lastClick)) btn.classList.add('daily-active');
@@ -2004,7 +1790,7 @@ function updateUI() {
         }
     });
     document.querySelectorAll('.track-once').forEach(btn => {
-        const id = btn.getAttribute('data-id'); const rec = arcData[id];
+        const id = btn.getAttribute('data-id'); const rec = tempoData[id];
         if (rec && rec.visited) btn.classList.add('visited-once');
         else btn.classList.remove('visited-once');
         if (btn.classList.contains('track-once-info') && rec && rec.lastClick) updateBadge(btn, rec.totalClicks || 0, rec.lastClick);
@@ -2024,22 +1810,21 @@ function handleClick(e) {
     const id = btn.getAttribute('data-id');
     if (!id) return;
     
-    // 🔥 Используем новую систему для очистки NEW
     if (newIndicatorsState.globalNew.has(id) && !newIndicatorsState.clickedByUser.has(id)) {
         clearNewLink(id);
     }
     
     const now = new Date().toISOString();
-    if (!arcData[id]) arcData[id] = {};
+    if (!tempoData[id]) tempoData[id] = {};
     if (btn.classList.contains('track-daily')) {
-        if (arcData[id].lastClick && isToday(arcData[id].lastClick)) return;
-        arcData[id].totalClicks = (arcData[id].totalClicks || 0) + 1;
-        arcData[id].lastClick = now;
+        if (tempoData[id].lastClick && isToday(tempoData[id].lastClick)) return;
+        tempoData[id].totalClicks = (tempoData[id].totalClicks || 0) + 1;
+        tempoData[id].lastClick = now;
     } else if (btn.classList.contains('track-once')) {
-        arcData[id].visited = true;
+        tempoData[id].visited = true;
         if (btn.classList.contains('track-once-info')) {
-            arcData[id].totalClicks = (arcData[id].totalClicks || 0) + 1;
-            arcData[id].lastClick = now;
+            tempoData[id].totalClicks = (tempoData[id].totalClicks || 0) + 1;
+            tempoData[id].lastClick = now;
         }
     }
     saveStats(); updateUI();
@@ -2047,14 +1832,13 @@ function handleClick(e) {
 
 window.resetAll = async function() {
     if (confirm('Сбросить всю статистику?')) {
-        arcData = {}; await saveStats();
+        tempoData = {}; await saveStats();
         document.querySelectorAll('.click-info').forEach(el => el.remove());
         document.querySelectorAll('.link-inline').forEach(l => { l.classList.remove('daily-active', 'visited-once'); });
         updateUI(); showToast('Прогресс сброшен', 'info');
     }
 };
 
-// ===== BADGES =====
 function getBadgeHiddenState() { return localStorage.getItem(BADGE_VISIBILITY_KEY) === 'true'; }
 function setBadgeHiddenState(h) { localStorage.setItem(BADGE_VISIBILITY_KEY, h ? 'true' : 'false'); }
 function updateBadgeVisibility() {
@@ -2064,7 +1848,6 @@ function updateBadgeVisibility() {
     if (btn) btn.textContent = hidden ? 'Показать бейджи' : 'Скрыть бейджи';
 }
 
-// ===== SECTIONS =====
 function getSectionCollapseState() { return JSON.parse(localStorage.getItem(SECTION_COLLAPSE_KEY) || '{}'); }
 function saveSectionCollapseState(s) { localStorage.setItem(SECTION_COLLAPSE_KEY, JSON.stringify(s)); }
 function applySectionState(sec, collapsed) {
@@ -2073,26 +1856,11 @@ function applySectionState(sec, collapsed) {
     if (t) { t.textContent = collapsed ? '▸' : '▾'; t.setAttribute('aria-expanded', collapsed ? 'false' : 'true'); }
 }
 
-
-
 function updateNewIndicators() {
-	if (!newIndicatorsState || !newIndicatorsState.globalNew) {
-        console.log('⚠️ NEW indicators state not ready');
-        return;
-    }
-    
-    console.log('🔄 Updating NEW indicators:', {
-        globalNew: [...newIndicatorsState.globalNew],
-        clickedByUser: [...newIndicatorsState.clickedByUser]
-    });
+    if (!newIndicatorsState || !newIndicatorsState.globalNew) return;
     document.querySelectorAll('[data-id]').forEach(el => {
         const id = el.dataset.id;
-        
-        // 🔥 NEW показывается только если:
-        // 1. Элемент глобально новый (добавлен админом) И
-        // 2. Пользователь на него ещё не кликал
-        const shouldShowNew = newIndicatorsState.globalNew.has(id) && 
-                             !newIndicatorsState.clickedByUser.has(id);
+        const shouldShowNew = newIndicatorsState.globalNew.has(id) && !newIndicatorsState.clickedByUser.has(id);
         
         if (shouldShowNew) {
             el.setAttribute('data-new', 'true'); 
@@ -2114,11 +1882,9 @@ function updateNewIndicators() {
 }
 
 async function clearNewLink(id) {
-    // 🔥 Добавляем в кликнутые этим пользователем
     newIndicatorsState.clickedByUser.add(id);
     newIndicatorsState.lastSync = Date.now();
     
-    // Сохраняем локально
     const saveData = {
         globalNew: [...newIndicatorsState.globalNew],
         clickedByUser: [...newIndicatorsState.clickedByUser],
@@ -2126,26 +1892,20 @@ async function clearNewLink(id) {
     };
     localStorage.setItem(NEW_INDICATORS_KEY, JSON.stringify(saveData));
     
-    // 🔥 Синхронизируем с Firebase для других устройств
     if (currentUser) {
         try {
             await saveToCloud({ 
-                newIndicators: saveData,
-                newIndicatorsTimestamp: newIndicatorsState.lastSync
+                tempoNewIndicators: saveData,
+                tempoNewIndicatorsTimestamp: newIndicatorsState.lastSync
             });
-            console.log('✅ NEW click synced to cloud');
-        } catch (e) {
-            console.error("NEW click sync error:", e);
-        }
+        } catch (e) { console.error("NEW click sync error:", e); }
     }
     
     updateNewIndicators();
     showToast('🔄 Отметка NEW синхронизирована', 'info');
 }
 
-	// 🔥 ЗАГРУЗКА NEW состояния
 async function loadNewIndicators() {
-    // Загружаем локальные данные ПЕРВЫМИ
     const localData = JSON.parse(localStorage.getItem(NEW_INDICATORS_KEY) || '{}');
     
     newIndicatorsState = {
@@ -2154,13 +1914,6 @@ async function loadNewIndicators() {
         lastSync: localData.lastSync || 0
     };
     
-    console.log('💾 Local NEW state loaded:', {
-        globalNew: [...newIndicatorsState.globalNew],
-        clickedByUser: [...newIndicatorsState.clickedByUser],
-        lastSync: new Date(newIndicatorsState.lastSync).toLocaleString()
-    });
-    
-    // Синхронизируем с облаком только если авторизован
     if (currentUser) {
         try {
             const docRef = doc(db, "users", currentUser.uid);
@@ -2169,39 +1922,24 @@ async function loadNewIndicators() {
             if (docSnap.exists()) {
                 const cloudData = docSnap.data();
                 
-                if (cloudData.newIndicators) {
-                    const cloudTs = cloudData.newIndicatorsTimestamp || 0;
-                    
+                if (cloudData.tempoNewIndicators) {
+                    const cloudTs = cloudData.tempoNewIndicatorsTimestamp || 0;
                     if (cloudTs > newIndicatorsState.lastSync) {
-                        console.log('☁️ Using cloud NEW data (newer)');
                         newIndicatorsState = {
-                            globalNew: new Set(cloudData.newIndicators.globalNew || []),
-                            clickedByUser: new Set(cloudData.newIndicators.clickedByUser || []),
+                            globalNew: new Set(cloudData.tempoNewIndicators.globalNew || []),
+                            clickedByUser: new Set(cloudData.tempoNewIndicators.clickedByUser || []),
                             lastSync: cloudTs
                         };
-                        localStorage.setItem(NEW_INDICATORS_KEY, JSON.stringify(cloudData.newIndicators));
-                    } else {
-                        console.log('💾 Keeping local NEW data (newer or equal)');
+                        localStorage.setItem(NEW_INDICATORS_KEY, JSON.stringify(cloudData.tempoNewIndicators));
                     }
                 }
             }
-        } catch (e) {
-            console.error("NEW indicators sync error:", e);
-        }
+        } catch (e) { console.error("NEW indicators sync error:", e); }
     }
     
-    // 🔥 УСТАНАВЛИВАЕМ ФЛАГ ГОТОВНОСТИ
     newIndicatorsState.lastSync = newIndicatorsState.lastSync || Date.now();
-    
-    console.log('✅ NEW indicators final state:', {
-        globalNew: [...newIndicatorsState.globalNew],
-        clickedByUser: [...newIndicatorsState.clickedByUser],
-        ready: true
-    });
 }
 
-
-// 🔥 РЕАЛ-ТАЙМ синхронизация NEW элементов
 function initNewIndicatorsRealtime() {
     if (!currentUser) return;
     
@@ -2212,77 +1950,53 @@ function initNewIndicatorsRealtime() {
             const data = doc.data();
             const globalNew = new Set(data.globalNew || []);
             
-            // 🔥 ЗАЩИТА ОТ ГОНКИ УСЛОВИЙ: проверяем, что локальные данные уже загружены
-            if (newIndicatorsState.lastSync === 0) {
-                console.log('⚠️ Skipping realtime update - local data not ready');
-                return;
-            }
+            if (newIndicatorsState.lastSync === 0) return;
             
-            // 🔥 ПРОВЕРКА НА РЕАЛЬНЫЕ ИЗМЕНЕНИЯ (не просто обновление timestamp)
             const hasRealChanges = [...globalNew].some(id => !newIndicatorsState.globalNew.has(id)) ||
                                   [...newIndicatorsState.globalNew].some(id => !globalNew.has(id));
             
             if (hasRealChanges) {
-                console.log('🔄 Real-time NEW update:', {
-                    before: [...newIndicatorsState.globalNew],
-                    after: [...globalNew]
-                });
-                
                 newIndicatorsState.globalNew = globalNew;
-                
-                // Сохраняем в localStorage
                 const saveData = {
                     globalNew: [...newIndicatorsState.globalNew],
                     clickedByUser: [...newIndicatorsState.clickedByUser],
                     lastSync: Date.now()
                 };
                 localStorage.setItem(NEW_INDICATORS_KEY, JSON.stringify(saveData));
-                
                 updateNewIndicators();
                 showToast('🔄 NEW элементы обновлены в реальном времени', 'info');
             }
         }
-    }, (error) => {
-        console.error("NEW indicators realtime error:", error);
-    });
+    }, (error) => { console.error("NEW indicators realtime error:", error); });
 }
 
-// 🔥 АДМИНСКАЯ функция для добавления NEW элементов
 async function addToGlobalNewIndicators(itemId) {
     if (!isAdmin) return;
-    
     try {
-        // 🔥 ЗАЩИТА ОТ ДУБЛИКАТОВ: проверяем, не существует ли уже
-        if (newIndicatorsState.globalNew.has(itemId)) {
-            console.log('⚠️ Item already in global NEW:', itemId);
-            return;
-        }
+        if (newIndicatorsState.globalNew.has(itemId)) return;
         
         newIndicatorsState.globalNew.add(itemId);
         
-        // Сохраняем в Firebase config для всех пользователей
         await setDoc(doc(db, CONFIG_COLLECTION, NEW_INDICATORS_DOC), {
             globalNew: [...newIndicatorsState.globalNew],
             lastUpdated: Date.now(),
             updatedBy: currentUser.uid
         }, { merge: true });
         
-        // 🔥 ЛОКАЛЬНОЕ СОХРАНЕНИЕ СРАЗУ
         const saveData = {
             globalNew: [...newIndicatorsState.globalNew],
             clickedByUser: [...newIndicatorsState.clickedByUser],
             lastSync: Date.now()
         };
         localStorage.setItem(NEW_INDICATORS_KEY, JSON.stringify(saveData));
-        
         updateNewIndicators();
-        console.log('✅ Added to global NEW indicators:', itemId);
         
     } catch (e) {
         console.error("Failed to add to global NEW:", e);
         showToast('❌ Ошибка добавления NEW индикатора', 'error');
     }
 }
+
 function updateSectionBadges() {
     document.querySelectorAll('.collapsible-section').forEach(sec => {
         const st = sec.querySelector('.section-status'); if (!st) return;
@@ -2292,7 +2006,6 @@ function updateSectionBadges() {
     });
 }
 
-// ===== LEGEND =====
 function applyLegendState(collapsed) {
     const legend = document.getElementById('statusLegend');
     const toggle = document.getElementById('legendToggle');
@@ -2304,10 +2017,7 @@ function applyLegendState(collapsed) {
     toggle.textContent = shouldCollapse ? 'Показать инструкцию ▸' : 'Скрыть инструкцию ▾';
 }
 
-// ============================================================
-//  DYNAMIC ADD SYSTEM (ADMIN ONLY)
-// ============================================================
-const USER_ITEMS_KEY = 'tempo_user_items_v1';
+// ===== DYNAMIC ADD SYSTEM =====
 const ZONE_CONFIG = {
     nft_alze:     { type:'nft-item', label:'NFT в Alze', trackType:'track-once' },
     nft_caset:    { type:'nft-item', label:'NFT в Caset', trackType:'track-once' },
@@ -2331,6 +2041,7 @@ const ZONE_CONFIG = {
     dapp_games:       { type:'link-item', label:'Games', trackType:'track-daily' },
     dapp_others:      { type:'link-item', label:'Others', trackType:'track-daily' },
 };
+
 const SECTION_ZONE_CONFIG = {
     nfts:   { type:'nft-collection', label:'новую NFT-коллекцию' },
     deploy: { type:'deploy-group', label:'новую группу деплоя' },
@@ -2347,46 +2058,25 @@ function loadUserItems() {
     } catch(e) { console.error(e); }
 }
 
-// ===== ОБНОВЛЕННЫЕ ФУНКЦИИ СОХРАНЕНИЯ =====
 async function saveUserItems() {
-    // 1. Локальное сохранение (для быстрого доступа)
     localStorage.setItem(USER_ITEMS_KEY, JSON.stringify(userItemsData));
-    
-    // 2. 🔥 АВТОМАТИЧЕСКОЕ СОХРАНЕНИЕ В FIREBASE
     if (currentUser) {
         try {
-            await saveToCloud({ 
-                userItems: userItemsData,
-                userItemsTimestamp: Date.now()
-            });
-            console.log('✅ Данные сохранены в Firebase автоматически');
-        } catch (e) {
-            console.error("Firebase auto-save error:", e);
-            showToast('⚠️ Локально сохранено, облако недоступно', 'error');
-        }
+            await saveToCloud({ tempoUserItems: userItemsData, tempoUserItemsTimestamp: Date.now() });
+        } catch (e) { console.error("Firebase auto-save error:", e); showToast('⚠️ Локально сохранено, облако недоступно', 'error'); }
     }
 }
 
 async function saveEditsOverride() {
-    // 1. Локальное сохранение
     localStorage.setItem(EDITS_OVERRIDE_KEY, JSON.stringify(editsOverride));
-    
-    // 2. 🔥 АВТОМАТИЧЕСКОЕ СОХРАНЕНИЕ В FIREBASE
     if (currentUser) {
-        try {
-            await saveToCloud({ 
-                editsOverride: editsOverride,
-                editsTimestamp: Date.now()
-            });
-        } catch (e) {
-            console.error("Firebase edits save error:", e);
-        }
+        try { await saveToCloud({ tempoEditsOverride: editsOverride, tempoEditsTimestamp: Date.now() }); }
+        catch (e) { console.error("Firebase edits save error:", e); }
     }
 }
 
 function generateId() { return 'u_' + Date.now().toString(36) + '_' + Math.random().toString(36).substr(2, 5); }
 
-// ---- MODAL ----
 const overlayEl = () => document.getElementById('addModalOverlay');
 function showFields(fields) {
     ['fieldTitle','fieldUrl','fieldTooltip','fieldImage','fieldWebsite','fieldTwitter','fieldDescription'].forEach(f => {
@@ -2428,8 +2118,6 @@ function normalizeImageUrl(rawUrl) {
 document.getElementById('addModalSave').addEventListener('click', async () => {
     const saveBtn = document.getElementById('addModalSave');
     const isEdit = saveBtn.dataset.editMode === 'true';
-    
-    // Показываем процесс сохранения
     const originalText = saveBtn.textContent;
     saveBtn.disabled = true;
     saveBtn.textContent = isEdit ? '💾 Сохранение...' : '💾 Добавление...';
@@ -2443,10 +2131,7 @@ document.getElementById('addModalSave').addEventListener('click', async () => {
             const newTooltip = document.getElementById('addFieldTooltip').value.trim();
             const newImage = normalizeImageUrl(document.getElementById('addFieldImage').value.trim());
             
-            if (!newTitle || !newUrl) { 
-                alert('Название и URL обязательны!'); 
-                return; 
-            }
+            if (!newTitle || !newUrl) { alert('Название и URL обязательны!'); return; }
 
             let isUserItem = false;
             for (const zone in userItemsData.items) {
@@ -2454,43 +2139,28 @@ document.getElementById('addModalSave').addEventListener('click', async () => {
                 if (!items) continue;
                 const found = items.find(i => i.id === id);
                 if (found) {
-                    found.title = newTitle; 
-                    found.url = newUrl; 
-                    found.tooltip = newTooltip; 
-                    found.image = newImage;
+                    found.title = newTitle; found.url = newUrl; found.tooltip = newTooltip; found.image = newImage;
                     isUserItem = true;
-                    
-                    // 🔥 АВТОМАТИЧЕСКОЕ СОХРАНЕНИЕ В FIREBASE
-                    await saveUserItems();
-                    break;
+                    await saveUserItems(); break;
                 }
             }
 
             if (!isUserItem) {
                 editsOverride[id] = { title: newTitle, url: newUrl, tooltip: newTooltip, image: newImage };
-                
-                // 🔥 АВТОМАТИЧЕСКОЕ СОХРАНЕНИЕ ПРАВОК В FIREBASE
                 await saveEditsOverride();
             }
 
             applyOverrideToLink(link, { title: newTitle, url: newUrl, tooltip: newTooltip, image: newImage });
             
             if (favoritesState[id]) {
-                favoritesState[id].title = newTitle; 
-                favoritesState[id].url = newUrl; 
-                favoritesState[id].tooltip = newTooltip;
-                await saveFavorites(); 
-                renderFavoritesList();
+                favoritesState[id].title = newTitle; favoritesState[id].url = newUrl; favoritesState[id].tooltip = newTooltip;
+                await saveFavorites(); renderFavoritesList();
             }
 
             showToast('✅ Элемент обновлен и синхронизирован', 'success');
-            closeModal(); 
-            initializeTooltips(); 
-            initLightbox(); 
-            return;
+            closeModal(); initializeTooltips(); initLightbox(); return;
         }
 
-        // Добавление нового элемента
         if (!currentAddContext) return;
         
         const title = document.getElementById('addFieldTitle').value.trim();
@@ -2502,31 +2172,17 @@ document.getElementById('addModalSave').addEventListener('click', async () => {
         const description = document.getElementById('addFieldDescription').value.trim();
 
         if (currentAddContext.zone) {
-            if (!title || !url) { 
-                alert('Название и URL обязательны!'); 
-                return; 
-            }
+            if (!title || !url) { alert('Название и URL обязательны!'); return; }
             
             const config = currentAddContext.config; 
             const id = generateId();
-            const item = { 
-                id, title, url, tooltip, image, 
-                trackType: config.trackType, 
-                addedAt: Date.now() 
-            };
+            const item = { id, title, url, tooltip, image, trackType: config.trackType, addedAt: Date.now() };
             
-            if (!userItemsData.items[currentAddContext.zone]) {
-                userItemsData.items[currentAddContext.zone] = [];
-            }
+            if (!userItemsData.items[currentAddContext.zone]) userItemsData.items[currentAddContext.zone] = [];
             userItemsData.items[currentAddContext.zone].push(item);
             
-           if (isAdmin) {
-    await addToGlobalNewIndicators(id);
-}
-            
-            // 🔥 АВТОМАТИЧЕСКОЕ СОХРАНЕНИЕ В FIREBASE
+            if (isAdmin) await addToGlobalNewIndicators(id);
             await saveUserItems();
-            
             renderUserItemInZone(currentAddContext.zone, item);
             showToast('✅ Элемент добавлен и синхронизирован', 'success');
             
@@ -2535,94 +2191,46 @@ document.getElementById('addModalSave').addEventListener('click', async () => {
             
             if (sConfig.type === 'nft-collection') {
                 if (!title) { alert('Название обязательно!'); return; }
-                
                 const collId = generateId();
-                const coll = { 
-                    id: collId, title, website, twitter, 
-                    parentZone: currentAddContext.sectionZone, 
-                    items: [], addedAt: Date.now()
-                };
-                
+                const coll = { id: collId, title, website, twitter, parentZone: currentAddContext.sectionZone, items: [], addedAt: Date.now() };
                 userItemsData.collections.push(coll);
-                ZONE_CONFIG[collId] = { 
-                    type: 'nft-item', 
-                    label: 'NFT в ' + title, 
-                    trackType: 'track-once' 
-                };
-                
-                // 🔥 АВТОМАТИЧЕСКОЕ СОХРАНЕНИЕ В FIREBASE
+                ZONE_CONFIG[collId] = { type: 'nft-item', label: 'NFT в ' + title, trackType: 'track-once' };
                 await saveUserItems();
-                
                 renderUserCollection(coll);
                 showToast('✅ Коллекция создана и синхронизирована', 'success');
-                
             } else if (sConfig.type === 'dapp-category') {
                 if (!title) { alert('Название обязательно!'); return; }
-                
                 const catId = generateId();
-                const cat = { 
-                    id: catId, title, description, 
-                    parentZone: currentAddContext.sectionZone, 
-                    items: [], addedAt: Date.now()
-                };
-                
+                const cat = { id: catId, title, description, parentZone: currentAddContext.sectionZone, items: [], addedAt: Date.now() };
                 userItemsData.dappCategories.push(cat);
-                ZONE_CONFIG[catId] = { 
-                    type: 'link-item', 
-                    label: title, 
-                    trackType: 'track-daily' 
-                };
-                
-                // 🔥 АВТОМАТИЧЕСКОЕ СОХРАНЕНИЕ В FIREBASE
+                ZONE_CONFIG[catId] = { type: 'link-item', label: title, trackType: 'track-daily' };
                 await saveUserItems();
-                
                 renderUserDappCategory(cat);
                 showToast('✅ Категория создана и синхронизирована', 'success');
-                
             } else if (sConfig.type === 'deploy-group') {
                 if (!title) { alert('Название обязательно!'); return; }
-                
                 const grpId = generateId();
-                const grp = { 
-                    id: grpId, title, 
-                    parentZone: currentAddContext.sectionZone, 
-                    items: [], addedAt: Date.now()
-                };
-                
+                const grp = { id: grpId, title, parentZone: currentAddContext.sectionZone, items: [], addedAt: Date.now() };
                 userItemsData.collections.push(grp);
-                ZONE_CONFIG[grpId] = { 
-                    type: 'link-item', 
-                    label: title, 
-                    trackType: 'track-once track-once-info' 
-                };
-                
-                // 🔥 АВТОМАТИЧЕСКОЕ СОХРАНЕНИЕ В FIREBASE
+                ZONE_CONFIG[grpId] = { type: 'link-item', label: title, trackType: 'track-once track-once-info' };
                 await saveUserItems();
-                
                 renderUserDeployGroup(grp);
                 showToast('✅ Группа создана и синхронизирована', 'success');
             }
         }
 
         closeModal();
-        bindTrackingHandlersToAll(); 
-        attachFavoriteControls(); 
-        initializeTooltips(); 
-        initLightbox(); 
-        updateUI();
-       updateNewIndicators();
+        bindTrackingHandlersToAll(); attachFavoriteControls(); initializeTooltips(); initLightbox(); updateUI(); updateNewIndicators();
         
     } catch (error) {
         console.error('Save error:', error);
         showToast('❌ Ошибка сохранения: ' + error.message, 'error');
     } finally {
-        // Восстанавливаем кнопку
         saveBtn.disabled = false;
         saveBtn.textContent = originalText;
     }
 });
 
-// ---- RENDER USER ITEMS ----
 function createUserLink(item, zone) {
     const wrapper = document.createElement('span');
     wrapper.className = 'user-item-wrapper';
@@ -2639,62 +2247,35 @@ function createUserLink(item, zone) {
     delBtn.type = 'button'; delBtn.className = 'user-item-delete admin-only';
     delBtn.title = 'Удалить'; delBtn.innerHTML = '×';
     delBtn.addEventListener('click', async (e) => {
-    e.stopPropagation();
-    if (!confirm(`Удалить «${item.title}»?`)) return;
-    
-    // Показываем процесс удаления
-    delBtn.disabled = true;
-    delBtn.innerHTML = '⏳';
-    
-    try {
-        // Удаляем из локальных данных
-        if (userItemsData.items[zone]) {
-            userItemsData.items[zone] = userItemsData.items[zone].filter(i => i.id !== item.id);
+        e.stopPropagation();
+        if (!confirm(`Удалить «${item.title}»?`)) return;
+        delBtn.disabled = true; delBtn.innerHTML = '⏳';
+        try {
+            if (userItemsData.items[zone]) userItemsData.items[zone] = userItemsData.items[zone].filter(i => i.id !== item.id);
+            userItemsData.collections.forEach(c => { if (c.items) c.items = c.items.filter(i => i.id !== item.id); });
+            userItemsData.dappCategories.forEach(c => { if (c.items) c.items = c.items.filter(i => i.id !== item.id); });
+            await saveUserItems();
+            wrapper.remove();
+            if (favoritesState[item.id]) {
+                delete favoritesState[item.id];
+                favoritesOrder = favoritesOrder.filter(x => x !== item.id);
+                await saveFavorites();
+                refreshAllVisuals();
+            }
+            showToast(`✅ Удалено и синхронизировано: ${item.title}`, 'info');
+        } catch (error) {
+            console.error('Delete error:', error);
+            delBtn.disabled = false; delBtn.innerHTML = '×';
         }
-        userItemsData.collections.forEach(c => {
-            if (c.items) c.items = c.items.filter(i => i.id !== item.id);
-        });
-        userItemsData.dappCategories.forEach(c => {
-            if (c.items) c.items = c.items.filter(i => i.id !== item.id);
-        });
-        
-        // 🔥 АВТОМАТИЧЕСКОЕ СОХРАНЕНИЕ В FIREBASE
-        await saveUserItems();
-        
-        // Удаляем из DOM
-        wrapper.remove();
-        
-        // Удаляем из избранного, если есть
-        if (favoritesState[item.id]) {
-            delete favoritesState[item.id];
-            favoritesOrder = favoritesOrder.filter(x => x !== item.id);
-            await saveFavorites();
-            refreshAllVisuals();
-        }
-        
-        showToast(`✅ Удалено и синхронизировано: ${item.title}`, 'info');
-    } catch (error) {
-        console.error('Delete error:', error);
-        showToast('❌ Ошибка удаления: ' + error.message, 'error');
-        // Восстанавливаем кнопку при ошибке
-        delBtn.disabled = false;
-        delBtn.innerHTML = '×';
-    }
-});
+    });
     wrapper.appendChild(delBtn); return wrapper;
 }
 
 function renderUserItemInZone(zone, item) {
     const container = document.querySelector(`[data-zone="${zone}"]`);
     if (!container) return;
-    
-    // 🔥 ПРОВЕРЯЕМ, НЕ СУЩЕСТВУЕТ ЛИ УЖЕ ЭЛЕМЕНТ С ТАКИМ ID
     const existingItem = container.querySelector(`[data-user-item-id="${item.id}"]`);
-    if (existingItem) {
-        console.log(`Item ${item.id} already exists, skipping render`);
-        return;
-    }
-    
+    if (existingItem) return;
     let target;
     if (container.tagName === 'TR') target = container.querySelector('.dapp-links');
     else target = container.querySelector('.link-collection') || container.querySelector('.link-row');
@@ -2825,8 +2406,7 @@ function renderUserDeployGroup(grp) {
 function injectAddButtons() {
     document.querySelectorAll('[data-zone]').forEach(container => {
         const zone = container.dataset.zone; const config = ZONE_CONFIG[zone];
-        if (!config) return;
-        if (container.querySelector('.add-item-btn')) return;
+        if (!config || container.querySelector('.add-item-btn')) return;
         const btn = document.createElement('button');
         btn.type = 'button'; btn.className = 'add-item-btn admin-only';
         btn.title = `Добавить в ${config.label}`;
@@ -2870,29 +2450,18 @@ function injectAddButtons() {
     });
 }
 
-
 function clearAllUserItems() {
-    // Удаляем все пользовательские элементы (wrapper'ы)
     document.querySelectorAll('.user-item-wrapper').forEach(el => el.remove());
-    
-    // Удаляем все пользовательские коллекции и категории
     document.querySelectorAll('.user-collection-card').forEach(el => el.remove());
-    
-    // Удаляем строки пользовательских категорий из таблицы dApps
     document.querySelectorAll('.dapp-table tbody tr').forEach(tr => {
         const zone = tr.dataset.zone;
-        if (zone && zone.startsWith('u_')) {
-            tr.remove();
-        }
+        if (zone && zone.startsWith('u_')) tr.remove();
     });
-    
-    // Удаляем все кнопки "+" (будем пересоздавать)
     document.querySelectorAll('.add-item-btn, .section-add-btn').forEach(btn => btn.remove());
 }
+
 function renderAllUserItems() {
     loadUserItems();
-    
-    // 🔥 ОЧИЩАЕМ ВСЕ ПОЛЬЗОВАТЕЛЬСКИЕ ЭЛЕМЕНТЫ ПЕРЕД РЕНДЕРОМ
     clearAllUserItems();
     
     userItemsData.collections.forEach(coll => {
@@ -2918,13 +2487,10 @@ function renderAllUserItems() {
     bindTrackingHandlersToAll(); attachFavoriteControls(); initializeTooltips(); initLightbox(); updateUI();
 }
 
-// ===== EDIT MODE =====
 function loadEditsOverride() {
     try { editsOverride = JSON.parse(localStorage.getItem(EDITS_OVERRIDE_KEY) || '{}'); }
     catch(e) { editsOverride = {}; }
 }
-
-
 
 function applyOverrideToLink(link, ov) {
     if (!link || !ov) return;
@@ -2995,98 +2561,43 @@ function openEditModal(link) {
     saveBtn.textContent = 'Сохранить'; saveBtn.dataset.editMode = 'true';
     overlayEl().classList.add('open');
 }
+
 async function uploadConfigToGithub() {
     try {
-        // 1. Убеждаемся, что локальные данные записаны в localStorage
         saveUserItems();
         saveEditsOverride();
-
-        // 2. Просим у админа GitHub Personal Access Token
-        const token = prompt(
-            'Введите ваш GitHub Personal Access Token (с правами repo).\n' +
-            'Токен НЕ сохраняется и используется только в этой вкладке.'
-        );
+        const token = prompt('Введите ваш GitHub Personal Access Token (с правами repo).\nТокен НЕ сохраняется и используется только в этой вкладке.');
         if (!token) return;
-
         showToast('Загрузка на GitHub начата...', 'info');
 
-        // 3. Формируем полезную нагрузку
-        const itemsPayload = {
-            items: userItemsData.items || {},
-            collections: userItemsData.collections || [],
-            dappCategories: userItemsData.dappCategories || []
-        };
-        const editsPayload = {
-            editsOverride: editsOverride || {}
-        };
+        const itemsPayload = { items: userItemsData.items || {}, collections: userItemsData.collections || [], dappCategories: userItemsData.dappCategories || [] };
+        const editsPayload = { editsOverride: editsOverride || {} };
 
-        // 4. Получаем текущий sha файлов (если существуют)
         const [itemsSha, editsSha] = await Promise.all([
             githubGetFileSha(GITHUB_ITEMS_PATH, token),
             githubGetFileSha(GITHUB_EDITS_PATH, token)
         ]);
 
-        // 5. Обновляем arc_shared_items.json
-        const putItemsResp = await fetch(
-            `https://api.github.com/repos/${GITHUB_OWNER}/${GITHUB_REPO}/contents/${GITHUB_ITEMS_PATH}`,
-            {
-                method: 'PUT',
-                headers: {
-                    'Authorization': `Bearer ${token}`,
-                    'Accept': 'application/vnd.github+json',
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify({
-                    message: 'Update arc_shared_items via Arc admin UI',
-                    content: encodeContent(itemsPayload),
-                    branch: GITHUB_BRANCH,
-                    sha: itemsSha || undefined
-                })
-            }
-        );
+        const putItemsResp = await fetch(`https://api.github.com/repos/${GITHUB_OWNER}/${GITHUB_REPO}/contents/${GITHUB_ITEMS_PATH}`, {
+            method: 'PUT',
+            headers: { 'Authorization': `Bearer ${token}`, 'Accept': 'application/vnd.github+json', 'Content-Type': 'application/json' },
+            body: JSON.stringify({ message: 'Update tempo_shared_items via Tempo admin UI', content: encodeContent(itemsPayload), branch: GITHUB_BRANCH, sha: itemsSha || undefined })
+        });
 
-        if (!putItemsResp.ok) {
-            const errText = await putItemsResp.text();
-            throw new Error(`GitHub items update failed: ${putItemsResp.status} ${errText}`);
-        }
+        if (!putItemsResp.ok) { const errText = await putItemsResp.text(); throw new Error(`GitHub items update failed: ${putItemsResp.status} ${errText}`); }
 
-        // 6. Обновляем arc_shared_edits.json
-        const putEditsResp = await fetch(
-            `https://api.github.com/repos/${GITHUB_OWNER}/${GITHUB_REPO}/contents/${GITHUB_EDITS_PATH}`,
-            {
-                method: 'PUT',
-                headers: {
-                    'Authorization': `Bearer ${token}`,
-                    'Accept': 'application/vnd.github+json',
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify({
-                    message: 'Update arc_shared_edits via Arc admin UI',
-                    content: encodeContent(editsPayload),
-                    branch: GITHUB_BRANCH,
-                    sha: editsSha || undefined
-                })
-            }
-        );
+        const putEditsResp = await fetch(`https://api.github.com/repos/${GITHUB_OWNER}/${GITHUB_REPO}/contents/${GITHUB_EDITS_PATH}`, {
+            method: 'PUT',
+            headers: { 'Authorization': `Bearer ${token}`, 'Accept': 'application/vnd.github+json', 'Content-Type': 'application/json' },
+            body: JSON.stringify({ message: 'Update tempo_shared_edits via Tempo admin UI', content: encodeContent(editsPayload), branch: GITHUB_BRANCH, sha: editsSha || undefined })
+        });
 
-        if (!putEditsResp.ok) {
-            const errText = await putEditsResp.text();
-            throw new Error(`GitHub edits update failed: ${putEditsResp.status} ${errText}`);
-        }
+        if (!putEditsResp.ok) { const errText = await putEditsResp.text(); throw new Error(`GitHub edits update failed: ${putEditsResp.status} ${errText}`); }
 
         showToast('Изменения загружены на GitHub!', 'success');
+        setTimeout(async () => { await loadSharedData(); renderAllUserItems(); showToast('Данные обновлены на странице!', 'info'); }, 2000);
 
-        // 🔥 ПРИНУДИТЕЛЬНО ПЕРЕЗАГРУЖАЕМ ДАННЫЕ ПОСЛЕ ЗАГРУЗКИ
-        setTimeout(async () => {
-            await loadSharedData();
-            renderAllUserItems();
-            showToast('Данные обновлены на странице!', 'info');
-        }, 2000);
-
-    } catch (e) {
-        console.error(e);
-        showToast('Ошибка загрузки на GitHub: ' + e.message, 'error');
-    }
+    } catch (e) { console.error(e); showToast('Ошибка загрузки на GitHub: ' + e.message, 'error'); }
 }
 
 // ===== DOM CONTENT LOADED =====
@@ -3094,32 +2605,18 @@ document.addEventListener('DOMContentLoaded', () => {
     loadTheme(); 
     loadEditsOverride(); 
     applyAllOverrides();
+    attachFavoriteControls(); 
+    bindTrackingHandlersToAll();
+    initLightbox(); 
+    initCardAnimations(); 
+    initLazyLoading();
     
-    // 🔥 Сначала инициализируем весь DOM
-attachFavoriteControls(); 
-bindTrackingHandlersToAll();
-initLightbox(); 
-initCardAnimations(); 
-initLazyLoading();
-const localData = JSON.parse(localStorage.getItem(NEW_INDICATORS_KEY) || '{}');
-    newIndicatorsState = {
-        globalNew: new Set(localData.globalNew || []),
-        clickedByUser: new Set(localData.clickedByUser || []),
-        lastSync: localData.lastSync || 0
-    };
+    const localData = JSON.parse(localStorage.getItem(NEW_INDICATORS_KEY) || '{}');
+    newIndicatorsState = { globalNew: new Set(localData.globalNew || []), clickedByUser: new Set(localData.clickedByUser || []), lastSync: localData.lastSync || 0 };
     
-    console.log('🎯 Initial NEW state loaded:', {
-        globalNew: [...newIndicatorsState.globalNew],
-        clickedByUser: [...newIndicatorsState.clickedByUser]
-    });
-// 🔥 Затем применяем NEW состояние если уже загружено
-if (isDataLoaded) {
-    updateNewIndicators();
-}
+    if (isDataLoaded) updateNewIndicators();
 
     document.getElementById('themeToggleBtn').addEventListener('click', toggleTheme);
-    
-    // 🔥 ИСПРАВЛЕННАЯ функция для кнопки бейджей
     document.getElementById('toggleBadgesBtn').addEventListener('click', () => { 
         const currentlyHidden = getBadgeHiddenState();
         setBadgeHiddenState(!currentlyHidden); 
@@ -3134,13 +2631,9 @@ if (isDataLoaded) {
     document.getElementById('importBtn').addEventListener('click', () => document.getElementById('importFileInput').click());
 
     const githubUploadBtn = document.getElementById('githubUploadBtn');
-    if (githubUploadBtn) {
-        githubUploadBtn.addEventListener('click', uploadConfigToGithub);
-    }
+    if (githubUploadBtn) githubUploadBtn.addEventListener('click', uploadConfigToGithub);
     
-    document.getElementById('importFileInput').addEventListener('change', (e) => {
-        if (e.target.files[0]) { importJSON(e.target.files[0]); e.target.value = ''; }
-    });
+    document.getElementById('importFileInput').addEventListener('change', (e) => { if (e.target.files[0]) { importJSON(e.target.files[0]); e.target.value = ''; } });
 
     const sectionState = getSectionCollapseState();
     document.querySelectorAll('.collapsible-section').forEach(sec => {
@@ -3179,215 +2672,81 @@ if (isDataLoaded) {
         applyLegendState(isLegendCollapsed);
     });
     applyLegendState(isLegendCollapsed);
-
     initializeTooltips(); updateBadgeVisibility();
 });
-   // ============================================================
-//  TWITTER MONITOR (Загрузка из JSON)
-// ============================================================
 
+// ===== TWITTER MONITOR =====
 async function loadTwitterResults() {
     const list = document.getElementById('monitorList');
     const status = document.getElementById('monitorStatus');
     const badge = document.getElementById('monitorBadge');
-    
     if (!list || !status || !badge) return;
     
     try {
-        // 🔥 Добавляем timestamp чтобы избежать кэширования
         const response = await fetch('twitter_results.json?' + Date.now());
-        
-        if (!response.ok) {
-            throw new Error(`HTTP ${response.status}`);
-        }
-        
+        if (!response.ok) throw new Error(`HTTP ${response.status}`);
         const data = await response.json();
         
         if (data.nfts && data.nfts.length > 0) {
             list.innerHTML = '';
-            
-            // 🔥 Сортируем по времени (новые первые)
-            const sortedNfts = [...data.nfts].sort((a, b) => {
-                const timeA = new Date(a.datetime || 0).getTime();
-                const timeB = new Date(b.datetime || 0).getTime();
-                return timeB - timeA; // Новые сверху
-            });
+            const sortedNfts = [...data.nfts].sort((a, b) => new Date(b.datetime || 0).getTime() - new Date(a.datetime || 0).getTime());
             
             sortedNfts.forEach(nft => {
                 const li = document.createElement('li');
                 li.className = 'monitor-item';
-                
-                // 🔥 Безопасное получение времени
-                let timeAgo = 'недавно';
-                try {
-                    if (nft.time_ago) {
-                        // Используем готовое значение из Python
-                        timeAgo = nft.time_ago;
-                    } else if (nft.datetime) {
-                        const date = new Date(nft.datetime);
-                        if (!isNaN(date.getTime())) {
-                            timeAgo = getTimeAgo(date);
-                        }
-                    }
-                } catch (e) {
-                    console.error('Time parsing error:', e);
-                }
-                
-                // 🔥 Безопасное получение ссылки
+                const timeAgo = nft.time_ago || 'недавно';
                 const tweetUrl = nft.url || `https://twitter.com/${nft.twitter}`;
-                
-                // 🔥 Безопасное получение текста
                 const tweetText = (nft.text || 'NFT пост').substring(0, 120);
-                const truncated = (nft.text || '').length > 120 ? '...' : '';
-                
-                // 🔥 Название проекта с эмодзи
-                const projectEmoji = {
-                    'morkie': '🐾',
-                    'clara': '✨',
-                    'oku': '🌸',
-                    'mintaura': '💫',
-                    'arkle': '🎨',
-                    'draze': '🌙',
-                    'caset': '🎵',
-                    'alze': '⚡'
-                };
+                const projectEmoji = { morkie: '🐾', clara: '✨', oku: '🌸', mintaura: '💫', arkle: '🎨', draze: '🌙', caset: '🎵', alze: '⚡' };
                 const emoji = projectEmoji[nft.project] || '🆕';
-                const projectName = nft.project.charAt(0).toUpperCase() + nft.project.slice(1);
+                const projectName = nft.project ? nft.project.charAt(0).toUpperCase() + nft.project.slice(1) : 'Unknown';
                 
                 li.innerHTML = `
                     <div class="monitor-item-header">
                         <span class="monitor-item-project">${emoji} ${projectName}</span>
                         <span class="monitor-item-time">${timeAgo}</span>
                     </div>
-                    <div class="monitor-item-text">${tweetText}${truncated}</div>
-                    <div style="display: flex; gap: 12px; margin-top: 8px; align-items: center;">
-                        <a href="${tweetUrl}" target="_blank" rel="noopener" class="monitor-item-link">
-                            <i class="fab fa-twitter"></i> Открыть твит
-                        </a>
-                        ${nft.likes ? `<span style="font-size: 0.75rem; color: #64748b;">❤️ ${nft.likes}</span>` : ''}
-                        ${nft.retweets ? `<span style="font-size: 0.75rem; color: #64748b;">🔁 ${nft.retweets}</span>` : ''}
-                    </div>
+                    <div class="monitor-item-text">${tweetText}</div>
+                    <a href="${tweetUrl}" target="_blank" rel="noopener" class="monitor-item-link"><i class="fab fa-twitter"></i> Открыть твит</a>
                 `;
-                
                 list.appendChild(li);
             });
             
             badge.textContent = sortedNfts.length;
             badge.classList.remove('empty');
-            
-            // 🔥 Обновляем статус с последним временем проверки
-            if (data.timestamp) {
-                try {
-                    const lastCheck = new Date(data.timestamp);
-                    if (!isNaN(lastCheck.getTime())) {
-                        const checkTime = lastCheck.toLocaleString('ru', {
-                            day: '2-digit',
-                            month: '2-digit',
-                            hour: '2-digit',
-                            minute: '2-digit'
-                        });
-                        status.innerHTML = `<i class="fas fa-check-circle"></i> Обновлено: ${checkTime}`;
-                        status.style.color = '#22c55e';
-                    }
-                } catch(e) {
-                    status.innerHTML = '<i class="fas fa-check-circle"></i> Данные загружены';
-                    status.style.color = '#22c55e';
-                }
-            } else {
-                status.innerHTML = '<i class="fas fa-check-circle"></i> Данные загружены';
-                status.style.color = '#22c55e';
-            }
-            
+            status.innerHTML = '<i class="fas fa-check-circle"></i> Данные загружены';
+            status.style.color = '#22c55e';
         } else {
-            showEmptyState();
+            list.innerHTML = '<li style="text-align:center;padding:20px;color:#64748b;">Новых постов пока нет</li>';
+            badge.textContent = '0';
+            badge.classList.add('empty');
+            status.innerHTML = '<i class="fas fa-clock"></i> Ожидание обновления';
         }
-        
     } catch (error) {
         console.error('Twitter results load error:', error);
-        showEmptyState();
+        list.innerHTML = '<li style="text-align:center;padding:20px;color:#64748b;">Ошибка загрузки</li>';
+        badge.textContent = '0';
+        status.innerHTML = '<i class="fas fa-exclamation-circle"></i> Ошибка';
     }
-}
-
-function showEmptyState() {
-    const list = document.getElementById('monitorList');
-    const status = document.getElementById('monitorStatus');
-    const badge = document.getElementById('monitorBadge');
-    
-    if (!list || !status || !badge) return;
-    
-    list.innerHTML = `
-        <li style="text-align: center; padding: 20px; color: #64748b; font-size: 0.9rem;">
-            <i class="fas fa-info-circle" style="font-size: 2rem; margin-bottom: 10px; opacity: 0.5;"></i>
-            <p>Нажми "🔄 Обновить" для запуска парсинга</p>
-            <p style="font-size: 0.75rem; margin-top: 5px;">Или запусти <code>twitter_parser.py</code></p>
-        </li>
-    `;
-    badge.textContent = '0';
-    badge.classList.add('empty');
-    status.innerHTML = '<i class="fas fa-clock"></i> Ожидание обновления';
-    status.style.color = '#94a3b8';
-}
-
-function getTimeAgo(date) {
-    // 🔥 Защита от NaN и невалидных дат
-    if (!(date instanceof Date) || isNaN(date.getTime())) {
-        return 'недавно';
-    }
-    
-    const now = new Date();
-    const seconds = Math.floor((now - date) / 1000);
-    
-    // 🔥 Защита от отрицательных значений (твит из будущего?)
-    if (seconds < 0) return 'только что';
-    
-    if (seconds < 60) return 'только что';
-    if (seconds < 3600) {
-        const mins = Math.floor(seconds / 60);
-        return `${mins} мин назад`;
-    }
-    if (seconds < 86400) {
-        const hours = Math.floor(seconds / 3600);
-        return `${hours} ч назад`;
-    }
-    if (seconds < 604800) {
-        const days = Math.floor(seconds / 86400);
-        return `${days} д назад`;
-    }
-    
-    // Для старых постов
-    const weeks = Math.floor(seconds / 604800);
-    return `${weeks} нед назад`;
 }
 
 function initTwitterMonitor() {
     if (!isAdmin) return;
-    
     const refreshBtn = document.getElementById('monitorRefreshBtn');
-    
     if (!refreshBtn) return;
     
-    // 🔥 Загружаем данные при старте
     loadTwitterResults();
-    
-    // 🔥 Кнопка обновления
     refreshBtn.addEventListener('click', async () => {
         const originalHTML = refreshBtn.innerHTML;
         refreshBtn.disabled = true;
         refreshBtn.innerHTML = '<i class="fas fa-sync-alt fa-spin"></i> Обновление...';
-        
         await loadTwitterResults();
-        
-        setTimeout(() => {
-            refreshBtn.disabled = false;
-            refreshBtn.innerHTML = originalHTML;
-            showToast('Данные обновлены!', 'success');
-        }, 1000);
+        refreshBtn.disabled = false;
+        refreshBtn.innerHTML = originalHTML;
+        showToast('Данные обновлены!', 'success');
     });
-    
-    // 🔥 Автообновление каждые 5 минут
     setInterval(loadTwitterResults, 5 * 60 * 1000);
 }
-
 </script>
 <!-- ====== LOGIN MODAL ====== -->
 <div id="loginModal" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.8); backdrop-filter:blur(8px); z-index:1000; align-items:center; justify-content:center; padding:20px;">
