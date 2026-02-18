@@ -71,9 +71,17 @@ TWITTER_MONITOR_CONFIG = {
 
 GITHUB_REPO_PATH = r"C:\Users\mykol\Worklaf\TestNet_Hub"
 YOUR_WEBSITE_URL = "https://worklaf.github.io/Worklaf/TestNet_Hub/Arc_Testnet_by_Circle.html"
+# ✅ НОВОЕ: URL для проверки дубликатов по JSON-файлу
+YOUR_JSON_URL = "https://raw.githubusercontent.com/Worklaf/Worklaf/refs/heads/main/TestNet_Hub/data/arc_shared_items.json"
 SCROLL_PAUSE = 5
 MAX_SCROLLS = 1
 LOGIN_TIMEOUT = 90
+
+MINT_DOMAINS = [
+    'alze.xyz', 'caset.network', 'draze.io', 'arklelab.xyz',
+    'mintaura.io', 'oku.xyz', 'clarachain.net', 'morkie.xyz',
+    'nfts2me', 'omnihub.xyz', 'nft.arc.market', 'arc.market'
+]
 
 def normalize_url(url):
     """Нормализация URL для проверки дубликатов: lowercase, без протокола/www/слэшей/query."""
@@ -86,46 +94,79 @@ def normalize_url(url):
     return url
 
 def load_existing_nfts():
-    """Загрузка существующих NFT с сайта"""
-    try:
-        print("\n" + "="*60)
-        print("🔍 Загрузка существующих NFT с сайта")
-        print("="*60)
-        print(f"🌐 URL: {YOUR_WEBSITE_URL}")
+    """
+    Загрузка существующих NFT из двух источников:
+    1. HTML-страница сайта (YOUR_WEBSITE_URL)
+    2. JSON-файл с shared items (YOUR_JSON_URL) ✅ НОВОЕ
+    """
+    mint_links = set()
 
+    print("\n" + "="*60)
+    print("🔍 Загрузка существующих NFT")
+    print("="*60)
+
+    # ─── Источник 1: HTML-страница ───────────────────────────────
+    try:
+        print(f"🌐 [1/2] HTML: {YOUR_WEBSITE_URL}")
         response = requests.get(YOUR_WEBSITE_URL, timeout=10)
         response.raise_for_status()
         soup = BeautifulSoup(response.text, 'html.parser')
 
-        # Fallback: если секция не найдена, парсим весь HTML
         nft_section = soup.find('div', {'data-section-zone': 'nfts'}) or soup
-        mint_links = set()
 
-        # Ищем все ссылки, попадающие под наши домены
         for a in nft_section.find_all('a', href=True):
             href = a['href']
             if not href:
                 continue
             normalized = normalize_url(href)
-            if normalized and any(domain in normalized for domain in [
-                'alze.xyz', 'caset.network', 'draze.io', 'arklelab.xyz',
-                'mintaura.io', 'oku.xyz', 'clarachain.net', 'morkie.xyz',
-                'nfts2me', 'omnihub.xyz', 'nft.arc.market', 'arc.market'
-            ]):
+            if normalized and any(domain in normalized for domain in MINT_DOMAINS):
                 mint_links.add(normalized)
 
-        print(f"✅ Найдено существующих NFT: {len(mint_links)}")
-        if mint_links:
-            print("📝 Примеры:")
-            for link in list(mint_links)[:5]:
-                print(f"   - {link}")
-            if len(mint_links) > 5:
-                print(f"   ... и ещё {len(mint_links) - 5}")
-        return mint_links
+        print(f"   ✅ Найдено из HTML: {len(mint_links)}")
 
     except Exception as e:
-        print(f"⚠️ Не удалось загрузить существующие NFT: {e}")
-        return set()
+        print(f"   ⚠️ Не удалось загрузить HTML: {e}")
+
+    # ─── Источник 2: JSON-файл (arc_shared_items.json) ──────────
+    json_count_before = len(mint_links)
+    try:
+        print(f"📄 [2/2] JSON: {YOUR_JSON_URL}")
+        response = requests.get(YOUR_JSON_URL, timeout=10)
+        response.raise_for_status()
+        data = response.json()
+
+        # Обходим все элементы JSON, ищем строки с mint-доменами
+        def extract_links_from_value(value):
+            """Рекурсивно ищем URL-строки в любой структуре JSON."""
+            if isinstance(value, str):
+                normalized = normalize_url(value)
+                if normalized and any(domain in normalized for domain in MINT_DOMAINS):
+                    mint_links.add(normalized)
+            elif isinstance(value, list):
+                for item in value:
+                    extract_links_from_value(item)
+            elif isinstance(value, dict):
+                for v in value.values():
+                    extract_links_from_value(v)
+
+        extract_links_from_value(data)
+
+        added_from_json = len(mint_links) - json_count_before
+        print(f"   ✅ Найдено из JSON: {added_from_json} (новых, не дублирующих HTML)")
+
+    except Exception as e:
+        print(f"   ⚠️ Не удалось загрузить JSON: {e}")
+
+    # ─── Итог ────────────────────────────────────────────────────
+    print(f"\n📊 Итого уникальных существующих NFT: {len(mint_links)}")
+    if mint_links:
+        print("📝 Примеры:")
+        for link in list(mint_links)[:5]:
+            print(f"   - {link}")
+        if len(mint_links) > 5:
+            print(f"   ... и ещё {len(mint_links) - 5}")
+
+    return mint_links
 
 def expand_tco(url, timeout=5):
     """Разворачиваем t.co ссылку через HEAD-запрос."""
@@ -149,17 +190,9 @@ def extract_mint_links_from_tweet(tweet_element, existing_nfts_set):
             if href and 't.co' in href:
                 expanded = expand_tco(href)
                 normalized = normalize_url(expanded)
-                if normalized and any(domain in normalized for domain in [
-                    'alze.xyz', 'caset.network', 'draze.io', 'arklelab.xyz',
-                    'mintaura.io', 'oku.xyz', 'clarachain.net', 'morkie.xyz',
-                    'nfts2me', 'omnihub.xyz', 'nft.arc.market', 'arc.market'
-                ]):
+                if normalized and any(domain in normalized for domain in MINT_DOMAINS):
                     mint_links.add(normalized)
-            elif href and any(domain in href for domain in [ # Добавляем прямые ссылки
-                    'alze.xyz', 'caset.network', 'draze.io', 'arklelab.xyz',
-                    'mintaura.io', 'oku.xyz', 'clarachain.net', 'morkie.xyz',
-                    'nfts2me', 'omnihub.xyz', 'nft.arc.market', 'arc.market'
-                ]):
+            elif href and any(domain in href for domain in MINT_DOMAINS):
                 mint_links.add(normalize_url(href))
     except Exception as e:
         print(f"   ❌ Ошибка парсинга ссылок: {e}")
@@ -188,11 +221,7 @@ def extract_mint_links_from_tweet(tweet_element, existing_nfts_set):
             for match in matches:
                 path = match[1] if isinstance(match, tuple) and len(match) > 1 else match[0]
                 normalized = normalize_url(f"https://{path}")
-                if normalized and any(domain in normalized for domain in [
-                    'alze.xyz', 'caset.network', 'draze.io', 'arklelab.xyz',
-                    'mintaura.io', 'oku.xyz', 'clarachain.net', 'morkie.xyz',
-                    'nfts2me', 'omnihub.xyz', 'nft.arc.market', 'arc.market'
-                ]):
+                if normalized and any(domain in normalized for domain in MINT_DOMAINS):
                     mint_links.add(normalized)
     except Exception as e:
         print(f"   ❌ Ошибка парсинга текста: {e}")
@@ -203,8 +232,7 @@ def extract_mint_links_from_tweet(tweet_element, existing_nfts_set):
             new_links.add(link)
         else:
             found_duplicates += 1
-            # print(f"   ⚠️ Дубликат найден: {link} — пропускаем ссылку") # Отключено, чтобы не загромождать вывод
-            
+
     if len(mint_links) > 0:
         print(f"   ℹ️  Найдено всего ссылок: {len(mint_links)}, из них новых: {len(new_links)}, дубликатов: {found_duplicates}")
 
@@ -213,25 +241,23 @@ def extract_mint_links_from_tweet(tweet_element, existing_nfts_set):
 def get_all_links_from_tweet_text(text):
     """Извлекает все ссылки из текста твита для проверки дубликатов."""
     links = []
-    # Обновленный regex для более полного захвата ссылок, включая домены без http/https
     patterns = [
-        r'(https?://[^\s\)\]]+)',  # http/https ссылки
-        r'((?:www\.)?(?:alze\.xyz|caset\.network|draze\.io|arklelab\.xyz|mintaura\.io|oku\.xyz|clarachain\.net|morkie\.xyz|nfts2me\.com|omnihub\.xyz|nft\.arc\.market|arc\.market)(?:/[^\s\)\]]*)?)', # Домены
+        r'(https?://[^\s\)\]]+)',
+        r'((?:www\.)?(?:alze\.xyz|caset\.network|draze\.io|arklelab\.xyz|mintaura\.io|oku\.xyz|clarachain\.net|morkie\.xyz|nfts2me\.com|omnihub\.xyz|nft\.arc\.market|arc\.market)(?:/[^\s\)\]]*)?)',
     ]
-    
+
     for pattern in patterns:
         matches = re.findall(pattern, text, re.IGNORECASE)
         for match in matches:
-            if isinstance(match, tuple): # Если regex возвращает группы, берем полную ссылку
+            if isinstance(match, tuple):
                 link = match[0] if match[0] else match[1]
             else:
                 link = match
-            
-            # Добавляем протокол, если его нет (для корректной нормализации)
+
             if not link.startswith('http'):
                 link = 'https://' + link
             links.append(link)
-            
+
     return links
 
 # ===========================
@@ -348,13 +374,13 @@ def search_tweets_by_user(driver, project_key, config, existing_nfts_set):
     skipped_no_new_links = 0
     scrolls = 0
 
-    time.sleep(3) # Дополнительная задержка для загрузки контента
+    time.sleep(3)
 
     while scrolls < MAX_SCROLLS:
         print(f"📄 Прокрутка {scrolls + 1}/{MAX_SCROLLS}")
 
         tweets = []
-        for attempt in range(3): # Повторные попытки найти твиты
+        for attempt in range(3):
             try:
                 tweets = driver.find_elements(By.CSS_SELECTOR, 'article[data-testid="tweet"]')
                 if tweets:
@@ -370,42 +396,36 @@ def search_tweets_by_user(driver, project_key, config, existing_nfts_set):
             print("   ❌ Твиты не найдены, прерываем.")
             break
 
-        found_duplicate_for_user = False # Флаг, указывающий, что найден дубликат для ЭТОГО пользователя
+        found_duplicate_for_user = False
 
         for idx, tweet in enumerate(tweets):
             try:
-                # Извлекаем URL твита (ссылка на сам твит)
                 time_elem = tweet.find_element(By.TAG_NAME, "time")
                 link_elem = time_elem.find_element(By.XPATH, "./ancestor::a")
                 tweet_url = link_elem.get_attribute("href")
                 if tweet_url in seen_tweet_urls:
-                    continue # Пропускаем уже обработанные твиты
+                    continue
                 seen_tweet_urls.add(tweet_url)
 
-                # Читаем текст твита
                 try:
                     text_elem = tweet.find_element(By.CSS_SELECTOR, '[data-testid="tweetText"]')
                     tweet_text = text_elem.text
                 except:
                     continue
                 if trigger_text not in tweet_text.lower():
-                    continue # Пропускаем, если нет триггерного текста
+                    continue
 
-                # Проверка автора твита
                 try:
                     author_elem = tweet.find_element(By.CSS_SELECTOR, '[data-testid="User-Name"] a[role="link"]')
                     author_handle = author_elem.get_attribute("href").split('/')[-1]
                     if author_handle.lower() != username.lower():
-                        continue # Пропускаем, если автор не совпадает
+                        continue
                 except:
                     continue
 
-                # Извлекаем ссылки NFT и проверяем их на дубликаты
                 mint_links, has_new_links = extract_mint_links_from_tweet(tweet, existing_nfts_set)
 
-                # 🔴 КЛЮЧЕВОЙ ШАГ: если в твите есть хотя бы один ДУБЛИКАТ — прекращаем обработку
                 if not has_new_links:
-                    # Проверяем, есть ли в этом твите *какие-либо* ссылки, которые уже существуют
                     all_tweet_links = get_all_links_from_tweet_text(tweet_text)
                     is_full_duplicate = False
                     for link in all_tweet_links:
@@ -415,19 +435,17 @@ def search_tweets_by_user(driver, project_key, config, existing_nfts_set):
                             found_duplicate_for_user = True
                             is_full_duplicate = True
                             break
-                    
+
                     if is_full_duplicate:
-                        break # Выйти из цикла по твитам, т.к. найден дубликат
+                        break
                     else:
                         skipped_no_new_links += 1
                         print(f"   ⏭️ Пропускаем твит #{idx+1} (нет НОВЫХ ссылок)")
-                        continue # Продолжить к следующему твиту, если нет НОВЫХ, но и не является полным дубликатом
+                        continue
 
-                # Если найден дубликат для этого пользователя — прерываем обработку всех твитов для него
                 if found_duplicate_for_user:
                     break
 
-                # 👉 СОХРАНЯЕМ НОВЫЙ NFT
                 try:
                     datetime_str = time_elem.get_attribute("datetime")
                     time_ago = parse_tweet_time(datetime_str)
@@ -449,18 +467,12 @@ def search_tweets_by_user(driver, project_key, config, existing_nfts_set):
                     retweets = int(''.join(filter(str.isdigit, rt_label))) if rt_label else 0
                 except:
                     pass
-                
-                # ✅ ФОРМАТИРУЕМ ВАШ ТРЕБУЕМЫЙ ФОРМАТ
-                # Важно: mint_links здесь - это только НОВЫЕ ссылки, 
-                # но в выходном JSON мы хотим видеть все найденные ссылки, 
-                # если твит не был пропущен как дубликат.
-                # Для этого используем get_all_links_from_tweet_text
-                all_found_mint_links_in_tweet = [normalize_url(link) for link in get_all_links_from_tweet_text(tweet_text) if any(domain in normalize_url(link) for domain in [
-                    'alze.xyz', 'caset.network', 'draze.io', 'arklelab.xyz',
-                    'mintaura.io', 'oku.xyz', 'clarachain.net', 'morkie.xyz',
-                    'nfts2me', 'omnihub.xyz', 'nft.arc.market', 'arc.market'
-                ])]
 
+                all_found_mint_links_in_tweet = [
+                    normalize_url(link)
+                    for link in get_all_links_from_tweet_text(tweet_text)
+                    if any(domain in normalize_url(link) for domain in MINT_DOMAINS)
+                ]
 
                 nft_data = {
                     "project": project_key,
@@ -473,7 +485,7 @@ def search_tweets_by_user(driver, project_key, config, existing_nfts_set):
                     "likes": likes,
                     "retweets": retweets,
                     "triggerText": config['triggerText'],
-                    "mint_links": all_found_mint_links_in_tweet # Добавляем все подходящие ссылки из твита
+                    "mint_links": all_found_mint_links_in_tweet
                 }
                 nfts.append(nft_data)
                 print(f"   ✅ [{idx+1}] НАЙДЕН НОВЫЙ NFT: {all_found_mint_links_in_tweet[0][:60]}... | {time_ago} | ❤️ {likes} | 🔁 {retweets}")
@@ -481,10 +493,8 @@ def search_tweets_by_user(driver, project_key, config, existing_nfts_set):
 
             except Exception as e:
                 print(f"   ❌ Ошибка обработки твита #{idx+1}: {e}")
-                # traceback.print_exc() # Отключено, чтобы не загромождать вывод
                 continue
 
-        # 🚫 Если найден дубликат — прекращаем скролл и обработку для текущего пользователя
         if found_duplicate_for_user:
             print(f"   🔴 **Обработка @{username} прекращена по первому дубликату.**")
             break
@@ -501,13 +511,13 @@ def search_tweets_by_user(driver, project_key, config, existing_nfts_set):
     return nfts, skipped_no_new_links
 
 # ===========================
-# ✅ СОХРАНЕНИЕ В ОЖИДАЕМОМ ФОРМАТЕ
+# ✅ СОХРАНЕНИЕ
 # ===========================
 
 def save_results(nfts, filename):
-    """Сохраняет NFT в JSON в формате, который вы указали"""
+    """Сохраняет NFT в JSON"""
     result = {
-        "timestamp": datetime.now(timezone.utc).isoformat().replace("+00:00", "Z"), # Время сохранения
+        "timestamp": datetime.now(timezone.utc).isoformat().replace("+00:00", "Z"),
         "total": len(nfts),
         "nfts": nfts
     }
@@ -520,7 +530,7 @@ def save_results(nfts, filename):
         traceback.print_exc()
 
 # ===========================
-# 🔧 GIT УПРАВЛЕНИЕ (без изменений)
+# 🔧 GIT УПРАВЛЕНИЕ
 # ===========================
 
 def run_git_command(cmd_list, cwd=None, timeout=30, capture_output=True):
@@ -544,7 +554,6 @@ def upload_to_github():
     try:
         import shutil
 
-        # Копируем локальный twitter_results.json в папку Git репозитория
         local_results_file = "twitter_results.json"
         if not os.path.exists(local_results_file):
             print(f"❌ Локальный файл {local_results_file} не найден. Пропуск загрузки на GitHub.")
@@ -563,8 +572,7 @@ def upload_to_github():
         else:
             print("   Нет unstaged изменений.")
 
-        # Шаг 1: Если есть изменения в рабочей копии, сохраняем их во временном stash
-        if result.stdout.strip(): # Если status --porcelain что-то вернул, значит есть изменения
+        if result.stdout.strip():
             print("🛡️ Stash unstaged changes...")
             stash_result = run_git_command(["git", "stash", "push", "-m", "Temp stash before pull"])
             if stash_result.returncode != 0 and "No local changes to save" not in stash_result.stderr:
@@ -572,12 +580,10 @@ def upload_to_github():
         else:
             stash_result = None
 
-        # Шаг 2: Pull последних изменений с autostash
         print("⬇️ git pull --autostash...")
         pull_result = run_git_command(["git", "pull", "--autostash", "origin", "main"])
         if pull_result.returncode != 0:
             print(f"⚠️ Pull error: {pull_result.stderr}")
-            # Fallback: pull без rebase/autostash
             print("⬇️ Пробую простой git pull...")
             pull_result = run_git_command(["git", "pull", "origin", "main"])
             if pull_result.returncode != 0:
@@ -586,8 +592,7 @@ def upload_to_github():
                     print("📥 Pop stash (clean up)...")
                     run_git_command(["git", "stash", "pop"], timeout=10)
                 return False
-        
-        # Шаг 3: Если был stash, применяем его обратно
+
         if stash_result and stash_result.returncode == 0:
             print("📥 Pop stash...")
             pop_result = run_git_command(["git", "stash", "pop"], timeout=10)
@@ -642,7 +647,7 @@ def upload_to_github():
         return False
 
 # ===========================
-# 🔥 ГЛАВНАЯ ФУНКЦИЯ (ИСПРАВЛЕНА!)
+# 🔥 ГЛАВНАЯ ФУНКЦИЯ
 # ===========================
 
 def main():
@@ -653,7 +658,7 @@ def main():
 
     existing_nfts = load_existing_nfts()
     total_skipped = 0
-    driver = None # Инициализируем driver как None
+    driver = None
     all_nfts = []
 
     try:
@@ -671,7 +676,6 @@ def main():
                 all_nfts.extend(nfts)
                 total_skipped += skipped
 
-                # Обновляем existing_nfts новыми ссылками, чтобы избежать дубликатов в рамках одного запуска
                 for nft_item in nfts:
                     for link in nft_item.get('mint_links', []):
                         normalized = normalize_url(link)
@@ -686,7 +690,6 @@ def main():
 
         all_nfts.sort(key=lambda x: x.get('datetime', ''), reverse=True)
 
-        # ✅ СОХРАНЯЕМ В ФАЙЛ twitter_results.json (перезаписываем)
         output_filename = "twitter_results.json"
         save_results(all_nfts, output_filename)
 
@@ -707,11 +710,12 @@ def main():
         print(f"\n❌ Критическая ошибка в главной функции: {e}")
         traceback.print_exc()
     finally:
-        if driver: # Закрываем драйвер только если он был успешно инициализирован
+        if driver:
             print("\n🔒 Закрываю браузер...")
             time.sleep(2)
             driver.quit()
         input("\n✅ Нажми Enter для выхода...")
+
 
 if __name__ == "__main__":
     main()
