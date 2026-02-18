@@ -19,48 +19,6 @@ from bs4 import BeautifulSoup
 # ===========================
 
 TWITTER_MONITOR_CONFIG = {
-    'morkie': {
-        'username': '_morkie',
-        'zone': 'nft_morkie',
-        'triggerText': 'Mint Free NFT On Arc Testnet',
-        'searchKeywords': 'Mint Free NFT On Arc Testnet'
-    },
-    'clara': {
-        'username': 'clarachainxyz',
-        'zone': 'nft_clara',
-        'triggerText': 'Free Mint NFT on Arc Testnet',
-        'searchKeywords': 'Free Mint NFT on Arc Testnet'
-    },
-    'oku': {
-        'username': 'OKUXYZ',
-        'zone': 'nft_oku',
-        'triggerText': 'NFT On Arc Testnet',
-        'searchKeywords': 'NFT On Arc Testnet'
-    },
-    'mintaura': {
-        'username': 'MintAura',
-        'zone': 'nft_mintaura',
-        'triggerText': 'Mint Free Nft on Arc Testnet',
-        'searchKeywords': 'NFT On Arc Testnet'
-    },
-    'arkle': {
-        'username': '0xarkle',
-        'zone': 'nft_arkle',
-        'triggerText': 'NFT On Arc Testnet',
-        'searchKeywords': 'NFT On Arc Testnet'
-    },
-    'draze': {
-        'username': 'DrazeLab',
-        'zone': 'nft_draze',
-        'triggerText': 'NFT On Arc Testnet',
-        'searchKeywords': 'NFT On Arc Testnet'
-    },
-    'caset': {
-        'username': 'casetnetwork',
-        'zone': 'nft_caset',
-        'triggerText': 'Mint Free NFT On ARC Testnet',
-        'searchKeywords': 'NFT On Arc Testnet'
-    },
     'alze': {
         'username': '0xAlze',
         'zone': 'nft_alze',
@@ -69,19 +27,37 @@ TWITTER_MONITOR_CONFIG = {
     }
 }
 
-GITHUB_REPO_PATH = r"C:\Users\mykol\Worklaf\TestNet_Hub"
-YOUR_WEBSITE_URL = "https://worklaf.github.io/Worklaf/TestNet_Hub/Arc_Testnet_by_Circle.html"
-# ✅ НОВОЕ: URL для проверки дубликатов по JSON-файлу
-YOUR_JSON_URL = "https://raw.githubusercontent.com/Worklaf/Worklaf/refs/heads/main/TestNet_Hub/data/arc_shared_items.json"
-SCROLL_PAUSE = 5
-MAX_SCROLLS = 1
+GITHUB_REPO_PATH = r"C:\Users\mykol\Worklaf\AirdropLab"
+YOUR_WEBSITE_URL = "https://worklaf.github.io/Worklaf/AirdropLab/guides/Arc/Arc_Testnet_by_Circle.html"
+YOUR_JSON_URL = "https://raw.githubusercontent.com/Worklaf/Worklaf/refs/heads/main/AirdropLab/guides/Arc/arc_shared_items.json"
+
+# ⚡ УСКОРЕННЫЕ НАСТРОЙКИ
+SCROLL_PAUSE = 2
+MAX_SCROLLS = 3
 LOGIN_TIMEOUT = 90
+CONSECUTIVE_DUPES_THRESHOLD = 1  # 🆕 Останавливаемся после 1 дубликата
 
 MINT_DOMAINS = [
     'alze.xyz', 'caset.network', 'draze.io', 'arklelab.xyz',
     'mintaura.io', 'oku.xyz', 'clarachain.net', 'morkie.xyz',
     'nfts2me', 'omnihub.xyz', 'nft.arc.market', 'arc.market'
 ]
+
+# ===========================
+# 🎨 ЛОГОТИП
+# ===========================
+
+def show_logo():
+    logo = """
+    ╔═══════════════════════════════════════════════════════════════════════════╗
+    ║                                                                           ║
+    ║      🐦 Twitter NFT Parser for Arc Testnet                               ║
+    ║      ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━                               ║
+    ║      ⚡ Быстрый режим | 🔍 Smart фильтрация | 🚀 Auto GitHub            ║
+    ║                                                                           ║
+    ╚═══════════════════════════════════════════════════════════════════════════╝
+    """
+    print(logo)
 
 def normalize_url(url):
     """Нормализация URL для проверки дубликатов: lowercase, без протокола/www/слэшей/query."""
@@ -97,18 +73,15 @@ def load_existing_nfts():
     """
     Загрузка существующих NFT из двух источников:
     1. HTML-страница сайта (YOUR_WEBSITE_URL)
-    2. JSON-файл с shared items (YOUR_JSON_URL) ✅ НОВОЕ
+    2. JSON-файл с shared items (YOUR_JSON_URL)
     """
     mint_links = set()
 
-    print("\n" + "="*60)
-    print("🔍 Загрузка существующих NFT")
-    print("="*60)
+    print("\n🔍 Загрузка существующих NFT...")
 
     # ─── Источник 1: HTML-страница ───────────────────────────────
     try:
-        print(f"🌐 [1/2] HTML: {YOUR_WEBSITE_URL}")
-        response = requests.get(YOUR_WEBSITE_URL, timeout=10)
+        response = requests.get(YOUR_WEBSITE_URL, timeout=8)
         response.raise_for_status()
         soup = BeautifulSoup(response.text, 'html.parser')
 
@@ -122,53 +95,33 @@ def load_existing_nfts():
             if normalized and any(domain in normalized for domain in MINT_DOMAINS):
                 mint_links.add(normalized)
 
-        print(f"   ✅ Найдено из HTML: {len(mint_links)}")
-
     except Exception as e:
-        print(f"   ⚠️ Не удалось загрузить HTML: {e}")
+        print(f"⚠️ HTML загрузка: {e}")
 
     # ─── Источник 2: JSON-файл (arc_shared_items.json) ──────────
-    json_count_before = len(mint_links)
     try:
-        print(f"📄 [2/2] JSON: {YOUR_JSON_URL}")
-        response = requests.get(YOUR_JSON_URL, timeout=10)
+        response = requests.get(YOUR_JSON_URL, timeout=8)
         response.raise_for_status()
         data = response.json()
-
-        # Обходим все элементы JSON, ищем строки с mint-доменами
+        
         def extract_links_from_value(value):
-            """Рекурсивно ищем URL-строки в любой структуре JSON."""
             if isinstance(value, str):
                 normalized = normalize_url(value)
                 if normalized and any(domain in normalized for domain in MINT_DOMAINS):
                     mint_links.add(normalized)
-            elif isinstance(value, list):
-                for item in value:
-                    extract_links_from_value(item)
-            elif isinstance(value, dict):
-                for v in value.values():
+            elif isinstance(value, (list, dict)):
+                for v in value.values() if isinstance(value, dict) else value:
                     extract_links_from_value(v)
 
         extract_links_from_value(data)
 
-        added_from_json = len(mint_links) - json_count_before
-        print(f"   ✅ Найдено из JSON: {added_from_json} (новых, не дублирующих HTML)")
-
     except Exception as e:
-        print(f"   ⚠️ Не удалось загрузить JSON: {e}")
+        print(f"⚠️ JSON загрузка: {e}")
 
-    # ─── Итог ────────────────────────────────────────────────────
-    print(f"\n📊 Итого уникальных существующих NFT: {len(mint_links)}")
-    if mint_links:
-        print("📝 Примеры:")
-        for link in list(mint_links)[:5]:
-            print(f"   - {link}")
-        if len(mint_links) > 5:
-            print(f"   ... и ещё {len(mint_links) - 5}")
-
+    print(f"✅ Загружено {len(mint_links)} существующих NFT\n")
     return mint_links
 
-def expand_tco(url, timeout=5):
+def expand_tco(url, timeout=3):
     """Разворачиваем t.co ссылку через HEAD-запрос."""
     try:
         resp = requests.head(url, allow_redirects=True, timeout=timeout)
@@ -180,7 +133,6 @@ def extract_mint_links_from_tweet(tweet_element, existing_nfts_set):
     """Извлекает уникальные (новые) ссылки из твита, учитывая дубликаты."""
     mint_links = set()
     new_links = set()
-    found_duplicates = 0
 
     # Парсинг ссылок из <a href>
     try:
@@ -194,47 +146,37 @@ def extract_mint_links_from_tweet(tweet_element, existing_nfts_set):
                     mint_links.add(normalized)
             elif href and any(domain in href for domain in MINT_DOMAINS):
                 mint_links.add(normalize_url(href))
-    except Exception as e:
-        print(f"   ❌ Ошибка парсинга ссылок: {e}")
+    except:
+        pass
 
     # Парсинг ссылок из текста твита (fallback)
     try:
         text_elem = tweet_element.find_element(By.CSS_SELECTOR, '[data-testid="tweetText"]')
-        text = text_elem.text.lower()
+        tweet_text = text_elem.text.lower()
+
         patterns = [
-            r'(alze\.xyz/?)([a-zA-Z0-9\-_/]+)',
-            r'(caset\.network/?)([a-zA-Z0-9\-_/]+)',
-            r'(draze\.io/?)([a-zA-Z0-9\-_/]+)',
-            r'(arklelab\.xyz/?)([a-zA-Z0-9\-_/]+)',
-            r'(mintaura\.io/?)([a-zA-Z0-9\-_/]+)',
-            r'(oku\.xyz/?)([a-zA-Z0-9\-_/]+)',
-            r'(clarachain\.net/?)([a-zA-Z0-9\-_/]+)',
-            r'(morkie\.xyz/?)([a-zA-Z0-9\-_/]+)',
-            r'(nfts2?me\.com?/?.*)',
-            r'(omnihub\.xyz/collection/arc-testnet/[a-zA-Z0-9\-_/]+)',
-            r'(nft\.arc\.market/mint/[^\s\)\]]+)',
-            r'(arc\.market/mint/[^\s\)\]]+)',
+            r'(https?://(?:alze\.xyz|caset\.network|draze\.io|arklelab\.xyz|mintaura\.io|oku\.xyz|clarachain\.net|morkie\.xyz|nfts2me\.com|omnihub\.xyz|nft\.arc\.market|arc\.market)(?:/[^\s\)\]]*)?)',
             r'(0x[a-fA-F0-9]{40})',
         ]
+
         for pattern in patterns:
-            matches = re.findall(pattern, text)
+            matches = re.findall(pattern, tweet_text)
             for match in matches:
-                path = match[1] if isinstance(match, tuple) and len(match) > 1 else match[0]
-                normalized = normalize_url(f"https://{path}")
+                if isinstance(match, tuple):
+                    link = match[0]
+                else:
+                    link = match
+
+                normalized = normalize_url(link)
                 if normalized and any(domain in normalized for domain in MINT_DOMAINS):
                     mint_links.add(normalized)
-    except Exception as e:
-        print(f"   ❌ Ошибка парсинга текста: {e}")
+    except:
+        pass
 
     # Фильтрация: только новые ссылки
     for link in mint_links:
         if link not in existing_nfts_set:
             new_links.add(link)
-        else:
-            found_duplicates += 1
-
-    if len(mint_links) > 0:
-        print(f"   ℹ️  Найдено всего ссылок: {len(mint_links)}, из них новых: {len(new_links)}, дубликатов: {found_duplicates}")
 
     return list(new_links), len(new_links) > 0
 
@@ -266,7 +208,7 @@ def get_all_links_from_tweet_text(text):
 
 def setup_driver():
     """Настройка Edge WebDriver"""
-    print("🚀 Настройка Edge...\n")
+    print("🚀 Настройка Edge...")
 
     options = Options()
     options.add_argument("--start-maximized")
@@ -278,6 +220,14 @@ def setup_driver():
     options.add_argument(f"user-data-dir={user_data_dir}")
     options.add_argument("--disable-dev-shm-usage")
     options.add_argument("--no-sandbox")
+    
+    # 🖼️ ЯВНО ВКЛЮЧАЕМ ИЗОБРАЖЕНИЯ
+    prefs = {
+        "profile.managed_default_content_settings.images": 0,  # 0 = разрешено, 2 = блокировать
+        "profile.default_content_setting_values.media_stream": 0,
+        "profile.default_content_setting_values.notifications": 2,
+    }
+    options.add_experimental_option("prefs", prefs)
 
     driver = webdriver.Edge(options=options)
     driver.execute_script("Object.defineProperty(navigator, 'webdriver', {get: () => undefined})")
@@ -289,41 +239,38 @@ def setup_driver():
 
 def login_to_twitter(driver):
     """Проверка авторизации"""
-    print("\n" + "="*60)
-    print("🔐 Проверка авторизации в Twitter")
-    print("="*60)
+    print("\n🔐 Проверка Twitter...")
 
     try:
         driver.get("https://twitter.com/home")
-        time.sleep(4)
+        time.sleep(2)
 
         try:
-            WebDriverWait(driver, 5).until(
+            WebDriverWait(driver, 3).until(
                 EC.presence_of_element_located((By.CSS_SELECTOR, '[data-testid="SideNav_NewTweet_Button"]'))
             )
-            print("✅ Уже залогинен!")
+            print("✅ Залогинен!\n")
             return True
         except:
-            print("⏳ Требуется логин...")
-            print(f"👉 Войди в Twitter (таймаут: {LOGIN_TIMEOUT} сек)\n")
+            print(f"⏳ Требуется логин (таймаут: {LOGIN_TIMEOUT} сек)\n")
 
             start_time = time.time()
             while time.time() - start_time < LOGIN_TIMEOUT:
                 try:
                     driver.find_element(By.CSS_SELECTOR, '[data-testid="SideNav_NewTweet_Button"]')
-                    print("\n✅ Успешно вошли!")
-                    time.sleep(2)
+                    print("\n✅ Вход выполнен!\n")
+                    time.sleep(1)
                     return True
                 except:
                     remaining = int(LOGIN_TIMEOUT - (time.time() - start_time))
-                    print(f"⏳ Осталось: {remaining} сек...", end='\r')
+                    print(f"⏳ {remaining} сек...", end='\r')
                     time.sleep(2)
 
             print("\n❌ Таймаут логина!")
             return False
 
     except Exception as e:
-        print(f"❌ Ошибка при попытке логина: {e}")
+        print(f"❌ Ошибка логина: {e}")
         return False
 
 def parse_tweet_time(datetime_str):
@@ -347,7 +294,7 @@ def parse_tweet_time(datetime_str):
         return "Unknown"
 
 # ===========================
-# 🔥 ПАРСЕР ТВИТОВ
+# 🔥 ПАРСЕР ТВИТОВ (МИНИМАЛИСТИЧНЫЙ)
 # ===========================
 
 def search_tweets_by_user(driver, project_key, config, existing_nfts_set):
@@ -356,47 +303,29 @@ def search_tweets_by_user(driver, project_key, config, existing_nfts_set):
     search_keywords = config.get('searchKeywords', 'Free Mint NFT on Arc Testnet')
     zone = config['zone']
 
-    print(f"\n{'='*60}")
-    print(f"🔍 Поиск: @{username}")
-    print(f"🎯 Ключевые слова: {search_keywords}")
-    print(f"✅ Триггер: '{config['triggerText']}'")
-    print(f"{'='*60}")
+    print(f"🔍 Поиск: @{username} | '{search_keywords}'")
 
     search_query = f"from:{username} {search_keywords}"
     encoded_query = urllib.parse.quote(search_query)
     search_url = f"https://twitter.com/search?q={encoded_query}&f=live"
-    print(f"🌐 URL: {search_url}")
     driver.get(search_url)
-    time.sleep(5)
+    time.sleep(2)
 
     nfts = []
     seen_tweet_urls = set()
     skipped_no_new_links = 0
+    consecutive_duplicates = 0
     scrolls = 0
 
-    time.sleep(3)
-
     while scrolls < MAX_SCROLLS:
-        print(f"📄 Прокрутка {scrolls + 1}/{MAX_SCROLLS}")
-
         tweets = []
-        for attempt in range(3):
-            try:
-                tweets = driver.find_elements(By.CSS_SELECTOR, 'article[data-testid="tweet"]')
-                if tweets:
-                    print(f"   Найдено твитов: {len(tweets)}")
-                    break
-                else:
-                    time.sleep(1)
-            except Exception as e:
-                print(f"   Ошибка при поиске твитов: {e}")
-                time.sleep(1)
+        try:
+            tweets = driver.find_elements(By.CSS_SELECTOR, 'article[data-testid="tweet"]')
+        except:
+            pass
 
         if not tweets:
-            print("   ❌ Твиты не найдены, прерываем.")
             break
-
-        found_duplicate_for_user = False
 
         for idx, tweet in enumerate(tweets):
             try:
@@ -412,6 +341,7 @@ def search_tweets_by_user(driver, project_key, config, existing_nfts_set):
                     tweet_text = text_elem.text
                 except:
                     continue
+
                 if trigger_text not in tweet_text.lower():
                     continue
 
@@ -426,25 +356,17 @@ def search_tweets_by_user(driver, project_key, config, existing_nfts_set):
                 mint_links, has_new_links = extract_mint_links_from_tweet(tweet, existing_nfts_set)
 
                 if not has_new_links:
-                    all_tweet_links = get_all_links_from_tweet_text(tweet_text)
-                    is_full_duplicate = False
-                    for link in all_tweet_links:
-                        normalized = normalize_url(link)
-                        if normalized in existing_nfts_set:
-                            print(f"   ⚠️ **ПЕРВЫЙ ДУБЛИКАТ НАЙДЕН:** {normalized} — прекращаем обработку @{username}")
-                            found_duplicate_for_user = True
-                            is_full_duplicate = True
-                            break
-
-                    if is_full_duplicate:
-                        break
-                    else:
-                        skipped_no_new_links += 1
-                        print(f"   ⏭️ Пропускаем твит #{idx+1} (нет НОВЫХ ссылок)")
-                        continue
-
-                if found_duplicate_for_user:
-                    break
+                    skipped_no_new_links += 1
+                    consecutive_duplicates += 1
+                    
+                    # 🆕 ОСТАНАВЛИВАЕМСЯ ПОСЛЕ ПЕРВОГО ДУБЛИКАТА
+                    if consecutive_duplicates >= CONSECUTIVE_DUPES_THRESHOLD:
+                        print(f"⏭️  Найден дубликат. Переход к следующему проекту.")
+                        return nfts, skipped_no_new_links
+                    
+                    continue
+                
+                consecutive_duplicates = 0
 
                 try:
                     datetime_str = time_elem.get_attribute("datetime")
@@ -488,26 +410,21 @@ def search_tweets_by_user(driver, project_key, config, existing_nfts_set):
                     "mint_links": all_found_mint_links_in_tweet
                 }
                 nfts.append(nft_data)
-                print(f"   ✅ [{idx+1}] НАЙДЕН НОВЫЙ NFT: {all_found_mint_links_in_tweet[0][:60]}... | {time_ago} | ❤️ {likes} | 🔁 {retweets}")
-                print(f"      📝 Текст: {tweet_text[:80]}...")
+                print(f"   ✅ НОВЫЙ NFT: {all_found_mint_links_in_tweet[0][:60]}... | {time_ago} | ❤️ {likes} | 🔁 {retweets}")
 
-            except Exception as e:
-                print(f"   ❌ Ошибка обработки твита #{idx+1}: {e}")
+            except:
                 continue
-
-        if found_duplicate_for_user:
-            print(f"   🔴 **Обработка @{username} прекращена по первому дубликату.**")
-            break
 
         scrolls += 1
         if scrolls < MAX_SCROLLS:
-            print(f"   ⬇️  Скроллим вниз...")
-            driver.execute_script("window.scrollBy(0, 5000);")
+            driver.execute_script("window.scrollBy(0, 4000);")
             time.sleep(SCROLL_PAUSE)
-            driver.execute_script("window.scrollBy(0, -200);")
-            time.sleep(1)
 
-    print(f"✅ Найдено НОВЫХ для @{username}: {len(nfts)} | Пропущено дубликатов: {skipped_no_new_links}")
+    if nfts:
+        print(f"✅ Найдено НОВЫХ: {len(nfts)}")
+    else:
+        print(f"⏭️  Новых NFT не найдено")
+    
     return nfts, skipped_no_new_links
 
 # ===========================
@@ -526,8 +443,7 @@ def save_results(nfts, filename):
             json.dump(result, f, indent=2, ensure_ascii=False)
         print(f"\n💾 Сохранено: {filename}")
     except Exception as e:
-        print(f"❌ Ошибка при сохранении файла {filename}: {e}")
-        traceback.print_exc()
+        print(f"❌ Ошибка сохранения: {e}")
 
 # ===========================
 # 🔧 GIT УПРАВЛЕНИЕ
@@ -540,110 +456,73 @@ def run_git_command(cmd_list, cwd=None, timeout=30, capture_output=True):
                                 text=True, encoding='utf-8', errors='replace')
         return result
     except subprocess.TimeoutExpired:
-        print(f"❌ Таймаут для команды: {' '.join(cmd_list)}")
         return subprocess.CompletedProcess(cmd_list, 1, stdout='', stderr='Timeout')
     except Exception as e:
-        print(f"❌ Ошибка запуска: {e}")
         return subprocess.CompletedProcess(cmd_list, 1, stdout='', stderr=str(e))
 
 def upload_to_github():
     if not os.path.exists(GITHUB_REPO_PATH):
-        print(f"❌ GitHub папка не найдена: {GITHUB_REPO_PATH}")
+        print(f"❌ GitHub папка не найдена")
         return False
 
     try:
         import shutil
 
-        local_results_file = "twitter_results.json"
+        original_dir = os.getcwd()
+        local_results_file = os.path.join(original_dir, "twitter_results.json")
+        
         if not os.path.exists(local_results_file):
-            print(f"❌ Локальный файл {local_results_file} не найден. Пропуск загрузки на GitHub.")
+            print(f"❌ Файл не найден")
             return False
 
-        target = os.path.join(GITHUB_REPO_PATH, "twitter_results.json")
-        shutil.copy2(local_results_file, target)
-        print(f"✅ Скопировано в: {target}")
-
+        target = os.path.join(GITHUB_REPO_PATH, "guides", "Arc", "twitter_results.json")
         os.chdir(GITHUB_REPO_PATH)
 
-        print("🔍 git status...")
-        result = run_git_command(["git", "status", "--porcelain"])
-        if result.stdout:
-            print(f"   Изменённые файлы:\n{result.stdout}")
-        else:
-            print("   Нет unstaged изменений.")
+        status_result = run_git_command(["git", "status", "--porcelain"])
+        if "AA" in status_result.stdout or "UU" in status_result.stdout:
+            run_git_command(["git", "merge", "--abort"], timeout=10)
 
-        if result.stdout.strip():
-            print("🛡️ Stash unstaged changes...")
-            stash_result = run_git_command(["git", "stash", "push", "-m", "Temp stash before pull"])
-            if stash_result.returncode != 0 and "No local changes to save" not in stash_result.stderr:
-                print(f"⚠️ Stash warning: {stash_result.stderr}")
-        else:
-            stash_result = None
-
-        print("⬇️ git pull --autostash...")
-        pull_result = run_git_command(["git", "pull", "--autostash", "origin", "main"])
+        run_git_command(["git", "reset", "--hard", "HEAD"], timeout=10)
+        
+        pull_result = run_git_command(["git", "pull", "origin", "main"], timeout=30)
         if pull_result.returncode != 0:
-            print(f"⚠️ Pull error: {pull_result.stderr}")
-            print("⬇️ Пробую простой git pull...")
-            pull_result = run_git_command(["git", "pull", "origin", "main"])
-            if pull_result.returncode != 0:
-                print(f"❌ Pull failed: {pull_result.stderr}")
-                if stash_result and stash_result.returncode == 0:
-                    print("📥 Pop stash (clean up)...")
-                    run_git_command(["git", "stash", "pop"], timeout=10)
-                return False
+            run_git_command(["git", "fetch", "origin", "main"], timeout=30)
+            run_git_command(["git", "reset", "--hard", "origin/main"], timeout=10)
 
-        if stash_result and stash_result.returncode == 0:
-            print("📥 Pop stash...")
-            pop_result = run_git_command(["git", "stash", "pop"], timeout=10)
-            if pop_result.returncode != 0:
-                print(f"⚠️ Stash pop warning: {pop_result.stderr}")
+        shutil.copy2(local_results_file, target)
 
-        print("📦 git add...")
-        add_result = run_git_command(["git", "add", "twitter_results.json"])
-        if add_result.returncode != 0:
-            print(f"❌ Add failed: {add_result.stderr}")
-            return False
+        result = run_git_command(["git", "status", "--porcelain", "guides/Arc/twitter_results.json"])
+        if not result.stdout:
+            print("   ℹ️  Нет изменений")
+            os.chdir(original_dir)
+            return True
 
-        print("💬 git commit...")
-        commit_msg = f"🐦 Twitter NFT update {datetime.now().strftime('%d.%m %H:%M')}"
+        run_git_command(["git", "add", "guides/Arc/twitter_results.json"])
+
+        commit_msg = f"🐦 NFT update {datetime.now().strftime('%d.%m %H:%M')}"
         commit_result = run_git_command(["git", "commit", "-m", commit_msg])
+        
         if commit_result.returncode != 0:
-            if "nothing to commit" in commit_result.stdout or "nothing to commit" in commit_result.stderr:
-                print("ℹ️  Нет изменений для коммита")
+            if "nothing to commit" in (commit_result.stdout + commit_result.stderr):
+                os.chdir(original_dir)
                 return True
-            else:
-                print(f"⚠️ Commit error: {commit_result.stderr}")
-                return False
-        else:
-            if commit_result.stdout:
-                print(f"✅ Commit: {commit_result.stdout.strip()}")
 
-        print("⬆️ git push...")
         push_result = run_git_command(["git", "push", "origin", "main"])
+        os.chdir(original_dir)
+        
         if push_result.returncode == 0:
             print("✅ Загружено на GitHub!")
-            print("🌐 Сайт обновится через 1-2 минуты")
             return True
         else:
-            print(f"❌ Git push failed!")
-            print(f"📋 STDOUT:\n{push_result.stdout}")
-            print(f"📋 STDERR:\n{push_result.stderr}")
-
-            if "rejected" in push_result.stderr or "non-fast-forward" in push_result.stderr:
-                print("\n💡 РЕШЕНИЕ: Remote ушёл вперёд. Попробуй:")
-                print("   cd", GITHUB_REPO_PATH)
-                print("   git pull --rebase origin main")
-                print("   git push origin main")
-            elif "Permission denied" in push_result.stderr or "authentication" in push_result.stderr.lower():
-                print("\n💡 РЕШЕНИЕ: Проблема с доступом:")
-                print("   1. Проверь SSH ключи: ssh -T git@github.com")
-                print("   2. Или используй Personal Access Token")
+            print(f"❌ Push failed")
             return False
 
     except Exception as e:
-        print(f"❌ Неожиданная ошибка в upload_to_github: {e}")
-        traceback.print_exc()
+        print(f"❌ Ошибка GitHub: {e}")
+        try:
+            os.chdir(original_dir)
+        except:
+            pass
         return False
 
 # ===========================
@@ -651,10 +530,7 @@ def upload_to_github():
 # ===========================
 
 def main():
-    print("\n" + "="*80)
-    print("🚀 Twitter NFT Search Parser for Arc Testnet")
-    print("🔍 Метод: Twitter Search + Улучшенная фильтрация дубликатов")
-    print("="*80)
+    show_logo()
 
     existing_nfts = load_existing_nfts()
     total_skipped = 0
@@ -670,7 +546,7 @@ def main():
 
         total_projects = len(TWITTER_MONITOR_CONFIG)
         for idx, (project_key, config) in enumerate(TWITTER_MONITOR_CONFIG.items(), 1):
-            print(f"\n[{idx}/{total_projects}] Обрабатываю {project_key}...")
+            print(f"\n[{idx}/{total_projects}] {project_key}")
             try:
                 nfts, skipped = search_tweets_by_user(driver, project_key, config, existing_nfts)
                 all_nfts.extend(nfts)
@@ -682,10 +558,10 @@ def main():
                         if normalized:
                             existing_nfts.add(normalized)
 
-                time.sleep(3)
+                time.sleep(0.5)
+
             except Exception as e:
-                print(f"❌ Ошибка при обработке проекта {project_key}: {e}")
-                traceback.print_exc()
+                print(f"❌ Ошибка: {e}")
                 continue
 
         all_nfts.sort(key=lambda x: x.get('datetime', ''), reverse=True)
@@ -693,29 +569,19 @@ def main():
         output_filename = "twitter_results.json"
         save_results(all_nfts, output_filename)
 
-        print("\n" + "="*80)
-        print("📤 Загрузка на GitHub")
-        print("="*80)
+        print("\n📤 Загрузка на GitHub...")
         upload_to_github()
 
-        print("\n" + "="*80)
-        print(f"✅ ГОТОВО!")
-        print(f"🆕 Найдено НОВЫХ NFT: {len(all_nfts)}")
-        print(f"⏭️  Пропущено (дубликаты/существующие): {total_skipped}")
-        print("="*80)
+        print(f"\n✅ ГОТОВО! Найдено: {len(all_nfts)} NFT")
 
     except KeyboardInterrupt:
-        print("\n⚠️  Прервано пользователем")
+        print("\n⚠️  Прервано")
     except Exception as e:
-        print(f"\n❌ Критическая ошибка в главной функции: {e}")
-        traceback.print_exc()
+        print(f"\n❌ Ошибка: {e}")
     finally:
         if driver:
-            print("\n🔒 Закрываю браузер...")
-            time.sleep(2)
             driver.quit()
-        input("\n✅ Нажми Enter для выхода...")
-
+        input("\n✅ Enter для выхода...")
 
 if __name__ == "__main__":
     main()
