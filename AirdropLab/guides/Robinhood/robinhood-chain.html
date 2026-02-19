@@ -1109,13 +1109,6 @@ function encodeContent(obj) {
     const json = JSON.stringify(obj, null, 2);
     return btoa(unescape(encodeURIComponent(json)));
 }
-
-const TWITTER_MONITOR_CONFIG = {
-    robinhood_nft: { username: 'robinhoodchain', zone: 'nft_robinhood', triggerText: 'NFT On Robinhood Testnet' }
-};
-
-let twitterMonitorData = [];
-const TWITTER_MONITOR_STORAGE = 'robinhood_twitter_monitor_v1';
     
 let knownLinksSet = new Set();
 let favoritesSortable = null;
@@ -2323,102 +2316,89 @@ async function uploadToGitHub() {
     }
 }
 
-function initRobinhoodTwitterMonitor() {
-    if (!isAdmin) {
-        const panel = document.getElementById('robinhoodTwitterMonitorPanel');
-        if (panel) panel.style.display = 'none';
-        return;
-    }
-    
-    loadTwitterMonitorData();
-    updateTwitterMonitorUI();
-    startTwitterMonitorPolling();
-    
-    const refreshBtn = document.getElementById('robinhoodMonitorRefreshBtn');
-    if (refreshBtn) {
-        refreshBtn.addEventListener('click', () => {
-            fetchTwitterUpdates();
-        });
-    }
-}
-
-function loadTwitterMonitorData() {
-    const saved = localStorage.getItem(TWITTER_MONITOR_STORAGE);
-    if (saved) {
-        try {
-            twitterMonitorData = JSON.parse(saved);
-        } catch (e) {
-            twitterMonitorData = [];
-        }
-    }
-}
-
-function saveTwitterMonitorData() {
-    localStorage.setItem(TWITTER_MONITOR_STORAGE, JSON.stringify(twitterMonitorData));
-}
-
-function updateTwitterMonitorUI() {
-    const badge = document.getElementById('robinhoodMonitorBadge');
+// ========== TWITTER MONITOR (GitHub JSON) ==========
+async function loadRobinhoodTwitterResults() {
     const list = document.getElementById('robinhoodMonitorList');
     const status = document.getElementById('robinhoodMonitorStatus');
+    const badge = document.getElementById('robinhoodMonitorBadge');
+    if (!list || !status || !badge) return;
     
-    if (!badge || !list || !status) return;
-    
-    const count = twitterMonitorData.length;
-    badge.textContent = count;
-    badge.classList.toggle('empty', count === 0);
-    
-    list.innerHTML = '';
-    
-    twitterMonitorData.forEach(item => {
-        const li = document.createElement('li');
-        li.className = 'monitor-item';
+    try {
+        const response = await fetch(
+            'https://raw.githubusercontent.com/Worklaf/Worklaf/main/AirdropLab/guides/Robinhood/robinhood_twitter_results.json?' + Date.now()
+        );
+        if (!response.ok) throw new Error(`HTTP ${response.status}`);
+        const data = await response.json();
         
-        li.innerHTML = `
-            <div class="monitor-item-header">
-                <span class="monitor-item-project">${item.project}</span>
-                <span class="monitor-item-time">${formatTwitterTime(item.timestamp)}</span>
-            </div>
-            <div class="monitor-item-text">${item.text}</div>
-            <a href="${item.url}" target="_blank" class="monitor-item-link">
-                <i class="fab fa-twitter"></i> Открыть пост
-            </a>
-        `;
+        if (data.nfts && data.nfts.length > 0) {
+            list.innerHTML = '';
+            const sortedNfts = [...data.nfts].sort((a, b) => 
+                new Date(b.datetime || 0).getTime() - new Date(a.datetime || 0).getTime()
+            );
+            
+            sortedNfts.forEach(nft => {
+                const li = document.createElement('li');
+                li.className = 'monitor-item';
+                const timeAgo = nft.time_ago || 'недавно';
+                const tweetUrl = nft.url || `https://twitter.com/${nft.twitter}`;
+                const tweetText = (nft.text || 'NFT пост').substring(0, 120);
+                const projectEmoji = '🏹'; // Robinhood emoji
+                const projectName = 'Robinhood NFT';
+                
+                li.innerHTML = `
+                    <div class="monitor-item-header">
+                        <span class="monitor-item-project">${projectEmoji} ${projectName}</span>
+                        <span class="monitor-item-time">${timeAgo}</span>
+                    </div>
+                    <div class="monitor-item-text">${tweetText}</div>
+                    <a href="${tweetUrl}" target="_blank" rel="noopener" class="monitor-item-link">
+                        <i class="fab fa-twitter"></i> Открыть твит
+                    </a>
+                `;
+                list.appendChild(li);
+            });
+            
+            badge.textContent = sortedNfts.length;
+            badge.classList.remove('empty');
+            status.innerHTML = '<i class="fas fa-check-circle"></i> Данные загружены';
+            status.style.color = '#22c55e';
+        } else {
+            list.innerHTML = '<li style="text-align:center;padding:20px;color:#64748b;">Новых постов пока нет</li>';
+            badge.textContent = '0';
+            badge.classList.add('empty');
+            status.innerHTML = '<i class="fas fa-clock"></i> Ожидание обновления';
+        }
+    } catch (error) {
+        console.error('Robinhood Twitter results load error:', error);
+        list.innerHTML = '<li style="text-align:center;padding:20px;color:#64748b;">Ошибка загрузки</li>';
+        badge.textContent = '0';
+        badge.classList.add('empty');
+        status.innerHTML = '<i class="fas fa-exclamation-circle"></i> Ошибка загрузки';
+    }
+}
+
+function initRobinhoodTwitterMonitor() {
+    if (!isAdmin) return;
+    
+    const refreshBtn = document.getElementById('robinhoodMonitorRefreshBtn');
+    if (!refreshBtn) return;
+    
+    loadRobinhoodTwitterResults(); // Первая загрузка
+    
+    refreshBtn.addEventListener('click', async () => {
+        const originalHTML = refreshBtn.innerHTML;
+        refreshBtn.disabled = true;
+        refreshBtn.innerHTML = '<i class="fas fa-sync-alt fa-spin"></i> Обновление...';
         
-        list.appendChild(li);
+        await loadRobinhoodTwitterResults();
+        
+        refreshBtn.disabled = false;
+        refreshBtn.innerHTML = originalHTML;
+        showToast('✅ Данные обновлены!', 'success');
     });
     
-    status.innerHTML = `<i class="fas fa-check-circle"></i> Обновлено: ${new Date().toLocaleTimeString('ru-RU')}`;
-}
-
-function formatTwitterTime(timestamp) {
-    const now = Date.now();
-    const diff = now - timestamp;
-    const minutes = Math.floor(diff / 60000);
-    const hours = Math.floor(diff / 3600000);
-    
-    if (minutes < 1) return 'только что';
-    if (minutes < 60) return `${minutes}м назад`;
-    if (hours < 24) return `${hours}ч назад`;
-    return new Date(timestamp).toLocaleDateString('ru-RU');
-}
-
-async function fetchTwitterUpdates() {
-    const status = document.getElementById('robinhoodMonitorStatus');
-    const refreshBtn = document.getElementById('robinhoodMonitorRefreshBtn');
-    
-    if (status) status.innerHTML = '<i class="fas fa-sync-alt fa-spin"></i> Проверка...';
-    if (refreshBtn) refreshBtn.disabled = true;
-    
-    setTimeout(() => {
-        updateTwitterMonitorUI();
-        if (refreshBtn) refreshBtn.disabled = false;
-    }, 1000);
-}
-
-function startTwitterMonitorPolling() {
-    fetchTwitterUpdates();
-    setInterval(fetchTwitterUpdates, 5 * 60 * 1000);
+    // Автообновление каждые 5 минут
+    setInterval(loadRobinhoodTwitterResults, 500 * 60 * 1000);
 }
 
 document.addEventListener('DOMContentLoaded', () => {
