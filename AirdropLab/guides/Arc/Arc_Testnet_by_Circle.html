@@ -1633,7 +1633,6 @@ async function loadAllData() {
     const localOrder = JSON.parse(localStorage.getItem(FAVORITES_ORDER_KEY) || '[]');
     const localTimestamp = parseInt(localStorage.getItem(FAVORITES_TIMESTAMP_KEY) || '0', 10);
     
-    // Устанавливаем локальные данные
     arcData = localStats; 
     favoritesState = localFav; 
     favoritesOrder = localOrder;
@@ -1646,40 +1645,40 @@ async function loadAllData() {
             if (docSnap.exists()) {
                 const cloudData = docSnap.data();
                 
-                // Синхронизируем статистику
+                // ✅ ИСПРАВЛЕНО: Используем arcGuideStats вместо arcData
                 if (cloudData.arcGuideStats && Object.keys(cloudData.arcGuideStats).length > 0) {
                     arcData = cloudData.arcGuideStats;
                     localStorage.setItem(STORAGE_KEY, JSON.stringify(arcData));
                 }
                 
-                // Синхронизируем избранное
-                if (cloudData.favoritesState) {
-                    const cloudTs = parseInt(cloudData.favoritesTimestamp || '0', 10);
+                // ✅ ИСПРАВЛЕНО: Используем arcFavoritesState
+                if (cloudData.arcFavoritesState) {
+                    const cloudTs = parseInt(cloudData.arcFavoritesTimestamp || '0', 10);
                     if (cloudTs > localTimestamp) {
-                        favoritesState = cloudData.favoritesState;
-                        favoritesOrder = cloudData.favoritesOrder || [];
+                        favoritesState = cloudData.arcFavoritesState;
+                        favoritesOrder = cloudData.arcFavoritesOrder || [];
                         localStorage.setItem(FAVORITES_KEY, JSON.stringify(favoritesState));
                         localStorage.setItem(FAVORITES_ORDER_KEY, JSON.stringify(favoritesOrder));
                         localStorage.setItem(FAVORITES_TIMESTAMP_KEY, String(cloudTs));
                     }
                 } else if (Object.keys(localFav).length > 0) {
                     await saveToCloud({ 
-                        favoritesState: localFav, 
-                        favoritesOrder: localOrder, 
-                        favoritesTimestamp: localTimestamp 
+                        arcFavoritesState: localFav, 
+                        arcFavoritesOrder: localOrder, 
+                        arcFavoritesTimestamp: localTimestamp 
                     });
                 }
                 
-                // 🔥 НОВОЕ: Синхронизируем пользовательские элементы
-                if (cloudData.userItems) {
-                    const cloudItemsTs = parseInt(cloudData.userItemsTimestamp || '0', 10);
+                // 🔥 ИСПРАВЛЕНО: Используем arcUserItems
+                if (cloudData.arcUserItems) {
+                    const cloudItemsTs = parseInt(cloudData.arcUserItemsTimestamp || '0', 10);
                     const localItemsTs = parseInt(localStorage.getItem('arc_user_items_timestamp') || '0', 10);
                     
                     if (cloudItemsTs > localItemsTs) {
                         userItemsData = {
-                            items: cloudData.userItems.items || {},
-                            collections: cloudData.userItems.collections || [],
-                            dappCategories: cloudData.userItems.dappCategories || []
+                            items: cloudData.arcUserItems.items || {},
+                            collections: cloudData.arcUserItems.collections || [],
+                            dappCategories: cloudData.arcUserItems.dappCategories || []
                         };
                         localStorage.setItem(USER_ITEMS_KEY, JSON.stringify(userItemsData));
                         localStorage.setItem('arc_user_items_timestamp', String(cloudItemsTs));
@@ -1687,13 +1686,13 @@ async function loadAllData() {
                     }
                 }
                 
-                // 🔥 НОВОЕ: Синхронизируем правки
-                if (cloudData.editsOverride) {
-                    const cloudEditsTs = parseInt(cloudData.editsTimestamp || '0', 10);
+                // 🔥 ИСПРАВЛЕНО: Используем arcEditsOverride
+                if (cloudData.arcEditsOverride) {
+                    const cloudEditsTs = parseInt(cloudData.arcEditsTimestamp || '0', 10);
                     const localEditsTs = parseInt(localStorage.getItem('arc_edits_timestamp') || '0', 10);
                     
                     if (cloudEditsTs > localEditsTs) {
-                        editsOverride = cloudData.editsOverride;
+                        editsOverride = cloudData.arcEditsOverride;
                         localStorage.setItem(EDITS_OVERRIDE_KEY, JSON.stringify(editsOverride));
                         localStorage.setItem('arc_edits_timestamp', String(cloudEditsTs));
                     }
@@ -1725,7 +1724,15 @@ async function saveFavorites() {
     localStorage.setItem(FAVORITES_KEY, JSON.stringify(favoritesState));
     localStorage.setItem(FAVORITES_ORDER_KEY, JSON.stringify(favoritesOrder));
     localStorage.setItem(FAVORITES_TIMESTAMP_KEY, String(ts));
-    if (currentUser) await saveToCloud({ favoritesState, favoritesOrder, favoritesTimestamp: ts });
+    
+    // ✅ ИСПРАВЛЕНО: Используем префикс arc
+    if (currentUser) {
+        await saveToCloud({ 
+            arcFavoritesState: favoritesState, 
+            arcFavoritesOrder: favoritesOrder, 
+            arcFavoritesTimestamp: ts 
+        });
+    }
 }
 
 // ===== AUTH =====
@@ -1766,9 +1773,9 @@ window.handleRegister = async function() {
 window.logout = function() { signOut(auth); };
 // ===== SHARED DATA — админские элементы видны всем =====
 async function loadSharedData() {
-    // 1) Пытаемся загрузить общие элементы из GitHub
+    // ✅ ИСПРАВЛЕНО: Полный путь к файлу Arc
     try {
-        const itemsResp = await fetch('arc_shared_items.json?' + Date.now());
+        const itemsResp = await fetch('https://worklaf.github.io/Worklaf/AirdropLab/guides/Arc/arc_shared_items.json?' + Date.now());
         if (itemsResp.ok) {
             const data = await itemsResp.json();
             userItemsData = {
@@ -1785,9 +1792,9 @@ async function loadSharedData() {
         loadUserItems();
     }
 
-    // 2) Загружаем правки
+    // ✅ ИСПРАВЛЕНО: Полный путь к правкам Arc
     try {
-        const editsResp = await fetch('arc_shared_edits.json?' + Date.now());
+        const editsResp = await fetch('https://worklaf.github.io/Worklaf/AirdropLab/guides/Arc/arc_shared_edits.json?' + Date.now());
         if (editsResp.ok) {
             const data = await editsResp.json();
             editsOverride = data.editsOverride || {};
@@ -2172,8 +2179,8 @@ async function loadNewIndicators() {
             if (docSnap.exists()) {
                 const cloudData = docSnap.data();
                 
-                if (cloudData.newIndicators) {
-                    const cloudTs = cloudData.newIndicatorsTimestamp || 0;
+                if (cloudData.arcNewIndicators) {  // ✅ Было newIndicators
+    const cloudTs = cloudData.arcNewIndicatorsTimestamp || 0;
                     
                     if (cloudTs > newIndicatorsState.lastSync) {
                         console.log('☁️ Using cloud NEW data (newer)');
@@ -2359,9 +2366,9 @@ async function saveUserItems() {
     if (currentUser) {
         try {
             await saveToCloud({ 
-                userItems: userItemsData,
-                userItemsTimestamp: Date.now()
-            });
+    arcUserItems: userItemsData,        // ✅ Изолировано от Tempo
+    arcUserItemsTimestamp: Date.now()
+});
             console.log('✅ Данные сохранены в Firebase автоматически');
         } catch (e) {
             console.error("Firebase auto-save error:", e);
@@ -2371,15 +2378,14 @@ async function saveUserItems() {
 }
 
 async function saveEditsOverride() {
-    // 1. Локальное сохранение
     localStorage.setItem(EDITS_OVERRIDE_KEY, JSON.stringify(editsOverride));
     
-    // 2. 🔥 АВТОМАТИЧЕСКОЕ СОХРАНЕНИЕ В FIREBASE
+    // ✅ ИСПРАВЛЕНО: Используем префикс arc
     if (currentUser) {
         try {
             await saveToCloud({ 
-                editsOverride: editsOverride,
-                editsTimestamp: Date.now()
+                arcEditsOverride: editsOverride,
+                arcEditsTimestamp: Date.now()
             });
         } catch (e) {
             console.error("Firebase edits save error:", e);
