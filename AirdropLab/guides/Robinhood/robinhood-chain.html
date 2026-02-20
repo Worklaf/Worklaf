@@ -759,6 +759,121 @@ body.light-theme .monitor-item {
     opacity: 0.5;
     cursor: not-allowed;
 }
+		/* ========== NFT GRID ========== */
+.nft-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 24px;
+    margin-top: 16px;
+}
+
+.nft-card {
+    background: var(--card-bg);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    overflow: hidden;
+    transition: all 0.3s ease;
+    display: flex;
+    flex-direction: column;
+    position: relative;
+}
+
+.nft-card:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 12px 40px rgba(0, 208, 158, 0.25);
+    border-color: rgba(0, 208, 158, 0.5);
+}
+
+.nft-image {
+    width: 100%;
+    height: 280px;
+    object-fit: cover;
+    background: linear-gradient(135deg, #1e293b, #0f172a);
+}
+
+.nft-title {
+    padding: 16px 18px 12px;
+    font-size: 1.1rem;
+    font-weight: 700;
+    color: var(--text-main);
+    text-align: center;
+}
+
+body.light-theme .nft-title {
+    color: #064e3b;
+}
+
+.nft-links {
+    padding: 0 18px 18px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
+    flex-wrap: wrap;
+}
+
+.nft-mint-btn {
+    flex: 1 1 auto;
+    padding: 10px 20px;
+    background: linear-gradient(135deg, #00d09e, #00a67e);
+    color: #fff;
+    border-radius: 10px;
+    font-weight: 700;
+    font-size: 0.95rem;
+    text-align: center;
+    transition: all 0.3s;
+    border: none;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    text-decoration: none;
+}
+
+.nft-mint-btn:hover {
+    background: linear-gradient(135deg, #00ffb8, #00d09e);
+    transform: translateY(-2px);
+    box-shadow: 0 8px 20px rgba(0, 208, 158, 0.4);
+}
+
+.nft-link {
+    width: 40px;
+    height: 40px;
+    border-radius: 10px;
+    background: rgba(0, 0, 0, 0.15);
+    border: 1px solid var(--border);
+    color: var(--text-muted);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.1rem;
+    transition: all 0.3s;
+    text-decoration: none;
+}
+
+.nft-link:hover {
+    background: rgba(0, 208, 158, 0.2);
+    border-color: rgba(0, 208, 158, 0.5);
+    color: var(--accent);
+    transform: translateY(-2px);
+}
+
+body.light-theme .nft-link {
+    background: rgba(0, 0, 0, 0.04);
+}
+
+body.light-theme .nft-link:hover {
+    background: rgba(0, 166, 126, 0.1);
+    border-color: rgba(0, 166, 126, 0.4);
+    color: #00a67e;
+}
+
+@media (max-width: 768px) {
+    .nft-grid {
+        grid-template-columns: 1fr;
+    }
+}
     </style>
 </head>
 <body>
@@ -1030,7 +1145,7 @@ body.light-theme .monitor-item {
 </div>
 
 <script type="module">
-    let newLinksSet = new Set();
+let newLinksSet = new Set();
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
 import {
   getAuth, signInWithPopup, GoogleAuthProvider, TwitterAuthProvider,
@@ -1054,7 +1169,6 @@ const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const db = getFirestore(app);
 
-// ===== ADMIN =====
 const ADMIN_UID = 'SAkz4mdW9reDaIsvqigCNZhEKJR2';
 let isAdmin = false;
 let currentUser = null;
@@ -1070,7 +1184,7 @@ const FAVORITES_KEY = 'robinhood_favorites_v1';
 const FAVORITES_ORDER_KEY = 'robinhood_favorites_order_v1';
 const FAVORITES_TIMESTAMP_KEY = 'robinhood_favorites_timestamp_v1';
 const THEME_KEY = 'robinhood_theme';
-const PAGE_VERSION = '2026-02-19-robinhood-v1';
+const PAGE_VERSION = '2026-02-19-robinhood-v2';
 const GITHUB_OWNER = 'Worklaf';
 const GITHUB_REPO = 'Worklaf';
 const GITHUB_BRANCH = 'main';
@@ -1090,7 +1204,26 @@ let newIndicatorsState = {
 };
 
 let newIndicatorsUnsubscribe = null;
+let knownLinksSet = new Set();
+let favoritesSortable = null;
+const favoriteControls = new Map();
+const DYNAMIC_CLASS_SET = new Set(['daily-active', 'visited-once', 'has-new-flag']);
+let tooltipEl = null;
+let activeTooltipTarget = null;
+let editModeActive = false;
+let currentEditTarget = null;
+let editsOverride = {};
 
+let userItemsData = {
+    items: {},
+    collections: [],
+    dappCategories: []
+};
+
+let currentAddZone = null;
+let currentAddType = 'item'; // 'item', 'collection', 'category'
+
+// ===== GITHUB =====
 async function githubGetFileSha(path, token) {
     const url = `https://api.github.com/repos/${GITHUB_OWNER}/${GITHUB_REPO}/contents/${path}?ref=${GITHUB_BRANCH}`;
     const resp = await fetch(url, {
@@ -1109,24 +1242,19 @@ function encodeContent(obj) {
     const json = JSON.stringify(obj, null, 2);
     return btoa(unescape(encodeURIComponent(json)));
 }
-    
-let knownLinksSet = new Set();
-let favoritesSortable = null;
-const favoriteControls = new Map();
-const DYNAMIC_CLASS_SET = new Set(['daily-active', 'visited-once', 'has-new-flag']);
-let tooltipEl = null;
-let activeTooltipTarget = null;
-let editModeActive = false;
-let currentEditTarget = null;
-let editsOverride = {};
 
+// ===== UI HELPERS =====
 function showToast(message, type = 'info') {
     const container = document.getElementById('robinhoodToastContainer');
     const toast = document.createElement('div');
     toast.className = `toast ${type}`;
     toast.textContent = message;
     container.appendChild(toast);
-    setTimeout(() => { toast.style.opacity = '0'; toast.style.transform = 'translateY(20px)'; setTimeout(() => toast.remove(), 300); }, 3000);
+    setTimeout(() => { 
+        toast.style.opacity = '0'; 
+        toast.style.transform = 'translateY(20px)'; 
+        setTimeout(() => toast.remove(), 300); 
+    }, 3000);
 }
 
 function checkAdmin(user) {
@@ -1138,6 +1266,7 @@ function checkAdmin(user) {
     }
 }
 
+// ===== THEME =====
 function loadTheme() {
     const saved = localStorage.getItem(THEME_KEY);
     if (saved === 'light') document.body.classList.add('light-theme');
@@ -1159,7 +1288,7 @@ function updateThemeBtn() {
     btn.innerHTML = isLight ? '<i class="fas fa-moon"></i> Тёмная тема' : '<i class="fas fa-sun"></i> Светлая тема';
 }
 
-// ========== LIGHTBOX ==========
+// ===== LIGHTBOX =====
 function openLightbox(imageUrl, title, tooltip, linkUrl, linkLabel, linkIcon) {
     const overlay = document.getElementById('robinhoodLightboxOverlay');
     const img = document.getElementById('lightboxImage');
@@ -1188,6 +1317,7 @@ function initLightbox() {
         if (e.target === e.currentTarget) closeLightbox();
     });
     document.addEventListener('keydown', (e) => { if (e.key === 'Escape') closeLightbox(); });
+    
     document.querySelectorAll('.link-inline[data-image]').forEach(link => {
         if (link.dataset.lightboxBound) return;
         link.addEventListener('contextmenu', (e) => {
@@ -1196,7 +1326,7 @@ function initLightbox() {
             e.preventDefault();
             const title = getLinkTitle(link);
             const tooltip = link.getAttribute('data-tooltip') || '';
-            const isNftMint = link.classList.contains('track-once') && !link.classList.contains('track-once-info') && !link.classList.contains('track-daily');
+            const isNftMint = link.classList.contains('track-once');
             const linkLabel = isNftMint ? 'Перейти к минту' : 'Перейти на Website';
             const linkIcon = isNftMint ? 'external-link-alt' : 'globe';
             openLightbox(imageUrl, title, tooltip, link.href, linkLabel, linkIcon);
@@ -1205,6 +1335,7 @@ function initLightbox() {
     });
 }
 
+// ===== ANIMATIONS =====
 function initCardAnimations() {
     const observer = new IntersectionObserver((entries) => {
         entries.forEach((entry, index) => {
@@ -1217,28 +1348,21 @@ function initCardAnimations() {
     document.querySelectorAll('.resource-item').forEach(card => observer.observe(card));
 }
 
-function initLazyLoading() {
-    const imgObserver = new IntersectionObserver((entries) => {
-        entries.forEach(entry => {
-            if (entry.isIntersecting) {
-                const img = entry.target;
-                if (img.dataset.lazySrc) { img.src = img.dataset.lazySrc; img.removeAttribute('data-lazy-src'); }
-                imgObserver.unobserve(img);
-            }
-        });
-    }, { rootMargin: '200px' });
-    document.querySelectorAll('img[loading="lazy"]').forEach(img => imgObserver.observe(img));
-}
-
+// ===== TOOLTIPS =====
 function ensureTooltipElement() {
-    if (!tooltipEl) { tooltipEl = document.createElement('div'); tooltipEl.className = 'floating-tooltip'; document.body.appendChild(tooltipEl); }
+    if (!tooltipEl) { 
+        tooltipEl = document.createElement('div'); 
+        tooltipEl.className = 'floating-tooltip'; 
+        document.body.appendChild(tooltipEl); 
+    }
 }
 
 function positionTooltip(target) {
     if (!tooltipEl || !target) return;
     const rect = target.getBoundingClientRect();
     const spacing = 15;
-    tooltipEl.style.left = '0'; tooltipEl.style.top = '0';
+    tooltipEl.style.left = '0'; 
+    tooltipEl.style.top = '0';
     const tooltipRect = tooltipEl.getBoundingClientRect();
     const tooltipWidth = Math.min(tooltipRect.width, 320);
     const tooltipHeight = tooltipRect.height;
@@ -1249,7 +1373,8 @@ function positionTooltip(target) {
     if (top + tooltipHeight > window.innerHeight - spacing) top = window.innerHeight - tooltipHeight - spacing;
     if (left < spacing) left = spacing;
     if (left + tooltipWidth > window.innerWidth - spacing) left = window.innerWidth - tooltipWidth - spacing;
-    tooltipEl.style.left = left + 'px'; tooltipEl.style.top = top + 'px';
+    tooltipEl.style.left = left + 'px'; 
+    tooltipEl.style.top = top + 'px';
 }
 
 function showTooltip(e) {
@@ -1263,12 +1388,18 @@ function showTooltip(e) {
     if (imageUrl) {
         tooltipEl.classList.add('has-image');
         tooltipEl.innerHTML = `<div class="tooltip-image-container"><img src="${imageUrl}" alt="${text || 'Image'}" class="tooltip-image" loading="lazy" onerror="this.style.display='none'">${text ? `<div class="tooltip-text">${text}</div>` : ''}</div>`;
-    } else { tooltipEl.classList.remove('has-image'); tooltipEl.textContent = text; }
+    } else { 
+        tooltipEl.classList.remove('has-image'); 
+        tooltipEl.textContent = text; 
+    }
     positionTooltip(target);
     tooltipEl.classList.add('visible');
 }
 
-function hideTooltip() { activeTooltipTarget = null; if (tooltipEl) tooltipEl.classList.remove('visible'); }
+function hideTooltip() { 
+    activeTooltipTarget = null; 
+    if (tooltipEl) tooltipEl.classList.remove('visible'); 
+}
 
 function initializeTooltips() {
     document.querySelectorAll('[data-tooltip]').forEach(el => {
@@ -1281,9 +1412,15 @@ function initializeTooltips() {
     });
 }
 
-document.addEventListener('scroll', () => { if (activeTooltipTarget) positionTooltip(activeTooltipTarget); }, true);
-window.addEventListener('resize', () => { if (activeTooltipTarget) positionTooltip(activeTooltipTarget); });
+document.addEventListener('scroll', () => { 
+    if (activeTooltipTarget) positionTooltip(activeTooltipTarget); 
+}, true);
 
+window.addEventListener('resize', () => { 
+    if (activeTooltipTarget) positionTooltip(activeTooltipTarget); 
+});
+
+// ===== EXPORT/IMPORT =====
 function exportRobinhoodJSON() {
     const exportData = {
         version: PAGE_VERSION, 
@@ -1291,16 +1428,18 @@ function exportRobinhoodJSON() {
         robinhoodData, 
         favoritesState, 
         favoritesOrder,
-        userItems: JSON.parse(localStorage.getItem(USER_ITEMS_KEY) || '{}'),
+        userItems: userItemsData,
         sections: JSON.parse(localStorage.getItem(SECTION_COLLAPSE_KEY) || '{}'),
         badgesHidden: localStorage.getItem(BADGE_VISIBILITY_KEY), 
         theme: localStorage.getItem(THEME_KEY)
     };
     const blob = new Blob([JSON.stringify(exportData, null, 2)], { type: 'application/json' });
     const url = URL.createObjectURL(blob);
-    const a = document.createElement('a'); a.href = url;
+    const a = document.createElement('a'); 
+    a.href = url;
     a.download = `robinhood-tracker-backup-${new Date().toISOString().slice(0, 10)}.json`;
-    a.click(); URL.revokeObjectURL(url);
+    a.click(); 
+    URL.revokeObjectURL(url);
     showToast('Данные экспортированы!', 'success');
 }
 
@@ -1310,21 +1449,46 @@ function importRobinhoodJSON(file) {
         try {
             const data = JSON.parse(e.target.result);
             if (!data.robinhoodData && !data.favoritesState) throw new Error('Неверный формат');
-            if (data.robinhoodData) { robinhoodData = data.robinhoodData; localStorage.setItem(STORAGE_KEY, JSON.stringify(robinhoodData)); }
-            if (data.favoritesState) { favoritesState = data.favoritesState; localStorage.setItem(FAVORITES_KEY, JSON.stringify(favoritesState)); }
-            if (data.favoritesOrder) { favoritesOrder = data.favoritesOrder; localStorage.setItem(FAVORITES_ORDER_KEY, JSON.stringify(favoritesOrder)); }
-            if (data.userItems) { localStorage.setItem(USER_ITEMS_KEY, JSON.stringify(data.userItems)); }
-            if (data.sections) { localStorage.setItem(SECTION_COLLAPSE_KEY, JSON.stringify(data.sections)); }
+            
+            if (data.robinhoodData) { 
+                robinhoodData = data.robinhoodData; 
+                localStorage.setItem(STORAGE_KEY, JSON.stringify(robinhoodData)); 
+            }
+            if (data.favoritesState) { 
+                favoritesState = data.favoritesState; 
+                localStorage.setItem(FAVORITES_KEY, JSON.stringify(favoritesState)); 
+            }
+            if (data.favoritesOrder) { 
+                favoritesOrder = data.favoritesOrder; 
+                localStorage.setItem(FAVORITES_ORDER_KEY, JSON.stringify(favoritesOrder)); 
+            }
+            if (data.userItems) { 
+                userItemsData = data.userItems;
+                localStorage.setItem(USER_ITEMS_KEY, JSON.stringify(userItemsData)); 
+            }
+            if (data.sections) { 
+                localStorage.setItem(SECTION_COLLAPSE_KEY, JSON.stringify(data.sections)); 
+            }
             if (data.badgesHidden != null) localStorage.setItem(BADGE_VISIBILITY_KEY, data.badgesHidden);
-            if (data.theme) { localStorage.setItem(THEME_KEY, data.theme); if (data.theme === 'light') document.body.classList.add('light-theme'); else document.body.classList.remove('light-theme'); updateThemeBtn(); }
-            await saveRobinhoodStats(); await saveRobinhoodFavorites();
+            if (data.theme) { 
+                localStorage.setItem(THEME_KEY, data.theme); 
+                if (data.theme === 'light') document.body.classList.add('light-theme'); 
+                else document.body.classList.remove('light-theme'); 
+                updateThemeBtn(); 
+            }
+            
+            await saveRobinhoodStats(); 
+            await saveRobinhoodFavorites();
             showToast('Данные импортированы! Страница обновится.', 'success');
             setTimeout(() => location.reload(), 1500);
-        } catch (err) { showToast('Ошибка импорта: ' + err.message, 'error'); }
+        } catch (err) { 
+            showToast('Ошибка импорта: ' + err.message, 'error'); 
+        }
     };
     reader.readAsText(file);
 }
 
+// ===== DATA LOADING =====
 async function loadRobinhoodData() {
     const localStats = JSON.parse(localStorage.getItem(STORAGE_KEY) || '{}');
     const localFav = JSON.parse(localStorage.getItem(FAVORITES_KEY) || '{}');
@@ -1370,14 +1534,9 @@ async function loadRobinhoodData() {
                     const localItemsTs = parseInt(localStorage.getItem('robinhood_user_items_timestamp') || '0', 10);
                     
                     if (cloudItemsTs > localItemsTs) {
-                        userItemsData = {
-                            items: cloudData.robinhoodUserItems.items || {},
-                            collections: cloudData.robinhoodUserItems.collections || [],
-                            dappCategories: cloudData.robinhoodUserItems.dappCategories || []
-                        };
+                        userItemsData = cloudData.robinhoodUserItems;
                         localStorage.setItem(USER_ITEMS_KEY, JSON.stringify(userItemsData));
                         localStorage.setItem('robinhood_user_items_timestamp', String(cloudItemsTs));
-                        showToast('🔄 Элементы синхронизированы из облака', 'info');
                     }
                 }
                 
@@ -1394,7 +1553,6 @@ async function loadRobinhoodData() {
             }
         } catch (e) {
             console.error("Cloud load error:", e);
-            showToast('⚠️ Не удалось синхронизировать с облаком', 'error');
         }
     }
     
@@ -1404,8 +1562,11 @@ async function loadRobinhoodData() {
 
 async function saveToCloud(data) {
     if (!currentUser) return;
-    try { await setDoc(doc(db, "users", currentUser.uid), data, { merge: true }); }
-    catch (e) { console.error("Cloud save error:", e); }
+    try { 
+        await setDoc(doc(db, "users", currentUser.uid), data, { merge: true }); 
+    } catch (e) { 
+        console.error("Cloud save error:", e); 
+    }
 }
 
 async function saveRobinhoodStats() {
@@ -1418,25 +1579,34 @@ async function saveRobinhoodFavorites() {
     localStorage.setItem(FAVORITES_KEY, JSON.stringify(favoritesState));
     localStorage.setItem(FAVORITES_ORDER_KEY, JSON.stringify(favoritesOrder));
     localStorage.setItem(FAVORITES_TIMESTAMP_KEY, String(ts));
-    if (currentUser) await saveToCloud({ robinhoodFavoritesState: favoritesState, robinhoodFavoritesOrder: favoritesOrder, robinhoodFavoritesTimestamp: ts });
+    if (currentUser) await saveToCloud({ 
+        robinhoodFavoritesState: favoritesState, 
+        robinhoodFavoritesOrder: favoritesOrder, 
+        robinhoodFavoritesTimestamp: ts 
+    });
 }
 
 // ===== AUTH =====
-window.openLoginModal = function() { document.getElementById('robinhoodLoginModal').style.display = 'flex'; };
-window.closeLoginModal = function() { document.getElementById('robinhoodLoginModal').style.display = 'none'; };
-window.loginGoogle = async function() { try { await signInWithPopup(auth, new GoogleAuthProvider()); closeLoginModal(); } catch(e) { alert('Ошибка: ' + e.message); } };
-window.loginTwitter = async function() { try { await signInWithPopup(auth, new TwitterAuthProvider()); closeLoginModal(); } catch(e) { alert('Ошибка: ' + e.message); } };
-window.handleEmailLogin = async function() {
-    const email = document.getElementById('emailInput').value;
-    const pass = document.getElementById('passInput').value;
-    try { await signInWithEmailAndPassword(auth, email, pass); closeLoginModal(); } catch(e) { alert('Ошибка: ' + e.message); }
+window.openLoginModal = function() { 
+    document.getElementById('robinhoodLoginModal')?.style.display = 'flex'; 
 };
-window.handleRegister = async function() {
-    const email = document.getElementById('emailInput').value;
-    const pass = document.getElementById('passInput').value;
-    try { await createUserWithEmailAndPassword(auth, email, pass); closeLoginModal(); } catch(e) { alert('Ошибка: ' + e.message); }
+
+window.closeLoginModal = function() { 
+    document.getElementById('robinhoodLoginModal')?.style.display = 'none'; 
 };
-window.logout = function() { signOut(auth); };
+
+window.loginGoogle = async function() { 
+    try { 
+        await signInWithPopup(auth, new GoogleAuthProvider()); 
+        closeLoginModal(); 
+    } catch(e) { 
+        alert('Ошибка: ' + e.message); 
+    } 
+};
+
+window.logout = function() { 
+    signOut(auth); 
+};
 
 async function loadRobinhoodSharedData() {
     try {
@@ -1493,12 +1663,17 @@ onAuthStateChanged(auth, async (user) => {
         checkAdmin(user);
         
         setTimeout(() => { initRobinhoodNewIndicatorsRealtime(); }, 2000);
-        if (user.uid === ADMIN_UID) { setTimeout(initRobinhoodTwitterMonitor, 1000); }
+        if (user.uid === ADMIN_UID) { 
+            setTimeout(initRobinhoodTwitterMonitor, 1000); 
+        }
     } else {
         loggedOut.style.display = '';
         loggedIn.style.display = 'none';
         checkAdmin(null);
-        if (newIndicatorsUnsubscribe) { newIndicatorsUnsubscribe(); newIndicatorsUnsubscribe = null; }
+        if (newIndicatorsUnsubscribe) { 
+            newIndicatorsUnsubscribe(); 
+            newIndicatorsUnsubscribe = null; 
+        }
     }
     
     if (!isDataLoaded) {
@@ -1516,20 +1691,33 @@ function getBaseClasses(link) {
     if (!link) return ['link-inline'];
     return [...link.classList].filter(cls => !DYNAMIC_CLASS_SET.has(cls));
 }
-function classesToKey(classes) { return Array.isArray(classes) ? [...classes].sort().join('|') : ''; }
+
+function classesToKey(classes) { 
+    return Array.isArray(classes) ? [...classes].sort().join('|') : ''; 
+}
+
 function getLinkTitle(link) {
     const clone = link.cloneNode(true);
     clone.querySelectorAll('.click-info, .new-flag').forEach(el => el.remove());
     return clone.textContent.trim();
 }
+
 function extractLinkInfo(link) {
-    return { id: link.dataset.id, title: getLinkTitle(link), url: link.href, tooltip: link.getAttribute('data-tooltip') || '', classes: getBaseClasses(link) };
+    return { 
+        id: link.dataset.id, 
+        title: getLinkTitle(link), 
+        url: link.href, 
+        tooltip: link.getAttribute('data-tooltip') || '', 
+        classes: getBaseClasses(link) 
+    };
 }
+
 function formatDate(iso) {
     if (!iso) return '';
     const d = new Date(iso);
     return `${String(d.getDate()).padStart(2,'0')}.${String(d.getMonth()+1).padStart(2,'0')}`;
 }
+
 function isToday(iso) {
     if (!iso) return false;
     const d = new Date(iso), t = new Date();
@@ -1539,24 +1727,35 @@ function isToday(iso) {
 // ===== FAVORITES =====
 function ensureLinkWrapper(link) {
     if (link.parentElement && link.parentElement.classList.contains('link-with-favorite')) return link.parentElement;
-    const w = document.createElement('span'); w.className = 'link-with-favorite';
-    link.parentNode.insertBefore(w, link); w.appendChild(link); return w;
+    const w = document.createElement('span'); 
+    w.className = 'link-with-favorite';
+    link.parentNode.insertBefore(w, link); 
+    w.appendChild(link); 
+    return w;
 }
 
 function createFavoriteToggle(id) {
     const btn = document.createElement('button');
-    btn.type = 'button'; btn.className = 'favorite-toggle';
+    btn.type = 'button'; 
+    btn.className = 'favorite-toggle';
     btn.setAttribute('aria-label', 'Добавить в избранное');
-    btn.title = 'Добавить в избранное'; btn.textContent = '☆';
+    btn.title = 'Добавить в избранное'; 
+    btn.textContent = '☆';
     btn.addEventListener('click', async (e) => {
-        e.preventDefault(); e.stopPropagation();
+        e.preventDefault(); 
+        e.stopPropagation();
         if (favoritesState[id]) {
-            delete favoritesState[id]; favoritesOrder = favoritesOrder.filter(x => x !== id);
+            delete favoritesState[id]; 
+            favoritesOrder = favoritesOrder.filter(x => x !== id);
         } else {
             const ctrl = favoriteControls.get(id);
-            if (ctrl) { favoritesState[id] = extractLinkInfo(ctrl.link); favoritesOrder.push(id); }
+            if (ctrl) { 
+                favoritesState[id] = extractLinkInfo(ctrl.link); 
+                favoritesOrder.push(id); 
+            }
         }
-        await saveRobinhoodFavorites(); refreshAllVisuals();
+        await saveRobinhoodFavorites(); 
+        refreshAllVisuals();
     });
     return btn;
 }
@@ -1569,16 +1768,21 @@ function refreshAllVisuals() {
         ctrl.button.setAttribute('aria-label', isFav ? 'Убрать из избранного' : 'Добавить в избранное');
         ctrl.button.title = isFav ? 'Убрать из избранного' : 'Добавить в избранное';
     });
-    renderFavoritesList(); updateUI();
+    renderFavoritesList(); 
+    updateUI();
 }
 
 function attachFavoriteControls() {
     favoriteControls.clear();
     document.querySelectorAll('a.link-inline[data-id]').forEach(link => {
-        const id = link.dataset.id; if (!id) return;
+        const id = link.dataset.id; 
+        if (!id) return;
         const wrapper = ensureLinkWrapper(link);
         let btn = wrapper.querySelector('.favorite-toggle');
-        if (!btn) { btn = createFavoriteToggle(id); wrapper.appendChild(btn); }
+        if (!btn) { 
+            btn = createFavoriteToggle(id); 
+            wrapper.appendChild(btn); 
+        }
         favoriteControls.set(id, { button: btn, link });
     });
     refreshAllVisuals();
@@ -1589,53 +1793,92 @@ function renderFavoritesList() {
     const emptyEl = document.getElementById('favoritesEmpty');
     const countEl = document.getElementById('favoritesCount');
     if (!listEl || !emptyEl || !countEl) return;
+    
     listEl.innerHTML = '';
     favoritesOrder = favoritesOrder.filter(id => favoritesState[id]);
-    Object.keys(favoritesState).forEach(id => { if (!favoritesOrder.includes(id)) favoritesOrder.push(id); });
+    Object.keys(favoritesState).forEach(id => { 
+        if (!favoritesOrder.includes(id)) favoritesOrder.push(id); 
+    });
+    
     if (favoritesOrder.length === 0) {
-        emptyEl.style.display = 'block'; listEl.style.display = 'none'; countEl.textContent = '0'; return;
+        emptyEl.style.display = 'block'; 
+        listEl.style.display = 'none'; 
+        countEl.textContent = '0'; 
+        return;
     }
-    emptyEl.style.display = 'none'; listEl.style.display = 'flex';
+    
+    emptyEl.style.display = 'none'; 
+    listEl.style.display = 'flex';
+    
     favoritesOrder.forEach(id => {
-        const info = favoritesState[id]; if (!info) return;
+        const info = favoritesState[id]; 
+        if (!info) return;
         const linkEl = document.querySelector(`a[data-id="${id}"]`);
         const liveInfo = linkEl ? extractLinkInfo(linkEl) : info;
+        
         if (linkEl && (info.title !== liveInfo.title || info.url !== liveInfo.url || classesToKey(info.classes) !== classesToKey(liveInfo.classes))) {
-            favoritesState[id] = liveInfo; localStorage.setItem(FAVORITES_KEY, JSON.stringify(favoritesState));
+            favoritesState[id] = liveInfo; 
+            localStorage.setItem(FAVORITES_KEY, JSON.stringify(favoritesState));
         }
-        const li = document.createElement('li'); li.className = 'favorites-item'; li.dataset.id = id;
-        const handle = document.createElement('span'); handle.className = 'drag-handle'; handle.innerHTML = '⋮⋮'; handle.title = 'Перетащить';
+        
+        const li = document.createElement('li'); 
+        li.className = 'favorites-item'; 
+        li.dataset.id = id;
+        
+        const handle = document.createElement('span'); 
+        handle.className = 'drag-handle'; 
+        handle.innerHTML = '⋮⋮'; 
+        handle.title = 'Перетащить';
         li.appendChild(handle);
+        
         const anchor = document.createElement('a');
-        anchor.href = liveInfo.url; anchor.target = '_blank'; anchor.rel = 'noopener';
-        anchor.dataset.id = id; anchor.classList.add('favorite-link');
+        anchor.href = liveInfo.url; 
+        anchor.target = '_blank'; 
+        anchor.rel = 'noopener';
+        anchor.dataset.id = id; 
+        anchor.classList.add('favorite-link');
         liveInfo.classes.forEach(cls => anchor.classList.add(cls));
         if (liveInfo.tooltip) anchor.setAttribute('data-tooltip', liveInfo.tooltip);
+        
         const record = robinhoodData[id];
         if (record) {
             if (record.visited) anchor.classList.add('visited-once');
             if (isToday(record.lastClick)) anchor.classList.add('daily-active');
             if (record.totalClicks > 0 || record.lastClick) {
-                const badge = document.createElement('span'); badge.className = 'click-info';
+                const badge = document.createElement('span'); 
+                badge.className = 'click-info';
                 badge.textContent = `${record.totalClicks || 0}р • ${formatDate(record.lastClick)}`;
                 anchor.appendChild(badge);
             }
         }
-        const titleSpan = document.createElement('span'); titleSpan.className = 'favorite-title'; titleSpan.textContent = liveInfo.title;
-        anchor.appendChild(titleSpan); li.appendChild(anchor);
+        
+        const titleSpan = document.createElement('span'); 
+        titleSpan.className = 'favorite-title'; 
+        titleSpan.textContent = liveInfo.title;
+        anchor.appendChild(titleSpan); 
+        li.appendChild(anchor);
+        
         const removeBtn = document.createElement('button');
-        removeBtn.type = 'button'; removeBtn.className = 'remove-fav-btn';
-        removeBtn.innerHTML = '×'; removeBtn.title = 'Удалить из избранного';
+        removeBtn.type = 'button'; 
+        removeBtn.className = 'remove-fav-btn';
+        removeBtn.innerHTML = '×'; 
+        removeBtn.title = 'Удалить из избранного';
         removeBtn.onclick = async (e) => {
-            e.stopPropagation(); delete favoritesState[id];
+            e.stopPropagation(); 
+            delete favoritesState[id];
             favoritesOrder = favoritesOrder.filter(x => x !== id);
-            await saveRobinhoodFavorites(); refreshAllVisuals();
+            await saveRobinhoodFavorites(); 
+            refreshAllVisuals();
         };
-        li.appendChild(removeBtn); listEl.appendChild(li);
+        li.appendChild(removeBtn); 
+        listEl.appendChild(li);
         bindTrackingHandler(anchor);
     });
+    
     countEl.textContent = String(favoritesOrder.length);
-    initSortable(); initializeTooltips(); updateRobinhoodNewIndicators();
+    initSortable(); 
+    initializeTooltips(); 
+    updateRobinhoodNewIndicators();
 }
 
 function initSortable() {
@@ -1643,7 +1886,9 @@ function initSortable() {
     if (!listEl || typeof Sortable === 'undefined') return;
     if (favoritesSortable) favoritesSortable.destroy();
     favoritesSortable = new Sortable(listEl, {
-        animation: 150, handle: '.drag-handle', ghostClass: 'sortable-ghost',
+        animation: 150, 
+        handle: '.drag-handle', 
+        ghostClass: 'sortable-ghost',
         onEnd: async () => {
             favoritesOrder = Array.from(listEl.children).map(li => li.dataset.id);
             await saveRobinhoodFavorites();
@@ -1654,34 +1899,46 @@ function initSortable() {
 // ===== TRACKING =====
 function updateBadge(el, count, time) {
     let badge = el.querySelector('.click-info');
-    if (!badge) { badge = document.createElement('span'); badge.className = 'click-info'; el.appendChild(badge); }
+    if (!badge) { 
+        badge = document.createElement('span'); 
+        badge.className = 'click-info'; 
+        el.appendChild(badge); 
+    }
     badge.textContent = `${count}р • ${formatDate(time)}`;
 }
 
 function updateUI() {
     document.querySelectorAll('.track-daily').forEach(btn => {
-        const id = btn.getAttribute('data-id'); const rec = robinhoodData[id];
+        const id = btn.getAttribute('data-id'); 
+        const rec = robinhoodData[id];
         btn.classList.remove('daily-active');
         if (rec) {
             if (isToday(rec.lastClick)) btn.classList.add('daily-active');
             if (rec.lastClick) updateBadge(btn, rec.totalClicks || 0, rec.lastClick);
         }
     });
+    
     document.querySelectorAll('.track-once').forEach(btn => {
-        const id = btn.getAttribute('data-id'); const rec = robinhoodData[id];
+        const id = btn.getAttribute('data-id'); 
+        const rec = robinhoodData[id];
         if (rec && rec.visited) btn.classList.add('visited-once');
         else btn.classList.remove('visited-once');
-        if (btn.classList.contains('track-once-info') && rec && rec.lastClick) updateBadge(btn, rec.totalClicks || 0, rec.lastClick);
+        if (btn.classList.contains('track-once-info') && rec && rec.lastClick) {
+            updateBadge(btn, rec.totalClicks || 0, rec.lastClick);
+        }
     });
 }
 
 function bindTrackingHandler(el) {
     if (!el || el.dataset.trackingBound === 'true') return;
     if (!(el.classList.contains('track-daily') || el.classList.contains('track-once'))) return;
-    el.addEventListener('click', handleClick); el.dataset.trackingBound = 'true';
+    el.addEventListener('click', handleClick); 
+    el.dataset.trackingBound = 'true';
 }
 
-function bindTrackingHandlersToAll() { document.querySelectorAll('.track-daily, .track-once').forEach(bindTrackingHandler); }
+function bindTrackingHandlersToAll() { 
+    document.querySelectorAll('.track-daily, .track-once').forEach(bindTrackingHandler); 
+}
 
 function handleClick(e) {
     const btn = e.currentTarget; 
@@ -1694,6 +1951,7 @@ function handleClick(e) {
     
     const now = new Date().toISOString();
     if (!robinhoodData[id]) robinhoodData[id] = {};
+    
     if (btn.classList.contains('track-daily')) {
         if (robinhoodData[id].lastClick && isToday(robinhoodData[id].lastClick)) return;
         robinhoodData[id].totalClicks = (robinhoodData[id].totalClicks || 0) + 1;
@@ -1705,20 +1963,32 @@ function handleClick(e) {
             robinhoodData[id].lastClick = now;
         }
     }
-    saveRobinhoodStats(); updateUI();
+    saveRobinhoodStats(); 
+    updateUI();
 }
 
 window.resetRobinhoodAll = async function() {
     if (confirm('Сбросить всю статистику?')) {
-        robinhoodData = {}; await saveRobinhoodStats();
+        robinhoodData = {}; 
+        await saveRobinhoodStats();
         document.querySelectorAll('.click-info').forEach(el => el.remove());
-        document.querySelectorAll('.link-inline').forEach(l => { l.classList.remove('daily-active', 'visited-once'); });
-        updateUI(); showToast('Прогресс сброшен', 'info');
+        document.querySelectorAll('.link-inline').forEach(l => { 
+            l.classList.remove('daily-active', 'visited-once'); 
+        });
+        updateUI(); 
+        showToast('Прогресс сброшен', 'info');
     }
 };
 
-function getBadgeHiddenState() { return localStorage.getItem(BADGE_VISIBILITY_KEY) === 'true'; }
-function setBadgeHiddenState(h) { localStorage.setItem(BADGE_VISIBILITY_KEY, h ? 'true' : 'false'); }
+// ===== BADGES =====
+function getBadgeHiddenState() { 
+    return localStorage.getItem(BADGE_VISIBILITY_KEY) === 'true'; 
+}
+
+function setBadgeHiddenState(h) { 
+    localStorage.setItem(BADGE_VISIBILITY_KEY, h ? 'true' : 'false'); 
+}
+
 function updateBadgeVisibility() {
     const hidden = getBadgeHiddenState();
     document.body.classList.toggle('badges-hidden', hidden);
@@ -1726,13 +1996,25 @@ function updateBadgeVisibility() {
     if (btn) btn.textContent = hidden ? 'Показать бейджи' : 'Скрыть бейджи';
 }
 
-function getSectionCollapseState() { return JSON.parse(localStorage.getItem(SECTION_COLLAPSE_KEY) || '{}'); }
-function saveSectionCollapseState(s) { localStorage.setItem(SECTION_COLLAPSE_KEY, JSON.stringify(s)); }
+// ===== SECTIONS =====
+function getSectionCollapseState() { 
+    return JSON.parse(localStorage.getItem(SECTION_COLLAPSE_KEY) || '{}'); 
+}
+
+function saveSectionCollapseState(s) { 
+    localStorage.setItem(SECTION_COLLAPSE_KEY, JSON.stringify(s)); 
+}
+
 function applySectionState(sec, collapsed) {
     sec.classList.toggle('collapsed', collapsed);
     const t = sec.querySelector('.section-toggle');
-    if (t) { t.textContent = collapsed ? '▸' : '▾'; t.setAttribute('aria-expanded', collapsed ? 'false' : 'true'); }
+    if (t) { 
+        t.textContent = collapsed ? '▸' : '▾'; 
+        t.setAttribute('aria-expanded', collapsed ? 'false' : 'true'); 
+    }
 }
+
+// ===== NEW INDICATORS =====
 function updateRobinhoodNewIndicators() {
     if (!newIndicatorsState) return;
     
@@ -1815,56 +2097,7 @@ function initRobinhoodNewIndicatorsRealtime() {
     }
 }
 
-async function markRobinhoodLinkAsNew(id) {
-    if (!isAdmin || !id) return;
-    
-    try {
-        newIndicatorsState.globalNew.add(id);
-        const timestamp = Date.now();
-        newIndicatorsState.lastSync = timestamp;
-        
-        await setDoc(doc(db, CONFIG_COLLECTION, NEW_INDICATORS_DOC), {
-            newLinks: Array.from(newIndicatorsState.globalNew),
-            timestamp: timestamp
-        });
-        
-        await saveRobinhoodNewIndicators();
-        updateRobinhoodNewIndicators();
-        showToast('✅ Ссылка помечена как NEW для всех', 'success');
-    } catch (e) {
-        console.error('Mark as new error:', e);
-        showToast('❌ Ошибка пометки NEW', 'error');
-    }
-}
-
-async function removeRobinhoodNewMark(id) {
-    if (!isAdmin || !id) return;
-    
-    try {
-        newIndicatorsState.globalNew.delete(id);
-        const timestamp = Date.now();
-        newIndicatorsState.lastSync = timestamp;
-        
-        await setDoc(doc(db, CONFIG_COLLECTION, NEW_INDICATORS_DOC), {
-            newLinks: Array.from(newIndicatorsState.globalNew),
-            timestamp: timestamp
-        });
-        
-        await saveRobinhoodNewIndicators();
-        updateRobinhoodNewIndicators();
-        showToast('✅ Метка NEW удалена', 'success');
-    } catch (e) {
-        console.error('Remove new mark error:', e);
-        showToast('❌ Ошибка удаления метки', 'error');
-    }
-}
-
-let userItemsData = {
-    items: {},
-    collections: [],
-    dappCategories: []
-};
-
+// ===== USER ITEMS =====
 function loadRobinhoodUserItems() {
     const saved = localStorage.getItem(USER_ITEMS_KEY);
     if (saved) {
@@ -1892,6 +2125,7 @@ async function saveRobinhoodUserItems() {
     }
 }
 
+// ===== EDITS =====
 function loadRobinhoodEditsOverride() {
     const saved = localStorage.getItem(EDITS_OVERRIDE_KEY);
     if (saved) {
@@ -1941,7 +2175,28 @@ function applyRobinhoodAllOverrides() {
     updateUI();
 }
 
+// ===== RENDER USER ITEMS =====
 function renderRobinhoodUserItems() {
+    // Render NFT collections
+    const nftSection = document.querySelector('[data-section-id="nfts"] .section-content');
+    if (nftSection && userItemsData.collections && userItemsData.collections.length > 0) {
+        const emptyMsg = nftSection.querySelector('p[style*="italic"]');
+        if (emptyMsg) emptyMsg.remove();
+        
+        let grid = nftSection.querySelector('.nft-grid');
+        if (!grid) {
+            grid = document.createElement('div');
+            grid.className = 'nft-grid';
+            nftSection.appendChild(grid);
+        }
+        
+        userItemsData.collections.forEach(collection => {
+            const collectionCard = createNFTCollectionCard(collection);
+            grid.appendChild(collectionCard);
+        });
+    }
+    
+    // Render simple zone items
     Object.keys(userItemsData.items).forEach(zone => {
         const items = userItemsData.items[zone];
         if (!items || items.length === 0) return;
@@ -1949,37 +2204,16 @@ function renderRobinhoodUserItems() {
         const container = document.querySelector(`[data-zone="${zone}"]`);
         if (!container) return;
         
-        let targetEl;
-        
-        if (zone.startsWith('nft_')) {
-            targetEl = container.querySelector('.nft-grid');
-            if (!targetEl) {
-                targetEl = document.createElement('div');
-                targetEl.className = 'nft-grid';
-                container.querySelector('.section-content')?.appendChild(targetEl);
-            }
-        } else if (zone.startsWith('dapp_')) {
-            targetEl = container.querySelector('.dapp-links');
-        } else if (zone.startsWith('deploy_')) {
-            targetEl = container.querySelector('.link-collection');
-        } else {
-            targetEl = container.querySelector('.section-content');
-        }
-        
+        let targetEl = container.querySelector('.link-collection') || container.querySelector('.dapp-links');
         if (!targetEl) return;
         
         const emptyMsg = targetEl.querySelector('p[style*="italic"]');
         if (emptyMsg) emptyMsg.remove();
         
         items.forEach(item => {
-            if (zone.startsWith('nft_')) {
-                const card = createNFTCard(item);
-                targetEl.appendChild(card);
-            } else {
-                const link = createLinkElement(item);
-                targetEl.appendChild(link);
-                targetEl.appendChild(document.createTextNode(' '));
-            }
+            const link = createLinkElement(item);
+            targetEl.appendChild(link);
+            targetEl.appendChild(document.createTextNode(' '));
         });
     });
     
@@ -1989,39 +2223,40 @@ function renderRobinhoodUserItems() {
     initLightbox();
 }
 
-function createNFTCard(item) {
+function createNFTCollectionCard(collection) {
     const card = document.createElement('div');
-    card.className = 'nft-card';
+    card.className = 'nft-card user-collection-card';
+    card.dataset.collectionId = collection.id;
     
     const img = document.createElement('img');
-    img.src = item.image || 'https://via.placeholder.com/300x300/1e293b/64748b?text=NFT';
-    img.alt = item.title;
+    img.src = collection.image || 'https://via.placeholder.com/300x300/1e293b/64748b?text=NFT';
+    img.alt = collection.title;
     img.loading = 'lazy';
     img.className = 'nft-image';
     card.appendChild(img);
     
     const title = document.createElement('div');
     title.className = 'nft-title';
-    title.textContent = item.title;
+    title.textContent = collection.title;
     card.appendChild(title);
     
     const links = document.createElement('div');
     links.className = 'nft-links';
     
     const mintLink = document.createElement('a');
-    mintLink.href = item.url;
+    mintLink.href = collection.url;
     mintLink.target = '_blank';
     mintLink.rel = 'noopener';
     mintLink.className = 'nft-mint-btn track-once';
-    mintLink.dataset.id = item.id;
-    if (item.tooltip) mintLink.setAttribute('data-tooltip', item.tooltip);
-    if (item.image) mintLink.setAttribute('data-image', item.image);
+    mintLink.dataset.id = collection.id;
+    if (collection.tooltip) mintLink.setAttribute('data-tooltip', collection.tooltip);
+    if (collection.image) mintLink.setAttribute('data-image', collection.image);
     mintLink.innerHTML = '<i class="fas fa-plus-circle"></i> Mint';
     links.appendChild(mintLink);
     
-    if (item.website) {
+    if (collection.website) {
         const webLink = document.createElement('a');
-        webLink.href = item.website;
+        webLink.href = collection.website;
         webLink.target = '_blank';
         webLink.rel = 'noopener';
         webLink.className = 'nft-link';
@@ -2030,9 +2265,9 @@ function createNFTCard(item) {
         links.appendChild(webLink);
     }
     
-    if (item.twitter) {
+    if (collection.twitter) {
         const twLink = document.createElement('a');
-        twLink.href = item.twitter;
+        twLink.href = collection.twitter;
         twLink.target = '_blank';
         twLink.rel = 'noopener';
         twLink.className = 'nft-link';
@@ -2042,10 +2277,32 @@ function createNFTCard(item) {
     }
     
     card.appendChild(links);
+    
+    if (isAdmin) {
+        const deleteBtn = document.createElement('button');
+        deleteBtn.type = 'button';
+        deleteBtn.className = 'user-collection-delete-top admin-only';
+        deleteBtn.innerHTML = '×';
+        deleteBtn.title = 'Удалить коллекцию';
+        deleteBtn.onclick = async (e) => {
+            e.stopPropagation();
+            if (confirm(`Удалить коллекцию "${collection.title}"?`)) {
+                userItemsData.collections = userItemsData.collections.filter(c => c.id !== collection.id);
+                await saveRobinhoodUserItems();
+                card.remove();
+                showToast('Коллекция удалена', 'success');
+            }
+        };
+        card.appendChild(deleteBtn);
+    }
+    
     return card;
 }
 
 function createLinkElement(item) {
+    const wrapper = document.createElement('span');
+    wrapper.className = 'user-item-wrapper';
+    
     const link = document.createElement('a');
     link.href = item.url;
     link.target = '_blank';
@@ -2058,15 +2315,47 @@ function createLinkElement(item) {
     const icon = item.icon || 'external-link-alt';
     link.innerHTML = `<i class="fas fa-${icon}"></i> ${item.title}`;
     
-    return link;
+    wrapper.appendChild(link);
+    
+    if (isAdmin) {
+        const deleteBtn = document.createElement('button');
+        deleteBtn.type = 'button';
+        deleteBtn.className = 'user-item-delete admin-only';
+        deleteBtn.innerHTML = '×';
+        deleteBtn.title = 'Удалить';
+        deleteBtn.onclick = async (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            if (confirm(`Удалить "${item.title}"?`)) {
+                const zone = Object.keys(userItemsData.items).find(z => 
+                    userItemsData.items[z]?.some(i => i.id === item.id)
+                );
+                if (zone) {
+                    userItemsData.items[zone] = userItemsData.items[zone].filter(i => i.id !== item.id);
+                    await saveRobinhoodUserItems();
+                    wrapper.remove();
+                    showToast('Элемент удалён', 'success');
+                }
+            }
+        };
+        wrapper.appendChild(deleteBtn);
+    }
+    
+    return wrapper;
 }
 
-function openAddModal(zone) {
+// ===== ADD MODAL =====
+function openAddModal(zone, type = 'item') {
     currentAddZone = zone;
+    currentAddType = type;
+    
     const modal = document.getElementById('robinhoodAddModalOverlay');
     const title = document.getElementById('addModalTitle');
     
-    if (zone.startsWith('nft_')) {
+    // Hide all fields
+    document.querySelectorAll('#addModal label').forEach(el => el.style.display = '');
+    
+    if (type === 'collection') {
         title.textContent = 'Добавить NFT коллекцию';
         document.getElementById('fieldImage').style.display = '';
         document.getElementById('fieldWebsite').style.display = '';
@@ -2086,6 +2375,7 @@ function openAddModal(zone) {
         document.getElementById('fieldDescription').style.display = 'none';
     }
     
+    // Clear all fields
     document.getElementById('addFieldTitle').value = '';
     document.getElementById('addFieldUrl').value = '';
     document.getElementById('addFieldTooltip').value = '';
@@ -2100,9 +2390,8 @@ function openAddModal(zone) {
 function closeAddModal() {
     document.getElementById('robinhoodAddModalOverlay').style.display = 'none';
     currentAddZone = null;
+    currentAddType = 'item';
 }
-
-let currentAddZone = null;
 
 async function saveNewItem() {
     const title = document.getElementById('addFieldTitle').value.trim();
@@ -2119,30 +2408,41 @@ async function saveNewItem() {
     
     const id = 'user_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
     
-    const item = {
-        id,
-        title,
-        url,
-        tooltip,
-        image,
-        website,
-        twitter,
-        classes: currentAddZone.startsWith('nft_') ? 'track-once' : 'link-inline track-daily'
-    };
-    
-    if (!userItemsData.items[currentAddZone]) {
-        userItemsData.items[currentAddZone] = [];
+    if (currentAddType === 'collection') {
+        const collection = {
+            id,
+            title,
+            url,
+            tooltip,
+            image,
+            website,
+            twitter
+        };
+        
+        userItemsData.collections.push(collection);
+    } else {
+        const item = {
+            id,
+            title,
+            url,
+            tooltip,
+            classes: currentAddZone.startsWith('dapp_') ? 'link-inline track-daily' : 'link-inline track-daily'
+        };
+        
+        if (!userItemsData.items[currentAddZone]) {
+            userItemsData.items[currentAddZone] = [];
+        }
+        
+        userItemsData.items[currentAddZone].push(item);
     }
     
-    userItemsData.items[currentAddZone].push(item);
     await saveRobinhoodUserItems();
-    
     showToast('✅ Элемент добавлен', 'success');
     closeAddModal();
-    
     setTimeout(() => location.reload(), 500);
 }
 
+// ===== EDIT MODE =====
 function toggleEditMode() {
     editModeActive = !editModeActive;
     document.body.classList.toggle('edit-mode', editModeActive);
@@ -2165,7 +2465,7 @@ function attachEditButtons() {
         const wrapper = ensureLinkWrapper(link);
         const btn = document.createElement('button');
         btn.type = 'button';
-        btn.className = 'edit-link-btn';
+        btn.className = 'edit-item-btn';
         btn.innerHTML = '✎';
         btn.title = 'Редактировать';
         btn.onclick = (e) => {
@@ -2180,7 +2480,7 @@ function attachEditButtons() {
 }
 
 function removeEditButtons() {
-    document.querySelectorAll('.edit-link-btn').forEach(btn => btn.remove());
+    document.querySelectorAll('.edit-item-btn').forEach(btn => btn.remove());
     document.querySelectorAll('a.link-inline[data-id]').forEach(link => {
         delete link.dataset.editBtnAttached;
     });
@@ -2211,7 +2511,6 @@ function openEditLinkModal(link) {
     
     document.getElementById('robinhoodAddModalOverlay').style.display = 'flex';
 }
-
 async function saveEditedLink() {
     if (!currentEditTarget) return;
     
@@ -2243,6 +2542,7 @@ async function saveEditedLink() {
     saveBtn.onclick = saveNewItem;
 }
 
+// ===== GITHUB UPLOAD =====
 async function uploadToGitHub() {
     const token = prompt('Введите GitHub Personal Access Token:');
     if (!token) return;
@@ -2316,7 +2616,7 @@ async function uploadToGitHub() {
     }
 }
 
-// ========== TWITTER MONITOR (GitHub JSON) ==========
+// ===== TWITTER MONITOR =====
 async function loadRobinhoodTwitterResults() {
     const list = document.getElementById('robinhoodMonitorList');
     const status = document.getElementById('robinhoodMonitorStatus');
@@ -2342,7 +2642,7 @@ async function loadRobinhoodTwitterResults() {
                 const timeAgo = nft.time_ago || 'недавно';
                 const tweetUrl = nft.url || `https://twitter.com/${nft.twitter}`;
                 const tweetText = (nft.text || 'NFT пост').substring(0, 120);
-                const projectEmoji = '🏹'; // Robinhood emoji
+                const projectEmoji = '🏹';
                 const projectName = 'Robinhood NFT';
                 
                 li.innerHTML = `
@@ -2383,7 +2683,7 @@ function initRobinhoodTwitterMonitor() {
     const refreshBtn = document.getElementById('robinhoodMonitorRefreshBtn');
     if (!refreshBtn) return;
     
-    loadRobinhoodTwitterResults(); // Первая загрузка
+    loadRobinhoodTwitterResults();
     
     refreshBtn.addEventListener('click', async () => {
         const originalHTML = refreshBtn.innerHTML;
@@ -2397,16 +2697,17 @@ function initRobinhoodTwitterMonitor() {
         showToast('✅ Данные обновлены!', 'success');
     });
     
-    // Автообновление каждые 5 минут
-    setInterval(loadRobinhoodTwitterResults, 500 * 60 * 1000);
+    setInterval(loadRobinhoodTwitterResults, 5 * 60 * 1000);
 }
 
+// ===== INITIALIZATION =====
 document.addEventListener('DOMContentLoaded', () => {
     loadTheme();
     updateBadgeVisibility();
     
     const states = getSectionCollapseState();
 
+    // Section toggles
     document.querySelectorAll('.collapsible-section').forEach(sec => {
         const id = sec.getAttribute('data-section-id');
 
@@ -2423,23 +2724,30 @@ document.addEventListener('DOMContentLoaded', () => {
             saveSectionCollapseState(newStates);
         });
 
-        const addBtn = sec.querySelector('.section-add-btn');
-        if (addBtn) {
-            addBtn.addEventListener('click', () => {
-                const zone = sec.getAttribute('data-section-id');
-                openAddModal(zone);
+        // Section add button - для добавления коллекций в NFT
+        const sectionAddBtn = sec.querySelector('.section-header .section-add-btn');
+        if (sectionAddBtn) {
+            sectionAddBtn.addEventListener('click', () => {
+                const sectionId = sec.getAttribute('data-section-id');
+                if (sectionId === 'nfts') {
+                    openAddModal('nfts', 'collection');
+                } else {
+                    openAddModal(sectionId, 'item');
+                }
             });
         }
     });
 
-    
-    document.querySelectorAll('[data-zone] .section-add-btn, [data-zone] .resource-header .section-add-btn').forEach(btn => {
+    // Zone add buttons - для добавления элементов в подкатегории
+    document.querySelectorAll('[data-zone] .add-item-btn').forEach(btn => {
         btn.addEventListener('click', () => {
-            const zone = btn.closest('[data-zone]')?.getAttribute('data-zone');
-            if (zone) openAddModal(zone);
+            const zone = btn.closest('[data-zone]')?.getAttribute('data-zone') || 
+                         btn.getAttribute('data-zone');
+            if (zone) openAddModal(zone, 'item');
         });
     });
     
+    // Legend toggle
     const legend = document.getElementById('statusLegend');
     const legendContent = document.getElementById('legendContent');
     const legendToggle = document.getElementById('legendToggle');
@@ -2461,7 +2769,9 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
     
+    // Control buttons
     document.getElementById('themeToggleBtn')?.addEventListener('click', toggleTheme);
+    
     document.getElementById('toggleBadgesBtn')?.addEventListener('click', () => {
         const hidden = getBadgeHiddenState();
         setBadgeHiddenState(!hidden);
@@ -2471,6 +2781,7 @@ document.addEventListener('DOMContentLoaded', () => {
     
     document.getElementById('editModeBtn')?.addEventListener('click', toggleEditMode);
     document.getElementById('exportBtn')?.addEventListener('click', exportRobinhoodJSON);
+    
     document.getElementById('importBtn')?.addEventListener('click', () => {
         document.getElementById('robinhoodImportFileInput').click();
     });
@@ -2483,18 +2794,20 @@ document.addEventListener('DOMContentLoaded', () => {
     
     document.getElementById('githubUploadBtn')?.addEventListener('click', uploadToGitHub);
     
+    // Modal controls
     document.getElementById('addModalCancel')?.addEventListener('click', closeAddModal);
     document.getElementById('addModalSave')?.addEventListener('click', saveNewItem);
+    
     document.getElementById('robinhoodAddModalOverlay')?.addEventListener('click', (e) => {
         if (e.target === e.currentTarget) closeAddModal();
     });
     
+    // Initialize
     bindTrackingHandlersToAll();
     attachFavoriteControls();
     initLightbox();
     initializeTooltips();
     initCardAnimations();
-    initLazyLoading();
     initSortable();
 });
 </script>
