@@ -1772,8 +1772,27 @@ function closeModal() {
 }
 
 document.getElementById('addModalCancel').addEventListener('click', closeModal);
-overlayEl().addEventListener('click', (e) => { if (e.target === overlayEl()) closeModal(); });
-document.addEventListener('keydown', (e) => { if (e.key === 'Escape') { closeModal(); closeLightbox(); } });
+
+const addModalEl = document.getElementById('addModal');
+let pointerDownInsideModal = false;
+
+// фикс: если выделяем текст и отпускаем вне модалки — не закрывать
+document.addEventListener('pointerdown', (e) => {
+    pointerDownInsideModal = !!e.target.closest('#addModal');
+}, true);
+
+// закрываем только если клик реально начался на оверлее
+overlayEl().addEventListener('click', (e) => {
+    if (e.target === overlayEl() && !pointerDownInsideModal) closeModal();
+});
+
+// на всякий случай гасим всплытие из модалки
+addModalEl.addEventListener('click', (e) => e.stopPropagation());
+addModalEl.addEventListener('pointerdown', (e) => e.stopPropagation());
+
+document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') { closeModal(); closeLightbox(); }
+});
 
 function normalizeImageUrl(rawUrl) {
     if (!rawUrl) return rawUrl;
