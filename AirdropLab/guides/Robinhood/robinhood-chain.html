@@ -1890,16 +1890,37 @@ document.getElementById('addModalSave').addEventListener('click', async () => {
 });
 
 function createUserLink(item, zone) {
-    const wrapper = document.createElement('span'); wrapper.className = 'user-item-wrapper'; wrapper.dataset.userItemId = item.id; wrapper.dataset.userItemZone = zone;
-    const link = document.createElement('a'); link.href = item.url; link.target = '_blank'; link.className = 'link-inline link-compact ' + item.trackType; link.dataset.id = item.id;
-	if (isDeployZone(zone)) {
-    item.trackType = 'track-daily';
-    link.className = 'link-inline link-compact track-daily';
-    if (item.tooltip) link.setAttribute('data-tooltip', item.tooltip); if (item.image) link.setAttribute('data-image', item.image); link.textContent = item.title;
+    const wrapper = document.createElement('span');
+    wrapper.className = 'user-item-wrapper';
+    wrapper.dataset.userItemId = item.id;
+    wrapper.dataset.userItemZone = zone;
+
+    // Если это deploy-зона, насильно track-daily
+    let trackType = item.trackType;
+    if (isDeployZone(zone)) {
+        trackType = 'track-daily';
+        item.trackType = 'track-daily';
+    }
+	// Всегда создаём ссылку, независимо от зоны!
+    const link = document.createElement('a');
+    link.href = item.url;
+    link.target = '_blank';
+    link.className = 'link-inline link-compact ' + trackType;
+    link.dataset.id = item.id;
+    if (item.tooltip) link.setAttribute('data-tooltip', item.tooltip);
+    if (item.image) link.setAttribute('data-image', item.image);
+    link.textContent = item.title;
     wrapper.appendChild(link);
-    const delBtn = document.createElement('button'); delBtn.type = 'button'; delBtn.className = 'user-item-delete admin-only'; delBtn.title = 'Удалить'; delBtn.innerHTML = '×';
+
+    // Кнопка удаления только для пользовательских элементов (admin)
+    const delBtn = document.createElement('button');
+    delBtn.type = 'button';
+    delBtn.className = 'user-item-delete admin-only';
+    delBtn.title = 'Удалить';
+    delBtn.innerHTML = '×';
     delBtn.addEventListener('click', async (e) => {
-        e.stopPropagation(); if (!confirm(`Удалить «${item.title}»?`)) return;
+        e.stopPropagation();
+        if (!confirm(`Удалить «${item.title}»?`)) return;
         delBtn.disabled = true; delBtn.innerHTML = '⏳';
         try {
             if (userItemsData.items[zone]) userItemsData.items[zone] = userItemsData.items[zone].filter(i => i.id !== item.id);
@@ -1910,7 +1931,8 @@ function createUserLink(item, zone) {
             showToast(`✅ Удалено: ${item.title}`, 'info');
         } catch (error) { delBtn.disabled = false; delBtn.innerHTML = '×'; }
     });
-    wrapper.appendChild(delBtn); return wrapper;
+    wrapper.appendChild(delBtn);
+    return wrapper;
 }
 
 function renderUserItemInZone(zone, item) {
