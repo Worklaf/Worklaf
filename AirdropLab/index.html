@@ -908,9 +908,24 @@
         0 0 120px rgba(59, 130, 246, 0.15);
 }
 .right-sidebar {
-    display: none;
+    scroll-behavior: smooth;
 }
-
+.right-sidebar::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    right: 0;
+    width: 2px;
+    height: 20px;
+    background: linear-gradient(to bottom, rgba(34, 211, 238, 0.5), transparent);
+    border-radius: 1px;
+    opacity: 0;
+    transition: opacity 0.3s;
+    pointer-events: none;
+}
+.right-sidebar:hover::before {
+    opacity: 1;
+}
 @media (min-width: 1024px) {
     .right-sidebar {
         display: block;
@@ -924,7 +939,7 @@
 .main-container {
     display: flex;
     gap: 1.5rem;
-    max-width: 1400px;
+    max-width: 1600px;
     margin: 0 auto;
     padding: 1rem;
 }
@@ -949,9 +964,39 @@ main {
 
 /* Правый сайдбар */
 .right-sidebar {
-    width: 22rem; /* 288px */
+    width: 23rem; /* 416px - УВЕЛИЧЕНО с 22rem */
     flex-shrink: 0;
-    margin-left: 1rem; /* Дополнительный отступ */
+    margin-left: 1rem;
+    
+    /* ✅ ПРИКРЕПЛЯЕМ К ВЕРХУ И ДОБАВЛЯЕМ ПРОКРУТКУ */
+    position: sticky;
+    top: 130px; /* Расстояние от header + crypto bar */
+    max-height: none;
+  overflow: visible;
+    
+    /* ✅ СТИЛИЗУЕМ СКРОЛЛ */
+    scrollbar-width: thin;
+    scrollbar-color: #334155 #0f172a;
+    padding-right: 6px; /* чтобы скролл не перекрывал контент */
+}
+/* ✅ Кастомный скролл для Chrome/Safari */
+.right-sidebar::-webkit-scrollbar {
+    width: 6px;
+}
+
+.right-sidebar::-webkit-scrollbar-thumb {
+    background: linear-gradient(135deg, #334155, #475569);
+    border-radius: 3px;
+    transition: background 0.2s;
+}
+
+.right-sidebar::-webkit-scrollbar-thumb:hover {
+    background: linear-gradient(135deg, #475569, #64748b);
+}
+
+.right-sidebar::-webkit-scrollbar-track {
+    background: rgba(15, 23, 42, 0.5);
+    border-radius: 3px;
 }
 /* Стили крипто-виджета для интеграции в дизайн */
 #cr-widget-marquee {
@@ -1613,14 +1658,24 @@ main {
     border: 1px solid rgba(34, 211, 238, 0.2);
     border-radius: 20px;
     padding: 20px;
-    position: sticky;
-    top: 130px;
     backdrop-filter: blur(12px);
     box-shadow: 
         0 8px 32px rgba(0, 0, 0, 0.3),
         inset 0 1px 0 rgba(255, 255, 255, 0.05);
+    }
+/* ✅ АДАПТИВНОСТЬ - скрываем на мобильных */
+@media (max-width: 1279px) { /* Увеличиваем breakpoint */
+    .right-sidebar {
+        display: none;
+    }
 }
 
+/* ✅ ПОКАЗЫВАЕМ НА БОЛЬШИХ ЭКРАНАХ */
+@media (min-width: 1280px) {
+    .right-sidebar {
+        display: block;
+    }
+}
 .lab-header {
     display: flex;
     justify-content: space-between;
@@ -1702,15 +1757,15 @@ main {
 .lab-specimens {
     display: flex;
     flex-direction: column;
-    gap: 16px;
+    gap: 14px; /* Уменьшаем gap */
     margin-bottom: 24px;
 }
 
 .specimen-tube {
     background: linear-gradient(145deg, rgba(30, 41, 59, 0.6), rgba(15, 23, 42, 0.8));
     border: 1px solid rgba(255, 255, 255, 0.1);
-    border-radius: 16px;
-    padding: 16px;
+    border-radius: 14px; /* Немного уменьшаем */
+    padding: 14px; /* Уменьшаем padding */
     transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
     position: relative;
     overflow: hidden;
@@ -2621,8 +2676,7 @@ main {
                     </svg>
                 </div>
                 <div>
-                    <h3 class="lab-title">Экспериментальная зона</h3>
-                    <p class="lab-subtitle">Активные исследования</p>
+                    <h3 class="lab-subtitle">Активные исследования</h3>
                 </div>
             </div>
             
@@ -2655,7 +2709,7 @@ main {
                     <h4 class="specimen-name">Arc Testnet by Circle</h4>
                     <p class="specimen-data">
                         <i class="fas fa-link"></i>
-                        <span class="link-count" id="arc-link-count">Подсчет...</span> образцов
+                        <span class="link-count" id="arc-link-count">Подсчет...</span> ссылок
                     </p>
                     <button class="analyze-btn" onclick="analyzeGuide('arc', 'guides/Arc/Arc_Testnet_by_Circle.html')">
                         <i class="fas fa-microscope"></i> Анализировать
@@ -2683,7 +2737,7 @@ main {
                     <h4 class="specimen-name">Tempo Testnet</h4>
                     <p class="specimen-data">
                         <i class="fas fa-link"></i>
-                        <span class="link-count" id="tempo-link-count">Подсчет...</span> образцов
+                        <span class="link-count" id="tempo-link-count">Подсчет...</span> ссылок
                     </p>
                     <button class="analyze-btn" onclick="analyzeGuide('tempo', 'guides/Tempo/Tempo_Testnet.html')">
                         <i class="fas fa-microscope"></i> Анализировать
@@ -2692,91 +2746,59 @@ main {
             </div>
             
             <!-- Robinhood Sample -->
-<div class="specimen-tube new" data-guide="robinhood">
-    <div class="tube-header">
-        <span class="specimen-id">RBH-003</span>
-        <div class="specimen-status status-new"></div>
+            <div class="specimen-tube new" data-guide="robinhood">
+                <div class="tube-header">
+                    <span class="specimen-id">RBH-003</span>
+                    <div class="specimen-status status-new"></div>
+                </div>
+                
+                <!-- SVG Банер для Robinhood -->
+               <div class="robinhood-testnet-card">
+    <div class="card-header">
+        <div class="logo-section">
+            <div class="rh-logo">
+    <img 
+        src="https://cryptocurrencyjobs.co/startups/assets/logos/robinhood.e4ca7c6b17d08763d0714e8a061cf5ba65950fe4d236e3c2db812421997fb743_hu_e366a75e4d388edb.jpg" 
+        alt="Robinhood Logo"
+        style="width:48px; height:48px; border-radius:8px;"
+    >
+</div>
+
+            <div class="logo-glow"></div>
+        </div>
+        
+        <div class="title-section">
+            <h1 class="main-title">ROBINHOOD</h1>
+            <h2 class="sub-title">Chain Testnet</h2>
+            <div class="status-badge">
+                <div class="status-indicator"></div>
+                <span>Активен</span>
+            </div>
+        </div>
     </div>
     
-    <!-- SVG Банер для Robinhood -->
-    <div class="robinhood-testnet-card">
-        <div class="card-header">
-            <div class="logo-section">
-                <div class="rh-logo-container">
-                    <svg class="rh-logo" viewBox="0 0 48 48" width="48" height="48">
-                        <defs>
-                            <linearGradient id="logoGrad" x1="0%" y1="0%" x2="100%" y2="100%">
-                                <stop offset="0%" style="stop-color:#00ff88"/>
-                                <stop offset="100%" style="stop-color:#00d970"/>
-                            </linearGradient>
-                            <filter id="logoGlow">
-                                <feGaussianBlur stdDeviation="2"/>
-                                <feMerge>
-                                    <feMergeNode/>
-                                    <feMergeNode in="SourceGraphic"/>
-                                </feMerge>
-                            </filter>
-                        </defs>
-                        
-                        <!-- Основной круг -->
-                        <circle cx="24" cy="24" r="22" fill="url(#logoGrad)" filter="url(#logoGlow)"/>
-                        
-                        <!-- Фирменное перо -->
-                        <g transform="translate(24, 24)">
-                            <path d="M-10,10 C-10,10 -8,-12 2,-12 C12,-12 14,10 14,10 C14,10 10,7 2,7 C-6,7 -10,10 -10,10 Z" 
-                                  fill="#000000"/>
-                            <ellipse cx="2" cy="-3" rx="3" ry="6" fill="#222" opacity="0.4"/>
-                            <path d="M-4,-6 Q2,-9 8,-6" stroke="#333" stroke-width="0.5" fill="none"/>
-                        </g>
-                    </svg>
-                </div>
-                <div class="logo-glow"></div>
-            </div>
-            
-            <div class="title-section">
-                <h1 class="main-title">ROBINHOOD</h1>
-                <h2 class="sub-title">Chain Guide</h2>
-                <div class="status-badge">
-                    <div class="status-indicator"></div>
-                    <span id="rh-status">Загрузка...</span>
-                </div>
+    <div class="network-stats">
+        <div class="stat-row">
+            <span class="stat-label">Сеть:</span>
+            <span class="stat-value">Testnet</span>
+        </div>
+       
+        <div class="stat-row">
+            <span class="stat-label">Статус:</span>
+            <div class="activity-bar">
+                <div class="activity-progress"></div>
             </div>
         </div>
-        
-        <div class="network-stats">
-            <div class="stat-row">
-                <span class="stat-label">Всего ссылок:</span>
-                <span class="stat-value" id="rh-total-links">Подсчет...</span>
-            </div>
-            <div class="stat-row">
-                <span class="stat-label">Внешние ссылки:</span>
-                <span class="stat-value" id="rh-external-links">Подсчет...</span>
-            </div>
-            <div class="stat-row">
-                <span class="stat-label">NFT коллекции:</span>
-                <span class="stat-value" id="rh-nft-count">Подсчет...</span>
-            </div>
-            <div class="stat-row">
-                <span class="stat-label">Изображения:</span>
-                <span class="stat-value" id="rh-images">Подсчет...</span>
-            </div>
-            <div class="stat-row">
-                <span class="stat-label">Статус:</span>
-                <div class="activity-bar">
-                    <div class="activity-progress" id="rh-progress"></div>
-                </div>
-            </div>
-        </div>
-        
-        <div class="card-footer">
-            <button class="connect-btn" onclick="analyzeGuide('robinhood', 'guides/Robinhood/robinhood-chain.html')">
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
-                    <circle cx="11" cy="8" r="3" stroke="currentColor" stroke-width="2"/>
-                    <path d="M21 21L16.514 16.506" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
-                    <circle cx="4" cy="16" r="2" stroke="currentColor" stroke-width="2"/>
-                </svg>
-                Анализировать
-            </button>
+    </div>
+    
+    <div class="card-footer">
+              
+        <div class="network-nodes">
+            <div class="node active"></div>
+            <div class="connection-line"></div>
+            <div class="node"></div>
+            <div class="connection-line"></div>
+            <div class="node"></div>
         </div>
     </div>
 </div>
@@ -2784,7 +2806,7 @@ main {
 <style>
 .robinhood-testnet-card {
     width: 100%;
-    max-width: 320px;
+    max-width: 380px; /* УВЕЛИЧЕНО с 320px */
     background: linear-gradient(145deg, #1e293b 0%, #0f172a 100%);
     border-radius: 12px;
     border: 1px solid rgba(0, 255, 136, 0.3);
@@ -2797,10 +2819,10 @@ main {
 }
 
 .card-header {
-    padding: 16px;
+    padding: 18px; /* Увеличиваем */
     display: flex;
     align-items: center;
-    gap: 12px;
+    gap: 14px; /* Увеличиваем */
     position: relative;
     background: linear-gradient(90deg, 
         rgba(0, 255, 136, 0.05) 0%, 
@@ -2831,12 +2853,12 @@ main {
 
 .title-section {
     flex: 1;
-    min-width: 0;
+    min-width: 0; /* Для правильного сжатия */
 }
 
 .main-title {
     font-family: 'Inter', 'Roboto', sans-serif;
-    font-size: 18px;
+    font-size: 20px; /* УВЕЛИЧЕНО с 18px */
     font-weight: 800;
     color: #ffffff;
     margin: 0 0 2px 0;
@@ -2845,7 +2867,7 @@ main {
 
 .sub-title {
     font-family: 'Inter', 'Roboto', sans-serif;
-    font-size: 13px;
+    font-size: 14px; /* УВЕЛИЧЕНО с 13px */
     font-weight: 600;
     color: #00ff88;
     margin: 0 0 8px 0;
@@ -2858,7 +2880,7 @@ main {
     background: rgba(0, 255, 136, 0.15);
     border: 1px solid rgba(0, 255, 136, 0.3);
     border-radius: 16px;
-    padding: 4px 8px;
+    padding: 4px 8px; /* Уменьшен padding */
     font-size: 11px;
     font-weight: 600;
     color: #00ff88;
@@ -2872,11 +2894,12 @@ main {
     animation: blink 1.5s infinite;
 }
 
+/* Новая секция статистики - компактнее */
 .network-stats {
-    padding: 0 16px 12px 16px;
+    padding: 0 18px 14px 18px; /* Увеличиваем */
     display: flex;
     flex-direction: column;
-    gap: 6px;
+    gap: 7px; /* Увеличиваем */
 }
 
 .stat-row {
@@ -2887,20 +2910,36 @@ main {
 
 .stat-label {
     font-family: 'JetBrains Mono', monospace;
-    font-size: 10px;
+    font-size: 11px; /* УВЕЛИЧЕНО с 10px */
     color: #64748b;
     text-transform: uppercase;
 }
 
 .stat-value {
     font-family: 'JetBrains Mono', monospace;
-    font-size: 11px;
+    font-size: 12px; /* УВЕЛИЧЕНО с 11px */
     font-weight: 600;
     color: #ffffff;
 }
 
+.counting {
+    position: relative;
+}
+
+.counting::after {
+    content: '';
+    position: absolute;
+    right: -6px;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 3px;
+    height: 10px;
+    background: #00ff88;
+    animation: blink 1s infinite;
+}
+
 .activity-bar {
-    width: 50px;
+    width: 60px; /* УВЕЛИЧЕНО с 50px */
     height: 6px;
     background: rgba(0, 255, 136, 0.2);
     border-radius: 3px;
@@ -2912,14 +2951,14 @@ main {
     height: 100%;
     background: linear-gradient(90deg, #00ff88, #00d970);
     border-radius: 3px;
-    width: 0%;
-    transition: width 0.3s ease;
+    animation: progress 3s infinite;
 }
 
 .card-footer {
-    padding: 12px 16px;
+    padding: 14px 18px; /* Увеличиваем */
     display: flex;
-    justify-content: center;
+    align-items: center;
+    justify-content: space-between;
     border-top: 1px solid rgba(0, 255, 136, 0.1);
     background: rgba(0, 0, 0, 0.2);
 }
@@ -2932,12 +2971,12 @@ main {
     color: #000000;
     border: none;
     border-radius: 6px;
-    padding: 8px 12px;
+    padding: 8px 12px; /* Уменьшен размер */
     font-weight: 600;
-    font-size: 12px;
+    font-size: 12px; /* Уменьшен шрифт */
     cursor: pointer;
     transition: all 0.2s;
-    white-space: nowrap;
+    white-space: nowrap; /* Предотвращает перенос текста */
 }
 
 .connect-btn:hover {
@@ -2949,6 +2988,33 @@ main {
     transform: translateY(0);
 }
 
+.network-nodes {
+    display: flex;
+    align-items: center;
+    gap: 4px; /* Уменьшен gap */
+}
+
+.node {
+    width: 6px; /* Уменьшен размер */
+    height: 6px;
+    border-radius: 50%;
+    background: rgba(100, 116, 139, 0.5);
+    transition: all 0.3s;
+}
+
+.node.active {
+    background: #00ff88;
+    box-shadow: 0 0 6px rgba(0, 255, 136, 0.6);
+    animation: pulse-node 2s infinite;
+}
+
+.connection-line {
+    width: 12px; /* Уменьшена длина */
+    height: 1px;
+    background: rgba(100, 116, 139, 0.3);
+}
+
+/* Анимации остаются прежними */
 @keyframes pulse {
     0%, 100% { opacity: 0.6; transform: scale(1); }
     50% { opacity: 1; transform: scale(1.05); }
@@ -2959,6 +3025,18 @@ main {
     50% { opacity: 0.3; }
 }
 
+@keyframes progress {
+    0% { width: 30%; }
+    50% { width: 80%; }
+    100% { width: 30%; }
+}
+
+@keyframes pulse-node {
+    0%, 100% { transform: scale(1); }
+    50% { transform: scale(1.2); }
+}
+
+/* Адаптивность для узких сайдбаров */
 @media (max-width: 300px) {
     .robinhood-testnet-card {
         max-width: 100%;
@@ -2975,82 +3053,21 @@ main {
 }
 </style>
 
-<script>
-// Функция для анализа контента гайда
-async function analyzeRobinhoodGuideContent() {
-    const guidePath = 'guides/Robinhood/robinhood-chain.html';
-    
-    try {
-        const response = await fetch(guidePath);
-        const text = await response.text();
-        const parser = new DOMParser();
-        const doc = parser.parseFromString(text, 'text/html');
-        
-        // Подсчет всех ссылок
-        const allLinks = doc.querySelectorAll('a[href]');
-        const totalLinks = allLinks.length;
-        
-        // Подсчет внешних ссылок
-        const externalLinks = Array.from(allLinks).filter(link => {
-            const href = link.getAttribute('href');
-            return href && (href.startsWith('http') || href.startsWith('//'));
-        }).length;
-        
-        // Подсчет изображений
-        const images = doc.querySelectorAll('img').length;
-        
-        // Поиск NFT коллекций (по ключевым словам)
-        const nftKeywords = ['nft', 'collection', 'opensea', 'token', 'mint', 'collectible', 'коллекция'];
-        let nftCount = 0;
-        
-        nftKeywords.forEach(keyword => {
-            const regex = new RegExp(keyword, 'gi');
-            nftCount += (text.match(regex) || []).length;
-        });
-        
-        // Обновляем интерфейс
-        document.getElementById('rh-total-links').textContent = totalLinks;
-        document.getElementById('rh-external-links').textContent = externalLinks;
-        document.getElementById('rh-images').textContent = images;
-        document.getElementById('rh-nft-count').textContent = Math.min(nftCount, 99); // Ограничиваем для читаемости
-        document.getElementById('rh-status').textContent = 'Готов';
-        
-        // Обновляем прогресс-бар
-        const progressBar = document.getElementById('rh-progress');
-        progressBar.style.width = '100%';
-        
-        // Также обновляем счетчик в tube-info
-        const linkCountElement = document.getElementById('robinhood-link-count');
-        if (linkCountElement) {
-            linkCountElement.textContent = totalLinks;
-        }
-        
-    } catch (error) {
-        console.log('Не удалось загрузить гайд:', error);
-        
-        // Показываем ошибку
-        document.getElementById('rh-total-links').textContent = 'N/A';
-        document.getElementById('rh-external-links').textContent = 'N/A';
-        document.getElementById('rh-images').textContent = 'N/A';
-        document.getElementById('rh-nft-count').textContent = 'N/A';
-        document.getElementById('rh-status').textContent = 'Ошибка';
-        
-        const linkCountElement = document.getElementById('robinhood-link-count');
-        if (linkCountElement) {
-            linkCountElement.textContent = 'N/A';
-        }
-    }
-}
-
-// Запускаем анализ при загрузке страницы
-document.addEventListener('DOMContentLoaded', () => {
-    // Небольшая задержка для плавности
-    setTimeout(analyzeRobinhoodGuideContent, 500);
-});
-</script>
-
-
-        
+                
+                
+                <div class="tube-info">
+                    <h4 class="specimen-name">Robinhood Chain Testnet</h4>
+                    <p class="specimen-data">
+                        <i class="fas fa-link"></i>
+                        <span class="link-count" id="robinhood-link-count">Подсчет...</span> ссылок
+                    </p>
+                    <button class="analyze-btn" onclick="analyzeGuide('robinhood', 'guides/Robinhood/robinhood-chain.html')">
+                        <i class="fas fa-microscope"></i> Анализировать
+                    </button>
+                </div>
+            </div>
+        </div>
+        </div>
         <!-- Лабораторный журнал -->
         <div class="lab-journal">
             <div class="journal-header">
@@ -6554,15 +6571,341 @@ async function loadHeroStateFromFirestore(uid) {
         console.log('Ошибка загрузки состояния Hero:', e);
     }
 }
-
 // Вызываем инициализацию при загрузке страницы
 document.addEventListener('DOMContentLoaded', function() {
     initHeroState();
     
-    // ... остальной ваш код DOMContentLoaded ...
+    // Инициализация всех компонентов
+    initNavigation();
+    initModals();
+    initForms();
+    initTabs();
+    initDropdowns();
+    initTooltips();
+    initScrollEffects();
+    initAnimations();
+    
+    // Инициализация функций
+    setupThemeToggle();
+    setupSearchFunctionality();
+    setupContactForm();
+    
+    // Запуск анимаций
+    startHeroAnimations();
+    
+    // Обработчики событий
+    setupEventListeners();
+    
+    console.log('Сайт полностью загружен и инициализирован');
 });
-// Добавьте в ваш <script> блок:
 
+// Функции инициализации компонентов
+function initNavigation() {
+    // Мобильное меню
+    const mobileMenuBtn = document.querySelector('.mobile-menu-btn');
+    const navMenu = document.querySelector('.nav-menu');
+    
+    if (mobileMenuBtn && navMenu) {
+        mobileMenuBtn.addEventListener('click', function() {
+            navMenu.classList.toggle('active');
+            mobileMenuBtn.classList.toggle('active');
+        });
+    }
+}
+
+function initModals() {
+    // Инициализация модальных окон
+    const modalTriggers = document.querySelectorAll('[data-modal]');
+    const modals = document.querySelectorAll('.modal');
+    const closeBtns = document.querySelectorAll('.modal-close');
+    
+    modalTriggers.forEach(trigger => {
+        trigger.addEventListener('click', function() {
+            const modalId = this.dataset.modal;
+            const modal = document.getElementById(modalId);
+            if (modal) {
+                modal.classList.add('active');
+                document.body.style.overflow = 'hidden';
+            }
+        });
+    });
+    
+    closeBtns.forEach(btn => {
+        btn.addEventListener('click', function() {
+            const modal = this.closest('.modal');
+            if (modal) {
+                modal.classList.remove('active');
+                document.body.style.overflow = '';
+            }
+        });
+    });
+    
+    // Закрытие по клику на фон
+    modals.forEach(modal => {
+        modal.addEventListener('click', function(e) {
+            if (e.target === this) {
+                this.classList.remove('active');
+                document.body.style.overflow = '';
+            }
+        });
+    });
+}
+
+function initTabs() {
+    const tabBtns = document.querySelectorAll('.tab-btn');
+    
+    tabBtns.forEach(btn => {
+        btn.addEventListener('click', function() {
+            const targetTab = this.dataset.tab;
+            const tabContainer = this.closest('.tabs');
+            
+            // Убираем активный класс со всех кнопок и контента
+            tabContainer.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+            tabContainer.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+            
+            // Добавляем активный класс
+            this.classList.add('active');
+            document.getElementById(targetTab).classList.add('active');
+        });
+    });
+}
+
+function initDropdowns() {
+    const dropdowns = document.querySelectorAll('.dropdown');
+    
+    dropdowns.forEach(dropdown => {
+        const btn = dropdown.querySelector('.dropdown-btn');
+        
+        if (btn) {
+            btn.addEventListener('click', function(e) {
+                e.stopPropagation();
+                dropdown.classList.toggle('active');
+                
+                // Закрываем другие дропдауны
+                dropdowns.forEach(other => {
+                    if (other !== dropdown) {
+                        other.classList.remove('active');
+                    }
+                });
+            });
+        }
+    });
+    
+    // Закрытие дропдаунов при клике вне их
+    document.addEventListener('click', function() {
+        dropdowns.forEach(dropdown => {
+            dropdown.classList.remove('active');
+        });
+    });
+}
+
+function initTooltips() {
+    const tooltips = document.querySelectorAll('[data-tooltip]');
+    
+    tooltips.forEach(tooltip => {
+        tooltip.classList.add('tooltip');
+    });
+}
+
+function initScrollEffects() {
+    // Плавная прокрутка для якорных ссылок
+    const anchorLinks = document.querySelectorAll('a[href^="#"]');
+    
+    anchorLinks.forEach(link => {
+        link.addEventListener('click', function(e) {
+            e.preventDefault();
+            const targetId = this.getAttribute('href');
+            const targetSection = document.querySelector(targetId);
+            
+            if (targetSection) {
+                targetSection.scrollIntoView({
+                    behavior: 'smooth',
+                    block: 'start'
+                });
+            }
+        });
+    });
+    
+    // Эффект появления элементов при скролле
+    const observeElements = document.querySelectorAll('.fade-in-up, .card, .feature-item');
+    
+    if (observeElements.length > 0) {
+        const observer = new IntersectionObserver((entries) => {
+            entries.forEach(entry => {
+                if (entry.isIntersecting) {
+                    entry.target.style.opacity = '1';
+                    entry.target.style.transform = 'translateY(0)';
+                }
+            });
+        }, {
+            threshold: 0.1,
+            rootMargin: '0px 0px -50px 0px'
+        });
+        
+        observeElements.forEach(el => {
+            el.style.opacity = '0';
+            el.style.transform = 'translateY(20px)';
+            el.style.transition = 'opacity 0.6s ease, transform 0.6s ease';
+            observer.observe(el);
+        });
+    }
+}
+
+function initAnimations() {
+    // Анимация счетчиков
+    const counters = document.querySelectorAll('.counter');
+    
+    counters.forEach(counter => {
+        const target = parseInt(counter.dataset.count || counter.textContent);
+        const duration = 2000;
+        const start = Date.now();
+        
+        const updateCounter = () => {
+            const elapsed = Date.now() - start;
+            const progress = Math.min(elapsed / duration, 1);
+            const current = Math.floor(target * progress);
+            
+            counter.textContent = current;
+            
+            if (progress < 1) {
+                requestAnimationFrame(updateCounter);
+            }
+        };
+        
+        // Запускаем анимацию когда элемент появляется в viewport
+        const observer = new IntersectionObserver((entries) => {
+            entries.forEach(entry => {
+                if (entry.isIntersecting) {
+                    updateCounter();
+                    observer.unobserve(entry.target);
+                }
+            });
+        });
+        
+        observer.observe(counter);
+    });
+}
+
+function setupThemeToggle() {
+    const themeToggle = document.querySelector('.theme-toggle');
+    
+    if (themeToggle) {
+        // Проверяем сохраненную тему
+        const savedTheme = localStorage.getItem('theme');
+        if (savedTheme) {
+            document.body.setAttribute('data-theme', savedTheme);
+        }
+        
+        themeToggle.addEventListener('click', function() {
+            const currentTheme = document.body.getAttribute('data-theme');
+            const newTheme = currentTheme === 'light' ? 'dark' : 'light';
+            
+            document.body.setAttribute('data-theme', newTheme);
+            localStorage.setItem('theme', newTheme);
+        });
+    }
+}
+
+function setupSearchFunctionality() {
+    const searchInput = document.querySelector('.search-input');
+    const searchBtn = document.querySelector('.search-btn');
+    
+    if (searchInput && searchBtn) {
+        searchBtn.addEventListener('click', performSearch);
+        searchInput.addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                performSearch();
+            }
+        });
+    }
+}
+
+function performSearch() {
+    const query = document.querySelector('.search-input').value.trim();
+    if (query) {
+        console.log('Поиск:', query);
+        // Здесь добавьте логику поиска
+    }
+}
+
+function setupContactForm() {
+    const contactForm = document.querySelector('.contact-form');
+    
+    if (contactForm) {
+        contactForm.addEventListener('submit', function(e) {
+            e.preventDefault();
+            
+            const formData = new FormData(this);
+            const data = Object.fromEntries(formData);
+            
+            // Простая валидация
+            if (!data.name || !data.email || !data.message) {
+                showAlert('Пожалуйста, заполните все поля', 'warning');
+                return;
+            }
+            
+            // Имитация отправки
+            showAlert('Сообщение отправлено!', 'success');
+            this.reset();
+        });
+    }
+}
+
+function setupEventListeners() {
+    // Обработка кнопок с loading состоянием
+    const loadingBtns = document.querySelectorAll('[data-loading]');
+    
+    loadingBtns.forEach(btn => {
+        btn.addEventListener('click', function() {
+            if (this.disabled) return;
+            
+            this.disabled = true;
+            this.innerHTML = '<span class="loading-spinner"></span> Загрузка...';
+            
+            // Имитация загрузки
+            setTimeout(() => {
+                this.disabled = false;
+                this.innerHTML = this.dataset.originalText || 'Готово';
+            }, 2000);
+        });
+        
+        // Сохраняем оригинальный текст
+        btn.dataset.originalText = btn.textContent;
+    });
+    
+    // Обработка клавиш
+    document.addEventListener('keydown', function(e) {
+        // Закрытие модалок по Escape
+        if (e.key === 'Escape') {
+            const activeModal = document.querySelector('.modal.active');
+            if (activeModal) {
+                activeModal.classList.remove('active');
+                document.body.style.overflow = '';
+            }
+        }
+    });
+}
+
+function showAlert(message, type = 'info') {
+    const alert = document.createElement('div');
+    alert.className = `alert alert-${type}`;
+    alert.textContent = message;
+    
+    document.body.appendChild(alert);
+    
+    setTimeout(() => {
+        alert.remove();
+    }, 3000);
+}
+
+function startHeroAnimations() {
+    // Запуск анимаций героя если они есть
+    const heroTitle = document.querySelector('.hero-title');
+    if (heroTitle) {
+        heroTitle.style.opacity = '1';
+        heroTitle.style.transform = 'translateY(0)';
+    }
+}
 // Функция для подсчета ссылок в гайдах
 async function countGuideLinks() {
     const guides = [
