@@ -1381,23 +1381,37 @@ window.handleRegister = async function() {
 window.logout = function() { signOut(auth); };
 
 async function loadRobinSharedData() {
-    try {
-        const itemsResp = await fetch('https://raw.githubusercontent.com/Worklaf/Worklaf/main/AirdropLab/guides/Robinhood/robin_shared_items.json?' + Date.now());
-        if (itemsResp.ok) {
-            const data = await itemsResp.json();
-            userItemsData = { items: data.items || {}, collections: data.collections || [], dappCategories: data.dappCategories || [] };
-            localStorage.setItem(USER_ITEMS_KEY, JSON.stringify(userItemsData));
-        } else { loadRobinUserItems(); }
-    } catch (e) { loadRobinUserItems(); }
+    if (isAdmin) {
+        // Просто загружаем данные из localStorage — админские данные уже синхронизированы с Firebase
+        loadRobinUserItems();
+        loadRobinEditsOverride();
+    } else {
+        try {
+            const itemsResp = await fetch('https://raw.githubusercontent.com/Worklaf/Worklaf/main/AirdropLab/guides/Robinhood/robin_shared_items.json?' + Date.now());
+            if (itemsResp.ok) {
+                const data = await itemsResp.json();
+                userItemsData = { items: data.items || {}, collections: data.collections || [], dappCategories: data.dappCategories || [] };
+                localStorage.setItem(USER_ITEMS_KEY, JSON.stringify(userItemsData));
+            } else {
+                loadRobinUserItems();
+            }
+        } catch (e) {
+            loadRobinUserItems();
+        }
 
-    try {
-        const editsResp = await fetch('https://raw.githubusercontent.com/Worklaf/Worklaf/main/AirdropLab/guides/Robinhood/robin_shared_edits.json?' + Date.now());
-        if (editsResp.ok) {
-            const data = await editsResp.json();
-            editsOverride = data.editsOverride || {};
-            localStorage.setItem(EDITS_OVERRIDE_KEY, JSON.stringify(editsOverride));
-        } else { loadRobinEditsOverride(); }
-    } catch (e) { loadRobinEditsOverride(); }
+        try {
+            const editsResp = await fetch('https://raw.githubusercontent.com/Worklaf/Worklaf/main/AirdropLab/guides/Robinhood/robin_shared_edits.json?' + Date.now());
+            if (editsResp.ok) {
+                const data = await editsResp.json();
+                editsOverride = data.editsOverride || {};
+                localStorage.setItem(EDITS_OVERRIDE_KEY, JSON.stringify(editsOverride));
+            } else {
+                loadRobinEditsOverride();
+            }
+        } catch (e) {
+            loadRobinEditsOverride();
+        }
+    }
 }
 
 let isDataLoaded = false;
@@ -1421,14 +1435,13 @@ onAuthStateChanged(auth, async (user) => {
         if (newIndicatorsUnsubscribe) { newIndicatorsUnsubscribe(); newIndicatorsUnsubscribe = null; }
     }
     
-   if (!initialAuthCheckComplete) {   // ← использовать эту переменную
-        initialAuthCheckComplete = true;  // ← сразу отмечаем
-        
-        await loadRobinSharedData();
-        await loadRobinNewIndicators();  
+   if (!initialAuthCheckComplete) {
+        initialAuthCheckComplete = true;
+        await loadRobinSharedData();  // <-- теперь с условием для админа
+        await loadRobinNewIndicators();
         await loadRobinData();
         renderRobinUserItems();
-        setTimeout(() => { updateRobinNewIndicators(); }, 100);
+        updateRobinNewIndicators();
         isDataLoaded = true;
     }
 });
@@ -2053,32 +2066,57 @@ function openRobinEditModal(link) {
 
 async function uploadConfigToGithub() {
     try {
-        saveRobinUserItems(); saveRobinEditsOverride();
-        const token = prompt('Введите ваш GitHub Personal Access Token (с правами repo).\nТокен НЕ сохраняется и используется только в этой вкладке.');
+        // Сначала сохраняем локальные изменения в Firebase
+        await saveRobinUserItems();
+        await saveRobinEditsOverride();
+        const token = prompt('Введите ваш GitHub Personal Access Token (с правами repo).');
         if (!token) return;
         showToast('Загрузка на GitHub начата...', 'info');
 
         const itemsPayload = { items: userItemsData.items || {}, collections: userItemsData.collections || [], dappCategories: userItemsData.dappCategories || [] };
         const editsPayload = { editsOverride: editsOverride || {} };
 
-        const [itemsSha, editsSha] = await Promise.all([ githubGetFileSha(GITHUB_ITEMS_PATH, token), githubGetFileSha(GITHUB_EDITS_PATH, token) ]);
+        // Получаем SHA файлов
+        const [itemsSha, editsSha] = await Promise.all([
+            githubGetFileSha(GITHUB_ITEMS_PATH, token),
+            githubGetFileSha(GITHUB_EDITS_PATH, token)
+        ]);
 
+        // Загружаем items
         const putItemsResp = await fetch(`https://api.github.com/repos/${GITHUB_OWNER}/${GITHUB_REPO}/contents/${GITHUB_ITEMS_PATH}`, {
-            method: 'PUT', headers: { 'Authorization': `Bearer ${token}`, 'Accept': 'application/vnd.github+json', 'Content-Type': 'application/json' },
-            body: JSON.stringify({ message: 'Update robin_shared_items via Admin UI', content: encodeContent(itemsPayload), branch: GITHUB_BRANCH, sha: itemsSha || undefined })
+            method: 'PUT',
+            headers: { 'Authorization': `Bearer ${token}`, 'Accept': 'application/vnd.github+json', 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                message: 'Update robin_shared_items via Admin UI',
+                content: encodeContent(itemsPayload),
+                branch: GITHUB_BRANCH,
+                sha: itemsSha || undefined
+            })
         });
-        if (!putItemsResp.ok) { const errText = await putItemsResp.text(); throw new Error(`GitHub items update failed: ${putItemsResp.status} ${errText}`); }
+        if (!putItemsResp.ok) throw new Error('GitHub items update failed');
 
+        // Загружаем edits
         const putEditsResp = await fetch(`https://api.github.com/repos/${GITHUB_OWNER}/${GITHUB_REPO}/contents/${GITHUB_EDITS_PATH}`, {
-            method: 'PUT', headers: { 'Authorization': `Bearer ${token}`, 'Accept': 'application/vnd.github+json', 'Content-Type': 'application/json' },
-            body: JSON.stringify({ message: 'Update robin_shared_edits via Admin UI', content: encodeContent(editsPayload), branch: GITHUB_BRANCH, sha: editsSha || undefined })
+            method: 'PUT',
+            headers: { 'Authorization': `Bearer ${token}`, 'Accept': 'application/vnd.github+json', 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                message: 'Update robin_shared_edits via Admin UI',
+                content: encodeContent(editsPayload),
+                branch: GITHUB_BRANCH,
+                sha: editsSha || undefined
+            })
         });
-        if (!putEditsResp.ok) { const errText = await putEditsResp.text(); throw new Error(`GitHub edits update failed: ${putEditsResp.status} ${errText}`); }
+        if (!putEditsResp.ok) throw new Error('GitHub edits update failed');
 
         showToast('Изменения загружены на GitHub!', 'success');
-        setTimeout(async () => { await loadRobinSharedData(); renderRobinUserItems(); showToast('Данные обновлены на странице!', 'info'); }, 2000);
-
-    } catch (e) { showToast('Ошибка загрузки на GitHub: ' + e.message, 'error'); }
+        setTimeout(async () => {
+            await loadRobinSharedData(); // обновить shared данные по ссылкам
+            renderRobinUserItems();
+            showToast('Данные обновлены на странице!', 'info');
+        }, 2000);
+    } catch (e) {
+        showToast('Ошибка загрузки на GitHub: ' + e.message, 'error');
+    }
 }
 
 // ===== DOM CONTENT LOADED =====
