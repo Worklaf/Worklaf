@@ -1736,7 +1736,20 @@ const SECTION_ZONE_CONFIG = {
     deploy: { type:'deploy-group', label:'новую группу деплоя' },
     dapps:  { type:'dapp-category', label:'новую категорию dApp' },
 };
+const CORE_DEPLOY_ZONES = new Set(['deploy_basic','deploy_advanced']);
 
+function isDeployZone(zoneId) {
+    if (CORE_DEPLOY_ZONES.has(zoneId)) return true;
+    const collection = userItemsData.collections.find(c => c.id === zoneId);
+    return collection?.parentZone === 'deploy';
+}
+
+function normalizeDeployTrackTypes() {
+    Object.entries(userItemsData.items || {}).forEach(([zone, list]) => {
+        if (!isDeployZone(zone) || !Array.isArray(list)) return;
+        list.forEach(item => { item.trackType = 'track-daily'; });
+    });
+}
 let userItemsData = { items: {}, collections: [], dappCategories: [] };
 let currentAddContext = null;
 
@@ -1866,7 +1879,7 @@ document.getElementById('addModalSave').addEventListener('click', async () => {
             } else if (sConfig.type === 'deploy-group') {
                 if (!title) { alert('Название обязательно!'); return; }
                 const grpId = generateId(); const grp = { id: grpId, title, parentZone: currentAddContext.sectionZone, items: [], addedAt: Date.now() };
-                userItemsData.collections.push(grp); ZONE_CONFIG[grpId] = { type: 'link-item', label: title, trackType: 'track-once track-once-info' };
+                userItemsData.collections.push(grp); ZONE_CONFIG[grpId] = { type: 'link-item', label: grp.title, trackType: 'track-daily' };
                 await saveRobinUserItems(); renderUserDeployGroup(grp); showToast('✅ Группа создана', 'success');
             }
         }
@@ -1879,6 +1892,9 @@ document.getElementById('addModalSave').addEventListener('click', async () => {
 function createUserLink(item, zone) {
     const wrapper = document.createElement('span'); wrapper.className = 'user-item-wrapper'; wrapper.dataset.userItemId = item.id; wrapper.dataset.userItemZone = zone;
     const link = document.createElement('a'); link.href = item.url; link.target = '_blank'; link.className = 'link-inline link-compact ' + item.trackType; link.dataset.id = item.id;
+	if (isDeployZone(zone)) {
+    item.trackType = 'track-daily';
+    link.className = 'link-inline link-compact track-daily';
     if (item.tooltip) link.setAttribute('data-tooltip', item.tooltip); if (item.image) link.setAttribute('data-image', item.image); link.textContent = item.title;
     wrapper.appendChild(link);
     const delBtn = document.createElement('button'); delBtn.type = 'button'; delBtn.className = 'user-item-delete admin-only'; delBtn.title = 'Удалить'; delBtn.innerHTML = '×';
@@ -1967,7 +1983,7 @@ function renderUserDeployGroup(grp) {
     card.appendChild(delTop);
     const header = document.createElement('div'); header.className = 'resource-header'; header.innerHTML = `<span class="resource-title">${grp.title}</span>`;
     const addBtn = document.createElement('button'); addBtn.type = 'button'; addBtn.className = 'add-item-btn admin-only'; addBtn.title = `Добавить в ${grp.title}`; addBtn.innerHTML = '<span class="btn-plus">+</span>';
-    addBtn.addEventListener('click', (e) => { e.stopPropagation(); currentAddContext = { zone: grp.id, config: ZONE_CONFIG[grp.id] || { type:'link-item', label: grp.title, trackType:'track-once track-once-info' } }; openModal(`Добавить: ${grp.title}`, ['fieldTitle','fieldUrl','fieldTooltip']); });
+    addBtn.addEventListener('click', (e) => { e.stopPropagation(); currentAddContext = { zone: grp.id, config: ZONE_CONFIG[grp.id] || { type:'link-item', label: grp.title, trackType:'track-daily' } }; openModal(`Добавить: ${grp.title}`, ['fieldTitle','fieldUrl','fieldTooltip']); });
     header.appendChild(addBtn); card.appendChild(header);
     const linkColl = document.createElement('div'); linkColl.className = 'link-collection'; card.appendChild(linkColl); grid.appendChild(card);
     const items = userItemsData.items[grp.id] || []; items.forEach(item => renderUserItemInZone(grp.id, item));
@@ -2005,7 +2021,15 @@ function clearAllUserItems() {
 }
 
 function renderRobinUserItems() {
-    loadRobinUserItems(); clearAllUserItems();
+	loadRobinUserItems();
+    normalizeDeployTrackTypes();
+	Object.entries(userItemsData.items || {}).forEach(([zone, list]) => {
+    if (!isDeployZone(zone)) return;
+    list.forEach(({ id }) => { if (robinData[id]?.visited) delete robinData[id].visited; });
+});
+saveRobinStats();
+    saveRobinUserItems();
+    clearAllUserItems();
     userItemsData.collections.forEach(coll => { if (!ZONE_CONFIG[coll.id]) { const isNft = coll.parentZone === 'nfts'; ZONE_CONFIG[coll.id] = { type: isNft ? 'nft-item' : 'link-item', label: coll.title, trackType: isNft ? 'track-once' : 'track-once track-once-info' }; } });
     userItemsData.dappCategories.forEach(cat => { if (!ZONE_CONFIG[cat.id]) ZONE_CONFIG[cat.id] = { type:'link-item', label: cat.title, trackType:'track-daily' }; });
     userItemsData.collections.forEach(coll => { if (coll.parentZone === 'nfts') renderUserCollection(coll); else if (coll.parentZone === 'deploy') renderUserDeployGroup(coll); });
