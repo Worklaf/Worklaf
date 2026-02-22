@@ -1284,9 +1284,24 @@ function closeLightbox() {
 
 function initLightbox() {
     document.getElementById('lightboxClose').addEventListener('click', closeLightbox);
-    document.getElementById('tempoLightboxOverlay').addEventListener('click', (e) => {
-        if (e.target === e.currentTarget) closeLightbox();
-    });
+    const lightboxContentEl = document.querySelector('.lightbox-content');
+let pointerDownInsideLightbox = false;
+
+document.addEventListener('pointerdown', (e) => {
+    pointerDownInsideLightbox = !!e.target.closest('.lightbox-content');
+}, true);
+
+document.getElementById('tempoLightboxOverlay').addEventListener('click', (e) => {
+    if (e.target === e.currentTarget && !pointerDownInsideLightbox) {
+        closeLightbox();
+    }
+});
+
+// Блокируем всплытие из содержимого lightbox
+if (lightboxContentEl) {
+    lightboxContentEl.addEventListener('click', (e) => e.stopPropagation());
+    lightboxContentEl.addEventListener('pointerdown', (e) => e.stopPropagation());
+}
     document.addEventListener('keydown', (e) => { if (e.key === 'Escape') closeLightbox(); });
     document.querySelectorAll('.link-inline[data-image]').forEach(link => {
         if (link.dataset.lightboxBound) return;
@@ -2084,8 +2099,33 @@ function closeModal() {
 }
 
 document.getElementById('addModalCancel').addEventListener('click', closeModal);
-overlayEl().addEventListener('click', (e) => { if (e.target === overlayEl()) closeModal(); });
-document.addEventListener('keydown', (e) => { if (e.key === 'Escape') { closeModal(); closeLightbox(); } });
+
+// 🔥 УЛУЧШЕННАЯ СИСТЕМА как в Robinhood
+const addModalEl = document.getElementById('addModal');
+let pointerDownInsideModal = false;
+
+// Отслеживаем где началось нажатие
+document.addEventListener('pointerdown', (e) => {
+    pointerDownInsideModal = !!e.target.closest('#addModal');
+}, true);
+
+// Закрываем только если клик реально начался на overlay
+overlayEl().addEventListener('click', (e) => {
+    if (e.target === overlayEl() && !pointerDownInsideModal) {
+        closeModal();
+    }
+});
+
+// Блокируем всплытие событий из модала
+addModalEl.addEventListener('click', (e) => e.stopPropagation());
+addModalEl.addEventListener('pointerdown', (e) => e.stopPropagation());
+
+document.addEventListener('keydown', (e) => { 
+    if (e.key === 'Escape') { 
+        closeModal(); 
+        closeLightbox(); 
+    } 
+});
 
 function normalizeImageUrl(rawUrl) {
     if (!rawUrl) return rawUrl;
