@@ -1,405 +1,244 @@
-// =====================================================
-// AUTH.JS - Система авторизации
-// =====================================================
+// Функции аутентификации
 
-import { auth, db } from './firebase.js';
-import { 
-    signInWithPopup, 
-    GoogleAuthProvider,
-    signInWithEmailAndPassword,
-    createUserWithEmailAndPassword,
-    signOut,
-    sendPasswordResetEmail,
-    updateProfile
-} from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
-
-import { 
-    doc, 
-    setDoc, 
-    getDoc,
-    serverTimestamp 
-} from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
-
-import { showToast } from './ui.js';
-import { currentUser, setCurrentUser } from './config.js';
-
-// ==========================================
-// GOOGLE SIGN IN
-// ==========================================
-
-export async function signInWithGoogle() {
-    const provider = new GoogleAuthProvider();
-    provider.addScope('profile');
-    provider.addScope('email');
-    
-    try {
-        const result = await signInWithPopup(auth, provider);
-        const user = result.user;
-        
-        console.log('✅ Google вход успешен:', user.email);
-        
-        // Создаем или обновляем профиль пользователя в Firestore
-        await createOrUpdateUserProfile(user);
-        
-        showToast('Вход выполнен успешно!', 'success');
-        return user;
-        
-    } catch (error) {
-        console.error('❌ Ошибка Google входа:', error);
-        
-        let errorMessage = 'Ошибка входа через Google';
-        
-        if (error.code === 'auth/popup-closed-by-user') {
-            errorMessage = 'Окно входа было закрыто';
-        } else if (error.code === 'auth/popup-blocked') {
-            errorMessage = 'Всплывающее окно заблокировано браузером';
-        } else if (error.code === 'auth/cancelled-popup-request') {
-            errorMessage = 'Запрос на вход был отменен';
-        }
-        
-        showToast(errorMessage, 'error');
-        throw error;
-    }
-}
-
-// ==========================================
-// EMAIL/PASSWORD SIGN IN
-// ==========================================
-
-export async function signInWithEmail(email, password) {
-    if (!email || !password) {
-        showToast('Заполните все поля', 'error');
-        return;
-    }
-    
-    if (!validateEmail(email)) {
-        showToast('Неверный формат email', 'error');
-        return;
-    }
-    
-    try {
-        const userCredential = await signInWithEmailAndPassword(auth, email, password);
-        const user = userCredential.user;
-        
-        console.log('✅ Email вход успешен:', user.email);
-        showToast('Вход выполнен успешно!', 'success');
-        
-        return user;
-        
-    } catch (error) {
-        console.error('❌ Ошибка Email входа:', error);
-        
-        let errorMessage = 'Ошибка входа';
-        
-        if (error.code === 'auth/user-not-found') {
-            errorMessage = 'Пользователь не найден';
-        } else if (error.code === 'auth/wrong-password') {
-            errorMessage = 'Неверный пароль';
-        } else if (error.code === 'auth/invalid-email') {
-            errorMessage = 'Неверный формат email';
-        } else if (error.code === 'auth/user-disabled') {
-            errorMessage = 'Аккаунт заблокирован';
-        } else if (error.code === 'auth/too-many-requests') {
-            errorMessage = 'Слишком много попыток. Попробуйте позже';
-        }
-        
-        showToast(errorMessage, 'error');
-        throw error;
-    }
-}
-
-// ==========================================
-// EMAIL/PASSWORD SIGN UP
-// ==========================================
-
-export async function signUpWithEmail(email, password, displayName) {
-    if (!email || !password) {
-        showToast('Заполните все поля', 'error');
-        return;
-    }
-    
-    if (!validateEmail(email)) {
-        showToast('Неверный формат email', 'error');
-        return;
-    }
-    
-    if (password.length < 6) {
-        showToast('Пароль должен содержать минимум 6 символов', 'error');
-        return;
-    }
-    
-    try {
-        const userCredential = await createUserWithEmailAndPassword(auth, email, password);
-        const user = userCredential.user;
-        
-        // Обновляем профиль с именем
-        if (displayName) {
-            await updateProfile(user, {
-                displayName: displayName
-            });
-        }
-        
-        console.log('✅ Регистрация успешна:', user.email);
-        
-        // Создаем профиль в Firestore
-        await createOrUpdateUserProfile(user, displayName);
-        
-        showToast('Регистрация успешна!', 'success');
-        return user;
-        
-    } catch (error) {
-        console.error('❌ Ошибка регистрации:', error);
-        
-        let errorMessage = 'Ошибка регистрации';
-        
-        if (error.code === 'auth/email-already-in-use') {
-            errorMessage = 'Email уже используется';
-        } else if (error.code === 'auth/invalid-email') {
-            errorMessage = 'Неверный формат email';
-        } else if (error.code === 'auth/weak-password') {
-            errorMessage = 'Слишком слабый пароль';
-        }
-        
-        showToast(errorMessage, 'error');
-        throw error;
-    }
-}
-
-// ==========================================
-// PASSWORD RESET
-// ==========================================
-
-export async function resetPassword(email) {
-    if (!email) {
-        showToast('Введите email', 'error');
-        return;
-    }
-    
-    if (!validateEmail(email)) {
-        showToast('Неверный формат email', 'error');
-        return;
-    }
-    
-    try {
-        await sendPasswordResetEmail(auth, email);
-        console.log('✅ Письмо для сброса пароля отправлено на:', email);
-        showToast('Письмо для сброса пароля отправлено!', 'success');
-        
-    } catch (error) {
-        console.error('❌ Ошибка сброса пароля:', error);
-        
-        let errorMessage = 'Ошибка отправки письма';
-        
-        if (error.code === 'auth/user-not-found') {
-            errorMessage = 'Пользователь не найден';
-        } else if (error.code === 'auth/invalid-email') {
-            errorMessage = 'Неверный формат email';
-        }
-        
-        showToast(errorMessage, 'error');
-        throw error;
-    }
-}
-
-// ==========================================
-// LOGOUT
-// ==========================================
-
-export async function logout() {
-    try {
-        await signOut(auth);
-        console.log('✅ Выход выполнен');
-        showToast('Вы вышли из аккаунта', 'info');
-        
-    } catch (error) {
-        console.error('❌ Ошибка выхода:', error);
-        showToast('Ошибка выхода', 'error');
-        throw error;
-    }
-}
-
-// ==========================================
-// CREATE OR UPDATE USER PROFILE
-// ==========================================
-
-async function createOrUpdateUserProfile(user, displayName = null) {
-    try {
-        const userDocRef = doc(db, "users", user.uid);
-        const userDoc = await getDoc(userDocRef);
-        
-        const userData = {
-            email: user.email,
-            displayName: displayName || user.displayName || 'Anonymous',
-            photoURL: user.photoURL || null,
-            lastLogin: serverTimestamp(),
-            updatedAt: serverTimestamp()
-        };
-        
-        if (!userDoc.exists()) {
-            // Новый пользователь
-            userData.createdAt = serverTimestamp();
-            userData.favorites = [];
-            userData.completed = [];
-            userData.arcData = {};
-            userData.isAdmin = false;
-            
-            await setDoc(userDocRef, userData);
-            console.log('✅ Создан новый профиль пользователя');
-        } else {
-            // Обновляем существующего
-            await setDoc(userDocRef, userData, { merge: true });
-            console.log('✅ Профиль пользователя обновлен');
-        }
-        
-    } catch (error) {
-        console.error('❌ Ошибка создания/обновления профиля:', error);
-    }
-}
-
-// ==========================================
-// EMAIL VALIDATION
-// ==========================================
-
-function validateEmail(email) {
-    const re = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    return re.test(email);
-}
-
-// ==========================================
-// CHECK IF USER IS ADMIN
-// ==========================================
-
-export async function checkIfAdmin(userId) {
-    try {
-        const userDocRef = doc(db, "users", userId);
-        const userDoc = await getDoc(userDocRef);
-        
-        if (userDoc.exists()) {
-            const data = userDoc.data();
-            return data.isAdmin === true;
-        }
-        
-        return false;
-        
-    } catch (error) {
-        console.error('❌ Ошибка проверки прав админа:', error);
-        return false;
-    }
-}
-
-// ==========================================
-// INIT AUTH UI
-// ==========================================
-
-export function initAuth() {
-    const loginBtn = document.getElementById('loginBtn');
-    const googleLoginBtn = document.getElementById('googleLoginBtn');
-    const signupBtn = document.getElementById('signupBtn');
-    const logoutBtn = document.getElementById('logoutBtn');
-    const forgotPasswordBtn = document.getElementById('forgotPasswordBtn');
-    
-    // Google Login
-    if (googleLoginBtn) {
-        googleLoginBtn.addEventListener('click', async () => {
-            try {
-                await signInWithGoogle();
-            } catch (error) {
-                // Error handled in signInWithGoogle
-            }
-        });
-    }
-    
-    // Email Login
-    if (loginBtn) {
-        loginBtn.addEventListener('click', async () => {
-            const email = document.getElementById('loginEmail').value.trim();
-            const password = document.getElementById('loginPassword').value;
-            
-            try {
-                await signInWithEmail(email, password);
-            } catch (error) {
-                // Error handled in signInWithEmail
-            }
-        });
-    }
-    
-    // Email Signup
-    if (signupBtn) {
-        signupBtn.addEventListener('click', async () => {
-            const email = document.getElementById('signupEmail').value.trim();
-            const password = document.getElementById('signupPassword').value;
-            const displayName = document.getElementById('signupName').value.trim();
-            
-            try {
-                await signUpWithEmail(email, password, displayName);
-            } catch (error) {
-                // Error handled in signUpWithEmail
-            }
-        });
-    }
-    
-    // Logout
-    if (logoutBtn) {
-        logoutBtn.addEventListener('click', async () => {
-            try {
-                await logout();
-            } catch (error) {
-                // Error handled in logout
-            }
-        });
-    }
-    
-    // Forgot Password
-    if (forgotPasswordBtn) {
-        forgotPasswordBtn.addEventListener('click', async () => {
-            const email = document.getElementById('loginEmail').value.trim();
-            
-            if (!email) {
-                showToast('Введите email для сброса пароля', 'error');
-                return;
-            }
-            
-            try {
-                await resetPassword(email);
-            } catch (error) {
-                // Error handled in resetPassword
-            }
-        });
-    }
-    
-    // Enter key handlers
-    const loginEmail = document.getElementById('loginEmail');
-    const loginPassword = document.getElementById('loginPassword');
-    
-    if (loginPassword) {
-        loginPassword.addEventListener('keypress', (e) => {
-            if (e.key === 'Enter') {
-                loginBtn.click();
-            }
-        });
-    }
-    
-    const signupPassword = document.getElementById('signupPassword');
-    
-    if (signupPassword) {
-        signupPassword.addEventListener('keypress', (e) => {
-            if (e.key === 'Enter') {
-                signupBtn.click();
-            }
-        });
-    }
-}
-
-// ==========================================
-// EXPORT
-// ==========================================
-
-export { 
-    signInWithGoogle,
-    signInWithEmail,
-    signUpWithEmail,
-    resetPassword,
-    logout,
-    initAuth,
-    checkIfAdmin
+// Открыть модалку входа
+window.openLoginModal = function() { 
+    document.getElementById('loginModal').classList.add('active'); 
 };
+
+// Закрыть модалку входа
+window.closeLoginModal = function() { 
+    document.getElementById('loginModal').classList.remove('active'); 
+};
+
+// Вход через Google
+window.loginGoogle = async function() { 
+    try { 
+        await signInWithPopup(auth, new GoogleAuthProvider()); 
+        closeLoginModal(); 
+        showToast('Вход: Google'); 
+    } catch(e) { 
+        showToast(e.message); 
+    } 
+};
+
+// Вход через Twitter
+window.loginTwitter = async function() { 
+    try { 
+        await signInWithPopup(auth, new TwitterAuthProvider()); 
+        closeLoginModal(); 
+        showToast('Вход: Twitter'); 
+    } catch(e) { 
+        showToast(e.message); 
+    } 
+};
+
+// Вход по email/password
+window.handleEmailAuth = async function(e) { 
+    e.preventDefault(); 
+    const email = document.getElementById('emailInput').value; 
+    const pass = document.getElementById('passInput').value; 
+    try { 
+        await signInWithEmailAndPassword(auth, email, pass); 
+        closeLoginModal(); 
+        showToast('Вход выполнен'); 
+    } catch(e) { 
+        showToast(e.message); 
+    } 
+};
+
+// Регистрация
+window.handleRegister = async function() { 
+    const email = document.getElementById('emailInput').value; 
+    const pass = document.getElementById('passInput').value; 
+    try { 
+        await createUserWithEmailAndPassword(auth, email, pass); 
+        closeLoginModal(); 
+        showToast('Аккаунт создан!'); 
+    } catch(e) { 
+        showToast(e.message); 
+    } 
+};
+
+// Выход
+window.logout = function() { 
+    signOut(auth).then(() => {
+        showToast('Вы вышли из системы');
+        localStorage.removeItem('favorites_backup');
+        localStorage.removeItem(CONFIG.STORAGE_KEY);
+        userFavorites = [];
+        userCompleted = [];
+        arcData = {};
+    }); 
+};
+
+// Сохранение данных пользователя
+async function saveUserData(user) {
+    try {
+        const userRef = doc(db, "users", user.uid);
+        const userSnap = await getDoc(userRef);
+        
+        if (!userSnap.exists()) {
+            console.log('🆕 Создание нового пользователя:', user.email);
+            await setDoc(userRef, {
+                email: user.email,
+                displayName: user.displayName || 'Аноним',
+                photoURL: user.photoURL || null,
+                firstLogin: serverTimestamp(),
+                provider: user.providerData[0]?.providerId || 'unknown',
+                lastLogin: serverTimestamp(),
+                favorites: [],
+                completed: [],
+                arcGuideStats: {}
+            });
+        } else {
+            const userData = userSnap.data();
+            const updates = { lastLogin: serverTimestamp() };
+            
+            if (!userData.firstLogin) {
+                updates.firstLogin = serverTimestamp();
+            }
+            
+            if (!userData.provider && user.providerData[0]) {
+                updates.provider = user.providerData[0].providerId;
+            }
+            
+            await updateDoc(userRef, updates);
+        }
+    } catch (e) {
+        console.error('❌ Ошибка сохранения данных пользователя:', e);
+    }
+}
+
+// Синхронизация localStorage с Firestore
+async function syncLocalStorageToFirestore(userId) {
+    try {
+        const userRef = doc(db, "users", userId);
+        const userSnap = await getDoc(userRef);
+        
+        if (!userSnap.exists()) return;
+        
+        const updates = {};
+        
+        const localFavorites = JSON.parse(localStorage.getItem(CONFIG.FAVORITES_KEY) || '[]');
+        if (localFavorites.length > 0) {
+            updates.favorites = localFavorites;
+        }
+        
+        const localCompleted = JSON.parse(localStorage.getItem(CONFIG.COMPLETED_KEY) || '[]');
+        if (localCompleted.length > 0) {
+            updates.completed = localCompleted;
+        }
+        
+        const localGuideStats = JSON.parse(localStorage.getItem(CONFIG.STORAGE_KEY) || '{}');
+        if (Object.keys(localGuideStats).length > 0) {
+            updates.arcGuideStats = localGuideStats;
+        }
+        
+        if (Object.keys(updates).length > 0) {
+            await updateDoc(userRef, updates);
+        }
+    } catch (e) {
+        console.error('❌ Ошибка синхронизации localStorage:', e);
+    }
+}
+
+// Обработчик состояния авторизации
+function setupAuthListener() {
+    onAuthStateChanged(auth, async function(user) {
+        const now = new Date().toISOString();
+
+        if (user) {
+            currentUser = user;
+            await saveUserData(user);
+            await syncLocalStorageToFirestore(user.uid);
+            
+            document.getElementById('generalFeedbackPanel').classList.remove('hidden');
+            initFeedbacksListener(user.uid);
+
+            if (user.uid === CONFIG.ADMIN_UID) {
+                activateAdminMode();
+            }
+
+            try {
+                const userRef = doc(db, "users", user.uid);
+                const userDoc = await getDoc(userRef);
+
+                const userData = {
+                    email: user.email,
+                    displayName: user.displayName,
+                    photoURL: user.photoURL,
+                    lastLogin: now
+                };
+                
+                await loadHeroStateFromFirestore(user.uid);
+                
+                if (userDoc.exists()) {
+                    await updateDoc(userRef, userData);
+                } else {
+                    await setDoc(userRef, { ...userData, firstLogin: now });
+                }
+            } catch (e) {
+                console.error('Error:', e);
+            }
+
+            document.getElementById('loggedOutView').classList.add('hidden');
+            document.getElementById('loggedInView').classList.remove('hidden');
+            document.getElementById('guestWarning').classList.add('hidden');
+
+            document.getElementById('userAvatar').src =
+                user.photoURL ||
+                'https://ui-avatars.com/api/?name=' + (user.email || 'User') + '&background=random';
+
+            document.getElementById('userName').textContent =
+                user.displayName || user.email.split('@')[0];
+
+            const userRef = doc(db, "users", user.uid);
+            const userDoc = await getDoc(userRef);
+
+            if (userDoc.exists()) {
+                const data = userDoc.data();
+                userFavorites = data.favorites || [];
+                userCompleted = data.completed || [];
+
+                if (data.arcGuideStats) {
+                    arcData = { ...arcData, ...data.arcGuideStats };
+                    localStorage.setItem(CONFIG.STORAGE_KEY, JSON.stringify(arcData));
+                }
+            } else {
+                await setDoc(userRef, { favorites: [], completed: [], arcGuideStats: {} });
+            }
+
+            applyFilters();
+            initUserSync(user.uid);
+            initNotificationsListener(user.uid);
+        } else {
+            currentUser = null;
+            userFavorites = [];
+            userCompleted = [];
+
+            document.getElementById('generalFeedbackPanel').classList.add('hidden');
+
+            if (notificationsUnsubscribe) {
+                notificationsUnsubscribe();
+                notificationsUnsubscribe = null;
+            }
+            if (adminFeedbacksUnsubscribe) {
+                adminFeedbacksUnsubscribe();
+                adminFeedbacksUnsubscribe = null;
+            }
+
+            notifications = [];
+            unreadNotificationsCount = 0;
+            updateNotificationBadge();
+
+            document.getElementById('loggedOutView').classList.remove('hidden');
+            document.getElementById('loggedInView').classList.add('hidden');
+            document.getElementById('guestWarning').classList.remove('hidden');
+
+            arcData = JSON.parse(localStorage.getItem(CONFIG.STORAGE_KEY)) || [];
+            userCompleted = JSON.parse(localStorage.getItem(CONFIG.COMPLETED_KEY) || []);
+
+            applyFilters();
+        }
+    });
+}
