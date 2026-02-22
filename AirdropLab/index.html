@@ -3495,31 +3495,43 @@ let currentSortType = 'latest';
         });
     }
 
-    // ✅ НОВОЕ: Закрытие модалок по клику вне области
-    const modalConfigs = [
-        { id: 'detailModal', closeFn: window.closeDetailModal },
-        { id: 'loginModal', closeFn: window.closeLoginModal },
-        { id: 'addModal', closeFn: window.closeAddModal },
-        { id: 'activityModal', closeFn: window.closeActivityModal },
-        { id: 'notificationsModal', closeFn: window.closeNotificationsModal },
-        { id: 'feedbackModal', closeFn: window.closeFeedbackModal },
-        { id: 'feedbackListModal', closeFn: window.closeFeedbackListModal },
-        { id: 'promptModal', closeFn: window.closePromptModal },
-        { id: 'deletedProjectsModal', closeFn: window.closeDeletedProjectsModal },
-        { id: 'imageModal', closeFn: window.closeImageModal }
-    ];
+    // 🔥 УЛУЧШЕННАЯ СИСТЕМА закрытия модалок как в Robinhood
+const modalConfigs = [
+    { id: 'detailModal', contentSelector: '.modal-content', closeFn: window.closeDetailModal },
+    { id: 'loginModal', contentSelector: '.modal-content', closeFn: window.closeLoginModal },
+    { id: 'addModal', contentSelector: '.modal-content', closeFn: window.closeAddModal },
+    { id: 'activityModal', contentSelector: '.modal-content', closeFn: window.closeActivityModal },
+    { id: 'notificationsModal', contentSelector: '.modal-content', closeFn: window.closeNotificationsModal },
+    { id: 'feedbackModal', contentSelector: '.modal-content', closeFn: window.closeFeedbackModal },
+    { id: 'feedbackListModal', contentSelector: '.modal-content', closeFn: window.closeFeedbackListModal },
+    { id: 'promptModal', contentSelector: '.modal-content', closeFn: window.closePromptModal },
+    { id: 'deletedProjectsModal', contentSelector: '.modal-content', closeFn: window.closeDeletedProjectsModal },
+    { id: 'imageModal', contentSelector: '.image-modal-content', closeFn: window.closeImageModal }
+];
 
-    modalConfigs.forEach(config => {
-        const modalElement = document.getElementById(config.id);
-        if (modalElement) {
-            modalElement.addEventListener('click', function(e) {
-                // Проверяем, что клик был именно по фону, а не по содержимому
-                if (e.target === this) {
-                    config.closeFn();
-                }
-            });
-        }
-    });
+modalConfigs.forEach(config => {
+    const modalElement = document.getElementById(config.id);
+    const contentElement = modalElement ? modalElement.querySelector(config.contentSelector) : null;
+    
+    if (modalElement && contentElement) {
+        let pointerDownInsideModal = false;
+        
+        // Отслеживаем где началось нажатие
+        document.addEventListener('pointerdown', (e) => {
+            pointerDownInsideModal = !!e.target.closest(`#${config.id} ${config.contentSelector}`);
+        }, true);
+        
+        // Закрываем только если клик реально начался на overlay
+        modalElement.addEventListener('click', (e) => {
+            if (e.target === modalElement && !pointerDownInsideModal) {
+                config.closeFn();
+            }
+        });
+        
+        // Блокируем всплытие событий из содержимого модала
+        contentElement.addEventListener('click', (e) => e.stopPropagation());
+        contentElement.addEventListener('pointerdown', (e) => e.stopPropagation());
+    }
 });
         function formatClickDate(dateString) {
             if (!dateString) return null;
