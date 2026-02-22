@@ -6567,10 +6567,11 @@ function initModals() {
     const modalTriggers = document.querySelectorAll('[data-modal]');
     const modals = document.querySelectorAll('.modal');
     const closeBtns = document.querySelectorAll('.modal-close');
-
-    // 👉 Открытие модалки
+    
+    // Открытие модальных окон
     modalTriggers.forEach(trigger => {
-        trigger.addEventListener('click', function () {
+        trigger.addEventListener('click', function(e) {
+            e.preventDefault();
             const modalId = this.dataset.modal;
             const modal = document.getElementById(modalId);
             if (modal) {
@@ -6579,10 +6580,10 @@ function initModals() {
             }
         });
     });
-
-    // 👉 Закрытие по кнопке-кресту
+    
+    // Закрытие по кнопке закрытия
     closeBtns.forEach(btn => {
-        btn.addEventListener('click', function () {
+        btn.addEventListener('click', function() {
             const modal = this.closest('.modal');
             if (modal) {
                 modal.classList.remove('active');
@@ -6590,20 +6591,34 @@ function initModals() {
             }
         });
     });
-
-    // 👉 Закрытие по клику на подложку (именно click, а не mouseup)
+    
+    // ✅ ПРАВИЛЬНОЕ ЗАКРЫТИЕ: учитывает выделение текста
     modals.forEach(modal => {
-        modal.addEventListener('click', function (e) {
-            // Проверяем, что именно кликнули по самому фону, а не по контенту
-            if (e.target === this) {
+        let mouseDownTarget = null;
+        
+        // Запоминаем элемент, на котором была нажата мышка
+        modal.addEventListener('mousedown', function(e) {
+            mouseDownTarget = e.target;
+        });
+        
+        // Закрываем только если mousedown И mouseup были на фоне модалки
+        modal.addEventListener('mouseup', function(e) {
+            // Проверяем: и нажатие, и отпускание были на фоне (this)
+            if (mouseDownTarget === this && e.target === this) {
                 this.classList.remove('active');
                 document.body.style.overflow = '';
             }
+            mouseDownTarget = null; // Сбрасываем
+        });
+        
+        // ✅ Сброс при уходе мышки за пределы модалки
+        modal.addEventListener('mouseleave', function() {
+            mouseDownTarget = null;
         });
     });
-
-    // 👉 Закрытие по клавише Escape
-    document.addEventListener('keydown', function (e) {
+    
+    // Закрытие по Escape
+    document.addEventListener('keydown', function(e) {
         if (e.key === 'Escape') {
             const activeModal = document.querySelector('.modal.active');
             if (activeModal) {
