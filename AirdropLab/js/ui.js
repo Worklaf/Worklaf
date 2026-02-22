@@ -1,7 +1,107 @@
 // =====================================================
 // UI.JS - Рендеринг интерфейса, модалки, фильтры
 // =====================================================
+// ============================================
+// UI.JS - ДОПОЛНЕНИЯ
+// ============================================
 
+import { 
+    parseRichContent,
+    formatTimeAgo 
+} from './utils.js';
+
+import {
+    currentEditingActivities,
+    editingActivityId,
+    setEditingActivityId
+} from './config.js';
+
+// ✅ Рендеринг списка активностей (админ)
+export function renderActivitiesAdminList() {
+    const container = document.getElementById('activitiesListAdmin');
+    
+    if (currentEditingActivities.length === 0) {
+        container.innerHTML = '<p class="text-slate-500 text-sm italic text-center py-4">Активности еще не добавлены.</p>';
+        return;
+    }
+    
+    container.innerHTML = currentEditingActivities.map(act => {
+        const actDate = act.date ? formatDateForDisplay(act.date) : '';
+        const actCats = act.categories ? act.categories.join(', ') : '';
+        
+        return `
+            <div class="activity-item-admin">
+                <div>
+                    <div class="font-bold text-white">${act.title}</div>
+                    <div class="text-xs text-slate-400">
+                        ${actDate ? actDate + ' • ' : ''}${actCats}
+                    </div>
+                </div>
+                <div class="flex gap-2">
+                    <button onclick="openActivityEditor('${act.id}')" 
+                            class="text-blue-400 hover:text-blue-300 p-1">
+                        <i class="fas fa-edit"></i>
+                    </button>
+                    <button onclick="deleteActivityFromList('${act.id}')" 
+                            class="text-red-400 hover:text-red-300 p-1">
+                        <i class="fas fa-trash"></i>
+                    </button>
+                </div>
+            </div>
+        `;
+    }).join('');
+}
+
+// ✅ Удаление активности из списка
+window.deleteActivityFromList = function(actId) {
+    const index = currentEditingActivities.findIndex(a => a.id === actId);
+    if (index !== -1) {
+        currentEditingActivities.splice(index, 1);
+        renderActivitiesAdminList();
+    }
+};
+
+// ✅ Открытие редактора активности
+window.openActivityEditor = function(actId = null) {
+    setEditingActivityId(actId);
+    
+    const modal = document.getElementById('activityModal');
+    const title = document.getElementById('activityModalTitle');
+    const deleteBtn = document.getElementById('deleteActivityBtn');
+    
+    title.textContent = actId ? 'Редактировать активность' : 'Новая активность';
+    deleteBtn.classList.toggle('hidden', !actId);
+    
+    // Очищаем форму
+    document.getElementById('actName').value = '';
+    document.getElementById('actDate').value = '';
+    document.getElementById('actRichDesc').value = '';
+    
+    // Если редактирование - загружаем данные
+    if (actId) {
+        const act = currentEditingActivities.find(a => a.id === actId);
+        if (act) {
+            document.getElementById('actName').value = act.title;
+            document.getElementById('actDate').value = act.date || '';
+            document.getElementById('actRichDesc').value = act.description || '';
+            
+            // Загружаем категории
+            if (act.categories) {
+                document.querySelectorAll('.act-cat-checkbox').forEach(cb => {
+                    cb.checked = act.categories.includes(cb.value);
+                });
+            }
+        }
+    }
+    
+    modal.classList.add('active');
+};
+
+// ✅ Закрытие редактора активности
+window.closeActivityModal = function() {
+    document.getElementById('activityModal').classList.remove('active');
+    setEditingActivityId(null);
+};
 import { 
     projects, 
     currentUser,
