@@ -1331,30 +1331,41 @@ function updateAllTranslations() {
             el.textContent = translation;
         }
     });
-    
+
     // Update document language
     document.documentElement.lang = currentLanguage;
-    
+
+    // Скрываем ВСЕ tooltips (глобально)
+    document.querySelectorAll('.floating-tooltip').forEach(tooltip => {
+        tooltip.classList.remove('visible');
+    });
+
+    // Сбрасываем активный tooltip, чтобы он перерисовался при следующем наведении
+    if (typeof tooltipEl !== 'undefined' && tooltipEl) {
+        tooltipEl.classList.remove('visible');
+    }
+    activeTooltipTarget = null;
+
     // Update language toggle button text
     const toggleText = document.getElementById('languageToggleText');
     if (toggleText) {
         toggleText.textContent = currentLanguage === 'en' ? 'Русский' : 'English';
     }
-    
+
     // Update theme button text
     const themeBtn = document.getElementById('themeToggleBtn');
     if (themeBtn) {
         const isLight = document.body.classList.contains('light-theme');
         themeBtn.innerHTML = `<i class="fas fa-${isLight ? 'moon' : 'sun'}"></i> <span data-i18n="${isLight ? 'dark_theme' : 'light_theme'}">${getTranslation(isLight ? 'dark_theme' : 'light_theme')}</span>`;
     }
-    
+
     // Update badges button text
     const badgesBtn = document.getElementById('toggleBadgesBtn');
     if (badgesBtn) {
         const hidden = getBadgeHiddenState();
         badgesBtn.textContent = getTranslation(hidden ? 'show_badges' : 'hide_badges');
     }
-    
+
     // Update legend toggle
     const legendToggle = document.getElementById('legendToggle');
     if (legendToggle) {
@@ -1364,7 +1375,7 @@ function updateAllTranslations() {
             legendToggle.innerHTML = collapsed ? getTranslation('show_legend') : getTranslation('hide_legend');
         }
     }
-    
+
     // Update edit mode button
     const editBtn = document.getElementById('editModeBtn');
     if (editBtn) {
@@ -1698,10 +1709,28 @@ function positionTooltip(target) {
     tooltipEl.style.left = left + 'px'; tooltipEl.style.top = top + 'px';
 }
 
+// Найди функцию showTooltip и замени её на:
+
+// ===== TOOLTIP LANGUAGE AWARE =====
 function showTooltip(e) {
     const target = e.target.closest('[data-tooltip]');
     if (!target) return;
-    const text = target.getAttribute('data-tooltip'); const imageUrl = target.getAttribute('data-image');
+    
+    // Получаем текст на выбранном языке
+    let text = target.getAttribute('data-tooltip');
+    const imageUrl = target.getAttribute('data-image');
+    
+    // Проверяем есть ли переводы для обоих языков
+    const descEn = target.getAttribute('data-desc-en');
+    const descRu = target.getAttribute('data-desc-ru');
+    
+    // Используем соответствующий язык
+    if (currentLanguage === 'ru' && descRu) {
+        text = descRu;
+    } else if (currentLanguage === 'en' && descEn) {
+        text = descEn;
+    }
+    
     if (!text && !imageUrl) return;
     ensureTooltipElement(); activeTooltipTarget = target;
     if (imageUrl) {
