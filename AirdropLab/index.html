@@ -6567,50 +6567,74 @@ function initModals() {
     const modalTriggers = document.querySelectorAll('[data-modal]');
     const modals = document.querySelectorAll('.modal');
     const closeBtns = document.querySelectorAll('.modal-close');
-    
-    // Открытие модальных окон
+
+    const openModal = modal => {
+        modal.classList.add('active');
+        document.body.style.overflow = 'hidden';
+    };
+
+    const closeModal = modal => {
+        modal.classList.remove('active');
+        document.body.style.overflow = '';
+    };
+
+    // Открытие
     modalTriggers.forEach(trigger => {
-        trigger.addEventListener('click', function(e) {
+        trigger.addEventListener('click', e => {
             e.preventDefault();
-            const modalId = this.dataset.modal;
-            const modal = document.getElementById(modalId);
-            if (modal) {
-                modal.classList.add('active');
-                document.body.style.overflow = 'hidden';
-            }
+            const modal = document.getElementById(trigger.dataset.modal);
+            if (modal) openModal(modal);
         });
     });
-    
-    // Закрытие по кнопке закрытия
+
+    // Закрытие по кнопке
     closeBtns.forEach(btn => {
-        btn.addEventListener('click', function() {
-            const modal = this.closest('.modal');
-            if (modal) {
-                modal.classList.remove('active');
-                document.body.style.overflow = '';
-            }
+        btn.addEventListener('click', () => {
+            const modal = btn.closest('.modal');
+            if (modal) closeModal(modal);
         });
     });
-    
-    // ✅ ПРАВИЛЬНОЕ ЗАКРЫТИЕ: через click вместо mouseup
+
+    // Закрытие по клику на фон с учётом выделений
     modals.forEach(modal => {
-        modal.addEventListener('click', function(e) {
-            // Закрываем только если клик был ТОЧНО на фоне модалки
-            if (e.target === this) {
-                this.classList.remove('active');
-                document.body.style.overflow = '';
+        let pointerStartedOnOverlay = false;
+
+        modal.addEventListener('pointerdown', event => {
+            pointerStartedOnOverlay = (event.target === modal);
+        });
+
+        modal.addEventListener('pointerup', event => {
+            const selection = window.getSelection();
+            const hasTextSelection =
+                selection &&
+                selection.type === 'Range' &&
+                selection.toString().trim().length > 0;
+
+            if (
+                pointerStartedOnOverlay &&
+                event.target === modal &&
+                !hasTextSelection
+            ) {
+                closeModal(modal);
             }
+
+            pointerStartedOnOverlay = false;
+        });
+
+        modal.addEventListener('pointerleave', () => {
+            pointerStartedOnOverlay = false;
+        });
+
+        modal.addEventListener('pointercancel', () => {
+            pointerStartedOnOverlay = false;
         });
     });
-    
+
     // Закрытие по Escape
-    document.addEventListener('keydown', function(e) {
-        if (e.key === 'Escape') {
+    document.addEventListener('keydown', event => {
+        if (event.key === 'Escape') {
             const activeModal = document.querySelector('.modal.active');
-            if (activeModal) {
-                activeModal.classList.remove('active');
-                document.body.style.overflow = '';
-            }
+            if (activeModal) closeModal(activeModal);
         }
     });
 }
