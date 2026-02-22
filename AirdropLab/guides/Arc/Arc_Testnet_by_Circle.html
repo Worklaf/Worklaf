@@ -1511,19 +1511,25 @@ function closeLightbox() {
 
 function initLightbox() {
     document.getElementById('lightboxClose').addEventListener('click', closeLightbox);
-    document.getElementById('lightboxOverlay').addEventListener('click', (e) => {
-    if (e.target === e.currentTarget) closeLightbox();
-});
+    const lightboxContentEl = document.querySelector('.lightbox-content');
+let pointerDownInsideLightbox = false;
 
-// Защищаем содержимое lightbox от случайного закрытия
-document.getElementById('lightboxOverlay').addEventListener('DOMContentLoaded', () => {
-    const lightboxContent = document.querySelector('.lightbox-content');
-    if (lightboxContent) {
-        lightboxContent.addEventListener('click', (e) => {
-            e.stopPropagation();
-        });
+document.addEventListener('pointerdown', (e) => {
+    pointerDownInsideLightbox = !!e.target.closest('.lightbox-content');
+}, true);
+
+document.getElementById('lightboxOverlay').addEventListener('click', (e) => {
+    if (e.target === e.currentTarget && !pointerDownInsideLightbox) {
+        closeLightbox();
     }
 });
+
+// Блокируем всплытие из содержимого lightbox
+if (lightboxContentEl) {
+    lightboxContentEl.addEventListener('click', (e) => e.stopPropagation());
+    lightboxContentEl.addEventListener('pointerdown', (e) => e.stopPropagation());
+}
+
     document.addEventListener('keydown', (e) => { if (e.key === 'Escape') closeLightbox(); });
     document.querySelectorAll('.link-inline[data-image]').forEach(link => {
         if (link.dataset.lightboxBound) return;
@@ -2455,18 +2461,31 @@ function closeModal() {
 
 document.getElementById('addModalCancel').addEventListener('click', closeModal);
 
-// Улучшенная система закрытия модала
-overlayEl().addEventListener('click', (e) => { 
-    // Закрываем только если клик был точно по затемненному фону
-    if (e.target === overlayEl()) {
+// 🔥 УЛУЧШЕННАЯ СИСТЕМА как в Robinhood
+const addModalEl = document.getElementById('addModal');
+let pointerDownInsideModal = false;
+
+// Отслеживаем где началось нажатие
+document.addEventListener('pointerdown', (e) => {
+    pointerDownInsideModal = !!e.target.closest('#addModal');
+}, true);
+
+// Закрываем только если клик реально начался на overlay
+overlayEl().addEventListener('click', (e) => {
+    if (e.target === overlayEl() && !pointerDownInsideModal) {
         closeModal();
     }
 });
 
-// Предотвращаем закрытие при взаимодействии с содержимым модала
-document.getElementById('addModal').addEventListener('click', (e) => {
-    // Останавливаем всплытие события от содержимого к overlay
-    e.stopPropagation();
+// Блокируем всплытие событий из модала
+addModalEl.addEventListener('click', (e) => e.stopPropagation());
+addModalEl.addEventListener('pointerdown', (e) => e.stopPropagation());
+
+document.addEventListener('keydown', (e) => { 
+    if (e.key === 'Escape') { 
+        closeModal(); 
+        closeLightbox(); 
+    } 
 });
 
 // Дополнительная защита для полей ввода
