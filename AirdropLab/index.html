@@ -6567,74 +6567,62 @@ function initModals() {
     const modalTriggers = document.querySelectorAll('[data-modal]');
     const modals = document.querySelectorAll('.modal');
     const closeBtns = document.querySelectorAll('.modal-close');
-
-    const openModal = modal => {
-        modal.classList.add('active');
-        document.body.style.overflow = 'hidden';
-    };
-
-    const closeModal = modal => {
-        modal.classList.remove('active');
-        document.body.style.overflow = '';
-    };
-
-    // Открытие
+    
+    // Открытие модальных окон
     modalTriggers.forEach(trigger => {
-        trigger.addEventListener('click', e => {
+        trigger.addEventListener('click', function(e) {
             e.preventDefault();
-            const modal = document.getElementById(trigger.dataset.modal);
-            if (modal) openModal(modal);
-        });
-    });
-
-    // Закрытие по кнопке
-    closeBtns.forEach(btn => {
-        btn.addEventListener('click', () => {
-            const modal = btn.closest('.modal');
-            if (modal) closeModal(modal);
-        });
-    });
-
-    // Закрытие по клику на фон с учётом выделений
-    modals.forEach(modal => {
-        let pointerStartedOnOverlay = false;
-
-        modal.addEventListener('pointerdown', event => {
-            pointerStartedOnOverlay = (event.target === modal);
-        });
-
-        modal.addEventListener('pointerup', event => {
-            const selection = window.getSelection();
-            const hasTextSelection =
-                selection &&
-                selection.type === 'Range' &&
-                selection.toString().trim().length > 0;
-
-            if (
-                pointerStartedOnOverlay &&
-                event.target === modal &&
-                !hasTextSelection
-            ) {
-                closeModal(modal);
+            const modalId = this.dataset.modal;
+            const modal = document.getElementById(modalId);
+            if (modal) {
+                modal.classList.add('active');
+                document.body.style.overflow = 'hidden';
             }
-
-            pointerStartedOnOverlay = false;
-        });
-
-        modal.addEventListener('pointerleave', () => {
-            pointerStartedOnOverlay = false;
-        });
-
-        modal.addEventListener('pointercancel', () => {
-            pointerStartedOnOverlay = false;
         });
     });
-
+    
+    // Закрытие по кнопке закрытия
+    closeBtns.forEach(btn => {
+        btn.addEventListener('click', function() {
+            const modal = this.closest('.modal');
+            if (modal) {
+                modal.classList.remove('active');
+                document.body.style.overflow = '';
+            }
+        });
+    });
+    
+    // ✅ ЗАКРЫТИЕ ПО ФОНУ (метод Robinhood)
+    modals.forEach(modal => {
+        let pointerDownTarget = null;
+        
+        // Запоминаем, где началось нажатие
+        modal.addEventListener('pointerdown', function(e) {
+            pointerDownTarget = e.target;
+        });
+        
+        // При отпускании проверяем: начало и конец на фоне?
+        modal.addEventListener('pointerup', function(e) {
+            // Закрываем только если:
+            // 1. Нажатие началось на фоне модалки
+            // 2. Отпускание тоже на фоне модалки
+            if (pointerDownTarget === this && e.target === this) {
+                this.classList.remove('active');
+                document.body.style.overflow = '';
+            }
+            // Сбрасываем для следующего клика
+            pointerDownTarget = null;
+        });
+    });
+    
     // Закрытие по Escape
-    document.addEventListener('keydown', event => {
-        if (event.key === 'Escape') {
+    document.addEventListener('keydown', function(e) {
+        if (e.key === 'Escape') {
             const activeModal = document.querySelector('.modal.active');
-            if (activeModal) closeModal(activeModal);
+            if (activeModal) {
+                activeModal.classList.remove('active');
+                document.body.style.overflow = '';
+            }
         }
     });
 }
