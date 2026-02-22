@@ -6577,11 +6577,14 @@ function initModals() {
             if (modal) {
                 modal.classList.add('active');
                 document.body.style.overflow = 'hidden';
+                
+                // ✅ Навешиваем события ПОСЛЕ открытия
+                setupModalClose(modal);
             }
         });
     });
     
-    // Закрытие по кнопке закрытия
+    // Закрытие по кнопке
     closeBtns.forEach(btn => {
         btn.addEventListener('click', function() {
             const modal = this.closest('.modal');
@@ -6592,23 +6595,30 @@ function initModals() {
         });
     });
     
-    // ✅ ПРАВИЛЬНОЕ ЗАКРЫТИЕ: через pointerdown / pointerup
-    modals.forEach(modal => {
+    // ✅ ФУНКЦИЯ ДЛЯ НАВЕШИВАНИЯ СОБЫТИЙ
+    function setupModalClose(modal) {
+        // Проверяем, не навешены ли уже события
+        if (modal.dataset.closeSetup) return;
+        modal.dataset.closeSetup = 'true';
+        
+        let pointerDownTarget = null;
+        
         modal.addEventListener('pointerdown', function(e) {
-            console.log('🔵 pointerdown:', e.target);
+            pointerDownTarget = e.target;
         });
         
         modal.addEventListener('pointerup', function(e) {
-            console.log('🟢 pointerup:', e.target);
-            
-            if (e.target === this) {
+            if (pointerDownTarget === this && e.target === this) {
                 this.classList.remove('active');
                 document.body.style.overflow = '';
-            } else {
-                console.log('❌ НЕ ЗАКРЫВАЕМ');
             }
+            pointerDownTarget = null;
         });
-    });
+        
+        modal.addEventListener('pointercancel', function() {
+            pointerDownTarget = null;
+        });
+    }
     
     // Закрытие по Escape
     document.addEventListener('keydown', function(e) {
