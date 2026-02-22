@@ -1,15 +1,35 @@
+// =====================================================
+// FIREBASE.JS - Вся работа с Firebase
+// =====================================================
+
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
 import { getAuth, signInWithPopup, GoogleAuthProvider, TwitterAuthProvider, signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
 import { getFirestore, collection, doc, setDoc, getDoc, getDocs, updateDoc, deleteDoc, onSnapshot, query, where, orderBy, addDoc, serverTimestamp, arrayUnion } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
-import { FIREBASE_CONFIG, ADMIN_UID, setCurrentUser, setUserFavorites, setUserCompleted, setArcData, setIsAdminMode } from './config.js';
 
+import { 
+    FIREBASE_CONFIG, 
+    ADMIN_UID, 
+    STORAGE_KEY,
+    setCurrentUser, 
+    setUserFavorites, 
+    setUserCompleted, 
+    setArcData, 
+    setIsAdminMode,
+    arcData,
+    currentUser
+} from './config.js';
+
+import { showToast } from './ui.js';
+
+// Инициализация Firebase
 const app = initializeApp(FIREBASE_CONFIG);
 export const auth = getAuth(app);
 export const db = getFirestore(app);
 
-// ==================
+// ==========================================
 // AUTH FUNCTIONS
-// ==================
+// ==========================================
+
 export function openLoginModal() {
     document.getElementById('loginModal').classList.add('active');
 }
@@ -74,9 +94,111 @@ export function logout() {
     });
 }
 
-// ==================
-// FIRESTORE FUNCTIONS
-// ==================
+// ==========================================
+// USER DATA FUNCTIONS
+// ==========================================
+
+export async function saveUserData(user) {
+    try {
+        const userRef = doc(db, "users", user.uid);
+        const userSnap = await getDoc(userRef);
+        
+        if (!userSnap.exists()) {
+            console.log('🆕 Создание нового пользователя:', user.email);
+            await setDoc(userRef, {
+                email: user.email,
+                displayName: user.displayName || 'Аноним',
+                photoURL: user.photoURL || null,
+                firstLogin: serverTimestamp(),
+                provider: user.providerData[0]?.providerId || 'unknown',
+                lastLogin: serverTimestamp(),
+                favorites: [],
+                completed: [],
+                arcGuideStats: {}
+            });
+        } else {
+            const userData = userSnap.data();
+            const updates = {
+                lastLogin: serverTimestamp()
+            };
+            
+            if (!userData.firstLogin) {
+                console.log('⚠️ Добавление firstLogin');
+                updates.firstLogin = serverTimestamp();
+            }
+            
+            if (!userData.provider && user.providerData[0]) {
+                console.log('⚠️ Добавление provider:', user.providerData[0].providerId);
+                updates.provider = user.providerData[0].providerId;
+            }
+            
+            await updateDoc(userRef, updates);
+        }
+    } catch (e) {
+        console.error('❌ Ошибка сохранения пользователя:', e);
+    }
+}
+
+export async function syncLocalStorageToFirestore(userId) {
+    try {
+        const userRef = doc(db, "users", userId);
+        const userSnap = await getDoc(userRef);
+        
+        if (!userSnap.exists()) return;
+        
+        const updates = {};
+        
+        const localFavorites = JSON.parse(localStorage.getItem('favorites_backup') || '[]');
+        if (localFavorites.length > 0) {
+            console.log('💾 Синхронизация избранного:', localFavorites.length);
+            updates.favorites = localFavorites;
+        }
+        
+        const localCompleted = JSON.parse(localStorage.getItem('arc_completed_v1') || '[]');
+        if (localCompleted.length > 0) {
+            console.log('💾 Синхронизация завершённых:', localCompleted.length);
+            updates.completed = localCompleted;
+        }
+        
+        const localGuideStats = JSON.parse(localStorage.getItem(STORAGE_KEY) || '{}');
+        if (Object.keys(localGuideStats).length > 0) {
+            console.log('💾 Синхронизация статистики гайдов:', Object.keys(localGuideStats).length);
+            updates.arcGuideStats = localGuideStats;
+        }
+        
+        if (Object.keys(updates).length > 0) {
+            await updateDoc(userRef, updates);
+            console.log('✅ Данные синхронизированы');
+        }
+    } catch (e) {
+        console.error('❌ Ошибка синхронизации:', e);
+    }
+}
+
+export async function loadHeroStateFromFirestore(uid) {
+    try {
+        const userRef = doc(db, "users", uid);
+        const userDoc = await getDoc(userRef);
+        
+        if (userDoc.exists()) {
+            const data = userDoc.data();
+            if (data.heroCollapsed !== undefined) {
+                localStorage.setItem('heroCollapsed', data.heroCollapsed);
+                
+                if (data.heroCollapsed) {
+                    window.collapseHero(false);
+                }
+            }
+        }
+    } catch (e) {
+        console.log('Ошибка загрузки Hero:', e);
+    }
+}
+
+// ==========================================
+// FIRESTORE OPERATIONS
+// ==========================================
+
 export async function saveProject(projectData) {
     try {
         const id = projectData.id;
@@ -101,7 +223,7 @@ export async function deleteProjectFromFirestore(id) {
     }
 }
 
-export async function loadProjectsFromFirestore(callback) {
+export function loadProjectsFromFirestore(callback) {
     return onSnapshot(collection(db, "projects"), (snapshot) => {
         const projects = [];
         snapshot.forEach((docSnap) => {
@@ -111,79 +233,16 @@ export async function loadProjectsFromFirestore(callback) {
     });
 }
 
-export async function saveUserData(user) {
-    try {
-        const userRef = doc(db, "users", user.uid);
-        const userSnap = await getDoc(userRef);
-        
-        if (!userSnap.exists()) {
-            await setDoc(userRef, {
-                email: user.email,
-                displayName: user.displayName || 'Аноним',
-                photoURL: user.photoURL || null,
-                firstLogin: serverTimestamp(),
-                provider: user.providerData[0]?.providerId || 'unknown',
-                lastLogin: serverTimestamp(),
-                favorites: [],
-                completed: [],
-                arcGuideStats: {}
-            });
-        } else {
-            await updateDoc(userRef, { lastLogin: serverTimestamp() });
-        }
-    } catch (e) {
-        console.error('Ошибка сохранения пользователя:', e);
-    }
-}
-
-export async function syncUserData(uid) {
-    try {
-        const userRef = doc(db, "users", uid);
-        const userSnap = await getDoc(userRef);
-        
-        if (userSnap.exists()) {
-            const data = userSnap.data();
-            setUserFavorites(data.favorites || []);
-            setUserCompleted(data.completed || []);
-            
-            if (data.arcGuideStats) {
-                setArcData({ ...arcData, ...data.arcGuideStats });
-                localStorage.setItem(STORAGE_KEY, JSON.stringify(arcData));
-            }
-        }
-    } catch (e) {
-        console.error('Ошибка синхронизации:', e);
-    }
-}
-
-export function initAuthListener(callback) {
-    onAuthStateChanged(auth, async (user) => {
-        if (user) {
-            setCurrentUser(user);
-            await saveUserData(user);
-            await syncUserData(user.uid);
-            
-            if (user.uid === ADMIN_UID) {
-                setIsAdminMode(true);
-            }
-        } else {
-            setCurrentUser(null);
-            setUserFavorites([]);
-            setUserCompleted([]);
-        }
-        
-        callback(user);
-    });
-}
-
-// ==================
+// ==========================================
 // FEEDBACK SYSTEM
-// ==================
-export async function sendFeedback(projectId, projectName, category, message) {
+// ==========================================
+
+export async function sendFeedback(projectId, projectName, projectLogo, category, message) {
     try {
         await addDoc(collection(db, "feedbacks"), {
             projectId: projectId,
             projectName: projectName,
+            projectLogo: projectLogo,
             category: category,
             userId: auth.currentUser.uid,
             userName: auth.currentUser.displayName || auth.currentUser.email,
@@ -225,11 +284,36 @@ export function initFeedbacksListener(uid, callback) {
     });
 }
 
-// Экспортируем showToast (нужна для auth функций)
-function showToast(msg) {
-    const t = document.getElementById('toast');
-    if (!t) return;
-    document.getElementById('toastMessage').textContent = msg;
-    t.classList.remove('translate-y-20', 'opacity-0');
-    setTimeout(() => t.classList.add('translate-y-20', 'opacity-0'), 3000);
+// ==========================================
+// NOTIFICATIONS
+// ==========================================
+
+export function initNotificationsListener(uid, callback) {
+    const notifQuery = query(collection(db, "notifications"), where("userId", "==", uid));
+    return onSnapshot(notifQuery, (snapshot) => {
+        const notifications = snapshot.docs.map((doc) => {
+            return { 
+                id: doc.id, 
+                ...doc.data(), 
+                createdAt: doc.data().createdAt && doc.data().createdAt.toDate ? doc.data().createdAt.toDate() : new Date() 
+            };
+        }).sort((a, b) => b.createdAt - a.createdAt);
+        callback(notifications);
+    });
+}
+
+export async function markNotificationAsRead(notifId) {
+    try {
+        await updateDoc(doc(db, "notifications", notifId), { read: true });
+    } catch (e) {
+        console.error('Ошибка:', e);
+    }
+}
+
+// ==========================================
+// AUTH STATE LISTENER
+// ==========================================
+
+export function initAuthListener(onUserChange) {
+    onAuthStateChanged(auth, onUserChange);
 }
