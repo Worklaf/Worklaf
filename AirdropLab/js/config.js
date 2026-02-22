@@ -1,5 +1,5 @@
 // =====================================================
-// CONFIG.JS - Константы и Firebase конфигурация
+// CONFIG.JS — Firebase, константы и глобальное состояние
 // =====================================================
 
 // 🔥 Firebase Configuration
@@ -25,27 +25,32 @@ export const EXTERNAL_DATA_URL = './data/projects.json';
 // 🏷️ Categories
 export const categories = ['DeFi', 'Gaming', 'Infra', 'L1/L2', 'NFT', 'Social', 'Other'];
 
-// ==========================================
+// =====================================================
 // ГЛОБАЛЬНЫЕ ПЕРЕМЕННЫЕ СОСТОЯНИЯ
-// ==========================================
+// =====================================================
 
 export let projects = [];
 export let currentUser = null;
 export let userFavorites = [];
 export let userCompleted = [];
 export let arcData = JSON.parse(localStorage.getItem(STORAGE_KEY)) || {};
+
 export let isAdminMode = false;
 export let currentDetailId = null;
 export let editingId = null;
 export let isEditModalOpen = false;
+
 export let currentFilters = { statuses: [], categories: [] };
 export let itemsPerPage = parseInt(localStorage.getItem('itemsPerPage')) || 10;
 export let currentPage = parseInt(localStorage.getItem('currentPage'), 10) || 1;
+
 export let currentFilteredList = [];
 export let currentEditingActivities = [];
 export let editingActivityId = null;
+
 export let mainProjectCategories = [];
 export let currentSortType = 'latest';
+
 export let tempCustomCategories = [];
 export let adminClickCount = 0;
 export const ADMIN_CLICK_THRESHOLD = 5;
@@ -65,33 +70,46 @@ export let pendingImgInsert = null;
 
 export let firstDataLoadComplete = false;
 
-// ==========================================
-// ФУНКЦИИ ДЛЯ ОБНОВЛЕНИЯ СОСТОЯНИЯ
-// ==========================================
+export let isHeroCollapsed = false;
 
-export function setProjects(value) { projects = value; }
-export function setCurrentUser(value) { currentUser = value; }
-export function setUserFavorites(value) { userFavorites = value; }
-export function setUserCompleted(value) { userCompleted = value; }
-export function setArcData(value) { arcData = value; }
-export function setIsAdminMode(value) { isAdminMode = value; }
-export function setCurrentDetailId(value) { currentDetailId = value; }
-export function setEditingId(value) { editingId = value; }
-export function setIsEditModalOpen(value) { isEditModalOpen = value; }
-export function setCurrentFilters(value) { currentFilters = value; }
-export function setCurrentPage(value) { 
-    currentPage = value;
-    localStorage.setItem('currentPage', value);
+// =====================================================
+// ФУНКЦИИ ДЛЯ ОБНОВЛЕНИЯ СОСТОЯНИЯ
+// =====================================================
+
+export function setProjects(v) { projects = v; }
+export function setCurrentUser(v) { currentUser = v; }
+export function setUserFavorites(v) { userFavorites = v; }
+export function setUserCompleted(v) { userCompleted = v; }
+export function setArcData(v) { arcData = v; }
+export function setIsAdminMode(v) { isAdminMode = v; }
+export function setCurrentDetailId(v) { currentDetailId = v; }
+export function setEditingId(v) { editingId = v; }
+export function setIsEditModalOpen(v) { isEditModalOpen = v; }
+export function setCurrentFilters(v) { currentFilters = v; }
+
+export function setCurrentPage(v) {
+    currentPage = v;
+    localStorage.setItem('currentPage', v);
 }
-export function setCurrentFilteredList(value) { currentFilteredList = value; }
-export function setCurrentEditingActivities(value) { currentEditingActivities = value; }
-export function setEditingActivityId(value) { editingActivityId = value; }
-export function setMainProjectCategories(value) { mainProjectCategories = value; }
-export function setCurrentSortType(value) { currentSortType = value; }
-export function setTempCustomCategories(value) { tempCustomCategories = value; }
-export function setNotifications(value) { notifications = value; }
-export function setUnreadNotificationsCount(value) { unreadNotificationsCount = value; }
-export function setAdminFeedbacks(value) { adminFeedbacks = value; }
-export function setCurrentImages(value) { currentImages = value; }
-export function setCurrentImageIndex(value) { currentImageIndex = value; }
-export function setFirstDataLoadComplete(value) { firstDataLoadComplete = value; }
+
+export function setCurrentFilteredList(v) { currentFilteredList = v; }
+export function setCurrentEditingActivities(v) { currentEditingActivities = v; }
+export function setEditingActivityId(v) { editingActivityId = v; }
+export function setMainProjectCategories(v) { mainProjectCategories = v; }
+export function setCurrentSortType(v) { currentSortType = v; }
+
+export function setTempCustomCategories(v) { tempCustomCategories = v; }
+export function setAdminClickCount(v) { adminClickCount = v; }
+
+export function setNotifications(v) { notifications = v; }
+export function setUnreadNotificationsCount(v) { unreadNotificationsCount = v; }
+export function setAdminFeedbacks(v) { adminFeedbacks = v; }
+
+export function setCurrentImages(v) { currentImages = v; }
+export function setCurrentImageIndex(v) { currentImageIndex = v; }
+
+export function setPendingLinkInsert(v) { pendingLinkInsert = v; }
+export function setPendingImgInsert(v) { pendingImgInsert = v; }
+
+export function setFirstDataLoadComplete(v) { firstDataLoadComplete = v; }
+export function setIsHeroCollapsed(v) { isHeroCollapsed = v; }
