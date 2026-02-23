@@ -5,6 +5,7 @@ window.i18nData = {
     en: {
         edit_mode_banner: "Edit Mode — click ✎ next to a link to modify",
         go_to_mint: "Go to Mint",
+        go_to_website: "Go to Website",
         add_item: "Add Item",
         title_label: "Title",
         url_label: "URL Link",
@@ -106,6 +107,7 @@ window.i18nData = {
     ru: {
         edit_mode_banner: "Режим редактирования — нажмите ✎ рядом со ссылкой для изменения",
         go_to_mint: "Перейти к минту",
+        go_to_website: "Перейти на Website",
         add_item: "Добавить элемент",
         title_label: "Название",
         url_label: "URL ссылки",
