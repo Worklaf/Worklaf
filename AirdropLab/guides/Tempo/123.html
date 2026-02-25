@@ -1959,7 +1959,7 @@ function renderTempoUserItems() {
     userItemsData.collections.forEach(coll => { if (coll.parentZone === 'nfts') renderUserCollection(coll); else if (coll.parentZone === 'deploy') renderUserDeployGroup(coll); });
     userItemsData.dappCategories.forEach(cat => renderUserDappCategory(cat));
     Object.keys(userItemsData.items).forEach(zone => { const items = userItemsData.items[zone]; if (!items || !items.length) return; items.forEach(item => renderUserItemInZone(zone, item)); });
-    injectAddButtons(); bindTrackingHandlersToAll(); attachFavoriteControls(); initializeTooltips(); initLightbox(); updateUI();
+    applyTranslationsToLinks(); injectAddButtons(); bindTrackingHandlersToAll(); attachFavoriteControls(); initializeTooltips(); initLightbox(); updateUI();
 }
 
 function loadTempoEditsOverride() {
@@ -1979,6 +1979,7 @@ function applyTempoOverrideToLink(link, ov) {
 function applyTempoAllOverrides() {
     loadTempoEditsOverride();
     Object.keys(editsOverride).forEach(id => { const link = document.querySelector(`a.link-inline[data-id="${id}"]`); if (link) applyTempoOverrideToLink(link, editsOverride[id]); });
+    applyTranslationsToLinks();
 }
 
 function toggleTempoEditMode() {
@@ -2145,6 +2146,28 @@ function initTempoTwitterMonitor() {
         await loadTempoTwitterResults(); refreshBtn.disabled = false; refreshBtn.innerHTML = originalHTML; showToast('Data refreshed!', 'success');
     });
     setInterval(loadTempoTwitterResults, 5 * 60 * 1000);
+}
+    // ===== ФУНКЦИЯ ДЛЯ ДОБАВЛЕНИЯ АТРИБУТОВ ПЕРЕВОДА К ССЫЛКАМ =====
+function applyTranslationsToLinks() {
+    // Проверяем, есть ли данные пользовательских элементов
+    if (!userItemsData || !userItemsData.items) return;
+    
+    // Проходим по всем зонам и элементам
+    Object.entries(userItemsData.items).forEach(([zone, items]) => {
+        if (!Array.isArray(items)) return;
+        
+        items.forEach(item => {
+            const link = document.querySelector(`a[data-id="${item.id}"]`);
+            if (link) {
+                // Добавляем атрибуты переводов
+                if (item.descUa) link.setAttribute('data-desc-ua', item.descUa);
+                if (item.descEn) link.setAttribute('data-desc-en', item.descEn);
+                
+                // Также обновляем основной tooltip для совместимости
+                if (item.tooltip) link.setAttribute('data-tooltip', item.tooltip);
+            }
+        });
+    });
 }
 </script>
 
