@@ -102,7 +102,7 @@ window.i18nData = {
         all_links: "All Links",
         action: "Action"
     },
-    ua: {
+    uk: {
         back_to_list: "Назад до списку",
         full_catalog: "Повний каталог усіх посилань та активностей",
         login: "Увійти",
