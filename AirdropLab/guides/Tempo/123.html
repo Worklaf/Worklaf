@@ -1140,10 +1140,25 @@ async function loadTempoSharedData() {
             const data = await itemsResp.json();
             userItemsData = { items: data.items || {}, collections: data.collections || [], dappCategories: data.dappCategories || [] };
             localStorage.setItem(USER_ITEMS_KEY, JSON.stringify(userItemsData));
+            
+            // ДОБАВЬТЕ ЭТУ СТРОКУ
+            setTimeout(applyTranslationsToLinks, 500);
         }
     } catch (e) {
         console.log('Using local user items data');
     }
+
+    try {
+        const editsResp = await fetch('https://raw.githubusercontent.com/Worklaf/Worklaf/main/AirdropLab/guides/Tempo/tempo_shared_edits.json?v=' + Date.now());
+        if (editsResp.ok) {
+            const data = await editsResp.json();
+            editsOverride = data.editsOverride || {};
+            localStorage.setItem(EDITS_OVERRIDE_KEY, JSON.stringify(editsOverride));
+        }
+    } catch (e) {
+        console.log('Using local edits data');
+    }
+}
 
     try {
         const editsResp = await fetch('https://raw.githubusercontent.com/Worklaf/Worklaf/main/AirdropLab/guides/Tempo/tempo_shared_edits.json?v=' + Date.now());
@@ -2149,25 +2164,71 @@ function initTempoTwitterMonitor() {
 }
     // ===== ФУНКЦИЯ ДЛЯ ДОБАВЛЕНИЯ АТРИБУТОВ ПЕРЕВОДА К ССЫЛКАМ =====
 function applyTranslationsToLinks() {
-    // Проверяем, есть ли данные пользовательских элементов
-    if (!userItemsData || !userItemsData.items) return;
+    console.log("🔄 Applying translations to links...");
     
-    // Проходим по всем зонам и элементам
-    Object.entries(userItemsData.items).forEach(([zone, items]) => {
-        if (!Array.isArray(items)) return;
-        
-        items.forEach(item => {
-            const link = document.querySelector(`a[data-id="${item.id}"]`);
-            if (link) {
-                // Добавляем атрибуты переводов
-                if (item.descUa) link.setAttribute('data-desc-ua', item.descUa);
-                if (item.descEn) link.setAttribute('data-desc-en', item.descEn);
-                
-                // Также обновляем основной tooltip для совместимости
-                if (item.tooltip) link.setAttribute('data-tooltip', item.tooltip);
-            }
+    // 1. Применяем к пользовательским элементам из JSON
+    if (userItemsData && userItemsData.items) {
+        Object.entries(userItemsData.items).forEach(([zone, items]) => {
+            if (!Array.isArray(items)) return;
+            
+            items.forEach(item => {
+                const link = document.querySelector(`a[data-id="${item.id}"]`);
+                if (link) {
+                    console.log(`✅ Applying translations for: ${item.id}`, {
+                        title: item.title,
+                        descUa: item.descUa,
+                        descEn: item.descEn,
+                        hasDescUa: !!item.descUa && item.descUa !== 'null',
+                        hasDescEn: !!item.descEn && item.descEn !== 'null'
+                    });
+                    
+                    // ВАЖНО: проверяем, что значения не null и не строка "null"
+                    if (item.descUa && item.descUa !== 'null' && item.descUa.trim()) {
+                        link.setAttribute('data-desc-ua', item.descUa);
+                    } else {
+                        console.warn(`⚠️ Missing descUa for: ${item.id}`);
+                    }
+                    
+                    if (item.descEn && item.descEn !== 'null' && item.descEn.trim()) {
+                        link.setAttribute('data-desc-en', item.descEn);
+                    } else {
+                        console.warn(`⚠️ Missing descEn for: ${item.id}`);
+                    }
+                    
+                    if (item.tooltip) {
+                        link.setAttribute('data-tooltip', item.tooltip);
+                    }
+                }
+            });
         });
+    }
+    
+    // 2. Проверяем все ссылки на наличие переводов
+    const allLinks = document.querySelectorAll('a.link-inline[data-id]');
+    console.log(`📊 Total links found: ${allLinks.length}`);
+    
+    let linksWithTranslations = 0;
+    let linksWithoutTranslations = 0;
+    
+    allLinks.forEach(link => {
+        const id = link.getAttribute('data-id');
+        const hasDescEn = link.hasAttribute('data-desc-en');
+        const hasDescUa = link.hasAttribute('data-desc-ua');
+        
+        if (hasDescEn && hasDescUa) {
+            linksWithTranslations++;
+        } else {
+            linksWithoutTranslations++;
+            console.warn(`⚠️ Link without full translations: ${id}`, {
+                hasDescEn,
+                hasDescUa,
+                tooltip: link.getAttribute('data-tooltip')
+            });
+        }
     });
+    
+    console.log(`✅ Links with translations: ${linksWithTranslations}`);
+    console.log(`⚠️ Links without translations: ${linksWithoutTranslations}`);
 }
 </script>
 
