@@ -946,11 +946,14 @@ function positionTooltip(target) {
 }
 
 // ===== TOOLTIP LANGUAGE AWARE =====
-// ===== TOOLTIP LANGUAGE AWARE =====
 function showTooltip(e) {
     const target = e.target.closest('[data-tooltip]');
     if (!target) return;
-    
+    console.log('=== TOOLTIP DEBUG ===');
+    console.log('Current language:', currentLanguage);
+    console.log('data-tooltip:', target.getAttribute('data-tooltip'));
+    console.log('data-desc-ua:', target.getAttribute('data-desc-ua'));
+    console.log('data-desc-en:', target.getAttribute('data-desc-en'));
     let text = target.getAttribute('data-tooltip');
     const imageUrl = target.getAttribute('data-image');
     
@@ -1140,25 +1143,10 @@ async function loadTempoSharedData() {
             const data = await itemsResp.json();
             userItemsData = { items: data.items || {}, collections: data.collections || [], dappCategories: data.dappCategories || [] };
             localStorage.setItem(USER_ITEMS_KEY, JSON.stringify(userItemsData));
-            
-            // ДОБАВЬТЕ ЭТУ СТРОКУ
-            setTimeout(applyTranslationsToLinks, 500);
         }
     } catch (e) {
         console.log('Using local user items data');
     }
-
-    try {
-        const editsResp = await fetch('https://raw.githubusercontent.com/Worklaf/Worklaf/main/AirdropLab/guides/Tempo/tempo_shared_edits.json?v=' + Date.now());
-        if (editsResp.ok) {
-            const data = await editsResp.json();
-            editsOverride = data.editsOverride || {};
-            localStorage.setItem(EDITS_OVERRIDE_KEY, JSON.stringify(editsOverride));
-        }
-    } catch (e) {
-        console.log('Using local edits data');
-    }
-}
 
     try {
         const editsResp = await fetch('https://raw.githubusercontent.com/Worklaf/Worklaf/main/AirdropLab/guides/Tempo/tempo_shared_edits.json?v=' + Date.now());
@@ -1688,7 +1676,7 @@ document.getElementById('addModalSave').addEventListener('click', async () => {
                     found.url = newUrl; 
                     found.descEn = newTooltipEn;
                     found.descUa = newTooltipUa;
-                    found.tooltip = currentModalLang === 'en' ? newTooltipEn : newTooltipUa;
+                    found.tooltip = newTooltipEn;
                     found.image = newImage; 
                     isUserItem = true; 
                     await saveTempoUserItems(); 
@@ -1702,7 +1690,7 @@ document.getElementById('addModalSave').addEventListener('click', async () => {
                     url: newUrl, 
                     descEn: newTooltipEn, 
                     descUa: newTooltipUa,
-                    tooltip: newTooltipEn || newTooltipUa, 
+                    tooltip: newTooltipEn,
                     image: newImage 
                 }; 
                 await saveTempoEditsOverride(); 
@@ -1713,7 +1701,7 @@ document.getElementById('addModalSave').addEventListener('click', async () => {
                 url: newUrl, 
                 descEn: newTooltipEn, 
                 descUa: newTooltipUa,
-                tooltip: newTooltipEn || newTooltipUa, 
+                tooltip: newTooltipEn,
                 image: newImage 
             });
             
@@ -1737,7 +1725,7 @@ document.getElementById('addModalSave').addEventListener('click', async () => {
         const url = document.getElementById('addFieldUrl').value.trim();
         const descEn = document.getElementById('addFieldTooltipEn').value.trim();
         const descUa = document.getElementById('addFieldTooltipUa').value.trim();
-        const tooltip = descEn || descUa;
+        const tooltip = descEn;
         const image = normalizeImageUrl(document.getElementById('addFieldImage').value.trim());
         const website = document.getElementById('addFieldWebsite').value.trim(); 
         const twitter = document.getElementById('addFieldTwitter').value.trim();
@@ -1824,16 +1812,14 @@ function createUserLink(item, zone) {
     link.className = 'link-inline link-compact ' + (item.trackType || 'track-once');
     link.dataset.id = item.id;
     
-    // ОБЯЗАТЕЛЬНО ДОБАВЛЯЕМ АТРИБУТЫ ПЕРЕВОДОВ
-    if (item.tooltip) link.setAttribute('data-tooltip', item.tooltip);
     if (item.descEn) link.setAttribute('data-desc-en', item.descEn);
     if (item.descUa) link.setAttribute('data-desc-ua', item.descUa);
+    if (item.tooltip || item.descEn) link.setAttribute('data-tooltip', item.tooltip || item.descEn);
     if (item.image) link.setAttribute('data-image', item.image);
     
     link.textContent = item.title;
     wrapper.appendChild(link);
 
-    // ... остальной код кнопки удаления
     const delBtn = document.createElement('button');
     delBtn.type = 'button';
     delBtn.className = 'user-item-delete admin-only';
@@ -1974,7 +1960,7 @@ function renderTempoUserItems() {
     userItemsData.collections.forEach(coll => { if (coll.parentZone === 'nfts') renderUserCollection(coll); else if (coll.parentZone === 'deploy') renderUserDeployGroup(coll); });
     userItemsData.dappCategories.forEach(cat => renderUserDappCategory(cat));
     Object.keys(userItemsData.items).forEach(zone => { const items = userItemsData.items[zone]; if (!items || !items.length) return; items.forEach(item => renderUserItemInZone(zone, item)); });
-    applyTranslationsToLinks(); injectAddButtons(); bindTrackingHandlersToAll(); attachFavoriteControls(); initializeTooltips(); initLightbox(); updateUI();
+    injectAddButtons(); bindTrackingHandlersToAll(); attachFavoriteControls(); initializeTooltips(); initLightbox(); updateUI();
 }
 
 function loadTempoEditsOverride() {
@@ -1994,7 +1980,6 @@ function applyTempoOverrideToLink(link, ov) {
 function applyTempoAllOverrides() {
     loadTempoEditsOverride();
     Object.keys(editsOverride).forEach(id => { const link = document.querySelector(`a.link-inline[data-id="${id}"]`); if (link) applyTempoOverrideToLink(link, editsOverride[id]); });
-    applyTranslationsToLinks();
 }
 
 function toggleTempoEditMode() {
@@ -2161,74 +2146,6 @@ function initTempoTwitterMonitor() {
         await loadTempoTwitterResults(); refreshBtn.disabled = false; refreshBtn.innerHTML = originalHTML; showToast('Data refreshed!', 'success');
     });
     setInterval(loadTempoTwitterResults, 5 * 60 * 1000);
-}
-    // ===== ФУНКЦИЯ ДЛЯ ДОБАВЛЕНИЯ АТРИБУТОВ ПЕРЕВОДА К ССЫЛКАМ =====
-function applyTranslationsToLinks() {
-    console.log("🔄 Applying translations to links...");
-    
-    // 1. Применяем к пользовательским элементам из JSON
-    if (userItemsData && userItemsData.items) {
-        Object.entries(userItemsData.items).forEach(([zone, items]) => {
-            if (!Array.isArray(items)) return;
-            
-            items.forEach(item => {
-                const link = document.querySelector(`a[data-id="${item.id}"]`);
-                if (link) {
-                    console.log(`✅ Applying translations for: ${item.id}`, {
-                        title: item.title,
-                        descUa: item.descUa,
-                        descEn: item.descEn,
-                        hasDescUa: !!item.descUa && item.descUa !== 'null',
-                        hasDescEn: !!item.descEn && item.descEn !== 'null'
-                    });
-                    
-                    // ВАЖНО: проверяем, что значения не null и не строка "null"
-                    if (item.descUa && item.descUa !== 'null' && item.descUa.trim()) {
-                        link.setAttribute('data-desc-ua', item.descUa);
-                    } else {
-                        console.warn(`⚠️ Missing descUa for: ${item.id}`);
-                    }
-                    
-                    if (item.descEn && item.descEn !== 'null' && item.descEn.trim()) {
-                        link.setAttribute('data-desc-en', item.descEn);
-                    } else {
-                        console.warn(`⚠️ Missing descEn for: ${item.id}`);
-                    }
-                    
-                    if (item.tooltip) {
-                        link.setAttribute('data-tooltip', item.tooltip);
-                    }
-                }
-            });
-        });
-    }
-    
-    // 2. Проверяем все ссылки на наличие переводов
-    const allLinks = document.querySelectorAll('a.link-inline[data-id]');
-    console.log(`📊 Total links found: ${allLinks.length}`);
-    
-    let linksWithTranslations = 0;
-    let linksWithoutTranslations = 0;
-    
-    allLinks.forEach(link => {
-        const id = link.getAttribute('data-id');
-        const hasDescEn = link.hasAttribute('data-desc-en');
-        const hasDescUa = link.hasAttribute('data-desc-ua');
-        
-        if (hasDescEn && hasDescUa) {
-            linksWithTranslations++;
-        } else {
-            linksWithoutTranslations++;
-            console.warn(`⚠️ Link without full translations: ${id}`, {
-                hasDescEn,
-                hasDescUa,
-                tooltip: link.getAttribute('data-tooltip')
-            });
-        }
-    });
-    
-    console.log(`✅ Links with translations: ${linksWithTranslations}`);
-    console.log(`⚠️ Links without translations: ${linksWithoutTranslations}`);
 }
 </script>
 
