@@ -949,30 +949,46 @@ function positionTooltip(target) {
 function showTooltip(e) {
     const target = e.target.closest('[data-tooltip]');
     if (!target) return;
-    console.log('=== TOOLTIP DEBUG ===');
-    console.log('Current language:', currentLanguage);
-    console.log('data-tooltip:', target.getAttribute('data-tooltip'));
-    console.log('data-desc-ua:', target.getAttribute('data-desc-ua'));
-    console.log('data-desc-en:', target.getAttribute('data-desc-en'));
-    let text = target.getAttribute('data-tooltip');
+
+    ensureTooltipElement();
+    activeTooltipTarget = target;
+
     const imageUrl = target.getAttribute('data-image');
-    
-    const descEn = target.getAttribute('data-desc-en');
-    const descUa = target.getAttribute('data-desc-ua');
-    
-    if (currentLanguage === 'ua' && descUa) {
-        text = descUa;
-    } else if (currentLanguage === 'en' && descEn) {
-        text = descEn;
+    const tooltip = target.getAttribute('data-tooltip') || '';
+    const descEn  = target.getAttribute('data-desc-en') || '';
+    const descUa  = target.getAttribute('data-desc-ua') || '';
+
+    // Нормализуем язык: 'uk' считаем как 'ua'
+    const lang = (currentLanguage === 'uk') ? 'ua' : currentLanguage;
+
+    let text;
+    if (lang === 'ua') {
+        // Для украинского: приоритет descUa → tooltip → descEn
+        text = descUa || tooltip || descEn;
+    } else {
+        // Для английского: приоритет descEn → tooltip → descUa
+        text = descEn || tooltip || descUa;
     }
-    
+
     if (!text && !imageUrl) return;
-    ensureTooltipElement(); activeTooltipTarget = target;
+
     if (imageUrl) {
         tooltipEl.classList.add('has-image');
-        tooltipEl.innerHTML = `<div class="tooltip-image-container"><img src="${imageUrl}" alt="${text || 'Image'}" class="tooltip-image" loading="lazy" onerror="this.style.display='none'">${text ? `<div class="tooltip-text">${text}</div>` : ''}</div>`;
-    } else { tooltipEl.classList.remove('has-image'); tooltipEl.textContent = text; }
-    positionTooltip(target); tooltipEl.classList.add('visible');
+        tooltipEl.innerHTML =
+            `<div class="tooltip-image-container">
+                <img src="${imageUrl}" alt="${text || 'Image'}"
+                     class="tooltip-image"
+                     loading="lazy"
+                     onerror="this.style.display='none'">
+                ${text ? `<div class="tooltip-text">${text}</div>` : ''}
+            </div>`;
+    } else {
+        tooltipEl.classList.remove('has-image');
+        tooltipEl.textContent = text;
+    }
+
+    positionTooltip(target);
+    tooltipEl.classList.add('visible');
 }
 
 function hideTooltip() { activeTooltipTarget = null; if (tooltipEl) tooltipEl.classList.remove('visible'); }
@@ -1676,7 +1692,7 @@ document.getElementById('addModalSave').addEventListener('click', async () => {
                     found.url = newUrl; 
                     found.descEn = newTooltipEn;
                     found.descUa = newTooltipUa;
-                    found.tooltip = newTooltipEn;
+                    found.tooltip = currentModalLang === 'en' ? newTooltipEn : newTooltipUa;
                     found.image = newImage; 
                     isUserItem = true; 
                     await saveTempoUserItems(); 
@@ -1690,7 +1706,7 @@ document.getElementById('addModalSave').addEventListener('click', async () => {
                     url: newUrl, 
                     descEn: newTooltipEn, 
                     descUa: newTooltipUa,
-                    tooltip: newTooltipEn,
+                    tooltip: newTooltipEn || newTooltipUa, 
                     image: newImage 
                 }; 
                 await saveTempoEditsOverride(); 
@@ -1701,7 +1717,7 @@ document.getElementById('addModalSave').addEventListener('click', async () => {
                 url: newUrl, 
                 descEn: newTooltipEn, 
                 descUa: newTooltipUa,
-                tooltip: newTooltipEn,
+                tooltip: newTooltipEn || newTooltipUa, 
                 image: newImage 
             });
             
@@ -1725,7 +1741,7 @@ document.getElementById('addModalSave').addEventListener('click', async () => {
         const url = document.getElementById('addFieldUrl').value.trim();
         const descEn = document.getElementById('addFieldTooltipEn').value.trim();
         const descUa = document.getElementById('addFieldTooltipUa').value.trim();
-        const tooltip = descEn;
+        const tooltip = descEn || descUa;
         const image = normalizeImageUrl(document.getElementById('addFieldImage').value.trim());
         const website = document.getElementById('addFieldWebsite').value.trim(); 
         const twitter = document.getElementById('addFieldTwitter').value.trim();
@@ -1812,9 +1828,9 @@ function createUserLink(item, zone) {
     link.className = 'link-inline link-compact ' + (item.trackType || 'track-once');
     link.dataset.id = item.id;
     
+    if (item.tooltip) link.setAttribute('data-tooltip', item.tooltip);
     if (item.descEn) link.setAttribute('data-desc-en', item.descEn);
     if (item.descUa) link.setAttribute('data-desc-ua', item.descUa);
-    if (item.tooltip || item.descEn) link.setAttribute('data-tooltip', item.tooltip || item.descEn);
     if (item.image) link.setAttribute('data-image', item.image);
     
     link.textContent = item.title;
