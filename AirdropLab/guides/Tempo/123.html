@@ -752,18 +752,34 @@ let editsOverride = {};
 // ===== AUTO TRANSLATE =====
 async function autoTranslate(text, targetLang) {
     if (!text || text.trim().length < 2) return text;
-    const sourceLang = targetLang === 'ua' ? 'en' : 'ua';
+    
+    let sourceLang, apiTargetLang;
+    if (targetLang === 'ua') {
+        sourceLang = 'en';
+        apiTargetLang = 'uk';
+    } else if (targetLang === 'en') {
+        sourceLang = 'uk';
+        apiTargetLang = 'en';
+    } else {
+        return text;
+    }
+    
     try {
-        const url = `https://api.mymemory.translated.net/get?q=${encodeURIComponent(text)}&langpair=${sourceLang}|${targetLang}`;
+        const url = `https://api.mymemory.translated.net/get?q=${encodeURIComponent(text)}&langpair=${sourceLang}|${apiTargetLang}`;
         const resp = await fetch(url);
         const d = await resp.json();
-        return d.responseData?.translatedText || text;
+        
+        if (d.responseStatus === 200) {
+            return d.responseData?.translatedText || text;
+        } else {
+            console.warn('Translation API error:', d.responseDetails);
+            throw new Error(d.responseDetails || 'Translation failed');
+        }
     } catch (e) {
         console.warn('Auto-translate failed:', e);
         return text;
     }
 }
-
 // ===== TOAST =====
 function showToast(message, type = 'info') {
     const container = document.getElementById('tempoToastContainer');
@@ -1516,7 +1532,7 @@ function setupAutoTranslate() {
     const descEn = document.getElementById('addFieldTooltipEn');
     const descUa = document.getElementById('addFieldTooltipUa');
     const badgeEn = document.getElementById('translateBadgeEn');
-    const badgeRu = document.getElementById('translateBadgeUa');
+    const badgeUa = document.getElementById('translateBadgeUa');
     
     if (descEn) {
         descEn.addEventListener('input', () => {
@@ -1525,17 +1541,21 @@ function setupAutoTranslate() {
             if (text.length < 3) return;
             
             if (badgeUa) badgeUa.style.display = 'inline-flex';
+            badgeUa.innerHTML = '<i class="fas fa-sync fa-spin"></i> Translating...';
             
-            translateTimeoutUa = setTimeout(async () => {
+            translateTimeoutEn = setTimeout(async () => {
                 try {
                     const translated = await autoTranslate(text, 'ua');
                     if (descUa) descUa.value = translated;
                     if (badgeUa) {
                         badgeUa.innerHTML = '<i class="fas fa-check"></i> Translated';
-                        setTimeout(() => { badgeUa.style.display = 'none'; }, 2000);
+                        setTimeout(() => { 
+                            if (badgeUa) badgeUa.style.display = 'none'; 
+                        }, 2000);
                     }
                 } catch (e) {
-                    if (badgeUz) badgeUa.style.display = 'none';
+                    console.error('Translate EN->UA error:', e);
+                    if (badgeUa) badgeUa.style.display = 'none';
                 }
             }, 1500);
         });
@@ -1548,16 +1568,20 @@ function setupAutoTranslate() {
             if (text.length < 3) return;
             
             if (badgeEn) badgeEn.style.display = 'inline-flex';
+            badgeEn.innerHTML = '<i class="fas fa-sync fa-spin"></i> Translating...';
             
-            translateTimeoutEn = setTimeout(async () => {
+            translateTimeoutUa = setTimeout(async () => {
                 try {
                     const translated = await autoTranslate(text, 'en');
                     if (descEn) descEn.value = translated;
                     if (badgeEn) {
                         badgeEn.innerHTML = '<i class="fas fa-check"></i> Translated';
-                        setTimeout(() => { badgeEn.style.display = 'none'; }, 2000);
+                        setTimeout(() => { 
+                            if (badgeEn) badgeEn.style.display = 'none'; 
+                        }, 2000);
                     }
                 } catch (e) {
+                    console.error('Translate UA->EN error:', e);
                     if (badgeEn) badgeEn.style.display = 'none';
                 }
             }, 1500);
