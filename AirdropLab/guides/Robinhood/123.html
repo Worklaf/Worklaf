@@ -1063,26 +1063,47 @@ function positionTooltip(target) {
 function showTooltip(e) {
     const target = e.target.closest('[data-tooltip]');
     if (!target) return;
-    
-    let text = target.getAttribute('data-tooltip');
+
+    ensureTooltipElement();
+    activeTooltipTarget = target;
+
     const imageUrl = target.getAttribute('data-image');
-    
-    const descEn = target.getAttribute('data-desc-en');
-    const descUa = target.getAttribute('data-desc-ua');
-    
-    if (currentLanguage === 'ua' && descUa) {
-        text = descUa;
-    } else if (currentLanguage === 'en' && descEn) {
-        text = descEn;
+    const tooltip = target.getAttribute('data-tooltip') || '';
+    const descEn = target.getAttribute('data-desc-en') || '';
+    const descUa = target.getAttribute('data-desc-ua') || '';
+
+    // Нормализуем язык: 'uk' считаем как 'ua'
+    const lang = (currentLanguage === 'uk') ? 'ua' : currentLanguage;
+
+    let text;
+    if (lang === 'ua') {
+        // Приоритет: descUa → tooltip → descEn
+        text = descUa || tooltip || descEn;
+    } else {
+        // Приоритет: descEn → tooltip → descUa
+        text = descEn || tooltip || descUa;
     }
-    
+
     if (!text && !imageUrl) return;
-    ensureTooltipElement(); activeTooltipTarget = target;
+
     if (imageUrl) {
         tooltipEl.classList.add('has-image');
-        tooltipEl.innerHTML = `<div class="tooltip-image-container"><img src="${imageUrl}" alt="${text || 'Image'}" class="tooltip-image" loading="lazy" onerror="this.style.display='none'">${text ? `<div class="tooltip-text">${text}</div>` : ''}</div>`;
-    } else { tooltipEl.classList.remove('has-image'); tooltipEl.textContent = text; }
-    positionTooltip(target); tooltipEl.classList.add('visible');
+        tooltipEl.innerHTML = `
+            <div class="tooltip-image-container">
+                <img src="${imageUrl}" alt="${text || 'Image'}"
+                     class="tooltip-image"
+                     loading="lazy"
+                     onerror="this.style.display='none'">
+                ${text ? `<div class="tooltip-text">${text}</div>` : ''}
+            </div>
+        `;
+    } else {
+        tooltipEl.classList.remove('has-image');
+        tooltipEl.textContent = text;
+    }
+
+    positionTooltip(target);
+    tooltipEl.classList.add('visible');
 }
 
 function hideTooltip() { activeTooltipTarget = null; if (tooltipEl) tooltipEl.classList.remove('visible'); }
