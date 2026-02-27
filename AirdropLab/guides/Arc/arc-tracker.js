@@ -436,7 +436,7 @@ async function saveEditsOverride() {
 // ===== LOAD SHARED DATA =====
 async function loadSharedData() {
     try {
-        const itemsResp = await fetch('https://worklaf.github.io/Worklaf/AirdropLab/guides/Arc/arc_shared_items.json?' + Date.now());
+        const itemsResp = await fetch('https://raw.githubusercontent.com/Worklaf/Worklaf/main/AirdropLab/guides/Arc/arc_shared_items.json?' + Date.now());
         if (itemsResp.ok) {
             const data = await itemsResp.json();
             userItemsData = {
@@ -454,7 +454,7 @@ async function loadSharedData() {
     }
 
     try {
-        const editsResp = await fetch('https://worklaf.github.io/Worklaf/AirdropLab/guides/Arc/arc_shared_edits.json?' + Date.now());
+      const editsResp = await fetch('https://raw.githubusercontent.com/Worklaf/Worklaf/main/AirdropLab/guides/Arc/arc_shared_edits.json?' + Date.now());
         if (editsResp.ok) {
             const data = await editsResp.json();
             editsOverride = data.editsOverride || {};
