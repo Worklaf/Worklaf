@@ -587,7 +587,7 @@ window.updatePageTranslations = function() {
         try {
             isAdmin = typeof isAdminMode !== 'undefined' && isAdminMode;
         } catch(e) {}
-        modeIndicator.textContent = window.t(isAdmin ? 'edit_mode' : 'experimental_zone');
+        modeIndicator.textContent = window.t(window.isAdminMode ? 'edit_mode' : 'experimental_zone');
     }
     
     // Обновляем Hero секцию
