@@ -1103,39 +1103,67 @@ window.openFeedbackFromList = function(docId, projectId, projectName) {
 window.openAdminFeedbackChat = function(feedbackId) {
   const fb = adminFeedbacks.find(f => f.id === feedbackId);
   if (!fb) return;
+  
+  // Находим проект для получения названия и логотипа
+  const project = projects.find(p => p.id === fb.projectId);
+  const projectName = project?.name || fb.projectId || 'Неизвестный проект';
+  const projectLogo = project?.image || '';
+  
   const listModal = document.getElementById('feedbackListModal');
   if (listModal) listModal.classList.remove('active');
+  
   const chatModal = document.getElementById('feedbackModal');
   document.getElementById('feedbackProjectId').value = fb.projectId;
-  document.getElementById('feedbackProjectName').textContent = `${fb.projectId} (от ${fb.userName || 'Пользователь'})`;
+  
+  // Формируем отображение с названием и логотипом
+  let projectDisplayHtml = '';
+  if (projectLogo) {
+    projectDisplayHtml += `<img src="${projectLogo}" class="w-6 h-6 rounded mr-2 object-cover" alt="${projectName}" onerror="this.style.display='none'">`;
+  }
+  projectDisplayHtml += `<span class="font-bold text-white">${projectName}</span> <span class="text-xs text-slate-500 ml-1">(от ${fb.userName || 'Пользователь'})</span>`;
+  
+  document.getElementById('feedbackProjectName').innerHTML = projectDisplayHtml;
   document.getElementById('feedbackDocId').value = fb.id;
   document.getElementById('feedbackModalTitle').textContent = 'Чат с пользователем';
+  
   document.getElementById('feedbackFormNew').classList.add('hidden');
   document.getElementById('feedbackFormReply').classList.remove('hidden');
   document.getElementById('feedbackSendBtn').classList.add('hidden');
+  
   if (window.currentFeedbackUnsub) { window.currentFeedbackUnsub(); window.currentFeedbackUnsub = null; }
+  
   const unsub = onSnapshot(doc(db, "feedbacks", feedbackId), (snap) => {
     if (!snap.exists()) return;
     const d = snap.data();
     const messages = d.messages || [];
     messages.sort((a, b) => new Date(a.timestamp || 0) - new Date(b.timestamp || 0));
+    
     const html = messages.map(msg => {
       const bubbleSide = msg.sender;
       const senderName = msg.sender === 'admin' ? 'Вы' : (d.userName || 'Пользователь');
-      const avatar = msg.sender === 'admin' ? `<div class="chat-avatar"><i class="fas fa-user-shield"></i></div>` : `<img src="${d.userPhoto || 'https://ui-avatars.com/api/?name=P'}" class="chat-avatar">`;
+      const avatar = msg.sender === 'admin' 
+        ? `<div class="chat-avatar"><i class="fas fa-user-shield"></i></div>` 
+        : `<img src="${d.userPhoto || 'https://ui-avatars.com/api/?name=P'}" class="chat-avatar" alt>`;
+      
       return `<div class="chat-bubble ${bubbleSide}">${avatar}<div class="chat-bubble-wrapper"><span class="chat-sender">${senderName}</span><div class="chat-content">${msg.text}</div><span class="chat-time">${msg.timestamp ? formatTimeAgo(msg.timestamp.toDate ? msg.timestamp.toDate() : new Date(msg.timestamp)) : ''}</span></div></div>`;
     }).join('');
+    
     const hist = document.getElementById('feedbackChatHistory');
     hist.innerHTML = html || '<p class="text-center text-slate-500 py-4">Нет сообщений</p>';
     hist.scrollTop = hist.scrollHeight;
   });
+  
   window.currentFeedbackUnsub = unsub;
+  
   const inp = document.getElementById('feedbackUserReplyText');
   inp.value = '';
   inp.placeholder = 'Ответ пользователю...';
+  
   const replyBtn = inp.parentElement.querySelector('button');
   if (replyBtn) replyBtn.onclick = function() { sendAdminReply(feedbackId); };
+  
   inp.onkeypress = e => { if (e.key === 'Enter') { e.preventDefault(); sendAdminReply(feedbackId); } };
+  
   chatModal.classList.add('active');
   document.getElementById('adminChatDeleteBtn').classList.remove('hidden');
   markFeedbackRead(feedbackId);
