@@ -1074,14 +1074,49 @@ window.renderFeedbackList = function() {
   const getProj = id => projects.find(p => p.id === id) || {};
   const container = document.getElementById('feedbacksContainer');
   const isAdmin = currentUser && currentUser.uid === "SAkz4mdW9reDaIsvqigCNZhEKJR2";
-  if (!adminFeedbacks || adminFeedbacks.length === 0) { container.innerHTML = '<div class="text-center py-12 text-slate-500"><div class="bg-slate-800/50 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4"><i class="fas fa-inbox text-2xl text-slate-600"></i></div><p>Нет сообщений</p></div>'; return; }
+  
+  if (!adminFeedbacks || adminFeedbacks.length === 0) { 
+    container.innerHTML = '<div class="text-center py-12 text-slate-500"><div class="bg-slate-800/50 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4"><i class="fas fa-inbox text-2xl text-slate-600"></i></div><p>Нет сообщений</p></div>'; 
+    return; 
+  }
+  
   container.innerHTML = adminFeedbacks.map((item) => {
     const messages = item.messages || [];
     const lastMsg = messages[messages.length - 1] || { text: '...', sender: 'unknown' };
     const date = item.createdAt?.toDate() || new Date(item.createdAt || 0);
     const isUnread = isAdmin ? !item.read : !item.userRead;
-    let titleHtml = isAdmin ? `<span class="font-bold text-white">${item.userName || 'User'}</span>` : `<div class="flex items-center gap-2">${getProj(item.projectId).image ? `<img src="${getProj(item.projectId).image}" class="w-6 h-6 rounded">` : ''}<span class="font-bold text-white">${getProj(item.projectId).name || item.projectId}</span></div>`;
-    return `<div onclick="${isAdmin ? `openAdminFeedbackChat('${item.id}')` : `openFeedbackFromList('${item.id}', '${item.projectId}', '${(getProj(item.projectId).name||'').replace(/'/g,"\\'")}')`}" class="cursor-pointer group relative bg-slate-800/40 border border-slate-700/50 hover:bg-slate-800 hover:border-slate-600 rounded-xl p-4 transition-all">${isUnread ? '<div class="absolute top-4 right-4 w-3 h-3 bg-purple-500 rounded-full animate-pulse"></div>' : ''}<div class="flex justify-between items-start mb-2"><div>${titleHtml}<span class="text-xs text-slate-500 mt-0.5 block">${formatTimeAgo(date)}</span></div>${isUnread ? '<span class="bg-purple-600 text-white text-xs px-2 py-1 rounded-full font-bold">NEW</span>' : ''}</div><div class="text-sm text-slate-300 line-clamp-2">${lastMsg.text}</div></div>`;
+    
+    // Получаем данные проекта
+    const project = getProj(item.projectId);
+    const projectName = project.name || item.projectId || 'Неизвестный проект';
+    const projectLogo = project.image || '';
+    const projectId = item.projectId || '';
+    
+    // Для админа показываем: логотип проекта + название проекта + имя пользователя
+    let titleHtml = '';
+    if (isAdmin) {
+      // Блок с информацией о проекте
+      let projectInfoHtml = '';
+      if (projectLogo) {
+        projectInfoHtml += `<img src="${projectLogo}" class="w-5 h-5 rounded object-cover mr-1.5" alt="${projectName}" onerror="this.style.display='none'">`;
+      }
+      projectInfoHtml += `<span class="text-blue-400 font-medium">${projectName}</span>`;
+      
+      titleHtml = `
+        <div class="flex flex-col gap-1">
+          <div class="flex items-center gap-1.5">${projectInfoHtml}</div>
+          <div class="text-xs text-slate-400 flex items-center gap-1">
+            <span>от</span>
+            <span class="text-white font-medium">${item.userName || 'Пользователь'}</span>
+          </div>
+        </div>
+      `;
+    } else {
+      // Для обычного пользователя - только название проекта
+      titleHtml = `<div class="flex items-center gap-2">${projectLogo ? `<img src="${projectLogo}" class="w-6 h-6 rounded">` : ''}<span class="font-bold text-white">${projectName}</span></div>`;
+    }
+    
+    return `<div onclick="${isAdmin ? `openAdminFeedbackChat('${item.id}')` : `openFeedbackFromList('${item.id}', '${projectId}', '${(projectName).replace(/'/g,"\\'")}')`}" class="cursor-pointer group relative bg-slate-800/40 border border-slate-700/50 hover:bg-slate-800 hover:border-slate-600 rounded-xl p-4 transition-all">${isUnread ? '<div class="absolute top-4 right-4 w-3 h-3 bg-purple-500 rounded-full animate-pulse"></div>' : ''}<div class="flex justify-between items-start mb-2"><div>${titleHtml}<span class="text-xs text-slate-500 mt-0.5 block">${formatTimeAgo(date)}</span></div>${isUnread ? '<span class="bg-purple-600 text-white text-xs px-2 py-1 rounded-full font-bold">NEW</span>' : ''}</div><div class="text-sm text-slate-300 line-clamp-2">${lastMsg.text}</div></div>`;
   }).join('');
 };
 
