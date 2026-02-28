@@ -10,7 +10,7 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link rel="stylesheet" href="styles.css">
     <style>
-        /* Подсказки для кнопок */
+        /* Подсказки для кнопок - показываем СНИЗУ */
 .admin-action-btn[title] {
   position: relative;
 }
@@ -18,9 +18,10 @@
 .admin-action-btn[title]:hover::after {
   content: attr(title);
   position: absolute;
-  bottom: 100%;
+  top: 100%;           /* Показываем снизу */
   left: 50%;
   transform: translateX(-50%);
+  margin-top: 8px;     /* Отступ сверху вместо снизу */
   background: #1e293b;
   color: #e2e8f0;
   padding: 6px 10px;
@@ -28,12 +29,27 @@
   font-size: 11px;
   white-space: nowrap;
   z-index: 100;
-  margin-bottom: 8px;
   border: 1px solid #475569;
   box-shadow: 0 4px 12px rgba(0,0,0,0.3);
   pointer-events: none;
   opacity: 1;
   transition: opacity 0.2s;
+}
+
+/* Добавляем стрелочку указывающую на кнопку */
+.admin-action-btn[title]:hover::before {
+  content: '';
+  position: absolute;
+  top: 100%;
+  left: 50%;
+  transform: translateX(-50%);
+  margin-top: 2px;
+  width: 0;
+  height: 0;
+  border-left: 6px solid transparent;
+  border-right: 6px solid transparent;
+  border-bottom: 6px solid #475569;
+  z-index: 101;
 }
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
         
@@ -2008,64 +2024,78 @@ window.insertActivityFormat = function(type) {
   const textarea = document.getElementById('actRichDesc');
   if (!textarea) return;
   
-  // СОХРАНЯЕМ ПОЗИЦИЮ СКРОЛЛА!
-  const oldScrollTop = textarea.scrollTop;
-  
   const start = textarea.selectionStart;
   const end = textarea.selectionEnd;
   const selectedText = textarea.value.substring(start, end);
-  const textBefore = textarea.value.substring(0, start);
-  const textAfter = textarea.value.substring(end);
+  
+  // Сохраняем позицию для вставки
+  window.pendingActivityFormat = {
+    type: type,
+    start: start,
+    end: end,
+    selectedText: selectedText
+  };
+  
+  // Открываем модальное окно для ввода ссылки
+  const promptInput = document.getElementById('promptInput');
+  promptInput.value = '';
   
   if (type === 'img') {
-    const imgTemplate = '![описание](ссылка_на_картинку)';
-    textarea.value = textBefore + imgTemplate + textAfter;
-    textarea.focus();
-    const descStart = start + 2;
-    textarea.selectionStart = descStart;
-    textarea.selectionEnd = descStart + 'описание'.length;
-    // ВОССТАНАВЛИВАЕМ СКРОЛЛ!
-    textarea.scrollTop = oldScrollTop;
-    showToast('Вставьте ссылку на картинку');
-  } 
-  else if (type === 'link') {
-    const linkText = selectedText.trim() || 'текст';
-    const linkTemplate = `[${linkText}](url)`;
-    textarea.value = textBefore + linkTemplate + textAfter;
-    textarea.focus();
-    const urlStart = start + linkText.length + 3;
-    textarea.selectionStart = urlStart;
-    textarea.selectionEnd = urlStart + 3;
-    // ВОССТАНАВЛИВАЕМ СКРОЛЛ!
-    textarea.scrollTop = oldScrollTop;
-  } 
-  else if (type === 'h3') {
-    textarea.value = textBefore + '### ' + (selectedText || 'Заголовок') + textAfter;
-    textarea.focus();
-    const newPos = start + 4 + (selectedText ? selectedText.length : 'Заголовок'.length);
-    textarea.selectionStart = textarea.selectionEnd = newPos;
-    textarea.scrollTop = oldScrollTop;
+    promptInput.placeholder = 'Вставьте ссылку на картинку...';
+    document.querySelector('#promptModal h2').textContent = 'Вставить картинку';
+    document.querySelector('#promptModal button:last-child').textContent = 'Вставить';
+  } else if (type === 'link') {
+    promptInput.placeholder = 'Вставьте ссылку...';
+    document.querySelector('#promptModal h2').textContent = 'Вставить ссылку';
+    document.querySelector('#promptModal button:last-child').textContent = 'Применить';
   }
-  else if (type === 'ul') {
-    textarea.value = textBefore + '- ' + (selectedText || 'Пункт') + textAfter;
-    textarea.focus();
-    const newPos = start + 2 + (selectedText ? selectedText.length : 'Пункт'.length);
-    textarea.selectionStart = textarea.selectionEnd = newPos;
-    textarea.scrollTop = oldScrollTop;
+  
+  document.getElementById('promptModal').classList.add('active');
+  promptInput.focus();
+};
+
+// Обновляем подтверждение вставки
+window.confirmLinkInsert = function() {
+  const textarea = document.getElementById('actRichDesc');
+  const url = document.getElementById('promptInput').value.trim();
+  
+  if (!url) {
+    showToast('Введите ссылку');
+    return;
   }
-  else if (type === 'quote') {
-    textarea.value = textBefore + '> ' + (selectedText || 'Цитата') + textAfter;
+  
+  if (window.pendingActivityFormat && textarea) {
+    const { type, start, end, selectedText } = window.pendingActivityFormat;
+    const textBefore = textarea.value.substring(0, start);
+    const textAfter = textarea.value.substring(end);
+    let insertion = '';
+    
+    if (type === 'img') {
+      // Для картинки: ![alt](url)
+      const altText = selectedText.trim() || 'изображение';
+      insertion = `![${altText}](${url})`;
+    } else if (type === 'link') {
+      // Для ссылки: [текст](url)
+      const linkText = selectedText.trim() || 'ссылка';
+      insertion = `[${linkText}](${url})`;
+    }
+    
+    textarea.value = textBefore + insertion + textAfter;
     textarea.focus();
-    const newPos = start + 2 + (selectedText ? selectedText.length : 'Цитата'.length);
-    textarea.selectionStart = textarea.selectionEnd = newPos;
-    textarea.scrollTop = oldScrollTop;
+    textarea.selectionStart = textarea.selectionEnd = start + insertion.length;
+    
+    showToast(type === 'img' ? 'Картинка добавлена' : 'Ссылка добавлена');
   }
-  else if (type === 'hr') {
-    textarea.value = textBefore + '\n---\n' + textAfter;
-    textarea.focus();
-    textarea.selectionStart = textarea.selectionEnd = start + 5;
-    textarea.scrollTop = oldScrollTop;
-  }
+  
+  window.pendingActivityFormat = null;
+  closePromptModal();
+};
+
+// Закрытие модального окна
+window.closePromptModal = function() { 
+  document.getElementById('promptModal').classList.remove('active'); 
+  document.getElementById('promptInput').value = ''; 
+  window.pendingActivityFormat = null; 
 };
 
 window.closePromptModal = function() { document.getElementById('promptModal').classList.remove('active'); document.getElementById('promptInput').value = ''; pendingLinkInsert = null; };
