@@ -408,7 +408,16 @@ window.toggleLang = function() {
   window.setLang(newLang);
   
   // Перезагружаем данные при смене языка
-  window.loadData();
+  projects = projects.map(p => {
+    // Возвращаем исходные данные
+    const original = projects.find(op => op.id === p.id);
+    if (newLang === 'en' && englishProjectsData[p.id]) {
+      return applyEnglishData(p);
+    }
+    return original || p;
+  });
+  
+  applyFilters();
 };
 
 // Обновить переводы на странице
