@@ -315,3 +315,38 @@ window.toggleLang = function() {
     const newLang = window.currentLang === 'ru' ? 'en' : 'ru';
     window.setLang(newLang);
 };
+// === ПЕРЕКЛЮЧАТЕЛЬ ЯЗЫКА ===
+let isEnglishActive = false;
+
+window.toggleEnglish = function() {
+    isEnglishActive = !isEnglishActive;
+    const btn = document.getElementById('langBtn');
+    
+    if (isEnglishActive) {
+        // Включаем английский
+        btn.classList.add('lang-active');
+        btn.querySelector('span:first-child').textContent = '🇷🇺';
+        btn.querySelector('span:last-child').textContent = 'ENG';
+        
+        // Загружаем английские данные если есть
+        if (window.loadEnglishData) {
+            window.loadEnglishData();
+        }
+        
+        console.log('English enabled');
+    } else {
+        // Выключаем английский (возвращаем русский)
+        btn.classList.remove('lang-active');
+        btn.querySelector('span:first-child').textContent = '🇬🇧';
+        btn.querySelector('span:last-child').textContent = 'ENG';
+        
+        // Здесь нужно загрузить обратно русские данные
+        // Если есть русский массив - загружаем его
+        if (window.russianProjectsData && window.russianProjectsData.projects) {
+            window.projects = window.russianProjectsData.projects;
+            if (window.renderProjects) window.renderProjects();
+        }
+        
+        console.log('English disabled - Russian active');
+    }
+};
