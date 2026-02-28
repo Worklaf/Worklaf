@@ -1,4 +1,6 @@
-// language.js - Полный список переводов всех UI элементов
+// language.js - Полный файл переводов
+
+// === ОСНОВНЫЕ ПЕРЕВОДЫ UI ===
 window.translations = {
     ru: {},
     en: {
@@ -9,13 +11,13 @@ window.translations = {
         'Экспериментальная зона': 'Experimental Zone',
         'Режим редактирования': 'Edit Mode',
         
-        // === STATS ===
+        // === STATS (СТАТИСТИКА) ===
         'Активных': 'Active',
         'Новых': 'New',
         'В работе': 'In Work',
         'Готово': 'Done',
         
-        // === FILTERS SIDEBAR ===
+        // === FILTERS SIDEBAR (ФИЛЬТРЫ) ===
         'Фильтры': 'Filters',
         'Все проекты': 'All Projects',
         'Не посещённые': 'Unvisited',
@@ -26,21 +28,21 @@ window.translations = {
         'Завершённые': 'Completed',
         'Архив': 'Archive',
         
-        // === CATEGORIES ===
+        // === CATEGORIES (КАТЕГОРИИ) ===
         'Категории': 'Categories',
         
-        // === SEARCH & SORT ===
+        // === SEARCH & SORT (ПОИСК И СОРТИРОВКА) ===
         'Поиск проектов...': 'Search projects...',
         'На странице:': 'Per page:',
         'Сначала новые': 'Newest first',
         'По приоритету': 'By priority',
         'По названию': 'By name',
         
-        // === INFO MESSAGES ===
-        'Нажмите на <strong>название проекта</strong> для подробной информации или на <strong>"Гайд"</strong> для выполнения.': 'Click on <strong>project name</strong> for details or <strong>"Guide"</strong> to complete tasks.',
+        // === INFO MESSAGES (ИНФО СООБЩЕНИЯ) ===
+        'Нажмите на название проекта для подробной информации или на "Гайд" для выполнения.': 'Click on <strong>project name for details or on "Guide" to complete tasks.',
         'Вы не вошли в аккаунт. Избранное и выполненные задания сохраняются только в этом браузере.': 'You are not logged in. Favorites and completed tasks are saved only in this browser.',
         
-        // === PROJECT CARD ===
+        // === PROJECT CARD (КАРТОЧКА ПРОЕКТА) ===
         'Гайд': 'Guide',
         'Website': 'Website',
         'Twitter': 'Twitter',
@@ -52,10 +54,9 @@ window.translations = {
         'High': 'High',
         'Нет описания': 'No description',
         'NEW': 'NEW',
-        'NEW': 'NEW',
         'Готово': 'Done',
         
-        // === DETAIL MODAL ===
+        // === DETAIL MODAL (МОДАЛКА ПРОЕКТА) ===
         'О проекте': 'About Project',
         'Активности': 'Activities',
         'Описание отсутствует': 'No description',
@@ -68,10 +69,10 @@ window.translations = {
         'Задача завершена!': 'Task completed!',
         'Задание засчитано!': 'Task credited!',
         
-        // === AUTH BUTTONS ===
+        // === AUTH BUTTONS (АВТОРИЗАЦИЯ) ===
         'Вход': 'Login',
         
-        // === ADMIN BUTTONS ===
+        // === ADMIN BUTTONS (АДМИН) ===
         'Новый тест': 'New Test',
         'Посмотреть статистику': 'View Statistics',
         'Загрузить данные в базу Firebase': 'Upload to Firebase',
@@ -79,7 +80,7 @@ window.translations = {
         'Просмотреть удаленные проекты': 'View Deleted Projects',
         'Admin': 'Admin',
         
-        // === MODAL: ADD/EDIT PROJECT ===
+        // === MODAL: ADD/EDIT PROJECT (ДОБАВИТЬ/РЕДАКТИРОВАТЬ ПРОЕКТ) ===
         'Добавить проект': 'Add Project',
         'Редактировать проект': 'Edit Project',
         'Название проекта *': 'Project Name *',
@@ -112,7 +113,7 @@ window.translations = {
         'Вставьте ссылку...': 'Insert URL...',
         'Применить': 'Apply',
         
-        // === ACTIVITY EDITOR ===
+        // === ACTIVITY EDITOR (РЕДАКТОР АКТИВНОСТЕЙ) ===
         'Заголовок 3 уровня': 'Heading level 3',
         'Маркированный список': 'Bulleted list',
         'Цитата': 'Quote',
@@ -122,7 +123,7 @@ window.translations = {
         'Пункт списка': 'List item',
         'Цитата': 'Quote',
         
-        // === MODAL: LOGIN ===
+        // === MODAL: LOGIN (АВТОРИЗАЦИЯ) ===
         'Войти': 'Login',
         'Google': 'Google',
         'Twitter': 'Twitter',
@@ -131,15 +132,15 @@ window.translations = {
         'Пароль': 'Password',
         'Регистрация': 'Register',
         
-        // === MODAL: DETAIL ===
+        // === MODAL: DETAIL (ДЕТАЛИ ПРОЕКТА) ===
         'Редактировать': 'Edit',
         
-        // === MODAL: NOTIFICATIONS ===
+        // === MODAL: NOTIFICATIONS (УВЕДОМЛЕНИЯ) ===
         'Уведомления': 'Notifications',
         'Нет уведомлений': 'No notifications',
         'Отметить': 'Mark as read',
         
-        // === MODAL: FEEDBACK ===
+        // === MODAL: FEEDBACK (ОБРАТНАЯ СВЯЗЬ) ===
         'Обратная связь': 'Feedback',
         'Отзывы и предложения': 'Feedback & Suggestions',
         'Проект: ': 'Project: ',
@@ -164,14 +165,14 @@ window.translations = {
         'Удалено': 'Deleted',
         'Ответ пользователю...': 'Reply to user...',
         
-        // === MODAL: DELETED PROJECTS ===
+        // === MODAL: DELETED PROJECTS (УДАЛЕННЫЕ ПРОЕКТЫ) ===
         'Удаленные проекты': 'Deleted Projects',
         'Поиск...': 'Search...',
         'Нет удаленных проектов': 'No deleted projects',
         'Восстановить': 'Restore',
         'Просмотр': 'View',
         
-        // === TOAST MESSAGES ===
+        // === TOAST MESSAGES (УВЕДОМЛЕНИЯ) ===
         'Действие выполнено': 'Action completed',
         'Задача завершена!': 'Task completed!',
         'Задание засчитано!': 'Task credited!',
@@ -204,7 +205,7 @@ window.translations = {
         'Картинка добавлена': 'Image added',
         'Ссылка добавлена': 'Link added',
         
-        // === CONFIRM DIALOGS ===
+        // === CONFIRM DIALOGS (ПОДТВЕРЖДЕНИЯ) ===
         'Переместить в архив?': 'Move to archive?',
         'Завершить эту активность?': 'Complete this activity?',
         'Возобновить эту активность?': 'Resume this activity?',
@@ -214,34 +215,30 @@ window.translations = {
         'Экспортировать все проекты?': 'Export all projects?',
         'Удалить?': 'Delete?',
         
-        // === LAB SPECIMENS (RIGHT SIDEBAR) ===
+        // === LAB SPECIMENS (ПРАВАЯ ПАНЕЛЬ) ===
         'Активные исследования': 'Active Research',
         'Перейти к гайду': 'Go to Guide',
         
-        // === HERO SECTION ===
+        // === HERO SECTION (ПРИВЕТСТВИЕ) ===
         'Лаборатория Крипто-Возможностей': 'Crypto Opportunities Laboratory',
         'AirdropLab - это ваш центр для исследования, тестирования и участия в самых перспективных аирдропах.': 'AirdropLab is your center for researching, testing and participating in the most promising airdrops.',
         'Начать исследование': 'Start Research',
         'Свернуть приветствие': 'Collapse Welcome',
         'Развернуть приветствие': 'Expand Welcome',
         
-        // === PAGINATION ===
+        // === PAGINATION (ПАГИНАЦИЯ) ===
         'Ничего не найдено': 'Nothing found',
         'Сбросить фильтры': 'Reset Filters',
         
-        // === USER STATUS ===
+        // === USER STATUS (СТАТУС ПОЛЬЗОВАТЕЛЯ) ===
         'В системе': 'In system',
         'Researcher': 'Researcher',
         
-        // === ACTIVITY STATUS ===
-        'Ended': 'Ended',
-        'Resume': 'Resume',
-        
-        // === DATE FORMATS ===
+        // === DATE FORMATS (ДАТЫ) ===
         'сегодня': 'today',
         'вчера': 'yesterday',
         
-        // === CATEGORY LABELS ===
+        // === CATEGORY LABELS (КАТЕГОРИИ) ===
         'DeFi': 'DeFi',
         'Gaming': 'Gaming',
         'Infra': 'Infra',
@@ -249,24 +246,40 @@ window.translations = {
         'NFT': 'NFT',
         'Social': 'Social',
         'Other': 'Other',
+        'Соц. активность': 'Social Activity',
+        'Тестнет': 'Testnet',
+        'Заполнение формы': 'Form Filling',
+        'Получение роли': 'Role Acquisition',
+        'Майннет': 'Mainnet',
+        'Минт домена': 'Domain Mint',
+        'Деплой контракта': 'Contract Deploy',
+        'Амбассадорская программа': 'Ambassador Program',
+        'Баунти платформы': 'Bounty Platforms',
+        'Нода': 'Node',
+        'Предсказания': 'Predictions',
+        'Mint NFT': 'Mint NFT',
+        'Трейдинг': 'Trading',
+        'Холд': 'Hold',
+        'DePIN': 'DePIN',
+        'Блокчейн': 'Blockchain',
         
-        // === FORMATTING HELP ===
-        'картинка, ': 'image, ',
-        ' ссылка': ' link',
-        
-        // === MISC ===
+        // === MISC (ПРОЧЕЕ) ===
         'Назад': 'Back',
         'Вперёд': 'Forward',
         'Нажмите на ': 'Click on ',
         'для подробной информации или на ': 'for details or on ',
-        '"Гайд" для выполнения.': '"Guide" to complete tasks.'
+        '"Гайд" для выполнения.': '"Guide" to complete tasks.',
+        
+        // === FORMATTING (ФОРМАТИРОВАНИЕ) ===
+        'картинка, ': 'image, ',
+        ' ссылка': ' link'
     }
 };
 
-// Текущий язык
+// === ТЕКУЩИЙ ЯЗЫК ===
 window.currentLang = localStorage.getItem('lang') || 'ru';
 
-// Функция перевода
+// === ФУНКЦИЯ ПЕРЕВОДА ===
 window.t = function(key) {
     if (window.currentLang === 'en' && window.translations.en[key]) {
         return window.translations.en[key];
@@ -274,12 +287,11 @@ window.t = function(key) {
     return key;
 };
 
-// Функция установки языка
+// === УСТАНОВИТЬ ЯЗЫК ===
 window.setLang = function(lang) {
     window.currentLang = lang;
     localStorage.setItem('lang', lang);
     
-    // Переключаем класс на кнопке
     const langToggle = document.getElementById('langToggle');
     if (langToggle) {
         if (lang === 'en') {
@@ -291,7 +303,6 @@ window.setLang = function(lang) {
         }
     }
     
-    // Перезагружаем данные
     if (lang === 'en') {
         window.loadEnglishData();
     } else {
@@ -299,7 +310,7 @@ window.setLang = function(lang) {
     }
 };
 
-// Переключатель (toggle)
+// === ПЕРЕКЛЮЧИТЬ ЯЗЫК ===
 window.toggleLang = function() {
     const newLang = window.currentLang === 'ru' ? 'en' : 'ru';
     window.setLang(newLang);
