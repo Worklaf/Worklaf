@@ -315,21 +315,26 @@ window.toggleLang = function() {
     const newLang = window.currentLang === 'ru' ? 'en' : 'ru';
     window.setLang(newLang);
 };
-// === ПЕРЕКЛЮЧАТЕЛЬ ЯЗЫКА ===
-let isEnglishActive = false;
+// === ПЕРЕКЛЮЧАТЕЛЬ ЯЗЫКА (ENG/NO-ENG) ===
+window.isEnglishActive = false;
 
 window.toggleEnglish = function() {
-    isEnglishActive = !isEnglishActive;
     const btn = document.getElementById('langBtn');
+    if (!btn) {
+        console.log('Кнопка не найдена');
+        return;
+    }
     
-    if (isEnglishActive) {
+    window.isEnglishActive = !window.isEnglishActive;
+    
+    if (window.isEnglishActive) {
         // Включаем английский
         btn.classList.add('lang-active');
         btn.querySelector('span:first-child').textContent = '🇷🇺';
         btn.querySelector('span:last-child').textContent = 'ENG';
         
-        // Загружаем английские данные если есть
-        if (window.loadEnglishData) {
+        // Загружаем английские данные
+        if (typeof window.loadEnglishData === 'function') {
             window.loadEnglishData();
         }
         
@@ -340,11 +345,9 @@ window.toggleEnglish = function() {
         btn.querySelector('span:first-child').textContent = '🇬🇧';
         btn.querySelector('span:last-child').textContent = 'ENG';
         
-        // Здесь нужно загрузить обратно русские данные
-        // Если есть русский массив - загружаем его
-        if (window.russianProjectsData && window.russianProjectsData.projects) {
-            window.projects = window.russianProjectsData.projects;
-            if (window.renderProjects) window.renderProjects();
+        // Загружаем русские данные (из projects.json)
+        if (typeof window.loadData === 'function') {
+            window.loadData();
         }
         
         console.log('English disabled - Russian active');
