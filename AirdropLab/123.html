@@ -1993,44 +1993,60 @@ window.resumeActivity = async function(projId, actId) {
 
 // Замени функцию insertActivityFormat полностью:
 
+// Замени эту функцию полностью в своём коде:
+
 window.insertActivityFormat = function(type) {
   const textarea = document.getElementById('actRichDesc');
   const start = textarea.selectionStart;
   const end = textarea.selectionEnd;
   const selectedText = textarea.value.substring(start, end);
+  const textBefore = textarea.value.substring(0, start);
+  const textAfter = textarea.value.substring(end);
   
   if (type === 'img') {
-    // Вставляем картинку сразу - пользователь должен вставить ссылку вручную
-    // или использовать формат ![текст](ссылка)
-    const imgTemplate = '![описание картинки](ссылка_на_картинку)';
-    textarea.value = textarea.value.substring(0, start) + imgTemplate + textarea.value.substring(end);
+    // Картинка - вставляем шаблон, курсор на описание
+    const imgTemplate = '![описание](ссылка_на_картинку)';
+    textarea.value = textBefore + imgTemplate + textAfter;
     textarea.focus();
-    // Устанавливаем курсор на место описания картинки
-    const newPos = start + 2; // после ![
-    textarea.selectionStart = newPos;
-    textarea.selectionEnd = newPos + 'описание картинки'.length;
-    showToast('Вставьте ссылку вместо "ссылка_на_картинку"');
+    // Курсор на описание картинки
+    const descStart = start + 2;
+    textarea.selectionStart = descStart;
+    textarea.selectionEnd = descStart + 'описание'.length;
+    showToast('Вставьте ссылку на картинку');
   } 
   else if (type === 'link') {
-    // Для ссылки - сразу вставляем с выделенным текстом как названием ссылки
-    const linkText = selectedText.trim() || 'текст ссылки';
+    // Ссылка - сразу вставляем с выделенным текстом
+    const linkText = selectedText.trim() || 'текст';
     const linkTemplate = `[${linkText}](url)`;
-    textarea.value = textarea.value.substring(0, start) + linkTemplate + textarea.value.substring(end);
+    textarea.value = textBefore + linkTemplate + textAfter;
     textarea.focus();
-    // Курсор на место URL
-    const urlStart = start + linkText.length + 3; // [текст](
+    // Курсор на URL
+    const urlStart = start + linkText.length + 3;
     textarea.selectionStart = urlStart;
-    textarea.selectionEnd = urlStart + 3; // выделяем "url"
+    textarea.selectionEnd = urlStart + 3;
   } 
-  else {
-    // Остальные форматы (h3, ul, quote, hr) - работают как и раньше
-    if (type === 'h3') textarea.value = textarea.value.substring(0, start) + '### ' + (selectedText || 'Заголовок') + textarea.value.substring(end);
-    else if (type === 'ul') textarea.value = textarea.value.substring(0, start) + '- ' + (selectedText || 'Пункт') + textarea.value.substring(end);
-    else if (type === 'quote') textarea.value = textarea.value.substring(0, start) + '> ' + (selectedText || 'Цитата') + textarea.value.substring(end);
-    else if (type === 'hr') textarea.value = textarea.value.substring(0, start) + '\n---\n' + textarea.value.substring(end);
-    
+  else if (type === 'h3') {
+    textarea.value = textBefore + '### ' + (selectedText || 'Заголовок') + textAfter;
     textarea.focus();
-    textarea.selectionStart = textarea.selectionEnd = start + (type === 'h3' ? 4 : type === 'ul' ? 2 : type === 'quote' ? 2 : type === 'hr' ? 4 : 0) + (selectedText || (type === 'h3' ? 'Заголовок' : type === 'ul' ? 'Пункт' : type === 'quote' ? 'Цитата' : '')).length;
+    const newPos = start + 4 + (selectedText ? selectedText.length : 'Заголовок'.length);
+    textarea.selectionStart = textarea.selectionEnd = newPos;
+  }
+  else if (type === 'ul') {
+    textarea.value = textBefore + '- ' + (selectedText || 'Пункт') + textAfter;
+    textarea.focus();
+    const newPos = start + 2 + (selectedText ? selectedText.length : 'Пункт'.length);
+    textarea.selectionStart = textarea.selectionEnd = newPos;
+  }
+  else if (type === 'quote') {
+    textarea.value = textBefore + '> ' + (selectedText || 'Цитата') + textAfter;
+    textarea.focus();
+    const newPos = start + 2 + (selectedText ? selectedText.length : 'Цитата'.length);
+    textarea.selectionStart = textarea.selectionEnd = newPos;
+  }
+  else if (type === 'hr') {
+    textarea.value = textBefore + '\n---\n' + textAfter;
+    textarea.focus();
+    textarea.selectionStart = textarea.selectionEnd = start + 5;
   }
 };
 
