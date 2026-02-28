@@ -529,8 +529,6 @@ const DYNAMIC_CLASS_SET = new Set(['daily-active','visited-once','has-new-flag']
 let initialAuthCheckComplete = false;
 let translateTimeoutEn = null;
 let translateTimeoutUa = null;
-    // флаг, зажат ли pointerdown внутри модалки
-let pointerDownInsideAddModal = false;
 
 // ===========================
 // FIREBASE: SAVE SHARED DATA (PUBLIC)
@@ -1084,11 +1082,7 @@ function renderDappRow(cat, tbody) {
         tdLinks.insertBefore(w, addBtn);
     });
 }
-// ловим pointerdown глобально, capture=true – чтобы первыми получать событие
-document.addEventListener('pointerdown', e => {
-  // если down случился внутри контейнера #addModal — запомним
-  pointerDownInsideAddModal = !!e.target.closest('#addModal');
-}, true);
+
 // ===========================
 // RENDER DEPLOY GROUP CARD
 // ===========================
@@ -1314,22 +1308,26 @@ function closeModal() {
 }
 
 document.getElementById('addModalCancel').addEventListener('click', closeModal);
-const addOverlay = document.getElementById('arcAddModalOverlay');
-const addModal   = document.getElementById('addModal');
 
-addOverlay.addEventListener('click', e => {
-  // если клик по самому оверлею И pointerdown был НЕ внутри модалки — закрываем
-  if (e.target === addOverlay && !pointerDownInsideAddModal) {
-    closeModal();
-  }
+// Защита от случайного закрытия при выделении текста
+const addModalEl = document.getElementById('addModal');
+const addModalOverlay = document.getElementById('arcAddModalOverlay');
+let pointerDownInsideModal = false;
+
+// Фиксируем, где началось нажатие мыши
+document.addEventListener('pointerdown', (e) => {
+    pointerDownInsideModal = !!e.target.closest('#addModal');
+}, true);
+
+// Закрываем только если клик был НЕ внутри окна
+addModalOverlay.addEventListener('click', (e) => {
+    if (e.target === addModalOverlay && !pointerDownInsideModal) {
+        closeModal();
+    }
 });
 
-// предотвращаем "сброс" флага pointerDown внутри модалки
-addModal.addEventListener('pointerdown', e => {
-  e.stopPropagation();
-  pointerDownInsideAddModal = true;
-});
-document.getElementById('addModal').addEventListener('click', e=>e.stopPropagation());
+// Останавливаем всплытие событий внутри окна
+addModalEl.addEventListener('click', (e) => e.stopPropagation());
 document.addEventListener('keydown', e=>{ if(e.key==='Escape'){ closeModal(); closeLightbox(); }});
 
 document.querySelectorAll('.lang-tab').forEach(tab=>{
