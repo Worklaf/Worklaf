@@ -531,6 +531,24 @@ let translateTimeoutEn = null;
 let translateTimeoutUa = null;
 
 // ===========================
+// FIREBASE: SAVE SHARED DATA (PUBLIC)
+// ===========================
+async function saveSharedDataToFirebase() {
+    if (!isAdmin || !currentUser) return;
+    try {
+        await setDoc(doc(db, PUBLIC_DATA_COLLECTION, SHARED_ITEMS_DOC), {
+            userItemsData: userItemsData,
+            editsOverride: editsOverride,
+            lastUpdated: Date.now(),
+            updatedBy: currentUser.uid
+        }, { merge: true });
+        console.log('✅ Public data updated in Firebase');
+    } catch (e) {
+        console.error("Firebase shared update error:", e);
+    }
+}
+
+// ===========================
 // LANGUAGE
 // ===========================
 function t(key) {
@@ -562,7 +580,6 @@ function toggleLanguage() {
     localStorage.setItem(LANG_KEY, currentLanguage);
     if (currentUser) saveToCloud({ arcLanguage: currentLanguage, arcLanguageTimestamp: Date.now() });
     updateAllTranslations();
-    // Re-render everything with new language
     renderAll();
     showToast(currentLanguage === 'en' ? 'Language: English' : 'Мова: Українська', 'info');
 }
@@ -687,37 +704,18 @@ async function saveArcFavorites() {
     localStorage.setItem(FAV_TS_KEY,String(ts));
     if (currentUser) await saveToCloud({arcFavoritesState:favoritesState,arcFavoritesOrder:favoritesOrder,arcFavoritesTimestamp:ts});
 }
-    // ===========================
-// FIREBASE SHARED DATA - СОХРАНЕНИЕ (PUBLIC)
-// ===========================
-async function saveSharedDataToFirebase() {
-    if (!isAdmin || !currentUser) return;
-    try {
-        await setDoc(doc(db, PUBLIC_DATA_COLLECTION, SHARED_ITEMS_DOC), {
-            userItemsData: userItemsData,
-            editsOverride: editsOverride,
-            lastUpdated: Date.now(),
-            updatedBy: currentUser.uid
-        }, { merge: true });
-        console.log('✅ Public data updated in Firebase');
-    } catch (e) {
-        console.error("Firebase shared update error:", e);
-    }
-}
 async function saveUserItems() {
-    localStorage.setItem(USER_ITEMS_KEY, JSON.stringify(userItemsData));
-    localStorage.setItem('arc_uit', String(Date.now()));
-    
+    localStorage.setItem(USER_ITEMS_KEY,JSON.stringify(userItemsData));
+    localStorage.setItem('arc_uit',String(Date.now()));
     if (currentUser) {
         try {
             await saveToCloud({arcUserItems:userItemsData,arcUserItemsTimestamp:Date.now()});
-        } catch(e) { 
-            showToast('⚠️ Saved locally only','error'); 
+            // Обновляем публичные данные если админ
+            if (isAdmin) await saveSharedDataToFirebase();
         }
-    }
-    
-    // Только админ обновляет публичные данные
-    if (isAdmin) {
+        catch(e) { showToast('⚠️ Saved locally only','error'); }
+    } else if (isAdmin) {
+        // Даже если не залогинен, но админ - обновляем
         await saveSharedDataToFirebase();
     }
 }
@@ -727,12 +725,12 @@ async function saveEditsOverride() {
     if (currentUser) {
         try {
             await saveToCloud({arcEditsOverride:editsOverride,arcEditsTimestamp:Date.now()});
-            if (isAdmin) {
-        await saveSharedDataToFirebase(); // <-- ДОБАВЬТЕ ЭТУ СТРОКУ
+            if (isAdmin) await saveSharedDataToFirebase();
         } catch(e) {}
+    } else if (isAdmin) {
+        await saveSharedDataToFirebase();
     }
 }
-
 
 function loadUserItems() {
     try { const r = localStorage.getItem(USER_ITEMS_KEY); if(r) userItemsData = JSON.parse(r); } catch(e) {}
@@ -791,17 +789,16 @@ onAuthStateChanged(auth, async(user)=>{
 });
 
 // ===========================
-// SHARED DATA (GITHUB)
+// SHARED DATA (GITHUB + FIREBASE)
 // ===========================
 async function loadSharedData() {
     if (isAdmin) {
-        // Администратор всегда использует свои локальные/синхронизированные данные
         loadUserItems();
         loadEditsOverride();
         return;
     }
 
-    // 1. Попытка загрузить данные из Firebase для обычных пользователей
+    // 1. Попытка загрузить данные из Firebase
     try {
         const docRef = doc(db, PUBLIC_DATA_COLLECTION, SHARED_ITEMS_DOC);
         const docSnap = await getDoc(docRef);
@@ -811,27 +808,31 @@ async function loadSharedData() {
             userItemsData = data.userItemsData || { items:{}, collections:[], dappCategories:[] };
             editsOverride = data.editsOverride || {};
             
-            // Сохраняем в localStorage для оффлайн доступа
             localStorage.setItem(USER_ITEMS_KEY, JSON.stringify(userItemsData));
             localStorage.setItem(EDITS_KEY, JSON.stringify(editsOverride));
-            console.log('Loaded shared data from Firebase successfully.');
-            return; // Успешно, выходим из функции
-        } else {
-             console.log('No shared document in Firebase, falling back to GitHub.');
+            console.log('Loaded shared data from Firebase.');
+            return;
         }
     } catch (e) {
-        console.warn("Could not load from Firebase, falling back to GitHub.", e);
+        console.warn("Firebase error, using GitHub fallback:", e);
     }
 
-    // 2. Запасной вариант: загрузка с GitHub, если Firebase недоступен
-    console.log('Falling back to loading data from GitHub.');
+    // 2. GitHub fallback
     try {
         const r = await fetch(`https://raw.githubusercontent.com/${GITHUB_OWNER}/${GITHUB_REPO}/main/${GITHUB_ITEMS_PATH}?v=${Date.now()}`);
-        if (r.ok) { const d = await r.json(); userItemsData = { items:d.items||{}, collections:d.collections||[], dappCategories:d.dappCategories||[] }; localStorage.setItem(USER_ITEMS_KEY,JSON.stringify(userItemsData)); }
+        if (r.ok) { 
+            const d = await r.json(); 
+            userItemsData = { items:d.items||{}, collections:d.collections||[], dappCategories:d.dappCategories||[] }; 
+            localStorage.setItem(USER_ITEMS_KEY,JSON.stringify(userItemsData)); 
+        }
     } catch(e) { console.log('Using local items cache'); }
     try {
         const r2 = await fetch(`https://raw.githubusercontent.com/${GITHUB_OWNER}/${GITHUB_REPO}/main/${GITHUB_EDITS_PATH}?v=${Date.now()}`);
-        if (r2.ok) { const d2 = await r2.json(); editsOverride = d2.editsOverride||{}; localStorage.setItem(EDITS_KEY,JSON.stringify(editsOverride)); }
+        if (r2.ok) { 
+            const d2 = await r2.json(); 
+            editsOverride = d2.editsOverride||{}; 
+            localStorage.setItem(EDITS_KEY,JSON.stringify(editsOverride)); 
+        }
     } catch(e) { console.log('Using local edits cache'); }
 }
 
@@ -895,11 +896,9 @@ function createLinkEl(item, trackClass) {
 function renderFaucets() {
     const zone = document.getElementById('faucets-zone');
     if (!zone) return;
-    // Keep + button
     const existing = zone.querySelector('.add-item-btn');
     zone.innerHTML = '';
     if (existing) zone.appendChild(existing);
-    // Add items
     const items = userItemsData.items['faucets'] || [];
     items.forEach(item => {
         const wrapper = createItemWrapper(item, 'faucets', 'track-daily');
@@ -927,10 +926,8 @@ function renderDeploy() {
             else lc.appendChild(w);
         });
     });
-    // User-added deploy groups
     const grid = document.getElementById('deploy-grid');
     if (!grid) return;
-    // Remove old user cards
     grid.querySelectorAll('.user-collection-card').forEach(el=>el.remove());
     userItemsData.collections.filter(c=>c.parentZone==='deploy').forEach(grp=>{
         renderDeployGroupCard(grp, grid);
@@ -944,12 +941,9 @@ function renderNFTs() {
     const grid = document.getElementById('nfts-grid');
     if (!grid) return;
     grid.innerHTML = '';
-
-    // Only render collections that have parentZone='nfts' or are NFT collections (id starts with nft_)
     const nftCollections = userItemsData.collections.filter(c => 
         c.parentZone === 'nfts' || (!c.parentZone && String(c.id).startsWith('nft_'))
     );
-
     nftCollections.forEach(coll => {
         renderNFTCard(coll, grid);
     });
@@ -994,7 +988,6 @@ function renderNFTCard(coll, grid) {
         header.appendChild(icons);
     }
 
-    // Add + button
     const addBtn = createAddBtn(`${t('add_nft')} ${coll.title}`, ()=>{
         currentAddContext = { zone: coll.id, trackType:'track-once', isNft:true };
         openModal(`${t('add_to')}: ${coll.title}`, ['fieldTitle','fieldUrl','fieldImage','descFieldEn','descFieldUa']);
@@ -1007,7 +1000,6 @@ function renderNFTCard(coll, grid) {
     card.appendChild(linkColl);
     grid.appendChild(card);
 
-    // Add items
     const items = userItemsData.items[coll.id] || [];
     items.forEach(item => {
         const w = createItemWrapper(item, coll.id, 'track-once');
@@ -1024,7 +1016,6 @@ function renderDapps() {
     const tbody = document.getElementById('dapps-tbody');
     if (!tbody) return;
     tbody.innerHTML = '';
-
     userItemsData.dappCategories.forEach(cat => {
         renderDappRow(cat, tbody);
     });
@@ -1040,7 +1031,6 @@ function renderDappRow(cat, tbody) {
     const tr = document.createElement('tr');
     tr.dataset.zone = cat.id;
 
-    // Category cell
     const tdCat = document.createElement('td');
     tdCat.setAttribute('data-label', t('category'));
 
@@ -1049,7 +1039,6 @@ function renderDappRow(cat, tbody) {
     strong.textContent = catTitle;
     tdCat.appendChild(strong);
 
-    // Delete row button
     const delRowBtn = document.createElement('button');
     delRowBtn.type = 'button';
     delRowBtn.className = 'dapp-row-delete admin-only';
@@ -1067,7 +1056,6 @@ function renderDappRow(cat, tbody) {
     tdCat.appendChild(delRowBtn);
     tr.appendChild(tdCat);
 
-    // Links cell
     const tdLinks = document.createElement('td');
     tdLinks.setAttribute('data-label', t('all_links'));
     tdLinks.className = 'dapp-links';
@@ -1079,7 +1067,6 @@ function renderDappRow(cat, tbody) {
     tdLinks.appendChild(addBtn);
     tr.appendChild(tdLinks);
 
-    // Action cell
     const tdAct = document.createElement('td');
     tdAct.setAttribute('data-label', t('action'));
     tdAct.className = 'task-desc';
@@ -1089,7 +1076,6 @@ function renderDappRow(cat, tbody) {
 
     tbody.appendChild(tr);
 
-    // Render existing items in this row
     const existingItems = userItemsData.items[cat.id] || userItemsData.items[zoneKey] || [];
     existingItems.forEach(item => {
         const w = createItemWrapper(item, cat.id, 'track-daily');
@@ -1151,7 +1137,7 @@ function renderDeployGroupCard(grp, grid) {
 }
 
 // ===========================
-// ITEM WRAPPER (with edit/delete in edit mode)
+// ITEM WRAPPER
 // ===========================
 function createItemWrapper(item, zone, defaultTrack) {
     const wrapper = document.createElement('span');
@@ -1162,7 +1148,6 @@ function createItemWrapper(item, zone, defaultTrack) {
     const link = createLinkEl(item, defaultTrack);
     wrapper.appendChild(link);
 
-    // Edit button (only visible in edit mode via CSS)
     const editBtn = document.createElement('button');
     editBtn.type = 'button';
     editBtn.className = 'edit-item-btn';
@@ -1171,7 +1156,6 @@ function createItemWrapper(item, zone, defaultTrack) {
     editBtn.addEventListener('click', (e)=>{ e.preventDefault(); e.stopPropagation(); openEditModal(link, item, zone); });
     wrapper.appendChild(editBtn);
 
-    // Delete button (only visible in edit mode via CSS)
     const delBtn = document.createElement('button');
     delBtn.type = 'button';
     delBtn.className = 'user-item-delete';
@@ -1209,7 +1193,6 @@ function createAddBtn(title, onClick) {
 // SECTION-LEVEL + BUTTONS
 // ===========================
 function injectSectionAddButtons() {
-    // NFTs section
     const nftSection = document.querySelector('[data-section-id="nfts"] .section-header');
     if (nftSection && !nftSection.querySelector('.section-add-btn')) {
         const btn = document.createElement('button');
@@ -1223,7 +1206,6 @@ function injectSectionAddButtons() {
         if (toggle) nftSection.insertBefore(btn,toggle); else nftSection.appendChild(btn);
     }
 
-    // Deploy section
     const deploySection = document.querySelector('[data-section-id="deploy"] .section-header');
     if (deploySection && !deploySection.querySelector('.section-add-btn')) {
         const btn = document.createElement('button');
@@ -1237,7 +1219,6 @@ function injectSectionAddButtons() {
         if (toggle) deploySection.insertBefore(btn,toggle); else deploySection.appendChild(btn);
     }
 
-    // dApps section
     const dappsSection = document.querySelector('[data-section-id="dapps"] .section-header');
     if (dappsSection && !dappsSection.querySelector('.section-add-btn')) {
         const btn = document.createElement('button');
@@ -1245,13 +1226,12 @@ function injectSectionAddButtons() {
         btn.addEventListener('click',(e)=>{
             e.stopPropagation();
             currentAddContext = { sectionType:'dapp-category' };
-    openModal('Add dApp Category', ['fieldTitle','descFieldEn','descFieldUa']);
+            openModal('Add dApp Category', ['fieldTitle','descFieldEn','descFieldUa']);
         });
         const toggle = dappsSection.querySelector('.section-toggle');
         if (toggle) dappsSection.insertBefore(btn,toggle); else dappsSection.appendChild(btn);
     }
 
-    // Faucets zone + button
     const faucetsZone = document.getElementById('faucets-zone');
     if (faucetsZone && !faucetsZone.querySelector('.add-item-btn')) {
         const btn = createAddBtn('Add Faucet', ()=>{
@@ -1261,7 +1241,6 @@ function injectSectionAddButtons() {
         faucetsZone.appendChild(btn);
     }
 
-    // Deploy basic/advanced + buttons
     ['deploy_basic','deploy_advanced'].forEach(zone=>{
         const container = document.querySelector(`[data-zone="${zone}"]`);
         if (!container) return;
@@ -1333,7 +1312,6 @@ document.getElementById('arcAddModalOverlay').addEventListener('click', (e)=>{ i
 document.getElementById('addModal').addEventListener('click', e=>e.stopPropagation());
 document.addEventListener('keydown', e=>{ if(e.key==='Escape'){ closeModal(); closeLightbox(); }});
 
-// Modal lang tabs
 document.querySelectorAll('.lang-tab').forEach(tab=>{
     tab.addEventListener('click', ()=>{
         currentModalLang = tab.dataset.lang;
@@ -1343,7 +1321,6 @@ document.querySelectorAll('.lang-tab').forEach(tab=>{
     });
 });
 
-// Auto translate
 async function autoTranslate(text, targetLang) {
     if (!text || text.trim().length < 2) return text;
     const [src, tgt] = targetLang==='ua' ? ['en','uk'] : ['uk','en'];
@@ -1382,7 +1359,6 @@ document.getElementById('addFieldTooltipUa')?.addEventListener('input', ()=>{
     }, 1500);
 });
 
-// SAVE button handler
 document.getElementById('addModalSave').addEventListener('click', async()=>{
     const saveBtn = document.getElementById('addModalSave');
     const isEdit = saveBtn.dataset.editMode==='true';
@@ -1400,7 +1376,6 @@ document.getElementById('addModalSave').addEventListener('click', async()=>{
             const newImage = document.getElementById('addFieldImage').value.trim();
             if (!newTitle||!newUrl) { alert('Title and URL required!'); return; }
 
-            // Update in userItemsData
             let found = false;
             for (const z in userItemsData.items) {
                 const arr = userItemsData.items[z];
@@ -1416,13 +1391,11 @@ document.getElementById('addModalSave').addEventListener('click', async()=>{
                 await saveEditsOverride();
             }
 
-            // Update DOM
             link.href = newUrl;
             link.setAttribute('data-desc-en', newDescEn);
             link.setAttribute('data-desc-ua', newDescUa);
             if (newDescEn||newDescUa) link.setAttribute('data-tooltip', currentLanguage==='ua'?newDescUa:newDescEn);
             if (newImage) link.setAttribute('data-image', newImage); else link.removeAttribute('data-image');
-            // Update title text
             Array.from(link.childNodes).forEach(n=>{ if(n.nodeType===Node.TEXT_NODE) n.remove(); });
             link.insertBefore(document.createTextNode(newTitle), link.firstChild);
 
@@ -1431,7 +1404,6 @@ document.getElementById('addModalSave').addEventListener('click', async()=>{
             return;
         }
 
-        // ADD NEW
         const ctx = currentAddContext;
         if (!ctx) return;
 
@@ -1450,7 +1422,6 @@ document.getElementById('addModalSave').addEventListener('click', async()=>{
             userItemsData.collections.push(coll);
             userItemsData.items[id] = [];
             await saveUserItems();
-            // Render immediately
             const grid = document.getElementById('nfts-grid');
             if (grid) renderNFTCard(coll, grid);
             showToast(t('collection_created'), 'success');
@@ -1466,21 +1437,18 @@ document.getElementById('addModalSave').addEventListener('click', async()=>{
             if (grid) renderDeployGroupCard(grp, grid);
             showToast(t('group_created'), 'success');
 
-        // ПРАВИЛЬНО
-} else if (ctx.sectionType === 'dapp-category') {
-    if (!title) { alert('Title required!'); return; }
-    const id = generateId();
-    const cat = { id, title, titleUa:title, titleEn:title, descEn:descEn, descUa:descUa, action:descEn||descUa, parentZone:'dapps', addedAt:Date.now() };
-    userItemsData.dappCategories.push(cat);
-    userItemsData.items[id] = [];
-    await saveUserItems();
-    // Render immediately
-    const tbody = document.getElementById('dapps-tbody');
-    if (tbody) renderDappRow(cat, tbody);
-    showToast(t('category_created'), 'success');
+        } else if (ctx.sectionType === 'dapp-category') {
+            if (!title) { alert('Title required!'); return; }
+            const id = generateId();
+            const cat = { id, title, titleUa:title, titleEn:title, descEn:descEn, descUa:descUa, action:descEn||descUa, parentZone:'dapps', addedAt:Date.now() };
+            userItemsData.dappCategories.push(cat);
+            userItemsData.items[id] = [];
+            await saveUserItems();
+            const tbody = document.getElementById('dapps-tbody');
+            if (tbody) renderDappRow(cat, tbody);
+            showToast(t('category_created'), 'success');
 
         } else if (ctx.zone) {
-            // Add item to existing zone
             if (!title||!url) { alert('Title and URL required!'); return; }
             const id = generateId();
             const item = { id, title, url, descEn, descUa, tooltip:descEn||descUa, image, trackType: ctx.trackType||'track-daily', addedAt:Date.now() };
@@ -1490,7 +1458,6 @@ document.getElementById('addModalSave').addEventListener('click', async()=>{
             if (isAdmin) await addToGlobalNew(id);
             await saveUserItems();
 
-            // Insert item into the right container
             insertItemIntoZone(item, zone, ctx.trackType||'track-daily');
             showToast(t('element_added'), 'success');
         }
@@ -1511,9 +1478,7 @@ document.getElementById('addModalSave').addEventListener('click', async()=>{
     }
 });
 
-// Insert item into DOM after adding
 function insertItemIntoZone(item, zone, trackType) {
-    // Find the container by data-zone
     let container = document.querySelector(`[data-zone="${zone}"]`);
     if (!container) return;
 
@@ -2018,7 +1983,6 @@ document.addEventListener('DOMContentLoaded', ()=>{
     initializeTooltips();
     initLightbox();
 });
-    
 </script>
 
 <!-- LOGIN MODAL -->
