@@ -808,12 +808,12 @@
 </div>
 
 <script type="module">
-    // === ПРОСТОЙ ПЕРЕВОДЧИК ===
-let currentLang = localStorage.getItem('siteLang') || 'ru';
-let translationsCache = {};
+   // === ПРОСТОЙ ПЕРЕВОДЧИК (глобальный) ===
+window.currentLang = localStorage.getItem('siteLang') || 'ru';
+window.translationsCache = {};
 
-// Словарь переводов (только ключевые элементы)
-const translations = {
+// Словарь переводов
+window.translations = {
   ru: {},
   en: {
     // Header
@@ -823,6 +823,7 @@ const translations = {
     'В работе': 'In Progress',
     'Готово': 'Done',
     'Вход': 'Login',
+    'В системе': 'In System',
     
     // Sidebar
     'Все проекты': 'All Projects',
@@ -853,6 +854,7 @@ const translations = {
     // Кнопки
     'Начать исследование': 'Start Research',
     'Свернуть приветствие': 'Collapse Welcome',
+    'Развернуть приветствие': 'Expand Welcome',
     
     // Модалки
     'Вход': 'Login',
@@ -864,69 +866,210 @@ const translations = {
     'Уведомления': 'Notifications',
     'Нет уведомлений': 'No notifications',
     
-    // Тоast
+    // Toast
     'Задание засчитано!': 'Task counted!',
+    'Загрузка проектов...': 'Loading projects...',
     'Добавлено!': 'Added!',
     'Удалено': 'Removed',
     'Войдите': 'Please login',
     'Сохранено!': 'Saved!',
+    'Переводим страницу...': 'Translating page...',
+    'Перевод завершён!': 'Translation complete!',
+    'Отмечено как незавершённое': 'Marked as incomplete',
+    'Задача завершена!': 'Task completed!',
+    'Введите название': 'Enter name',
+    'Активность сохранена': 'Activity saved',
+    'Активность удалена': 'Activity deleted',
+    'Активность завершена': 'Activity ended',
+    'Активность возобновлена': 'Activity resumed',
+    'Перемещено в архив': 'Moved to archive',
+    'Загружено': 'Uploaded',
+    'Экспорт...': 'Exporting...',
+    'Экспортировано': 'Exported',
+    'Нет данных': 'No data',
+    'Только для админа': 'Admin only',
+    'Нет доступа': 'No access',
+    'Только админ': 'Admin only',
+    'Восстановлен!': 'Restored!',
     
-    //empty state
+    // empty state
     'Ничего не найдено': 'Nothing found',
-    'Сбросить фильтры': 'Reset filters'
+    'Сбросить фильтры': 'Reset filters',
+    'Нет описания': 'No description',
+    'Активности не добавлены': 'No activities added',
+    'Активности еще не добавлены': 'No activities added yet',
+    
+    // Инфо
+    'Нажмите на название проекта для подробной информации или на "Гайд" для выполнения.': 
+      'Click on project name for details or "Guide" to complete.',
+    'Вы не вошли в аккаунт. Избранное и выполненные задания сохраняются только в этом браузере.':
+      'You are not logged in. Favorites and completed tasks are saved only in this browser.',
+    'Режим редактирования': 'Edit Mode',
+    'Удаленных:': 'Deleted:'
   }
 };
 
-// Функция перевода ключевых фраз
-function t(key) {
-  if (currentLang === 'ru') return key;
-  return translations.en[key] || key;
-}
+// Функция перевода
+window.t = function(key) {
+  if (window.currentLang === 'ru') return key;
+  return window.translations.en[key] || key;
+};
 
 // Переключение языка
-async function toggleLanguage() {
-  if (currentLang === 'ru') {
-    currentLang = 'en';
-    document.querySelector('#langSwitch .flag').textContent = '🇬🇧';
-    document.querySelector('#langSwitch .lang-code').textContent = 'EN';
+window.toggleLanguage = async function() {
+  const langSwitch = document.querySelector('#langSwitch');
+  
+  if (window.currentLang === 'ru') {
+    window.currentLang = 'en';
+    if (langSwitch) {
+      langSwitch.querySelector('.flag').textContent = '🇬🇧';
+      langSwitch.querySelector('.lang-code').textContent = 'EN';
+    }
   } else {
-    currentLang = 'ru';
-    document.querySelector('#langSwitch .flag').textContent = '🇷🇺';
-    document.querySelector('#langSwitch .lang-code').textContent = 'RU';
+    window.currentLang = 'ru';
+    if (langSwitch) {
+      langSwitch.querySelector('.flag').textContent = '🇷🇺';
+      langSwitch.querySelector('.lang-code').textContent = 'RU';
+    }
   }
-  localStorage.setItem('siteLang', currentLang);
+  localStorage.setItem('siteLang', window.currentLang);
   
-  // Применяем перевод к статическим элементам
-  applyTranslations();
+  // Применяем перевод к интерфейсу
+  window.applyTranslations();
   
-  if (currentLang === 'en') {
-    // Переводим весь контент через API
-    await translatePageContent();
+  if (window.currentLang === 'en') {
+    await window.translatePageContent();
+  } else {
+    // Возвращаем русский текст
+    window.restoreRussianContent();
   }
-}
+};
 
-// Применяем переводы к элементам с data-translate
-function applyTranslations() {
+// Применяем переводы к статическим элементам
+window.applyTranslations = function() {
+  // Переводим элементы с data-translate
   document.querySelectorAll('[data-translate]').forEach(el => {
     const key = el.getAttribute('data-translate');
-    if (translations[currentLang][key]) {
-      el.textContent = translations[currentLang][key];
+    if (window.translations[window.currentLang][key]) {
+      el.textContent = window.translations[window.currentLang][key];
     }
   });
   
   // Обновляем плейсхолдер поиска
   const searchInput = document.getElementById('searchInput');
   if (searchInput) {
-    searchInput.placeholder = currentLang === 'en' ? 'Search projects...' : 'Поиск проектов...';
+    searchInput.placeholder = window.currentLang === 'en' ? 'Search projects...' : 'Поиск проектов...';
   }
-}
+  
+  // Переводим sidebar
+  window.translateSidebar();
+  
+  // Переводим header stats
+  window.translateHeaderStats();
+  
+  // Переводим кнопки
+  window.translateButtons();
+  
+  // Переводим select элементы
+  window.translateSelects();
+};
 
-// Простой перевод через MyMemory API (бесплатный, без ключа)
-async function translateText(text, targetLang = 'en') {
+// Перевод sidebar
+window.translateSidebar = function() {
+  const sidebarItems = document.querySelectorAll('.sidebar-link');
+  sidebarItems.forEach(el => {
+    const span = el.querySelector('span');
+    if (span) {
+      const original = span.getAttribute('data-original') || span.textContent.trim();
+      span.setAttribute('data-original', original);
+      if (window.translations.en[original]) {
+        span.textContent = window.translations.en[original];
+      }
+    }
+  });
+  
+  // Категории
+  const categoryHeaders = document.querySelectorAll('.category-block h3');
+  categoryHeaders.forEach(el => {
+    const text = el.textContent.trim();
+    if (window.translations.en[text]) {
+      el.setAttribute('data-original', text);
+      el.textContent = window.translations.en[text];
+    }
+  });
+  
+  // Фильтры заголовок
+  const filterHeaders = document.querySelectorAll('.filters-section h3');
+  filterHeaders.forEach(el => {
+    const text = el.textContent.trim();
+    if (window.translations.en[text]) {
+      el.setAttribute('data-original', text);
+      el.textContent = window.translations.en[text];
+    }
+  });
+};
+
+// Перевод header stats
+window.translateHeaderStats = function() {
+  const statLabels = document.querySelectorAll('#statActive, #statToday, #statFavorites, #statCompleted');
+  // Stat values are numbers, we don't translate those
+  
+  // Mode indicator
+  const modeIndicator = document.getElementById('modeIndicator');
+  if (modeIndicator) {
+    const text = modeIndicator.textContent.trim();
+    if (window.translations.en[text]) {
+      modeIndicator.setAttribute('data-original', text);
+      modeIndicator.textContent = window.translations.en[text];
+    }
+  }
+};
+
+// Перевод кнопок
+window.translateButtons = function() {
+  const buttons = document.querySelectorAll('button');
+  buttons.forEach(btn => {
+    const text = btn.textContent.trim();
+    if (['Гайд', 'Готово', 'NEW', 'Active', 'Сегодня', 'Вчера', 'Начать исследование', 'Вход'].includes(text)) {
+      btn.setAttribute('data-original', text);
+      if (window.translations.en[text]) {
+        btn.textContent = window.translations.en[text];
+      }
+    }
+    
+    // Также ищем span внутри кнопок
+    const span = btn.querySelector('span');
+    if (span) {
+      const spanText = span.textContent.trim();
+      if (window.translations.en[spanText]) {
+        span.setAttribute('data-original', spanText);
+        span.textContent = window.translations.en[spanText];
+      }
+    }
+  });
+};
+
+// Перевод select элементов
+window.translateSelects = function() {
+  const selects = document.querySelectorAll('select');
+  selects.forEach(select => {
+    Array.from(select.options).forEach(opt => {
+      const text = opt.textContent.trim();
+      if (window.translations.en[text]) {
+        opt.setAttribute('data-original', text);
+        opt.textContent = window.translations.en[text];
+      }
+    });
+  });
+};
+
+// Простой перевод через MyMemory API
+window.translateText = async function(text, targetLang = 'en') {
   if (targetLang === 'ru') return text;
+  if (!text || text.length < 2) return text;
   
   const cacheKey = text;
-  if (translationsCache[cacheKey]) return translationsCache[cacheKey];
+  if (window.translationsCache[cacheKey]) return window.translationsCache[cacheKey];
   
   try {
     const langPair = `ru|${targetLang}`;
@@ -936,7 +1079,7 @@ async function translateText(text, targetLang = 'en') {
     const data = await response.json();
     
     if (data.responseStatus === 200 && data.responseData) {
-      translationsCache[cacheKey] = data.responseData.translatedText;
+      window.translationsCache[cacheKey] = data.responseData.translatedText;
       return data.responseData.translatedText;
     }
   } catch (e) {
@@ -944,79 +1087,119 @@ async function translateText(text, targetLang = 'en') {
   }
   
   return text;
-}
+};
 
 // Переводим контент проектов
-async function translatePageContent() {
-  if (currentLang !== 'en') return;
+window.translatePageContent = async function() {
+  if (window.currentLang !== 'en') return;
   
-  showToast('Переводим страницу...');
+  window.showToast('Переводим страницу...');
   
   // Переводим заголовки проектов
-  const projectNames = document.querySelectorAll('h3.font-bold.text-lg');
+  const projectNames = document.querySelectorAll('.project-card-wrapper h3');
   for (const el of projectNames) {
     const original = el.textContent;
-    if (!original.includes('�')) { // не переводить уже переведённое
-      const translated = await translateText(original);
+    if (original && original.length > 2 && !el.hasAttribute('data-translated')) {
+      const translated = await window.translateText(original);
       el.setAttribute('data-original', original);
+      el.setAttribute('data-translated', 'true');
       el.textContent = translated;
     }
   }
   
-  // Переводим описания
-  const descriptions = document.querySelectorAll('.line-clamp-2, .text-slate-400.text-sm');
+  // Переводим описания проектов
+  const descriptions = document.querySelectorAll('.project-card-wrapper .line-clamp-2');
   for (const el of descriptions) {
     const original = el.textContent;
-    if (original.length > 10 && !original.includes('�')) {
-      const translated = await translateText(original);
+    if (original && original.length > 10 && !el.hasAttribute('data-translated')) {
+      const translated = await window.translateText(original);
       el.setAttribute('data-original', original);
+      el.setAttribute('data-translated', 'true');
       el.textContent = translated;
     }
   }
   
-  // Переводим категории
-  const categories = document.querySelectorAll('.bg-slate-800.px-2.py-1.rounded, .tag');
-  for (const el of categories) {
+  // Переводим названия категорий в карточках
+  const categoryTags = document.querySelectorAll('.project-card-wrapper .bg-slate-800.px-2.py-1.rounded');
+  for (const el of categoryTags) {
     const original = el.textContent;
-    if (!original.match(/^\d+$/) && original.length < 20) {
-      const translated = await translateText(original);
+    if (original && original.length < 20 && !el.hasAttribute('data-translated')) {
+      const translated = await window.translateText(original);
       el.setAttribute('data-original', original);
+      el.setAttribute('data-translated', 'true');
       el.textContent = translated;
     }
   }
   
-  // Переводим кнопки
-  const buttons = document.querySelectorAll('button span, button');
-  for (const el of buttons) {
+  // Переводим статус проекта
+  const statusSpans = document.querySelectorAll('.project-card-wrapper .status-active, .project-card-wrapper .status-soon, .project-card-wrapper .status-ended');
+  for (const el of statusSpans) {
     const original = el.textContent.trim();
-    if (['Гайд', 'Готово', 'NEW', 'Active', 'Сегодня', 'Вчера'].includes(original)) {
-      const key = translations.en[original] || original;
-      el.textContent = key;
+    if (['Active', 'Soon', 'Ended'].includes(original)) continue;
+    if (original && !el.hasAttribute('data-translated')) {
+      el.setAttribute('data-original', original);
+      el.setAttribute('data-translated', 'true');
     }
   }
   
-  // Переводим sidebar
-  const sidebarItems = document.querySelectorAll('.sidebar-link span');
-  for (const el of sidebarItems) {
-    const original = el.textContent.trim();
-    const key = Object.keys(translations.en).find(k => translations.en[k] === original || k === original);
-    if (key && translations.en[key]) {
-      el.setAttribute('data-original', key);
-      el.textContent = translations.en[key];
-    }
+  window.showToast('Перевод завершён!');
+};
+
+// Возвращаем русский текст
+window.restoreRussianContent = function() {
+  // Заголовки проектов
+  document.querySelectorAll('.project-card-wrapper h3[data-original]').forEach(el => {
+    el.textContent = el.getAttribute('data-original');
+  });
+  
+  // Описания
+  document.querySelectorAll('.project-card-wrapper .line-clamp-2[data-original]').forEach(el => {
+    el.textContent = el.getAttribute('data-original');
+  });
+  
+  // Категории
+  document.querySelectorAll('.project-card-wrapper .bg-slate-800.px-2.py-1.rounded[data-original]').forEach(el => {
+    el.textContent = el.getAttribute('data-original');
+  });
+  
+  // Sidebar
+  document.querySelectorAll('.sidebar-link span[data-original]').forEach(el => {
+    el.textContent = el.getAttribute('data-original');
+  });
+  
+  // Mode indicator
+  const modeIndicator = document.getElementById('modeIndicator');
+  if (modeIndicator && modeIndicator.getAttribute('data-original')) {
+    modeIndicator.textContent = modeIndicator.getAttribute('data-original');
   }
   
-  showToast('Перевод завершён!');
-}
+  // Кнопки
+  document.querySelectorAll('button[data-original]').forEach(el => {
+    el.textContent = el.getAttribute('data-original');
+  });
+  
+  // Search placeholder
+  const searchInput = document.getElementById('searchInput');
+  if (searchInput) {
+    searchInput.placeholder = 'Поиск проектов...';
+  }
+};
 
 // Инициализация языка при загрузке
 document.addEventListener('DOMContentLoaded', function() {
   const savedLang = localStorage.getItem('siteLang');
   if (savedLang === 'en') {
-    currentLang = 'en';
-    document.querySelector('#langSwitch .flag').textContent = '🇬🇧';
-    document.querySelector('#langSwitch .lang-code').textContent = 'EN';
-    setTimeout(translatePageContent, 2000);
+    window.currentLang = 'en';
+    const langSwitch = document.querySelector('#langSwitch');
+    if (langSwitch) {
+      langSwitch.querySelector('.flag').textContent = '🇬🇧';
+      langSwitch.querySelector('.lang-code').textContent = 'EN';
+    }
+    // Применяем перевод после загрузки данных
+    setTimeout(() => {
+      window.applyTranslations();
+      window.translatePageContent();
+    }, 3000);
   }
 });
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
