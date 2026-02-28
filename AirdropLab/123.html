@@ -2360,6 +2360,100 @@ window.openDetail = function(id) {
   document.getElementById('detailEditBtn').classList.toggle('hidden', !isAdminMode);
   updateDetailFavoriteIcon();
   document.getElementById('detailModal').classList.add('active');
+  
+  // === ПЕРЕВОД КОНТЕНТА МОДАЛКИ ===
+  if (window.currentLang === 'en') {
+    setTimeout(() => translateDetailModal(project), 100);
+  }
+};
+
+// Функция перевода модалки деталей
+window.translateDetailModal = async function(project) {
+  if (!project) return;
+  
+  // Переводим заголовок
+  const detailName = document.getElementById('detailName');
+  if (detailName && !detailName.getAttribute('data-translated')) {
+    const translated = await window.translateText(project.name);
+    detailName.setAttribute('data-original', project.name);
+    detailName.textContent = translated;
+    detailName.setAttribute('data-translated', 'true');
+  }
+  
+  // Переводим описание
+  const detailDesc = document.getElementById('detailDesc');
+  if (detailDesc && !detailDesc.getAttribute('data-translated')) {
+    const originalDesc = project.description || 'Описание отсутствует';
+    const translated = await window.translateText(originalDesc);
+    detailDesc.setAttribute('data-original', originalDesc);
+    detailDesc.textContent = translated;
+    detailDesc.setAttribute('data-translated', 'true');
+  }
+  
+  // Переводим "Добавлено:"
+  const detailCreated = document.getElementById('detailCreated');
+  if (detailCreated) {
+    detailCreated.innerHTML = detailCreated.innerHTML.replace('Добавлено:', 'Added:');
+  }
+  
+  // Переводим текст активностей
+  const activitiesList = document.querySelectorAll('#detailActivitiesList .activity-block');
+  for (const actBlock of activitiesList) {
+    const titleEl = actBlock.querySelector('.font-bold.text-white');
+    if (titleEl && !titleEl.getAttribute('data-translated')) {
+      // Находим название активности (без иконок и бейджей)
+      const titleText = titleEl.textContent.replace(/NEW|Ended/gi, '').trim();
+      if (titleText && titleText.length > 2) {
+        const translated = await window.translateText(titleText);
+        titleEl.setAttribute('data-original', titleText);
+        titleEl.setAttribute('data-translated', 'true');
+      }
+    }
+    
+    // Переводим описание активности
+    const bodyEl = actBlock.querySelector('.activity-body');
+    if (bodyEl && !bodyEl.getAttribute('data-translated')) {
+      const descEl = bodyEl.querySelector('.rich-content');
+      if (descEl) {
+        const original = descEl.innerHTML;
+        // Простой перевод HTML контента - только текстовые узлы
+        const tempDiv = document.createElement('div');
+        tempDiv.innerHTML = original;
+        
+        // Переводим текстовые узлы
+        const walker = document.createTreeWalker(tempDiv, NodeFilter.SHOW_TEXT, null, false);
+        const textNodes = [];
+        while(walker.nextNode()) textNodes.push(walker.currentNode);
+        
+        for (const node of textNodes) {
+          if (node.textContent.trim().length > 5) {
+            const translated = await window.translateText(node.textContent);
+            node.textContent = translated;
+          }
+        }
+        
+        descEl.setAttribute('data-original', original);
+        descEl.innerHTML = tempDiv.innerHTML;
+        descEl.setAttribute('data-translated', 'true');
+      }
+    }
+  }
+  
+  // Переводим кнопку "Клик"
+  const clickButtons = document.querySelectorAll('#detailActivitiesList button:contains("Клик")');
+  clickButtons.forEach(btn => {
+    if (btn.textContent.includes('Клик')) {
+      btn.setAttribute('data-original', btn.textContent);
+      btn.innerHTML = btn.innerHTML.replace('Клик', 'Click');
+    }
+  });
+  
+  // Если нет активностей - переводим сообщение
+  const emptyActivities = document.querySelector('#detailActivitiesList p.text-slate-500');
+  if (emptyActivities && emptyActivities.textContent.includes('Активности')) {
+    emptyActivities.setAttribute('data-original', emptyActivities.textContent);
+    emptyActivities.textContent = 'No activities added';
+  }
 };
 
 window.toggleActivityDetail = function(actId) {
