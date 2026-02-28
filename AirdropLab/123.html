@@ -15,64 +15,39 @@
     // === ФУНКЦИЯ ЗАГРУЗКИ ENGLISH ДАННЫХ ===
     window.loadEnglishData = function() {
         console.log('loadEnglishData called');
-        console.log('englishProjectsData:', window.englishProjectsData);
         
         if (window.englishProjectsData && window.englishProjectsData.projects) {
+            // 1. Присваиваем данные в глобальную переменную projects
             window.projects = window.englishProjectsData.projects;
             console.log('English projects loaded:', window.projects.length);
             
-            // Вызываем глобальную функцию с правильным параметром
-            if (typeof window.renderProjects === 'function') {
-                window.renderProjects(window.currentFilteredList || window.projects);
+            // 2. Сбрасываем currentFilteredList чтобы пересчитать
+            window.currentFilteredList = null;
+            
+            // 3. Сбрасываем фильтры и поиск
+            if (typeof window.filterProjects === 'function') {
+                window.filterProjects('all'); // Сброс фильтров
             }
             
-            // Обновляем UI
+            // 4. Сбрасываем поиск
+            const searchInput = document.getElementById('searchInput');
+            if (searchInput) {
+                searchInput.value = '';
+            }
+            
+            // 5. Сбрасываем категории
+            if (typeof window.currentFilters !== 'undefined') {
+                window.currentFilters = { statuses: [], categories: [] };
+            }
+            
+            // 6. Применяем фильтры (это пересчитает currentFilteredList и отрендерит)
             if (typeof window.applyFilters === 'function') {
-                window.applyFilters();
+                window.applyFilters(null, true); // true = сбросить на первую страницу
             }
             
             console.log('English data loaded!');
         } else {
             console.error('English data NOT found!');
-        }
-    };
-    
-    // === ПЕРЕКЛЮЧАТЕЛЬ ЯЗЫКА ===
-    window.isEnglishActive = false;
-
-    window.toggleEnglish = function() {
-        const btn = document.getElementById('langBtn');
-        if (!btn) {
-            console.log('Кнопка не найдена');
-            return;
-        }
-        
-        window.isEnglishActive = !window.isEnglishActive;
-        
-        if (window.isEnglishActive) {
-            // Включаем английский
-            btn.classList.add('lang-active');
-            btn.querySelector('span:first-child').textContent = '🇷🇺';
-            btn.querySelector('span:last-child').textContent = 'ENG';
-            
-            // Загружаем английские данные
-            if (typeof window.loadEnglishData === 'function') {
-                window.loadEnglishData();
-            }
-            
-            console.log('English enabled');
-        } else {
-            // Выключаем английский (возвращаем русский)
-            btn.classList.remove('lang-active');
-            btn.querySelector('span:first-child').textContent = '🇬🇧';
-            btn.querySelector('span:last-child').textContent = 'ENG';
-            
-            // Загружаем русские данные (из projects.json)
-            if (typeof window.loadData === 'function') {
-                window.loadData();
-            }
-            
-            console.log('English disabled - Russian active');
         }
     };
 </script>
