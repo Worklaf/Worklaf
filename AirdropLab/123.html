@@ -1980,6 +1980,7 @@ window.resumeActivity = async function(projId, actId) {
   }
 };
 
+// ============ INSERT ACTIVITY FORMAT (с автозакрытием) ============
 window.insertActivityFormat = function(type) {
   const textarea = document.getElementById('actRichDesc');
   if (!textarea) return;
@@ -2014,7 +2015,33 @@ window.insertActivityFormat = function(type) {
   promptInput.focus();
 };
 
-// Обновляем подтверждение вставки
+// ============ PROMPT MODAL - АВТОЗАКРЫТИЕ И ВСТАВКА ============
+
+// Добавляем обработку Ctrl+V и Enter при загрузке
+document.addEventListener('DOMContentLoaded', function() {
+  const promptInput = document.getElementById('promptInput');
+  if (promptInput) {
+    // Enter для подтверждения
+    promptInput.addEventListener('keydown', function(e) {
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        window.confirmLinkInsert();
+      }
+    });
+    
+    // ✅ НОВОЕ: Ctrl+V автоматически вставляет и закрывает
+    promptInput.addEventListener('paste', function(e) {
+      // Небольшая задержка, чтобы значение успело вставиться
+      setTimeout(function() {
+        if (promptInput.value.trim()) {
+          window.confirmLinkInsert();
+        }
+      }, 50);
+    });
+  }
+});
+
+// ============ CONFIRM LINK INSERT (исправленная позиция курсора) ============
 window.confirmLinkInsert = function() {
   const textarea = document.getElementById('actRichDesc');
   const url = document.getElementById('promptInput').value.trim();
@@ -2024,8 +2051,11 @@ window.confirmLinkInsert = function() {
     return;
   }
   
-  if (window.pendingActivityFormat && textarea) {
-    const { type, start, end, selectedText } = window.pendingActivityFormat;
+  // Используем pendingActivityFormat если есть, иначе pendingLinkInsert
+  const format = window.pendingActivityFormat || pendingLinkInsert;
+  
+  if (format && textarea) {
+    const { type, start, end, selectedText } = format;
     const textBefore = textarea.value.substring(0, start);
     const textAfter = textarea.value.substring(end);
     let insertion = '';
@@ -2038,27 +2068,33 @@ window.confirmLinkInsert = function() {
       // Для ссылки: [текст](url)
       const linkText = selectedText.trim() || 'ссылка';
       insertion = `[${linkText}](${url})`;
+    } else {
+      // Для остальных типов (h3, ul, quote, hr)
+      insertion = selectedText;
     }
     
+    // Вставляем текст
     textarea.value = textBefore + insertion + textAfter;
+    
+    // ✅ ИСПРАВЛЕНО: Курсор остаётся ПОСЛЕ вставленного текста
+    const cursorPos = start + insertion.length;
     textarea.focus();
-    textarea.selectionStart = textarea.selectionEnd = start + insertion.length;
+    textarea.selectionStart = textarea.selectionEnd = cursorPos;
     
     showToast(type === 'img' ? 'Картинка добавлена' : 'Ссылка добавлена');
   }
   
-  window.pendingActivityFormat = null;
+  // Закрываем модалку
   closePromptModal();
 };
 
-// Закрытие модального окна
-window.closePromptModal = function() { 
-  document.getElementById('promptModal').classList.remove('active'); 
-  document.getElementById('promptInput').value = ''; 
-  window.pendingActivityFormat = null; 
+window.closePromptModal = function() {
+  document.getElementById('promptModal').classList.remove('active');
+  document.getElementById('promptInput').value = '';
+  window.pendingActivityFormat = null;
+  pendingLinkInsert = null;
 };
 
-window.closePromptModal = function() { document.getElementById('promptModal').classList.remove('active'); document.getElementById('promptInput').value = ''; pendingLinkInsert = null; };
 
 window.confirmLinkInsert = function() {
   const textarea = document.getElementById('actRichDesc');
