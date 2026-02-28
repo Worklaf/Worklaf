@@ -2054,7 +2054,7 @@ async function loadArcTwitterResults() {
     const list = document.getElementById('arcMonitorList'); const status = document.getElementById('arcMonitorStatus'); const badge = document.getElementById('arcMonitorBadge');
     if (!list || !status || !badge) return;
     try {
-        const response = await fetch('https://raw.githubusercontent.com/Worklaf/Worklaf/main/AirdropLab/guides/Arc/arc_twitter_results.json?v=' + Date.now());
+        const response = await fetch('https://raw.githubusercontent.com/Worklaf/Worklaf/main/AirdropLab/guides/Arc/twitter_results.json?v=' + Date.now());
         if (!response.ok) throw new Error(`HTTP ${response.status}`);
         const data = await response.json();
         
@@ -2141,6 +2141,26 @@ document.addEventListener('DOMContentLoaded', () => {
     window.addEventListener('resize', () => { const wasMobile = isMobile; isMobile = window.innerWidth <= 768; if (isMobile && !wasMobile) { storedLegend = localStorage.getItem(LEGEND_COLLAPSE_KEY); isLegendCollapsed = storedLegend === 'true' || storedLegend === null; } if (!isMobile) isLegendCollapsed = false; applyLegendState(isLegendCollapsed); });
     applyLegendState(isLegendCollapsed); initializeTooltips(); updateBadgeVisibility();
 });
+    // Кнопка очистки данных (одноразовая)
+window.clearOldFirebaseData = async function() {
+    if (!currentUser) return alert('Сначала войди в аккаунт!');
+    
+    if (!confirm('Это удалит старые данные в Firebase. Продолжить?')) return;
+    
+    try {
+        await setDoc(doc(db, "users", currentUser.uid), {
+            arcUserItems: deleteField(),
+            arcEditsOverride: deleteField(),
+            arcUserItemsTimestamp: deleteField(),
+            arcEditsTimestamp: deleteField()
+        }, { merge: true });
+        
+        alert('Данные очищены! Перезагрузи страницу.');
+        location.reload();
+    } catch(e) {
+        alert('Ошибка: ' + e.message);
+    }
+};
 </script>
 
 <!-- LOGIN MODAL -->
