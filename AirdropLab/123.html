@@ -1410,6 +1410,7 @@ setTimeout(() => {
   }
 
   // Настройка обработчиков модальных окон - закрытие только при клике по фону (mousedown)
+    // Список всех ID модальных окон для настройки закрытия
   const modalConfigs = [
     { id: 'detailModal', closeFn: window.closeDetailModal },
     { id: 'loginModal', closeFn: window.closeLoginModal },
@@ -1426,15 +1427,31 @@ setTimeout(() => {
   modalConfigs.forEach(config => {
     const modalElement = document.getElementById(config.id);
     if (modalElement) {
+      // ПРАВИЛЬНАЯ ЛОГИКА ЗАКРЫТИЯ (как в Tempo):
+      
+      // 1. При нажатии проверяем, попали ли мы именно в фон
       modalElement.addEventListener('mousedown', function(e) {
-        // Закрываем только если кликнули точно по фону модалки, а не по её содержимому
         if (e.target === modalElement) {
+          modalElement.dataset.mouseDownOnBg = 'true';
+        } else {
+          modalElement.dataset.mouseDownOnBg = 'false';
+        }
+      });
+
+      // 2. При отпускании закрываем, только если и нажали, и отпустили на фоне
+      modalElement.addEventListener('mouseup', function(e) {
+        if (modalElement.dataset.mouseDownOnBg === 'true' && e.target === modalElement) {
           config.closeFn();
         }
+        modalElement.dataset.mouseDownOnBg = 'false';
+      });
+      
+      // Сброс флага, если мышь ушла из окна
+      modalElement.addEventListener('mouseleave', function() {
+        modalElement.dataset.mouseDownOnBg = 'false';
       });
     }
   });
-});
 
 let firstDataLoadComplete = false;
 
@@ -1991,64 +2008,102 @@ window.resumeActivity = async function(projId, actId) {
   }
 };
 
-// Замени функцию insertActivityFormat полностью:
-
-// Замени эту функцию полностью в своём коде:
+// ========== ЗАМЕНИТЕ ФУНКЦИЮ insertActivityFormat ==========
 
 window.insertActivityFormat = function(type) {
   const textarea = document.getElementById('actRichDesc');
+  if (!textarea) return;
+  
+  // 1. Сохраняем текущую позицию скролла
+  const oldScrollTop = textarea.scrollTop;
+  
   const start = textarea.selectionStart;
   const end = textarea.selectionEnd;
   const selectedText = textarea.value.substring(start, end);
   const textBefore = textarea.value.substring(0, start);
   const textAfter = textarea.value.substring(end);
   
+  let insertion = '';
+  let newCursorPos = 0;
+  let selectionLength = 0;
+
   if (type === 'img') {
-    // Картинка - вставляем шаблон, курсор на описание
-    const imgTemplate = '![описание](ссылка_на_картинку)';
-    textarea.value = textBefore + imgTemplate + textAfter;
-    textarea.focus();
-    // Курсор на описание картинки
-    const descStart = start + 2;
-    textarea.selectionStart = descStart;
-    textarea.selectionEnd = descStart + 'описание'.length;
-    showToast('Вставьте ссылку на картинку');
+    insertion = '![описание](ссылка_на_картинку)';
+    newCursorPos = start + 2;
+    selectionLength = 'описание'.length;
   } 
   else if (type === 'link') {
-    // Ссылка - сразу вставляем с выделенным текстом
     const linkText = selectedText.trim() || 'текст';
-    const linkTemplate = `[${linkText}](url)`;
-    textarea.value = textBefore + linkTemplate + textAfter;
-    textarea.focus();
-    // Курсор на URL
-    const urlStart = start + linkText.length + 3;
-    textarea.selectionStart = urlStart;
-    textarea.selectionEnd = urlStart + 3;
+    insertion = `[${linkText}](url)`;
+    newCursorPos = start + linkText.length + 3;
+    selectionLength = 3; // выделяем слово url
   } 
   else if (type === 'h3') {
-    textarea.value = textBefore + '### ' + (selectedText || 'Заголовок') + textAfter;
-    textarea.focus();
-    const newPos = start + 4 + (selectedText ? selectedText.length : 'Заголовок'.length);
-    textarea.selectionStart = textarea.selectionEnd = newPos;
+    insertion = '### ' + (selectedText || 'Заголовок');
+    newCursorPos = start + 4;
+    selectionLength = (selectedText || 'Заголовок').length;
   }
   else if (type === 'ul') {
-    textarea.value = textBefore + '- ' + (selectedText || 'Пункт') + textAfter;
-    textarea.focus();
-    const newPos = start + 2 + (selectedText ? selectedText.length : 'Пункт'.length);
-    textarea.selectionStart = textarea.selectionEnd = newPos;
+    insertion = '- ' + (selectedText || 'Пункт');
+    newCursorPos = start + 2;
+    selectionLength = (selectedText || 'Пункт').length;
   }
   else if (type === 'quote') {
-    textarea.value = textBefore + '> ' + (selectedText || 'Цитата') + textAfter;
-    textarea.focus();
-    const newPos = start + 2 + (selectedText ? selectedText.length : 'Цитата'.length);
-    textarea.selectionStart = textarea.selectionEnd = newPos;
+    insertion = '> ' + (selectedText || 'Цитата');
+    newCursorPos = start + 2;
+    selectionLength = (selectedText || 'Цитата').length;
   }
   else if (type === 'hr') {
-    textarea.value = textBefore + '\n---\n' + textAfter;
-    textarea.focus();
-    textarea.selectionStart = textarea.selectionEnd = start + 5;
+    insertion = '\n---\n';
+    newCursorPos = start + 5;
   }
+
+  // 2. Вставляем текст
+  textarea.value = textBefore + insertion + textAfter;
+  
+  // 3. Возвращаем фокус и выделение
+  textarea.focus();
+  textarea.setSelectionRange(newCursorPos, newCursorPos + selectionLength);
+  
+  // 4. ГЛАВНОЕ: Возвращаем скролл на место, чтобы экран не прыгал вниз
+  textarea.scrollTop = oldScrollTop;
 };
+// ========== ЗАМЕНИТЕ ОБРАБОТЧИКИ МОДАЛЬНЫХ ОКОН ==========
+
+// Найдите этот блок в коде и замените:
+
+  modalConfigs.forEachEach(config => {
+    const modalElement = document.getElementById(config.id);
+    if (modalElement) {
+      // Убираем старые обработчики если есть
+      modalElement.onmousedown = null;
+      modalElement.onmouseup = null;
+      
+      // Закрытие только при MOSE DOWN на фоне модалки
+      modalElement.addEventListener('mousedown', function(e) {
+        // Закрываем только если кликнули точно по фону модалки (не по контенту)
+        if (e.target === modalElement) {
+          // НЕ закрываем сразу - запоминаем что начали клик на фоне
+          modalElement.dataset.mouseDownOnBg = 'true';
+        } else {
+          modalElement.dataset.mouseDownOnBg = 'false';
+        }
+      });
+      
+      // При mouseup проверяем - если начинали на фоне и отпустили там же - закрываем
+      modalElement.addEventListener('mouseup', function(e) {
+        if (modalElement.dataset.mouseDownOnBg === 'true' && e.target === modalElement) {
+          config.closeFn();
+        }
+        modalElement.dataset.mouseDownOnBg = 'false';
+      });
+      
+      // Если увели мышь за пределы - сбрасываем флаг
+      modalElement.addEventListener('mouseleave', function(e) {
+        modalElement.dataset.mouseDownOnBg = 'false';
+      });
+    }
+  });
 
 window.closePromptModal = function() { document.getElementById('promptModal').classList.remove('active'); document.getElementById('promptInput').value = ''; pendingLinkInsert = null; };
 
