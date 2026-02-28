@@ -404,8 +404,11 @@ window.setLang = function(lang) {
 
 // Переключить язык
 window.toggleLang = function() {
-    const newLang = window.currentLang === 'ru' ? 'en' : 'ru';
-    window.setLang(newLang);
+  const newLang = window.currentLang === 'ru' ? 'en' : 'ru';
+  window.setLang(newLang);
+  
+  // Перезагружаем данные при смене языка
+  window.loadData();
 };
 
 // Обновить переводы на странице
