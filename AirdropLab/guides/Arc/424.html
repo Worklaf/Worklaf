@@ -499,8 +499,10 @@ const GITHUB_REPO = 'Worklaf';
 const GITHUB_BRANCH = 'main';
 const GITHUB_ITEMS_PATH = 'AirdropLab/guides/Arc/arc_shared_items.json';
 const GITHUB_EDITS_PATH = 'AirdropLab/guides/Arc/arc_shared_edits.json';
-const CONFIG_COLLECTION = 'arc_config';
 const NEW_IND_DOC = 'arc_new_indicators_global';
+const PUBLIC_DATA_COLLECTION = 'arc_public_data';
+const SHARED_ITEMS_DOC = 'shared_items_v1';
+const CONFIG_COLLECTION = 'arc_config';
 
 // ===========================
 // STATE
@@ -689,8 +691,21 @@ async function saveUserItems() {
     localStorage.setItem(USER_ITEMS_KEY,JSON.stringify(userItemsData));
     localStorage.setItem('arc_uit',String(Date.now()));
     if (currentUser) {
-        try { await saveToCloud({arcUserItems:userItemsData,arcUserItemsTimestamp:Date.now()}); }
+        try {
+            await saveToCloud({arcUserItems:userItemsData,arcUserItemsTimestamp:Date.now()});
+            await saveSharedDataToFirebase(); // <-- ДОБАВЬТЕ ЭТУ СТРОКУ
+        }
         catch(e) { showToast('⚠️ Saved locally only','error'); }
+    }
+}
+
+async function saveEditsOverride() {
+    localStorage.setItem(EDITS_KEY,JSON.stringify(editsOverride));
+    if (currentUser) {
+        try {
+            await saveToCloud({arcEditsOverride:editsOverride,arcEditsTimestamp:Date.now()});
+            await saveSharedDataToFirebase(); // <-- ДОБАВЬТЕ ЭТУ СТРОКУ
+        } catch(e) {}
     }
 }
 async function saveEditsOverride() {
@@ -760,15 +775,45 @@ onAuthStateChanged(auth, async(user)=>{
 // SHARED DATA (GITHUB)
 // ===========================
 async function loadSharedData() {
-    if (isAdmin) return;
+    if (isAdmin) {
+        // Администратор всегда использует свои локальные/синхронизированные данные
+        loadUserItems();
+        loadEditsOverride();
+        return;
+    }
+
+    // 1. Попытка загрузить данные из Firebase для обычных пользователей
+    try {
+        const docRef = doc(db, PUBLIC_DATA_COLLECTION, SHARED_ITEMS_DOC);
+        const docSnap = await getDoc(docRef);
+
+        if (docSnap.exists()) {
+            const data = docSnap.data();
+            userItemsData = data.userItemsData || { items:{}, collections:[], dappCategories:[] };
+            editsOverride = data.editsOverride || {};
+            
+            // Сохраняем в localStorage для оффлайн доступа
+            localStorage.setItem(USER_ITEMS_KEY, JSON.stringify(userItemsData));
+            localStorage.setItem(EDITS_KEY, JSON.stringify(editsOverride));
+            console.log('Loaded shared data from Firebase successfully.');
+            return; // Успешно, выходим из функции
+        } else {
+             console.log('No shared document in Firebase, falling back to GitHub.');
+        }
+    } catch (e) {
+        console.warn("Could not load from Firebase, falling back to GitHub.", e);
+    }
+
+    // 2. Запасной вариант: загрузка с GitHub, если Firebase недоступен
+    console.log('Falling back to loading data from GitHub.');
     try {
         const r = await fetch(`https://raw.githubusercontent.com/${GITHUB_OWNER}/${GITHUB_REPO}/main/${GITHUB_ITEMS_PATH}?v=${Date.now()}`);
         if (r.ok) { const d = await r.json(); userItemsData = { items:d.items||{}, collections:d.collections||[], dappCategories:d.dappCategories||[] }; localStorage.setItem(USER_ITEMS_KEY,JSON.stringify(userItemsData)); }
-    } catch(e) { console.log('Using local items'); }
+    } catch(e) { console.log('Using local items cache'); }
     try {
         const r2 = await fetch(`https://raw.githubusercontent.com/${GITHUB_OWNER}/${GITHUB_REPO}/main/${GITHUB_EDITS_PATH}?v=${Date.now()}`);
         if (r2.ok) { const d2 = await r2.json(); editsOverride = d2.editsOverride||{}; localStorage.setItem(EDITS_KEY,JSON.stringify(editsOverride)); }
-    } catch(e) { console.log('Using local edits'); }
+    } catch(e) { console.log('Using local edits cache'); }
 }
 
 // ===========================
@@ -1954,6 +1999,22 @@ document.addEventListener('DOMContentLoaded', ()=>{
     initializeTooltips();
     initLightbox();
 });
+    async function saveSharedDataToFirebase() {
+    if (!isAdmin) return;
+    try {
+        const dataToSave = {
+            userItemsData: userItemsData,
+            editsOverride: editsOverride,
+            lastUpdated: new Date().toISOString(),
+            updatedBy: currentUser.uid
+        };
+        await setDoc(doc(db, PUBLIC_DATA_COLLECTION, SHARED_ITEMS_DOC), dataToSave);
+        console.log('Public data successfully updated in Firebase.');
+    } catch (e) {
+        console.error("Failed to update public data:", e);
+        showToast('Error updating public data!', 'error');
+    }
+}
 </script>
 
 <!-- LOGIN MODAL -->
