@@ -606,13 +606,13 @@
           <label class="block text-sm font-medium text-slate-300 mb-2">Подробное описание</label>
           <div class="editor-wrapper">
             <div class="editor-toolbar">
-              <button type="button" onclick="insertActivityFormat('img')"><i class="fas fa-image"></i></button>
-              <button type="button" onclick="insertActivityFormat('link')"><i class="fas fa-link"></i></button>
-              <button type="button" onclick="insertActivityFormat('h3')"><i class="fas fa-heading"></i></button>
-              <button type="button" onclick="insertActivityFormat('ul')"><i class="fas fa-list-ul"></i></button>
-              <button type="button" onclick="insertActivityFormat('quote')"><i class="fas fa-quote-left"></i></button>
-              <button type="button" onclick="insertActivityFormat('hr')"><i class="fas fa-minus"></i></button>
-            </div>
+  <button type="button" onclick="insertActivityFormat('img')" title="Вставить картинку"><i class="fas fa-image"></i></button>
+  <button type="button" onclick="insertActivityFormat('link')" title="Вставить ссылку"><i class="fas fa-link"></i></button>
+  <button type="button" onclick="insertActivityFormat('h3')" title="Заголовок 3 уровня"><i class="fas fa-heading"></i></button>
+  <button type="button" onclick="insertActivityFormat('ul')" title="Маркированный список"><i class="fas fa-list-ul"></i></button>
+  <button type="button" onclick="insertActivityFormat('quote')" title="Цитата"><i class="fas fa-quote-left"></i></button>
+  <button type="button" onclick="insertActivityFormat('hr')" title="Горизонтальная линия"><i class="fas fa-minus"></i></button>
+</div>
             <textarea id="actRichDesc" class="editor-textarea" placeholder="Инструкция по выполнению..."></textarea>
             <div class="editor-help"><code>![текст](ссылка)</code> картинка, <code>[текст](ссылка)</code> ссылка</div>
           </div>
@@ -1981,6 +1981,7 @@ window.resumeActivity = async function(projId, actId) {
 };
 
 // ============ INSERT ACTIVITY FORMAT (с автозакрытием) ============
+// ============ INSERT ACTIVITY FORMAT (с автозакрытием) ============
 window.insertActivityFormat = function(type) {
   const textarea = document.getElementById('actRichDesc');
   if (!textarea) return;
@@ -1988,31 +1989,65 @@ window.insertActivityFormat = function(type) {
   const start = textarea.selectionStart;
   const end = textarea.selectionEnd;
   const selectedText = textarea.value.substring(start, end);
+  const textareaValue = textarea.value;
   
-  // Сохраняем позицию для вставки
-  window.pendingActivityFormat = {
-    type: type,
-    start: start,
-    end: end,
-    selectedText: selectedText
-  };
-  
-  // Открываем модальное окно для ввода ссылки
-  const promptInput = document.getElementById('promptInput');
-  promptInput.value = '';
-  
-  if (type === 'img') {
-    promptInput.placeholder = 'Вставьте ссылку на картинку...';
-    document.querySelector('#promptModal h2').textContent = 'Вставить картинку';
-    document.querySelector('#promptModal button:last-child').textContent = 'Вставить';
-  } else if (type === 'link') {
-    promptInput.placeholder = 'Вставьте ссылку...';
-    document.querySelector('#promptModal h2').textContent = 'Вставить ссылку';
-    document.querySelector('#promptModal button:last-child').textContent = 'Применить';
+  // Для img и link - открываем модальное окно
+  if (type === 'img' || type === 'link') {
+    const promptInput = document.getElementById('promptInput');
+    promptInput.value = '';
+    
+    if (type === 'img') {
+      promptInput.placeholder = 'Вставьте ссылку на картинку...';
+      document.querySelector('#promptModal h2').textContent = 'Вставить картинку';
+      document.querySelector('#promptModal button:last-child').textContent = 'Вставить';
+    } else if (type === 'link') {
+      promptInput.placeholder = 'Вставьте ссылку...';
+      document.querySelector('#promptModal h2').textContent = 'Вставить ссылку';
+      document.querySelector('#promptModal button:last-child').textContent = 'Применить';
+    }
+    
+    window.pendingActivityFormat = {
+      type: type,
+      start: start,
+      end: end,
+      selectedText: selectedText
+    };
+    
+    document.getElementById('promptModal').classList.add('active');
+    promptInput.focus();
+    return;
   }
   
-  document.getElementById('promptModal').classList.add('active');
-  promptInput.focus();
+  // Для остальных типов - применяем сразу без окна
+  let insertion = '';
+  const textBefore = textareaValue.substring(0, start);
+  const textAfter = textareaValue.substring(end);
+  
+  switch(type) {
+    case 'h3':
+      insertion = '### ' + (selectedText || 'Заголовок');
+      break;
+    case 'ul':
+      insertion = '- ' + (selectedText || 'Пункт списка');
+      break;
+    case 'quote':
+      insertion = '> ' + (selectedText || 'Цитата');
+      break;
+    case 'hr':
+      insertion = '\n---\n';
+      break;
+    default:
+      insertion = selectedText;
+  }
+  
+  textarea.value = textBefore + insertion + textAfter;
+  
+  // Курсор после вставки
+  const cursorPos = start + insertion.length;
+  textarea.focus();
+  textarea.selectionStart = textarea.selectionEnd = cursorPos;
+  
+  showToast(type === 'h3' ? 'Заголовок добавлен' : type === 'ul' ? 'Пункт добавлен' : type === 'quote' ? 'Цитата добавлена' : 'Разделитель добавлен');
 };
 
 // ============ PROMPT MODAL - АВТОЗАКРЫТИЕ И ВСТАВКА ============
@@ -2093,24 +2128,6 @@ window.closePromptModal = function() {
   document.getElementById('promptInput').value = '';
   window.pendingActivityFormat = null;
   pendingLinkInsert = null;
-};
-
-
-window.confirmLinkInsert = function() {
-  const textarea = document.getElementById('actRichDesc');
-  const url = document.getElementById('promptInput').value.trim();
-  if (!url) { showToast('Введите ссылку'); return; }
-  if (pendingLinkInsert && textarea) {
-    const { start, end, type, text } = pendingLinkInsert;
-    let insertion = '';
-    if (type === 'img') insertion = '![](' + url + ')';
-    else insertion = '[' + text + '](' + url + ')';
-    textarea.value = textarea.value.substring(0, start) + insertion + textarea.value.substring(end);
-    textarea.focus();
-    textarea.selectionStart = textarea.selectionEnd = start + insertion.length;
-    showToast(type === 'img' ? 'Картинка добавлена' : 'Ссылка добавлена');
-  }
-  closePromptModal();
 };
 
 window.openAddModal = function() {
