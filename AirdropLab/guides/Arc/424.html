@@ -1310,25 +1310,36 @@ function closeModal() {
 document.getElementById('addModalCancel').addEventListener('click', closeModal);
 
 // Защита от случайного закрытия при выделении текста
+// ===== MODAL: защита от случайного закрытия =====
 const addModalEl = document.getElementById('addModal');
 const addModalOverlay = document.getElementById('arcAddModalOverlay');
-let pointerDownInsideModal = false;
+let pointerDownStartedInside = false;
 
-// Фиксируем, где началось нажатие мыши
+// 1. Фиксируем где НАЧАЛСЯ клик (pointerdown)
 document.addEventListener('pointerdown', (e) => {
-    pointerDownInsideModal = !!e.target.closest('#addModal');
+    const modal = document.getElementById('addModal');
+    if (modal && modal.contains(e.target)) {
+        pointerDownStartedInside = true;
+    } else {
+        pointerDownStartedInside = false;
+    }
 }, true);
 
-// Закрываем только если клик был НЕ внутри окна
-addModalOverlay.addEventListener('click', (e) => {
-    if (e.target === addModalOverlay && !pointerDownInsideModal) {
-        closeModal();
+// 2. При отпускании (pointerup) - закрываем только если клик начался ВНЕ модалки
+document.addEventListener('pointerup', (e) => {
+    const overlay = document.getElementById('arcAddModalOverlay');
+    if (overlay && overlay.classList.contains('open')) {
+        // Если клик был на оверлее И начался НЕ внутри модалки - закрываем
+        if (e.target === overlay && !pointerDownStartedInside) {
+            closeModal();
+        }
     }
 });
 
-// Останавливаем всплытие событий внутри окна
+// Останавливаем всплытие чтобы клики внутри окна не закрывали его
 addModalEl.addEventListener('click', (e) => e.stopPropagation());
-document.addEventListener('keydown', e=>{ if(e.key==='Escape'){ closeModal(); closeLightbox(); }});
+addModalEl.addEventListener('pointerdown', (e) => e.stopPropagation());
+
 
 document.querySelectorAll('.lang-tab').forEach(tab=>{
     tab.addEventListener('click', ()=>{
