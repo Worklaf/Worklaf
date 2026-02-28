@@ -1365,6 +1365,20 @@ document.addEventListener('DOMContentLoaded', function() {
   setInterval(checkAndAutoEndActivities, 60 * 60 * 1000);
   loadData(); 
   setupSearchListener();
+  
+  // Сохраняем позицию прокрутки при работе с textarea
+  const richDescTextarea = document.getElementById('actRichDesc');
+  if (richDescTextarea) {
+    richDescTextarea.addEventListener('scroll', function() {
+      this.dataset.lastScrollTop = this.scrollTop;
+    });
+    
+    richDescTextarea.addEventListener('focus', function() {
+      if (this.dataset.lastScrollTop) {
+        this.scrollTop = parseInt(this.dataset.lastScrollTop);
+      }
+    });
+  }
   // Принудительно обновляем UI после загрузки
 setTimeout(() => {
   if (projects.length > 0) {
@@ -1980,16 +1994,19 @@ window.resumeActivity = async function(projId, actId) {
   }
 };
 
-// ============ INSERT ACTIVITY FORMAT (с автозакрытием) ============
-// ============ INSERT ACTIVITY FORMAT (с автозакрытием) ============
+// ============ INSERT ACTIVITY FORMAT (с сохранением позиции курсора) ============
 window.insertActivityFormat = function(type) {
   const textarea = document.getElementById('actRichDesc');
   if (!textarea) return;
   
+  // Сохраняем текущую позицию выделения ДО закрытия модального окна
   const start = textarea.selectionStart;
   const end = textarea.selectionEnd;
   const selectedText = textarea.value.substring(start, end);
   const textareaValue = textarea.value;
+  
+  // Сохраняем позицию прокрутки
+  const scrollTop = textarea.scrollTop;
   
   // Для img и link - открываем модальное окно
   if (type === 'img' || type === 'link') {
@@ -2006,11 +2023,13 @@ window.insertActivityFormat = function(type) {
       document.querySelector('#promptModal button:last-child').textContent = 'Применить';
     }
     
+    // Сохраняем позицию выделения для использования после закрытия модального окна
     window.pendingActivityFormat = {
       type: type,
       start: start,
       end: end,
-      selectedText: selectedText
+      selectedText: selectedText,
+      textarea: textarea // Ссылка на textarea
     };
     
     document.getElementById('promptModal').classList.add('active');
@@ -2025,13 +2044,29 @@ window.insertActivityFormat = function(type) {
   
   switch(type) {
     case 'h3':
-      insertion = '### ' + (selectedText || 'Заголовок');
+      // Обрабатываем случай, когда есть выделенный текст
+      if (selectedText) {
+        insertion = '### ' + selectedText;
+      } else {
+        insertion = '### Заголовок';
+      }
       break;
     case 'ul':
-      insertion = '- ' + (selectedText || 'Пункт списка');
+      if (selectedText) {
+        // Если несколько строк - добавляем маркер к каждой
+        const lines = selectedText.split('\n');
+        insertion = lines.map(line => '- ' + line).join('\n');
+      } else {
+        insertion = '- Пункт списка';
+      }
       break;
     case 'quote':
-      insertion = '> ' + (selectedText || 'Цитата');
+      if (selectedText) {
+        const lines = selectedText.split('\n');
+        insertion = lines.map(line => '> ' + line).join('\n');
+      } else {
+        insertion = '> Цитата';
+      }
       break;
     case 'hr':
       insertion = '\n---\n';
@@ -2040,14 +2075,19 @@ window.insertActivityFormat = function(type) {
       insertion = selectedText;
   }
   
+  // Вставляем текст
   textarea.value = textBefore + insertion + textAfter;
   
-  // Курсор после вставки
-  const cursorPos = start + insertion.length;
+  // Восстанавливаем позицию курсора ПОСЛЕ выделенного текста
+  const newCursorPos = start + insertion.length;
   textarea.focus();
-  textarea.selectionStart = textarea.selectionEnd = cursorPos;
+  textarea.selectionStart = newCursorPos;
+  textarea.selectionEnd = newCursorPos;
   
-  showToast(type === 'h3' ? 'Заголовок добавлен' : type === 'ul' ? 'Пункт добавлен' : type === 'quote' ? 'Цитата добавлена' : 'Разделитель добавлен');
+  // Восстанавливаем позицию прокрутки
+  textarea.scrollTop = scrollTop;
+  
+  showToast(type === 'h3' ? 'Заголовок добавлен' : type === 'ul' ? 'Список добавлен' : type === 'quote' ? 'Цитата добавлена' : 'Разделитель добавлен');
 };
 
 // ============ PROMPT MODAL - АВТОЗАКРЫТИЕ И ВСТАВКА ============
@@ -2077,6 +2117,7 @@ document.addEventListener('DOMContentLoaded', function() {
 });
 
 // ============ CONFIRM LINK INSERT (исправленная позиция курсора) ============
+// ============ CONFIRM LINK INSERT (с сохранением позиции курсора) ============
 window.confirmLinkInsert = function() {
   const textarea = document.getElementById('actRichDesc');
   const url = document.getElementById('promptInput').value.trim();
@@ -2086,13 +2127,18 @@ window.confirmLinkInsert = function() {
     return;
   }
   
-  // Используем pendingActivityFormat если есть, иначе pendingLinkInsert
-  const format = window.pendingActivityFormat || pendingLinkInsert;
+  // Используем pendingActivityFormat
+  const format = window.pendingActivityFormat;
   
   if (format && textarea) {
     const { type, start, end, selectedText } = format;
-    const textBefore = textarea.value.substring(0, start);
-    const textAfter = textarea.value.substring(end);
+    const textareaValue = textarea.value;
+    
+    // Сохраняем позицию прокрутки ДО изменений
+    const scrollTop = textarea.scrollTop;
+    
+    const textBefore = textareaValue.substring(0, start);
+    const textAfter = textareaValue.substring(end);
     let insertion = '';
     
     if (type === 'img') {
@@ -2104,17 +2150,22 @@ window.confirmLinkInsert = function() {
       const linkText = selectedText.trim() || 'ссылка';
       insertion = `[${linkText}](${url})`;
     } else {
-      // Для остальных типов (h3, ul, quote, hr)
       insertion = selectedText;
     }
     
     // Вставляем текст
     textarea.value = textBefore + insertion + textAfter;
     
-    // ✅ ИСПРАВЛЕНО: Курсор остаётся ПОСЛЕ вставленного текста
-    const cursorPos = start + insertion.length;
+    // Курсор после вставленного текста
+    const newCursorPos = start + insertion.length;
+    
+    // Возвращаем фокус и устанавливаем курсор
     textarea.focus();
-    textarea.selectionStart = textarea.selectionEnd = cursorPos;
+    textarea.selectionStart = newCursorPos;
+    textarea.selectionEnd = newCursorPos;
+    
+    // Восстанавливаем позицию прокрутки
+    textarea.scrollTop = scrollTop;
     
     showToast(type === 'img' ? 'Картинка добавлена' : 'Ссылка добавлена');
   }
@@ -2124,8 +2175,25 @@ window.confirmLinkInsert = function() {
 };
 
 window.closePromptModal = function() {
+  const textarea = document.getElementById('actRichDesc');
+  
+  // Сохраняем позицию прокрутки перед закрытием
+  if (textarea && window.pendingActivityFormat) {
+    textarea.dataset.savedScrollTop = textarea.scrollTop;
+  }
+  
   document.getElementById('promptModal').classList.remove('active');
   document.getElementById('promptInput').value = '';
+  
+  // Восстанавливаем позицию прокрутки после закрытия
+  setTimeout(() => {
+    if (textarea && textarea.dataset.savedScrollTop) {
+      textarea.scrollTop = parseInt(textarea.dataset.savedScrollTop);
+      textarea.focus();
+      delete textarea.dataset.savedScrollTop;
+    }
+  }, 50);
+  
   window.pendingActivityFormat = null;
   pendingLinkInsert = null;
 };
