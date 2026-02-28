@@ -10,6 +10,31 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link rel="stylesheet" href="styles.css">
     <style>
+        /* Подсказки для кнопок */
+.admin-action-btn[title] {
+  position: relative;
+}
+
+.admin-action-btn[title]:hover::after {
+  content: attr(title);
+  position: absolute;
+  bottom: 100%;
+  left: 50%;
+  transform: translateX(-50%);
+  background: #1e293b;
+  color: #e2e8f0;
+  padding: 6px 10px;
+  border-radius: 6px;
+  font-size: 11px;
+  white-space: nowrap;
+  z-index: 100;
+  margin-bottom: 8px;
+  border: 1px solid #475569;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+  pointer-events: none;
+  opacity: 1;
+  transition: opacity 0.2s;
+}
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
         
         /* Дополнительные стили для новых функций */
@@ -239,13 +264,13 @@
           </button>
         </div>
         <div id="adminPanel" class="flex gap-2 items-center border-l border-slate-700/50 pl-3 ml-1" style="display: none;">
-          <button onclick="openAddModal()" class="px-3 py-2 bg-gradient-to-r from-cyan-600 to-blue-600 hover:from-cyan-500 hover:to-blue-500 rounded-lg text-xs font-bold transition-all hover:scale-105 shadow-lg shadow-cyan-500/30"><i class="fas fa-flask mr-1"></i><span class="hidden sm:inline">Новый тест</span></button>
-          <button onclick="openStats()" class="admin-action-btn admin-btn-orange group"><i class="fas fa-chart-pie text-base"></i></button>
-          <button onclick="migrateToFirestore()" class="admin-action-btn admin-btn-purple group"><i class="fas fa-cloud-upload-alt text-base"></i></button>
-          <button onclick="exportAllData()" class="admin-action-btn admin-btn-emerald group"><i class="fas fa-file-export text-base"></i></button>
-          <button onclick="openDeletedProjects()" class="admin-action-btn admin-btn-red group"><i class="fas fa-trash-restore text-base"></i></button>
-          <span class="px-2.5 py-1 bg-gradient-to-r from-cyan-600 to-cyan-500 rounded-md text-[10px] font-black text-white uppercase"><i class="fas fa-user-shield mr-1"></i>Admin</span>
-        </div>
+  <button onclick="openAddModal()" class="px-3 py-2 bg-gradient-to-r from-cyan-600 to-blue-600 hover:from-cyan-500 hover:to-blue-500 rounded-lg text-xs font-bold transition-all hover:scale-105 shadow-lg shadow-cyan-500/30"><i class="fas fa-flask mr-1"></i><span class="hidden sm:inline">Новый тест</span></button>
+  <button onclick="openStats()" class="admin-action-btn admin-btn-orange group" title="Посмотреть статистику проектов"><i class="fas fa-chart-pie text-base"></i></button>
+  <button onclick="migrateToFirestore()" class="admin-action-btn admin-btn-purple group" title="Загрузить данные в базу Firebase"><i class="fas fa-cloud-upload-alt text-base"></i></button>
+  <button onclick="exportAllData()" class="admin-action-btn admin-btn-emerald group" title="Экспортировать все данные в JSON файл"><i class="fas fa-file-export text-base"></i></button>
+  <button onclick="openDeletedProjects()" class="admin-action-btn admin-btn-red group" title="Просмотреть удаленные проекты"><i class="fas fa-trash-restore text-base"></i></button>
+  <span class="px-2.5 py-1 bg-gradient-to-r from-cyan-600 to-cyan-500 rounded-md text-[10px] font-black text-white uppercase"><i class="fas fa-user-shield mr-1"></i>Admin</span>
+</div>
         <div id="authPanel" class="flex items-center gap-3 border-l border-slate-700/50 pl-3 ml-1">
           <div id="loggedOutView">
             <button onclick="openLoginModal()" class="px-4 py-2 bg-gradient-to-r from-cyan-600 to-blue-600 hover:from-cyan-500 hover:to-blue-500 rounded-xl text-sm font-bold flex items-center gap-2"><i class="fas fa-sign-in-alt"></i><span>Вход</span></button>
@@ -1966,29 +1991,44 @@ window.resumeActivity = async function(projId, actId) {
   }
 };
 
+// Замени функцию insertActivityFormat полностью:
+
 window.insertActivityFormat = function(type) {
   const textarea = document.getElementById('actRichDesc');
   const start = textarea.selectionStart;
   const end = textarea.selectionEnd;
   const selectedText = textarea.value.substring(start, end);
+  
   if (type === 'img') {
-    pendingLinkInsert = { type: 'img', start, end, text: '' };
-    document.getElementById('promptModal').classList.add('active');
-    document.getElementById('promptInput').value = '';
-    document.getElementById('promptInput').focus();
-    document.getElementById('promptModal').querySelector('h2').textContent = 'Вставьте ссылку на картинку';
-  } else if (type === 'link') {
-    const linkText = selectedText.trim() ? selectedText : 'текст ссылки';
-    pendingLinkInsert = { type: 'link', start, end, text: linkText };
-    document.getElementById('promptModal').classList.add('active');
-    document.getElementById('promptInput').value = '';
-    document.getElementById('promptInput').focus();
-    document.getElementById('promptModal').querySelector('h2').textContent = 'Вставьте ссылку';
-  } else {
+    // Вставляем картинку сразу - пользователь должен вставить ссылку вручную
+    // или использовать формат ![текст](ссылка)
+    const imgTemplate = '![описание картинки](ссылка_на_картинку)';
+    textarea.value = textarea.value.substring(0, start) + imgTemplate + textarea.value.substring(end);
+    textarea.focus();
+    // Устанавливаем курсор на место описания картинки
+    const newPos = start + 2; // после ![
+    textarea.selectionStart = newPos;
+    textarea.selectionEnd = newPos + 'описание картинки'.length;
+    showToast('Вставьте ссылку вместо "ссылка_на_картинку"');
+  } 
+  else if (type === 'link') {
+    // Для ссылки - сразу вставляем с выделенным текстом как названием ссылки
+    const linkText = selectedText.trim() || 'текст ссылки';
+    const linkTemplate = `[${linkText}](url)`;
+    textarea.value = textarea.value.substring(0, start) + linkTemplate + textarea.value.substring(end);
+    textarea.focus();
+    // Курсор на место URL
+    const urlStart = start + linkText.length + 3; // [текст](
+    textarea.selectionStart = urlStart;
+    textarea.selectionEnd = urlStart + 3; // выделяем "url"
+  } 
+  else {
+    // Остальные форматы (h3, ul, quote, hr) - работают как и раньше
     if (type === 'h3') textarea.value = textarea.value.substring(0, start) + '### ' + (selectedText || 'Заголовок') + textarea.value.substring(end);
     else if (type === 'ul') textarea.value = textarea.value.substring(0, start) + '- ' + (selectedText || 'Пункт') + textarea.value.substring(end);
     else if (type === 'quote') textarea.value = textarea.value.substring(0, start) + '> ' + (selectedText || 'Цитата') + textarea.value.substring(end);
     else if (type === 'hr') textarea.value = textarea.value.substring(0, start) + '\n---\n' + textarea.value.substring(end);
+    
     textarea.focus();
     textarea.selectionStart = textarea.selectionEnd = start + (type === 'h3' ? 4 : type === 'ul' ? 2 : type === 'quote' ? 2 : type === 'hr' ? 4 : 0) + (selectedText || (type === 'h3' ? 'Заголовок' : type === 'ul' ? 'Пункт' : type === 'quote' ? 'Цитата' : '')).length;
   }
