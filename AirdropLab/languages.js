@@ -582,7 +582,12 @@ window.updatePageTranslations = function() {
     // Обновляем секцию статистики в хедере
     const modeIndicator = document.getElementById('modeIndicator');
     if (modeIndicator) {
-        modeIndicator.textContent = window.t(isAdminMode ? 'edit_mode' : 'experimental_zone');
+        // Проверяем существование переменной isAdminMode через try-catch или typeof
+        let isAdmin = false;
+        try {
+            isAdmin = typeof isAdminMode !== 'undefined' && isAdminMode;
+        } catch(e) {}
+        modeIndicator.textContent = window.t(isAdmin ? 'edit_mode' : 'experimental_zone');
     }
     
     // Обновляем Hero секцию
@@ -604,7 +609,12 @@ window.updatePageTranslations = function() {
     // Обновляем кнопку сворачивания
     const heroCollapseText = document.getElementById('heroCollapseText');
     if (heroCollapseText) {
-        heroCollapseText.textContent = isHeroCollapsed ? window.t('expand_welcome') : window.t('collapse_welcome');
+        // Проверяем существование переменной isHeroCollapsed
+        let isCollapsed = false;
+        try {
+            isCollapsed = typeof isHeroCollapsed !== 'undefined' && isHeroCollapsed;
+        } catch(e) {}
+        heroCollapseText.textContent = isCollapsed ? window.t('expand_welcome') : window.t('collapse_welcome');
     }
     
     // Обновляем info сообщение
@@ -649,7 +659,13 @@ window.updatePageTranslations = function() {
     // Обновляем метки категорий
     const selectedCatsTags = document.getElementById('selectedCategoriesTags');
     if (selectedCatsTags) {
-        if (currentFilters.categories.length === 0) {
+        // Проверяем существование переменной currentFilters
+        let hasCategories = false;
+        try {
+            hasCategories = typeof currentFilters !== 'undefined' && currentFilters.categories && currentFilters.categories.length > 0;
+        } catch(e) {}
+        
+        if (!hasCategories) {
             selectedCatsTags.innerHTML = '<span class="text-xs text-slate-500 italic">' + window.t('all') + '</span>';
         }
     }
@@ -667,8 +683,13 @@ window.updatePageTranslations = function() {
     }
     
     // Принудительно перерендерим проекты для обновления переводов в карточках
+    // Проверяем существование функции перед вызовом
     if (typeof window.applyFilters === 'function') {
-        window.applyFilters();
+        try {
+            window.applyFilters();
+        } catch(e) {
+            console.log('applyFilters not ready yet');
+        }
     }
 };
 
