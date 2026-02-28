@@ -344,6 +344,15 @@
         .lang-tab, .language-toggle-btn, #languageToggleText, .lightbox-lang-btn {
             font-family: 'Noto Color Emoji', 'Apple Color Emoji', 'Segoe UI Emoji', sans-serif !important;
         }
+        .modal-btn-delete { 
+    background: var(--alert-red); 
+    border-color: var(--alert-red); 
+    color: #fff; 
+    margin-right: auto; 
+}
+.modal-btn-delete:hover { 
+    background: var(--alert-red-dark); 
+}
     </style>
 </head>
 <body>
@@ -395,10 +404,11 @@
         <label id="fieldWebsite"><span data-i18n="website_label">Project Website URL</span><input type="url" id="addFieldWebsite" placeholder="https://..."></label>
         <label id="fieldTwitter"><span data-i18n="twitter_label">Project Twitter URL</span><input type="url" id="addFieldTwitter" placeholder="https://x.com/..."></label>
         
-        <div class="modal-actions">
-            <button type="button" class="modal-btn modal-btn-cancel" id="addModalCancel" data-i18n="cancel">Cancel</button>
-            <button type="button" class="modal-btn modal-btn-save" id="addModalSave" data-i18n="add">Add</button>
-        </div>
+       <div class="modal-actions">
+    <button type="button" class="modal-btn modal-btn-delete" id="addModalDelete" data-i18n="delete_item" style="display:none;">🗑️ <span data-i18n="delete">Delete</span></button>
+    <button type="button" class="modal-btn modal-btn-cancel" id="addModalCancel" data-i18n="cancel">Cancel</button>
+    <button type="button" class="modal-btn modal-btn-save" id="addModalSave" data-i18n="add">Add</button>
+</div>
     </div>
 </div>
 
@@ -1710,6 +1720,10 @@ function closeModal() {
     const saveBtn = document.getElementById('addModalSave'); 
     saveBtn.textContent = getTranslation('add'); 
     delete saveBtn.dataset.editMode;
+    
+    // Скрываем кнопку удаления при закрытии
+    const deleteBtn = document.getElementById('addModalDelete');
+    if (deleteBtn) deleteBtn.style.display = 'none';
 }
 
 document.getElementById('addModalCancel').addEventListener('click', closeModal);
@@ -1841,6 +1855,65 @@ document.getElementById('addModalSave').addEventListener('click', async () => {
     finally { 
         saveBtn.disabled = false; 
         saveBtn.textContent = originalText; 
+    }
+});
+    // Обработчик кнопки удаления
+document.getElementById('addModalDelete').addEventListener('click', async () => {
+    if (!currentEditTarget || !currentEditTarget.id) return;
+    if (!confirm(getTranslation('confirm_delete'))) return;
+    
+    const id = currentEditTarget.id;
+    const btn = document.getElementById('addModalDelete');
+    btn.disabled = true; 
+    btn.innerHTML = '⏳';
+    
+    try {
+        // Удаляем из userItemsData
+        for (const zone in userItemsData.items) {
+            if (userItemsData.items[zone]) {
+                userItemsData.items[zone] = userItemsData.items[zone].filter(i => i.id !== id);
+            }
+        }
+        
+        // Удаляем из collections
+        if (userItemsData.collections) {
+            userItemsData.collections.forEach(c => {
+                if (c.items) c.items = c.items.filter(i => i.id !== id);
+            });
+        }
+        
+        // Удаляем из dappCategories
+        if (userItemsData.dappCategories) {
+            userItemsData.dappCategories.forEach(c => {
+                if (c.items) c.items = c.items.filter(i => i.id !== id);
+            });
+        }
+        
+        // Удаляем из overrides
+        if (editsOverride[id]) {
+            delete editsOverride[id];
+            await saveArcEditsOverride();
+        }
+        
+        await saveArcUserItems();
+        
+        // Удаляем из избранного
+        if (favoritesState[id]) {
+            delete favoritesState[id];
+            favoritesOrder = favoritesOrder.filter(x => x !== id);
+            await saveArcFavorites();
+        }
+        
+        renderAllContent();
+        refreshAllVisuals();
+        
+        showToast(getTranslation('removed') || 'Element deleted', 'success');
+        closeModal();
+        
+    } catch (error) {
+        showToast('❌ Delete error: ' + error.message, 'error');
+        btn.disabled = false; 
+        btn.innerHTML = '🗑️ <span data-i18n="delete">Delete</span>';
     }
 });
 
@@ -1996,7 +2069,10 @@ function removeArcEditButtons() {
 }
 
 function openArcEditModal(link) {
-    const id = link.dataset.id; const title = getLinkTitle(link); currentEditTarget = { id, link };
+    const id = link.dataset.id; 
+    const title = getLinkTitle(link); 
+    currentEditTarget = { id, link };
+    
     document.getElementById('addModalTitle').textContent = 'Edit: ' + title; 
     showFields(['fieldTitle', 'fieldUrl', 'fieldImage', 'descFieldEn', 'descFieldUa']);
     document.getElementById('addFieldTitle').value = title; 
@@ -2006,6 +2082,11 @@ function openArcEditModal(link) {
     document.getElementById('addFieldImage').value = link.getAttribute('data-image') || '';
     document.getElementById('descFieldEn').classList.remove('field-hidden');
     document.getElementById('descFieldUa').classList.remove('field-hidden');
+    
+    // 👇 ПОКАЗЫВАЕМ кнопку удаления
+    const deleteBtn = document.getElementById('addModalDelete');
+    deleteBtn.style.display = 'inline-flex';
+    
     const saveBtn = document.getElementById('addModalSave'); 
     saveBtn.textContent = getTranslation('save'); 
     saveBtn.dataset.editMode = 'true';
