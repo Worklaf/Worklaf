@@ -687,20 +687,21 @@ async function saveArcFavorites() {
     localStorage.setItem(FAV_TS_KEY,String(ts));
     if (currentUser) await saveToCloud({arcFavoritesState:favoritesState,arcFavoritesOrder:favoritesOrder,arcFavoritesTimestamp:ts});
 }
-    async function saveSharedDataToFirebase() {
-    if (!isAdmin) return;
+    // ===========================
+// FIREBASE SHARED DATA - СОХРАНЕНИЕ (PUBLIC)
+// ===========================
+async function saveSharedDataToFirebase() {
+    if (!isAdmin || !currentUser) return;
     try {
-        const dataToSave = {
+        await setDoc(doc(db, PUBLIC_DATA_COLLECTION, SHARED_ITEMS_DOC), {
             userItemsData: userItemsData,
             editsOverride: editsOverride,
-            lastUpdated: new Date().toISOString(),
+            lastUpdated: Date.now(),
             updatedBy: currentUser.uid
-        };
-        await setDoc(doc(db, PUBLIC_DATA_COLLECTION, SHARED_ITEMS_DOC), dataToSave);
-        console.log('Public data successfully updated in Firebase.');
+        }, { merge: true });
+        console.log('✅ Public data updated in Firebase');
     } catch (e) {
-        console.error("Failed to update public data:", e);
-        showToast('Error updating public data!', 'error');
+        console.error("Firebase shared update error:", e);
     }
 }
 async function saveUserItems() {
