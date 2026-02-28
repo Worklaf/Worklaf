@@ -1479,34 +1479,56 @@ function createSuccessRipple(button) {
 
 const EXTERNAL_DATA_URL = './data/projects.json';
 const ENGLISH_PROJECTS_URL = 'english_projects.json';
-
-// Хранилище для английских проектов
 let englishProjectsData = {};
-let firestoreUnsubscribe = null;
 
-// Функция загрузки английских проектов
 async function loadEnglishProjects() {
   try {
     const response = await fetch(ENGLISH_PROJECTS_URL);
     if (response.ok) {
       const data = await response.json();
-      if (Array.isArray(data)) {
+      // ИСПРАВЛЕНИЕ: правильно обрабатываем структуру JSON
+      if (data.projects && Array.isArray(data.projects)) {
+        englishProjectsData = {};
+        data.projects.forEach(project => {
+          englishProjectsData[project.id] = project;
+        });
+      } else if (Array.isArray(data)) {
         englishProjectsData = {};
         data.forEach(project => {
           englishProjectsData[project.id] = project;
         });
-      } else {
-        englishProjectsData = data;
       }
-      console.log('English projects loaded:', Object.keys(englishProjectsData).length);
-    } else {
-      console.log('english_projects.json not found');
-      englishProjectsData = {};
+      console.log('English loaded:', Object.keys(englishProjectsData).length);
     }
   } catch (e) {
-    console.log('Error loading english_projects.json:', e);
+    console.log('Error:', e);
     englishProjectsData = {};
   }
+}
+
+window.loadData = async function() {
+  await loadEnglishProjects();
+  if (window.currentLang === 'en') {
+    loadFromEnglish();
+  } else {
+    loadFromFirebase();
+  }
+};
+
+function loadFromEnglish() {
+  if (firestoreUnsubscribe) {
+    firestoreUnsubscribe();
+    firestoreUnsubscribe = null;
+  }
+  const englishArray = Object.values(englishProjectsData);
+  console.log('English projects:', englishArray.length);
+  
+  if (englishArray.length > 0) {
+    projects = englishArray.map(normalizeData);
+    sortProjects('latest');
+    applyFilters();
+  }
+  hideLoadingScreen();
 }
 
 // Функция применения английских данных к проекту
@@ -1722,6 +1744,20 @@ function normalizeData(project) {
     return act;
   });
   if (project.deleted === undefined) project.deleted = false;
+  
+  // ИСПРАВЛЕНИЕ: применяем английские данные
+  if (window.currentLang === 'en' && englishProjectsData[project.id]) {
+    const engData = englishProjectsData[project.id];
+    project.name = engData.name || project.name;
+    project.description = engData.description || project.description;
+    project.activities = engData.activities || project.activities;
+    project.guideUrl = engData.guideUrl || project.guideUrl;
+    project.twitterUrl = engData.twitterUrl || project.twitterUrl;
+    project.cryptoRankUrl = engData.cryptoRankUrl || project.cryptoRankUrl;
+    project.referralLink = engData.referralLink || project.referralLink;
+    project.image = engData.image || project.image;
+  }
+  
   return project;
 }
 
