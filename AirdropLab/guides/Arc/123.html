@@ -254,9 +254,9 @@
         .section-add-btn::after { content:''; position:absolute; inset:-3px; border-radius:15px; border:2px solid rgba(168,85,247,0.35); animation:add-pulse 2.5s ease-out infinite; pointer-events:none; }
         .section-add-btn:hover { transform:translateY(-3px) scale(1.1); box-shadow:0 10px 32px rgba(168,85,247,0.55); background:linear-gradient(135deg,#a855f7,#6c5ce7); }
 
-        .add-modal-overlay { position:fixed; inset:0; z-index:10000; background:rgba(0,0,0,0.7); backdrop-filter:blur(6px); display:none; align-items:center; justify-content:center; padding:16px; }
+        .add-modal-overlay { position:fixed; inset:0; z-index:10000; background:rgba(0,0,0,0.7); backdrop-filter:blur(6px); display:none; align-items:center; justify-content:center; padding:16px; cursor:pointer; }
         .add-modal-overlay.open { display:flex; }
-        .add-modal { background:#1a2332; border:1px solid rgba(96,165,250,0.4); border-radius:16px; padding:28px 24px 24px; width:100%; max-width:480px; max-height:90vh; overflow-y:auto; box-shadow:0 24px 64px rgba(0,0,0,0.6); display:flex; flex-direction:column; gap:18px; }
+        .add-modal { background:#1a2332; border:1px solid rgba(96,165,250,0.4); border-radius:16px; padding:28px 24px 24px; width:100%; max-width:480px; max-height:90vh; overflow-y:auto; box-shadow:0 24px 64px rgba(0,0,0,0.6); display:flex; flex-direction:column; gap:18px; cursor:default; }
         body.light-theme .add-modal { background:#fff; border-color:#cbd5e1; }
         .add-modal h3 { margin:0; font-size:1.2rem; color:#fff; border-bottom:1px solid var(--border); padding-bottom:12px; }
         body.light-theme .add-modal h3 { color:#0f172a; }
@@ -269,9 +269,9 @@
         .translate-badge { display:inline-flex; align-items:center; gap:4px; font-size:0.7rem; color:#22d3ee; background:rgba(34,211,238,0.1); padding:2px 8px; border-radius:4px; margin-left:8px; }
 
         .add-modal label { display:flex; flex-direction:column; gap:6px; font-size:0.85rem; color:var(--text-muted); font-weight:600; }
-        .add-modal input,.add-modal textarea { background:rgba(15,23,42,0.8); border:1px solid var(--border); border-radius:8px; padding:10px 12px; color:var(--text-main); font-size:0.9rem; font-family:inherit; transition:border-color .2s; }
+        .add-modal input,.add-modal textarea { background:rgba(15,23,42,0.8); border:1px solid var(--border); border-radius:8px; padding:10px 12px; color:var(--text-main); font-size:0.9rem; font-family:inherit; transition:border-color .2s; user-select:text!important; -webkit-user-select:text!important; cursor:text; }
         body.light-theme .add-modal input,body.light-theme .add-modal textarea { background:#f8fafc; }
-        .add-modal input:focus,.add-modal textarea:focus { outline:none; border-color:var(--accent); }
+        .add-modal input:focus,.add-modal textarea:focus { outline:none; border-color:var(--accent); pointer-events:auto; }
         .add-modal textarea { min-height:60px; resize:vertical; }
         .add-modal .modal-actions { display:flex; gap:12px; justify-content:flex-end; padding-top:8px; border-top:1px solid var(--border); }
         .modal-btn { padding:10px 20px; border-radius:8px; font-size:0.9rem; font-weight:600; cursor:pointer; border:1px solid transparent; transition:all .2s; }
@@ -385,10 +385,10 @@
         </div>
         
         <div class="desc-field-wrapper field-hidden" id="descFieldUa">
-    <label><span data-i18n="tooltip_label">Description (tooltip)</span> (Українська) <span class="translate-badge" id="translateBadgeUa" style="display:none;">...</span>
-        <textarea id="addFieldTooltipUa" placeholder="Опис українською..."></textarea>
-    </label>
-</div>
+            <label><span data-i18n="tooltip_label">Description (tooltip)</span> (Українська) <span class="translate-badge" id="translateBadgeUa" style="display:none;">...</span>
+                <textarea id="addFieldTooltipUa" placeholder="Опис українською..."></textarea>
+            </label>
+        </div>
         
         <label id="fieldUrl"><span data-i18n="url_label">URL Link</span> *<input type="url" id="addFieldUrl" placeholder="https://..." required></label>
         <label id="fieldImage"><span data-i18n="image_label">Image URL (for NFT)</span><input type="url" id="addFieldImage" placeholder="https://...image.png"></label>
@@ -615,9 +615,8 @@ function toggleLanguage() {
     updateAllTranslations();
     showToast(currentLanguage === 'en' ? 'Language: English' : 'Мова: Українська', 'info');
     
-    // Re-render dynamic content with new language
-    if (typeof renderArcContent === 'function') {
-        renderArcContent();
+    if (typeof renderAllContent === 'function') {
+        renderAllContent();
     }
 }
 
@@ -673,17 +672,20 @@ const ADMIN_UID = 'SAkz4mdW9reDaIsvqigCNZhEKJR2';
 let isAdmin = false;
 let currentUser = null;
 let arcData = {};
+
+// 🔥 ИСПРАВЛЕНО: Старые ключи для избранного
 let favoritesState = {};
 let favoritesOrder = [];
 let sharedItemsData = null;
 
-const STORAGE_KEY = 'arc_tracker_v1';
+// 🔥 ИСПРАВЛЕНО: Используем старые ключи
+const STORAGE_KEY = 'arc_tracker_v3';
 const BADGE_VISIBILITY_KEY = 'arc_badges_hidden';
 const SECTION_COLLAPSE_KEY = 'arc_sections';
 const LEGEND_COLLAPSE_KEY = 'arc_legend_collapsed';
-const FAVORITES_KEY = 'arc_favorites_v1';
-const FAVORITES_ORDER_KEY = 'arc_favorites_order_v1';
-const FAVORITES_TIMESTAMP_KEY = 'arc_favorites_timestamp_v1';
+const FAVORITES_KEY = 'arc_tracker_favorites_v1';
+const FAVORITES_ORDER_KEY = 'arc_tracker_favorites_order_v1';
+const FAVORITES_TIMESTAMP_KEY = 'arc_tracker_favorites_timestamp_v1';
 const THEME_KEY = 'arc_theme';
 const PAGE_VERSION = '2026-02-27-arc-v1';
 const GITHUB_OWNER = 'Worklaf';
@@ -724,33 +726,16 @@ let editsOverride = {};
 // ===== AUTO TRANSLATE =====
 async function autoTranslate(text, targetLang) {
     if (!text || text.trim().length < 2) return text;
-    
     let sourceLang, apiTargetLang;
-    if (targetLang === 'ua') {
-        sourceLang = 'en';
-        apiTargetLang = 'uk';
-    } else if (targetLang === 'en') {
-        sourceLang = 'uk';
-        apiTargetLang = 'en';
-    } else {
-        return text;
-    }
-    
+    if (targetLang === 'ua') { sourceLang = 'en'; apiTargetLang = 'uk'; } 
+    else if (targetLang === 'en') { sourceLang = 'uk'; apiTargetLang = 'en'; } 
+    else return text;
     try {
         const url = `https://api.mymemory.translated.net/get?q=${encodeURIComponent(text)}&langpair=${sourceLang}|${apiTargetLang}`;
-        const resp = await fetch(url);
-        const d = await resp.json();
-        
-        if (d.responseStatus === 200) {
-            return d.responseData?.translatedText || text;
-        } else {
-            console.warn('Translation API error:', d.responseDetails);
-            throw new Error(d.responseDetails || 'Translation failed');
-        }
-    } catch (e) {
-        console.warn('Auto-translate failed:', e);
-        return text;
-    }
+        const resp = await fetch(url); const d = await resp.json();
+        if (d.responseStatus === 200) return d.responseData?.translatedText || text;
+        else throw new Error(d.responseDetails || 'Translation failed');
+    } catch (e) { console.warn('Auto-translate failed:', e); return text; }
 }
 
 // ===== TOAST =====
@@ -768,6 +753,9 @@ function checkAdmin(user) {
     document.body.classList.toggle('is-admin', isAdmin);
     const badgeContainer = document.getElementById('adminBadgeContainer');
     if (badgeContainer) badgeContainer.innerHTML = isAdmin ? '<span class="admin-badge"><i class="fas fa-crown"></i> Admin</span>' : '';
+    if (isAdmin) {
+        setTimeout(injectAddButtons, 500);
+    }
 }
 
 function loadTheme() {
@@ -805,83 +793,41 @@ function openLightbox(imageUrl, title, tooltip, linkUrl, linkLabel, linkIcon, de
     
     img.src = imageUrl; img.alt = title; titleEl.textContent = title;
     
-    currentLightboxData = {
-        title: title,
-        descriptions: descriptions,
-        linkUrl: linkUrl,
-        linkLabel: linkLabel || getTranslation('go_to_mint'),
-        linkIcon: linkIcon
-    };
-    
+    currentLightboxData = { title: title, descriptions: descriptions, linkUrl: linkUrl, linkLabel: linkLabel || getTranslation('go_to_mint'), linkIcon: linkIcon };
     const hasDescriptions = descriptions && (descriptions.en || descriptions.ua);
+    if (hasDescriptions) { langToggle.style.display = 'flex'; currentLightboxLang = currentLanguage; updateLightboxCaption(currentLanguage); updateLightboxLangButtons(); } 
+    else { langToggle.style.display = 'none'; captionEl.textContent = tooltip || ''; }
     
-    if (hasDescriptions) {
-        langToggle.style.display = 'flex';
-        currentLightboxLang = currentLanguage;
-        updateLightboxCaption(currentLanguage);
-        updateLightboxLangButtons();
-    } else {
-        langToggle.style.display = 'none';
-        captionEl.textContent = tooltip || '';
-    }
-    
-    linkEl.href = linkUrl; 
-    linkEl.innerHTML = `<i class="fas fa-${linkIcon || 'external-link-alt'}"></i> ${linkLabel || getTranslation('go_to_mint')}`;
-    
-    overlay.classList.add('open'); 
-    document.body.style.overflow = 'hidden';
+    linkEl.href = linkUrl; linkEl.innerHTML = `<i class="fas fa-${linkIcon || 'external-link-alt'}"></i> ${linkLabel || getTranslation('go_to_mint')}`;
+    overlay.classList.add('open'); document.body.style.overflow = 'hidden';
 }
 
 function updateLightboxCaption(lang) {
     const captionEl = document.getElementById('lightboxCaption');
-    if (currentLightboxData && currentLightboxData.descriptions) {
-        const text = currentLightboxData.descriptions[lang] || currentLightboxData.descriptions['en'] || currentLightboxData.descriptions['ua'] || '';
-        captionEl.textContent = text;
-    }
+    if (currentLightboxData && currentLightboxData.descriptions) { const text = currentLightboxData.descriptions[lang] || currentLightboxData.descriptions['en'] || currentLightboxData.descriptions['ua'] || ''; captionEl.textContent = text; }
 }
 
 function updateLightboxLangButtons() {
-    document.querySelectorAll('.lightbox-lang-btn').forEach(btn => {
-        btn.classList.toggle('active', btn.dataset.lang === currentLightboxLang);
-    });
+    document.querySelectorAll('.lightbox-lang-btn').forEach(btn => { btn.classList.toggle('active', btn.dataset.lang === currentLightboxLang); });
 }
 
 function closeLightbox() {
     const overlay = document.getElementById('arcLightboxOverlay');
-    overlay.classList.remove('open'); 
-    document.body.style.overflow = '';
-    currentLightboxData = null;
-    currentLightboxLang = 'en';
+    overlay.classList.remove('open'); document.body.style.overflow = ''; currentLightboxData = null; currentLightboxLang = 'en';
 }
 
 function initLightbox() {
     document.getElementById('lightboxClose').addEventListener('click', closeLightbox);
     document.getElementById('arcLightboxOverlay').addEventListener('click', (e) => { if (e.target === e.currentTarget) closeLightbox(); });
     document.addEventListener('keydown', (e) => { if (e.key === 'Escape') closeLightbox(); });
-    
-    document.querySelectorAll('.lightbox-lang-btn').forEach(btn => {
-        btn.addEventListener('click', () => {
-            currentLightboxLang = btn.dataset.lang;
-            updateLightboxCaption(currentLightboxLang);
-            updateLightboxLangButtons();
-        });
-    });
-    
-    // Right-click context menu
+    document.querySelectorAll('.lightbox-lang-btn').forEach(btn => { btn.addEventListener('click', () => { currentLightboxLang = btn.dataset.lang; updateLightboxCaption(currentLightboxLang); updateLightboxLangButtons(); }); });
     document.querySelectorAll('.link-inline[data-image]').forEach(link => {
         if (link.dataset.lightboxBound) return;
         link.addEventListener('contextmenu', (e) => {
-            const imageUrl = link.getAttribute('data-image');
-            if (!imageUrl) return;
+            const imageUrl = link.getAttribute('data-image'); if (!imageUrl) return;
             e.preventDefault();
-            const title = getLinkTitle(link);
-            const tooltip = link.getAttribute('data-tooltip') || '';
-            
-            const descriptions = {
-                en: link.getAttribute('data-desc-en') || tooltip || '',
-                ua: link.getAttribute('data-desc-ua') || tooltip || ''
-            };
-            
+            const title = getLinkTitle(link); const tooltip = link.getAttribute('data-tooltip') || '';
+            const descriptions = { en: link.getAttribute('data-desc-en') || tooltip || '', ua: link.getAttribute('data-desc-ua') || tooltip || '' };
             const isNftMint = link.classList.contains('track-once') && !link.classList.contains('track-once-info') && !link.classList.contains('track-daily');
             const linkLabel = isNftMint ? getTranslation('go_to_mint') : getTranslation('go_to_website');
             const linkIcon = isNftMint ? 'external-link-alt' : 'globe';
@@ -893,16 +839,12 @@ function initLightbox() {
 
 function initCardAnimations() {
     const observer = new IntersectionObserver((entries) => {
-        entries.forEach((entry, index) => {
-            if (entry.isIntersecting) { setTimeout(() => { entry.target.classList.add('anim-visible'); }, index * 80); observer.unobserve(entry.target); }
-        });
+        entries.forEach((entry, index) => { if (entry.isIntersecting) { setTimeout(() => { entry.target.classList.add('anim-visible'); }, index * 80); observer.unobserve(entry.target); } });
     }, { threshold: 0.1, rootMargin: '0px 0px -40px 0px' });
     document.querySelectorAll('.resource-item').forEach(card => observer.observe(card));
 }
 
-function ensureTooltipElement() {
-    if (!tooltipEl) { tooltipEl = document.createElement('div'); tooltipEl.className = 'floating-tooltip'; document.body.appendChild(tooltipEl); }
-}
+function ensureTooltipElement() { if (!tooltipEl) { tooltipEl = document.createElement('div'); tooltipEl.className = 'floating-tooltip'; document.body.appendChild(tooltipEl); } }
 
 function positionTooltip(target) {
     if (!tooltipEl || !target) return;
@@ -917,47 +859,21 @@ function positionTooltip(target) {
     tooltipEl.style.left = left + 'px'; tooltipEl.style.top = top + 'px';
 }
 
-// ===== TOOLTIP LANGUAGE AWARE =====
 function showTooltip(e) {
-    const target = e.target.closest('[data-tooltip]');
-    if (!target) return;
-
-    ensureTooltipElement();
-    activeTooltipTarget = target;
-
+    const target = e.target.closest('[data-tooltip]'); if (!target) return;
+    ensureTooltipElement(); activeTooltipTarget = target;
     const imageUrl = target.getAttribute('data-image');
     const tooltip = target.getAttribute('data-tooltip') || '';
     const descEn  = target.getAttribute('data-desc-en') || '';
     const descUa  = target.getAttribute('data-desc-ua') || '';
-
     const lang = (currentLanguage === 'uk') ? 'ua' : currentLanguage;
-
-    let text;
-    if (lang === 'ua') {
-        text = descUa || tooltip || descEn;
-    } else {
-        text = descEn || tooltip || descUa;
-    }
-
+    let text; if (lang === 'ua') text = descUa || tooltip || descEn; else text = descEn || tooltip || descUa;
     if (!text && !imageUrl) return;
-
     if (imageUrl) {
         tooltipEl.classList.add('has-image');
-        tooltipEl.innerHTML =
-            `<div class="tooltip-image-container">
-                <img src="${imageUrl}" alt="${text || 'Image'}"
-                     class="tooltip-image"
-                     loading="lazy"
-                     onerror="this.style.display='none'">
-                ${text ? `<div class="tooltip-text">${text}</div>` : ''}
-            </div>`;
-    } else {
-        tooltipEl.classList.remove('has-image');
-        tooltipEl.textContent = text;
-    }
-
-    positionTooltip(target);
-    tooltipEl.classList.add('visible');
+        tooltipEl.innerHTML = `<div class="tooltip-image-container"><img src="${imageUrl}" alt="${text || 'Image'}" class="tooltip-image" loading="lazy" onerror="this.style.display='none'">${text ? `<div class="tooltip-text">${text}</div>` : ''}</div>`;
+    } else { tooltipEl.classList.remove('has-image'); tooltipEl.textContent = text; }
+    positionTooltip(target); tooltipEl.classList.add('visible');
 }
 
 function hideTooltip() { activeTooltipTarget = null; if (tooltipEl) tooltipEl.classList.remove('visible'); }
@@ -976,22 +892,14 @@ window.addEventListener('resize', () => { if (activeTooltipTarget) positionToolt
 
 function exportArcJSON() {
     const exportData = {
-        version: PAGE_VERSION, 
-        exportDate: new Date().toISOString(), 
-        arcData, 
-        favoritesState, 
-        favoritesOrder,
+        version: PAGE_VERSION, exportDate: new Date().toISOString(), arcData, favoritesState, favoritesOrder,
         userItems: JSON.parse(localStorage.getItem(USER_ITEMS_KEY) || '{}'),
         sections: JSON.parse(localStorage.getItem(SECTION_COLLAPSE_KEY) || '{}'),
-        badgesHidden: localStorage.getItem(BADGE_VISIBILITY_KEY), 
-        theme: localStorage.getItem(THEME_KEY),
-        language: currentLanguage
+        badgesHidden: localStorage.getItem(BADGE_VISIBILITY_KEY), theme: localStorage.getItem(THEME_KEY), language: currentLanguage
     };
     const blob = new Blob([JSON.stringify(exportData, null, 2)], { type: 'application/json' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a'); a.href = url;
-    a.download = `arc-tracker-backup-${new Date().toISOString().slice(0, 10)}.json`;
-    a.click(); URL.revokeObjectURL(url);
+    const url = URL.createObjectURL(blob); const a = document.createElement('a'); a.href = url;
+    a.download = `arc-tracker-backup-${new Date().toISOString().slice(0, 10)}.json`; a.click(); URL.revokeObjectURL(url);
     showToast(getTranslation('data_exported'), 'success');
 }
 
@@ -1027,24 +935,20 @@ async function loadArcData() {
     favoritesState = localFav; 
     favoritesOrder = localOrder;
     
+    console.log('Loaded favorites:', favoritesOrder.length, 'items');
+    
     if (currentUser) {
         try {
-            const docRef = doc(db, "users", currentUser.uid);
-            const docSnap = await getDoc(docRef);
-            
+            const docRef = doc(db, "users", currentUser.uid); const docSnap = await getDoc(docRef);
             if (docSnap.exists()) {
                 const cloudData = docSnap.data();
-                
                 if (cloudData.arcGuideStats && Object.keys(cloudData.arcGuideStats).length > 0) {
-                    arcData = cloudData.arcGuideStats;
-                    localStorage.setItem(STORAGE_KEY, JSON.stringify(arcData));
+                    arcData = cloudData.arcGuideStats; localStorage.setItem(STORAGE_KEY, JSON.stringify(arcData));
                 }
-                
                 if (cloudData.arcFavoritesState) {
                     const cloudTs = parseInt(cloudData.arcFavoritesTimestamp || '0', 10);
                     if (cloudTs > localTimestamp) {
-                        favoritesState = cloudData.arcFavoritesState;
-                        favoritesOrder = cloudData.arcFavoritesOrder || [];
+                        favoritesState = cloudData.arcFavoritesState; favoritesOrder = cloudData.arcFavoritesOrder || [];
                         localStorage.setItem(FAVORITES_KEY, JSON.stringify(favoritesState));
                         localStorage.setItem(FAVORITES_ORDER_KEY, JSON.stringify(favoritesOrder));
                         localStorage.setItem(FAVORITES_TIMESTAMP_KEY, String(cloudTs));
@@ -1052,22 +956,18 @@ async function loadArcData() {
                 } else if (Object.keys(localFav).length > 0) {
                     await saveToCloud({ arcFavoritesState: localFav, arcFavoritesOrder: localOrder, arcFavoritesTimestamp: localTimestamp });
                 }
-                
                 if (cloudData.arcUserItems) {
                     const cloudItemsTs = parseInt(cloudData.arcUserItemsTimestamp || '0', 10);
                     const localItemsTs = parseInt(localStorage.getItem('arc_user_items_timestamp') || '0', 10);
-                    
                     if (cloudItemsTs > localItemsTs) {
                         userItemsData = { items: cloudData.arcUserItems.items || {}, collections: cloudData.arcUserItems.collections || [], dappCategories: cloudData.arcUserItems.dappCategories || [] };
                         localStorage.setItem(USER_ITEMS_KEY, JSON.stringify(userItemsData));
                         localStorage.setItem('arc_user_items_timestamp', String(cloudItemsTs));
                     }
                 }
-                
                 if (cloudData.arcEditsOverride) {
                     const cloudEditsTs = parseInt(cloudData.arcEditsTimestamp || '0', 10);
                     const localEditsTs = parseInt(localStorage.getItem('arc_edits_timestamp') || '0', 10);
-                    
                     if (cloudEditsTs > localEditsTs) {
                         editsOverride = cloudData.arcEditsOverride;
                         localStorage.setItem(EDITS_OVERRIDE_KEY, JSON.stringify(editsOverride));
@@ -1077,9 +977,7 @@ async function loadArcData() {
             }
         } catch (e) { console.error("Cloud load error:", e); }
     }
-    
-    refreshAllVisuals(); 
-    applyArcAllOverrides();
+    refreshAllVisuals(); applyArcAllOverrides();
 }
 
 async function saveToCloud(data) {
@@ -1098,7 +996,9 @@ async function saveArcFavorites() {
     localStorage.setItem(FAVORITES_KEY, JSON.stringify(favoritesState));
     localStorage.setItem(FAVORITES_ORDER_KEY, JSON.stringify(favoritesOrder));
     localStorage.setItem(FAVORITES_TIMESTAMP_KEY, String(ts));
-    if (currentUser) await saveToCloud({ arcFavoritesState: favoritesState, arcFavoritesOrder: favoritesOrder, arcFavoritesTimestamp: ts });
+    if (currentUser) {
+        await saveToCloud({ arcFavoritesState: favoritesState, arcFavoritesOrder: favoritesOrder, arcFavoritesTimestamp: ts });
+    }
 }
 
 // ===== AUTH =====
@@ -1115,36 +1015,6 @@ window.handleRegister = async function() {
     try { await createUserWithEmailAndPassword(auth, email, pass); closeLoginModal(); } catch(e) { alert('Error: ' + e.message); }
 };
 window.logout = function() { signOut(auth); };
-
-async function loadArcSharedData() {
-    loadArcUserItems();
-    loadArcEditsOverride();
-    
-    if (isAdmin) return;
-    
-    try {
-        const itemsResp = await fetch('https://raw.githubusercontent.com/Worklaf/Worklaf/main/AirdropLab/guides/Arc/arc_shared_items.json?v=' + Date.now());
-        if (itemsResp.ok) {
-            const data = await itemsResp.json();
-            userItemsData = { items: data.items || {}, collections: data.collections || [], dappCategories: data.dappCategories || [] };
-            localStorage.setItem(USER_ITEMS_KEY, JSON.stringify(userItemsData));
-            sharedItemsData = data;
-        }
-    } catch (e) {
-        console.log('Using local user items data');
-    }
-
-    try {
-        const editsResp = await fetch('https://raw.githubusercontent.com/Worklaf/Worklaf/main/AirdropLab/guides/Arc/arc_shared_edits.json?v=' + Date.now());
-        if (editsResp.ok) {
-            const data = await editsResp.json();
-            editsOverride = data.editsOverride || {};
-            localStorage.setItem(EDITS_OVERRIDE_KEY, JSON.stringify(editsOverride));
-        }
-    } catch (e) {
-        console.log('Using local edits data');
-    }
-}
 
 // ===== CONTENT RENDERING =====
 function getLocalizedField(item, fieldEn, fieldUa, fallback = '') {
@@ -1167,39 +1037,72 @@ function renderLink(item, trackClass = 'track-daily') {
     return `<a href="${item.url}" target="_blank" ${attrs}>${title}</a>`;
 }
 
-function renderArcContent() {
-    if (!sharedItemsData) return;
+// 🔥 ИСПРАВЛЕНО: Рендерим контент из двух источников
+function renderAllContent() {
+    // Merge items from shared and user data
+    const mergedItems = {};
     
+    // Copy shared items
+    if (sharedItemsData && sharedItemsData.items) {
+        for (const zone in sharedItemsData.items) {
+            mergedItems[zone] = [...(sharedItemsData.items[zone] || [])];
+        }
+    }
+    
+    // Add user items (user items take precedence)
+    if (userItemsData && userItemsData.items) {
+        for (const zone in userItemsData.items) {
+            if (!mergedItems[zone]) mergedItems[zone] = [];
+            const userIds = new Set(userItemsData.items[zone].map(i => i.id));
+            // Filter out shared items with same ID
+            mergedItems[zone] = mergedItems[zone].filter(i => !userIds.has(i.id));
+            // Add user items
+            mergedItems[zone] = [...mergedItems[zone], ...userItemsData.items[zone]];
+        }
+    }
+
     // Render Faucets
     const faucetsContainer = document.getElementById('faucets-links');
-    if (faucetsContainer && sharedItemsData.items.faucets) {
-        faucetsContainer.innerHTML = sharedItemsData.items.faucets.map(f => renderLink(f, 'track-daily')).join('');
+    if (faucetsContainer && mergedItems.faucets) {
+        faucetsContainer.innerHTML = mergedItems.faucets.map(f => renderLink(f, 'track-daily')).join('');
     }
     
     // Render Deploy Basic
     const deployBasicContainer = document.getElementById('deploy-basic-links');
-    if (deployBasicContainer && sharedItemsData.items.deploy_basic) {
-        deployBasicContainer.innerHTML = sharedItemsData.items.deploy_basic.map(d => renderLink(d, 'track-daily')).join('');
+    if (deployBasicContainer && mergedItems.deploy_basic) {
+        deployBasicContainer.innerHTML = mergedItems.deploy_basic.map(d => renderLink(d, 'track-daily')).join('');
     }
     
     // Render Deploy Advanced
     const deployAdvancedContainer = document.getElementById('deploy-advanced-links');
-    if (deployAdvancedContainer && sharedItemsData.items.deploy_advanced) {
-        deployAdvancedContainer.innerHTML = sharedItemsData.items.deploy_advanced.map(d => renderLink(d, 'track-daily')).join('');
+    if (deployAdvancedContainer && mergedItems.deploy_advanced) {
+        deployAdvancedContainer.innerHTML = mergedItems.deploy_advanced.map(d => renderLink(d, 'track-daily')).join('');
     }
     
     // Render NFTs
     const nftsGrid = document.getElementById('nfts-grid');
-    if (nftsGrid && sharedItemsData.collections) {
-        const nftCollections = sharedItemsData.collections.filter(c => c.id.startsWith('nft_'));
+    if (nftsGrid) {
+        let allCollections = [];
+        
+        // Add shared collections
+        if (sharedItemsData && sharedItemsData.collections) {
+            allCollections = [...sharedItemsData.collections];
+        }
+        
+        // Add user collections
+        if (userItemsData && userItemsData.collections) {
+            const userCollIds = new Set(userItemsData.collections.map(c => c.id));
+            allCollections = allCollections.filter(c => !userCollIds.has(c.id));
+            allCollections = [...allCollections, ...userItemsData.collections];
+        }
+        
+        const nftCollections = allCollections.filter(c => c.id.startsWith('nft_'));
         nftsGrid.innerHTML = nftCollections.map(coll => {
-            const items = sharedItemsData.items[coll.id] || [];
+            const items = mergedItems[coll.id] || [];
             if (items.length === 0) return '';
-            
             const title = currentLanguage === 'ua' ? (coll.titleUa || coll.title) : coll.title;
             const website = coll.website || '';
             const twitter = coll.twitter || '';
-            
             return `
                 <div class="resource-item" data-zone="${coll.id}">
                     <div class="resource-header">
@@ -1219,17 +1122,26 @@ function renderArcContent() {
     
     // Render dApps
     const dappsTableBody = document.getElementById('dapps-table-body');
-    if (dappsTableBody && sharedItemsData.dappCategories) {
-        dappsTableBody.innerHTML = sharedItemsData.dappCategories.map(cat => {
+    if (dappsTableBody) {
+        let allCategories = [];
+        
+        if (sharedItemsData && sharedItemsData.dappCategories) {
+            allCategories = [...sharedItemsData.dappCategories];
+        }
+        
+        if (userItemsData && userItemsData.dappCategories) {
+            const userCatIds = new Set(userItemsData.dappCategories.map(c => c.id));
+            allCategories = allCategories.filter(c => !userCatIds.has(c.id));
+            allCategories = [...allCategories, ...userItemsData.dappCategories];
+        }
+        
+        dappsTableBody.innerHTML = allCategories.map(cat => {
             const title = currentLanguage === 'ua' ? (cat.titleUa || cat.title) : cat.title;
             const desc = currentLanguage === 'ua' ? (cat.descUa || cat.descEn) : (cat.descEn || cat.descUa);
             const action = cat.action || desc || '';
-            
             const zoneKey = 'dapp_' + cat.id;
-            const items = sharedItemsData.items[zoneKey] || [];
-            
+            const items = mergedItems[zoneKey] || [];
             if (items.length === 0) return '';
-            
             return `
                 <tr data-zone="${zoneKey}">
                     <td data-label="Category"><strong>${title}</strong></td>
@@ -1240,13 +1152,56 @@ function renderArcContent() {
         }).join('');
     }
     
-    // Reinitialize functionality
-    bindTrackingHandlersToAll();
-    attachFavoriteControls();
-    initializeTooltips();
-    initLightbox();
-    initCardAnimations();
+    // Inject buttons after render
+    injectAddButtons();
+    
+    bindTrackingHandlersToAll(); 
+    attachFavoriteControls(); 
+    initializeTooltips(); 
+    initLightbox(); 
+    initCardAnimations(); 
     updateUI();
+}
+
+async function loadArcSharedData() {
+    loadArcUserItems();
+    loadArcEditsOverride();
+    
+    if (isAdmin) {
+        renderAllContent();
+        return;
+    }
+    
+    try {
+        const itemsResp = await fetch('https://raw.githubusercontent.com/Worklaf/Worklaf/main/AirdropLab/guides/Arc/arc_shared_items.json?v=' + Date.now());
+        if (itemsResp.ok) {
+            const data = await itemsResp.json();
+            sharedItemsData = data;
+            // Also merge user items if exist
+            if (userItemsData && userItemsData.items) {
+                // Already handled in renderAllContent
+            }
+        } else {
+            console.log('GitHub items not found, using local data only');
+            // Use empty data, will rely on userItemsData
+            sharedItemsData = { items: {}, collections: [], dappCategories: [] };
+        }
+    } catch (e) {
+        console.log('Using local user items data only');
+        sharedItemsData = { items: {}, collections: [], dappCategories: [] };
+    }
+
+    try {
+        const editsResp = await fetch('https://raw.githubusercontent.com/Worklaf/Worklaf/main/AirdropLab/guides/Arc/arc_shared_edits.json?v=' + Date.now());
+        if (editsResp.ok) {
+            const data = await editsResp.json();
+            editsOverride = data.editsOverride || {};
+            localStorage.setItem(EDITS_OVERRIDE_KEY, JSON.stringify(editsOverride));
+        }
+    } catch (e) { console.log('Using local edits data'); }
+    
+    // Render content after loading
+    renderAllContent();
 }
 
 let isDataLoaded = false;
@@ -1276,7 +1231,10 @@ onAuthStateChanged(auth, async (user) => {
         await loadArcSharedData();
         await loadArcNewIndicators();
         await loadArcData();
-        renderArcContent();
+        
+        // Re-render to apply favorites tracking
+        renderAllContent();
+        
         updateArcNewIndicators();
         isDataLoaded = true;
     }
@@ -1303,9 +1261,18 @@ function createFavoriteToggle(id) {
     btn.title = 'Add to favorites'; btn.textContent = '☆';
     btn.addEventListener('click', async (e) => {
         e.preventDefault(); e.stopPropagation();
-        if (favoritesState[id]) { delete favoritesState[id]; favoritesOrder = favoritesOrder.filter(x => x !== id); } 
-        else { const ctrl = favoriteControls.get(id); if (ctrl) { favoritesState[id] = extractLinkInfo(ctrl.link); favoritesOrder.push(id); } }
-        await saveArcFavorites(); refreshAllVisuals();
+        if (favoritesState[id]) { 
+            delete favoritesState[id]; 
+            favoritesOrder = favoritesOrder.filter(x => x !== id); 
+        } else { 
+            const ctrl = favoriteControls.get(id); 
+            if (ctrl) { 
+                favoritesState[id] = extractLinkInfo(ctrl.link); 
+                favoritesOrder.push(id); 
+            } 
+        }
+        await saveArcFavorites(); 
+        refreshAllVisuals();
     });
     return btn;
 }
@@ -1338,44 +1305,94 @@ function renderFavoritesList() {
     const countEl = document.getElementById('favoritesCount');
     if (!listEl || !emptyEl || !countEl) return;
     listEl.innerHTML = '';
+    
+    // Clean up favoritesOrder
     favoritesOrder = favoritesOrder.filter(id => favoritesState[id]);
     Object.keys(favoritesState).forEach(id => { if (!favoritesOrder.includes(id)) favoritesOrder.push(id); });
-    if (favoritesOrder.length === 0) { emptyEl.style.display = 'block'; listEl.style.display = 'none'; countEl.textContent = '0'; return; }
-    emptyEl.style.display = 'none'; listEl.style.display = 'flex';
+    
+    if (favoritesOrder.length === 0) { 
+        emptyEl.style.display = 'block'; 
+        listEl.style.display = 'none'; 
+        countEl.textContent = '0'; 
+        return; 
+    }
+    
+    emptyEl.style.display = 'none'; 
+    listEl.style.display = 'flex';
+    
     favoritesOrder.forEach(id => {
         const info = favoritesState[id]; if (!info) return;
+        
+        // Try to get live info from DOM
         const linkEl = document.querySelector(`a[data-id="${id}"]`);
         const liveInfo = linkEl ? extractLinkInfo(linkEl) : info;
+        
+        // Update if changed
         if (linkEl && (info.title !== liveInfo.title || info.url !== liveInfo.url || classesToKey(info.classes) !== classesToKey(liveInfo.classes))) {
-            favoritesState[id] = liveInfo; localStorage.setItem(FAVORITES_KEY, JSON.stringify(favoritesState));
+            favoritesState[id] = liveInfo; 
+            localStorage.setItem(FAVORITES_KEY, JSON.stringify(favoritesState));
         }
-        const li = document.createElement('li'); li.className = 'favorites-item'; li.dataset.id = id;
-        const handle = document.createElement('span'); handle.className = 'drag-handle'; handle.innerHTML = '⋮⋮'; handle.title = 'Drag';
+        
+        const li = document.createElement('li'); 
+        li.className = 'favorites-item'; 
+        li.dataset.id = id;
+        
+        const handle = document.createElement('span'); 
+        handle.className = 'drag-handle'; 
+        handle.innerHTML = '⋮⋮'; 
+        handle.title = 'Drag';
         li.appendChild(handle);
+        
         const anchor = document.createElement('a');
-        anchor.href = liveInfo.url; anchor.target = '_blank'; anchor.rel = 'noopener'; anchor.dataset.id = id; anchor.classList.add('favorite-link');
+        anchor.href = liveInfo.url; 
+        anchor.target = '_blank'; 
+        anchor.rel = 'noopener'; 
+        anchor.dataset.id = id; 
+        anchor.classList.add('favorite-link');
         liveInfo.classes.forEach(cls => anchor.classList.add(cls));
         if (liveInfo.tooltip) anchor.setAttribute('data-tooltip', liveInfo.tooltip);
+        
         const record = arcData[id];
         if (record) {
             if (record.visited) anchor.classList.add('visited-once');
             if (isToday(record.lastClick)) anchor.classList.add('daily-active');
             if (record.totalClicks > 0 || record.lastClick) {
-                const badge = document.createElement('span'); badge.className = 'click-info';
+                const badge = document.createElement('span'); 
+                badge.className = 'click-info';
                 badge.textContent = `${record.totalClicks || 0}р • ${formatDate(record.lastClick)}`;
                 anchor.appendChild(badge);
             }
         }
-        const titleSpan = document.createElement('span'); titleSpan.className = 'favorite-title'; titleSpan.textContent = liveInfo.title;
-        anchor.appendChild(titleSpan); li.appendChild(anchor);
+        
+        const titleSpan = document.createElement('span'); 
+        titleSpan.className = 'favorite-title'; 
+        titleSpan.textContent = liveInfo.title;
+        anchor.appendChild(titleSpan); 
+        
+        li.appendChild(anchor);
+        
         const removeBtn = document.createElement('button');
-        removeBtn.type = 'button'; removeBtn.className = 'remove-fav-btn'; removeBtn.innerHTML = '×'; removeBtn.title = 'Remove from favorites';
-        removeBtn.onclick = async (e) => { e.stopPropagation(); delete favoritesState[id]; favoritesOrder = favoritesOrder.filter(x => x !== id); await saveArcFavorites(); refreshAllVisuals(); };
-        li.appendChild(removeBtn); listEl.appendChild(li);
+        removeBtn.type = 'button'; 
+        removeBtn.className = 'remove-fav-btn'; 
+        removeBtn.innerHTML = '×'; 
+        removeBtn.title = 'Remove from favorites';
+        removeBtn.onclick = async (e) => { 
+            e.stopPropagation(); 
+            delete favoritesState[id]; 
+            favoritesOrder = favoritesOrder.filter(x => x !== id); 
+            await saveArcFavorites(); 
+            refreshAllVisuals(); 
+        };
+        li.appendChild(removeBtn); 
+        listEl.appendChild(li);
+        
         bindTrackingHandler(anchor);
     });
+    
     countEl.textContent = String(favoritesOrder.length);
-    initSortable(); initializeTooltips(); updateArcNewIndicators();
+    initSortable(); 
+    initializeTooltips(); 
+    updateArcNewIndicators();
 }
 
 function initSortable() {
@@ -1383,7 +1400,10 @@ function initSortable() {
     if (!listEl || typeof Sortable === 'undefined') return;
     if (favoritesSortable) favoritesSortable.destroy();
     favoritesSortable = new Sortable(listEl, { animation: 150, handle: '.drag-handle', ghostClass: 'sortable-ghost',
-        onEnd: async () => { favoritesOrder = Array.from(listEl.children).map(li => li.dataset.id); await saveArcFavorites(); }
+        onEnd: async () => { 
+            favoritesOrder = Array.from(listEl.children).map(li => li.dataset.id); 
+            await saveArcFavorites(); 
+        }
     });
 }
 
@@ -1573,12 +1593,19 @@ let userItemsData = { items: {}, collections: [], dappCategories: [] };
 let currentAddContext = null;
 
 function loadArcUserItems() {
-    try { const raw = localStorage.getItem(USER_ITEMS_KEY); if (raw) { const p = JSON.parse(raw); userItemsData = { items: p.items||{}, collections: p.collections||[], dappCategories: p.dappCategories||[] }; } } 
-    catch(e) { console.error(e); }
+    try { 
+        const raw = localStorage.getItem(USER_ITEMS_KEY); 
+        if (raw) { 
+            const p = JSON.parse(raw); 
+            userItemsData = { items: p.items||{}, collections: p.collections||[], dappCategories: p.dappCategories||[] }; 
+            console.log('Loaded user items:', Object.keys(userItemsData.items).length, 'zones');
+        } 
+    } catch(e) { console.error(e); }
 }
 
 async function saveArcUserItems() {
     localStorage.setItem(USER_ITEMS_KEY, JSON.stringify(userItemsData));
+    localStorage.setItem('arc_user_items_timestamp', String(Date.now()));
     if (currentUser) {
         try { await saveToCloud({ arcUserItems: userItemsData, arcUserItemsTimestamp: Date.now() }); } 
         catch (e) { showToast('⚠️ Saved locally, cloud unavailable', 'error'); }
@@ -1631,24 +1658,14 @@ function setupAutoTranslate() {
             clearTimeout(translateTimeoutEn);
             const text = descEn.value.trim();
             if (text.length < 3) return;
-            
             if (badgeUa) badgeUa.style.display = 'inline-flex';
             badgeUa.innerHTML = '<i class="fas fa-sync fa-spin"></i> Translating...';
-            
             translateTimeoutEn = setTimeout(async () => {
                 try {
                     const translated = await autoTranslate(text, 'ua');
                     if (descUa) descUa.value = translated;
-                    if (badgeUa) {
-                        badgeUa.innerHTML = '<i class="fas fa-check"></i> Translated';
-                        setTimeout(() => { 
-                            if (badgeUa) badgeUa.style.display = 'none'; 
-                        }, 2000);
-                    }
-                } catch (e) {
-                    console.error('Translate EN->UA error:', e);
-                    if (badgeUa) badgeUa.style.display = 'none';
-                }
+                    if (badgeUa) { badgeUa.innerHTML = '<i class="fas fa-check"></i> Translated'; setTimeout(() => { if (badgeUa) badgeUa.style.display = 'none'; }, 2000); }
+                } catch (e) { if (badgeUa) badgeUa.style.display = 'none'; }
             }, 1500);
         });
     }
@@ -1658,24 +1675,14 @@ function setupAutoTranslate() {
             clearTimeout(translateTimeoutUa);
             const text = descUa.value.trim();
             if (text.length < 3) return;
-            
             if (badgeEn) badgeEn.style.display = 'inline-flex';
             badgeEn.innerHTML = '<i class="fas fa-sync fa-spin"></i> Translating...';
-            
             translateTimeoutUa = setTimeout(async () => {
                 try {
                     const translated = await autoTranslate(text, 'en');
                     if (descEn) descEn.value = translated;
-                    if (badgeEn) {
-                        badgeEn.innerHTML = '<i class="fas fa-check"></i> Translated';
-                        setTimeout(() => { 
-                            if (badgeEn) badgeEn.style.display = 'none'; 
-                        }, 2000);
-                    }
-                } catch (e) {
-                    console.error('Translate UA->EN error:', e);
-                    if (badgeEn) badgeEn.style.display = 'none';
-                }
+                    if (badgeEn) { badgeEn.innerHTML = '<i class="fas fa-check"></i> Translated'; setTimeout(() => { if (badgeEn) badgeEn.style.display = 'none'; }, 2000); }
+                } catch (e) { if (badgeEn) badgeEn.style.display = 'none'; }
             }, 1500);
         });
     }
@@ -1686,18 +1693,13 @@ let currentModalLang = 'en';
 function openModal(title, fields) {
     document.getElementById('addModalTitle').textContent = title; 
     showFields(fields);
-    
-    ['addFieldTitle', 'addFieldUrl', 'addFieldImage', 'addFieldWebsite', 'addFieldTwitter', 'addFieldDescription'].forEach(id => {
-        const el = document.getElementById(id); if (el) el.value = '';
-    });
+    ['addFieldTitle', 'addFieldUrl', 'addFieldImage', 'addFieldWebsite', 'addFieldTwitter', 'addFieldDescription'].forEach(id => { const el = document.getElementById(id); if (el) el.value = ''; });
     document.getElementById('addFieldTooltipEn').value = '';
     document.getElementById('addFieldTooltipUa').value = '';
-    
     currentModalLang = 'en';
     document.querySelectorAll('.lang-tab').forEach(t => t.classList.toggle('active', t.dataset.lang === 'en'));
     document.getElementById('descFieldEn').classList.remove('field-hidden');
     document.getElementById('descFieldUa').classList.add('field-hidden');
-    
     overlayEl().classList.add('open');
 }
 
@@ -1715,20 +1717,11 @@ document.getElementById('addModalCancel').addEventListener('click', closeModal);
 const addModalEl = document.getElementById('addModal');
 let pointerDownInsideModal = false;
 
-document.addEventListener('pointerdown', (e) => {
-    pointerDownInsideModal = !!e.target.closest('#addModal');
-}, true);
-
-overlayEl().addEventListener('click', (e) => {
-    if (e.target === overlayEl() && !pointerDownInsideModal) closeModal();
-});
-
+document.addEventListener('pointerdown', (e) => { pointerDownInsideModal = !!e.target.closest('#addModal'); }, true);
+overlayEl().addEventListener('click', (e) => { if (e.target === overlayEl() && !pointerDownInsideModal) closeModal(); });
 addModalEl.addEventListener('click', (e) => e.stopPropagation());
 addModalEl.addEventListener('pointerdown', (e) => e.stopPropagation());
-
-document.addEventListener('keydown', (e) => {
-    if (e.key === 'Escape') { closeModal(); closeLightbox(); }
-});
+document.addEventListener('keydown', (e) => { if (e.key === 'Escape') { closeModal(); closeLightbox(); } });
 
 function normalizeImageUrl(rawUrl) {
     if (!rawUrl) return rawUrl;
@@ -1760,51 +1753,25 @@ document.getElementById('addModalSave').addEventListener('click', async () => {
                 const items = userItemsData.items[zone]; if (!items) continue;
                 const found = items.find(i => i.id === id);
                 if (found) { 
-                    found.title = newTitle; 
-                    found.url = newUrl; 
-                    found.descEn = newTooltipEn;
-                    found.descUa = newTooltipUa;
-                    found.tooltip = currentModalLang === 'en' ? newTooltipEn : newTooltipUa;
-                    found.image = newImage; 
-                    isUserItem = true; 
-                    await saveArcUserItems(); 
-                    break; 
+                    found.title = newTitle; found.url = newUrl; found.descEn = newTooltipEn;
+                    found.descUa = newTooltipUa; found.tooltip = currentModalLang === 'en' ? newTooltipEn : newTooltipUa;
+                    found.image = newImage; isUserItem = true; await saveArcUserItems(); break; 
                 }
             }
 
             if (!isUserItem) { 
-                editsOverride[id] = { 
-                    title: newTitle, 
-                    url: newUrl, 
-                    descEn: newTooltipEn, 
-                    descUa: newTooltipUa,
-                    tooltip: newTooltipEn || newTooltipUa, 
-                    image: newImage 
-                }; 
+                editsOverride[id] = { title: newTitle, url: newUrl, descEn: newTooltipEn, descUa: newTooltipUa, tooltip: newTooltipEn || newTooltipUa, image: newImage }; 
                 await saveArcEditsOverride(); 
             }
             
-            applyArcOverrideToLink(link, { 
-                title: newTitle, 
-                url: newUrl, 
-                descEn: newTooltipEn, 
-                descUa: newTooltipUa,
-                tooltip: newTooltipEn || newTooltipUa, 
-                image: newImage 
-            });
+            applyArcOverrideToLink(link, { title: newTitle, url: newUrl, descEn: newTooltipEn, descUa: newTooltipUa, tooltip: newTooltipEn || newTooltipUa, image: newImage });
             
             if (favoritesState[id]) { 
-                favoritesState[id].title = newTitle; 
-                favoritesState[id].url = newUrl; 
-                favoritesState[id].tooltip = newTooltipEn || newTooltipUa; 
-                await saveArcFavorites(); 
-                renderFavoritesList(); 
+                favoritesState[id].title = newTitle; favoritesState[id].url = newUrl; favoritesState[id].tooltip = newTooltipEn || newTooltipUa; 
+                await saveArcFavorites(); renderFavoritesList(); 
             }
             showToast(getTranslation('element_updated'), 'success'); 
-            closeModal(); 
-            initializeTooltips(); 
-            initLightbox(); 
-            return;
+            closeModal(); initializeTooltips(); initLightbox(); return;
         }
 
         if (!currentAddContext) return;
@@ -1822,24 +1789,13 @@ document.getElementById('addModalSave').addEventListener('click', async () => {
             if (!title || !url) { alert('Title and URL are required!'); return; }
             const config = currentAddContext.config; 
             const id = generateId();
-            const item = { 
-                id, 
-                title, 
-                url, 
-                tooltip, 
-                descEn,
-                descUa,
-                image, 
-                trackType: config.trackType, 
-                addedAt: Date.now() 
-            };
+            const item = { id, title, url, tooltip, descEn, descUa, image, trackType: config.trackType, addedAt: Date.now() };
             if (!userItemsData.items[currentAddContext.zone]) userItemsData.items[currentAddContext.zone] = [];
             userItemsData.items[currentAddContext.zone].push(item);
             if (isAdmin) await addToArcGlobalNewIndicators(id);
             await saveArcUserItems(); 
-            renderUserItemInZone(currentAddContext.zone, item); 
+            renderAllContent(); // Re-render all content
             showToast(getTranslation('element_added'), 'success');
-            
         } else if (currentAddContext.sectionZone) {
             const sConfig = currentAddContext.config;
             if (sConfig.type === 'nft-collection') {
@@ -1849,7 +1805,7 @@ document.getElementById('addModalSave').addEventListener('click', async () => {
                 userItemsData.collections.push(coll); 
                 ZONE_CONFIG[collId] = { type: 'nft-item', label: 'NFT in ' + title, trackType: 'track-once' };
                 await saveArcUserItems(); 
-                renderUserCollection(coll); 
+                renderAllContent(); 
                 showToast(getTranslation('collection_created'), 'success');
             } else if (sConfig.type === 'dapp-category') {
                 if (!title) { alert('Title is required!'); return; }
@@ -1858,7 +1814,7 @@ document.getElementById('addModalSave').addEventListener('click', async () => {
                 userItemsData.dappCategories.push(cat); 
                 ZONE_CONFIG[catId] = { type: 'link-item', label: title, trackType: 'track-daily' };
                 await saveArcUserItems(); 
-                renderUserDappCategory(cat); 
+                renderAllContent(); 
                 showToast(getTranslation('category_created'), 'success');
             } else if (sConfig.type === 'deploy-group') {
                 if (!title) { alert('Title is required!'); return; }
@@ -1867,7 +1823,7 @@ document.getElementById('addModalSave').addEventListener('click', async () => {
                 userItemsData.collections.push(grp); 
                 ZONE_CONFIG[grpId] = { type: 'link-item', label: grp.title, trackType: 'track-daily' };
                 await saveArcUserItems(); 
-                renderUserDeployGroup(grp); 
+                renderAllContent(); 
                 showToast(getTranslation('group_created'), 'success');
             }
         }
@@ -1921,7 +1877,8 @@ function createUserLink(item, zone) {
             if (userItemsData.items[zone]) userItemsData.items[zone] = userItemsData.items[zone].filter(i => i.id !== item.id);
             userItemsData.collections.forEach(c => { if (c.items) c.items = c.items.filter(i => i.id !== item.id); });
             userItemsData.dappCategories.forEach(c => { if (c.items) c.items = c.items.filter(i => i.id !== item.id); });
-            await saveArcUserItems(); wrapper.remove();
+            await saveArcUserItems(); 
+            renderAllContent(); // Re-render
             if (favoritesState[item.id]) { delete favoritesState[item.id]; favoritesOrder = favoritesOrder.filter(x => x !== item.id); await saveArcFavorites(); refreshAllVisuals(); }
             showToast(`${getTranslation('removed')}: ${item.title}`, 'info');
         } catch (error) { delBtn.disabled = false; delBtn.innerHTML = '×'; }
@@ -1930,125 +1887,66 @@ function createUserLink(item, zone) {
     return wrapper;
 }
 
-function renderUserItemInZone(zone, item) {
-    const container = document.querySelector(`[data-zone="${zone}"]`); if (!container) return;
-    const existingItem = container.querySelector(`[data-user-item-id="${item.id}"]`); if (existingItem) return;
-    let target; 
-    if (container.tagName === 'TR') target = container.querySelector('.dapp-links'); 
-    else target = container.querySelector('.link-collection') || container.querySelector('.link-row');
-    if (!target) return;
-    const wrapper = createUserLink(item, zone);
-    const addBtn = target.querySelector('.add-item-btn'); 
-    if (addBtn) target.insertBefore(wrapper, addBtn); else target.appendChild(wrapper);
-}
-
-function renderUserCollection(coll) {
-    const sectionContent = document.querySelector(`[data-section-zone="${coll.parentZone}"]`); if (!sectionContent) return;
-    const grid = sectionContent.querySelector('.resource-grid'); if (!grid) return;
-    const card = document.createElement('div'); card.className = 'resource-item user-collection-card'; card.dataset.zone = coll.id;
-    const delTop = document.createElement('button'); delTop.type = 'button'; delTop.className = 'user-collection-delete-top admin-only'; delTop.title = getTranslation('delete_collection'); delTop.innerHTML = '×';
-    delTop.addEventListener('click', async () => {
-        if (!confirm(getTranslation('confirm_delete'))) return;
-        userItemsData.collections = userItemsData.collections.filter(c => c.id !== coll.id); delete userItemsData.items[coll.id]; delete ZONE_CONFIG[coll.id];
-        await saveArcUserItems(); card.remove(); showToast(getTranslation('collection_removed') + ': ' + coll.title, 'info');
-    });
-    card.appendChild(delTop);
-    const header = document.createElement('div'); header.className = 'resource-header';
-    const titleSpan = document.createElement('span'); titleSpan.className = 'resource-title'; titleSpan.textContent = coll.title; header.appendChild(titleSpan);
-    if (coll.website || coll.twitter) {
-        const icons = document.createElement('span'); icons.className = 'social-icons';
-        if (coll.website) icons.innerHTML += `<a href="${coll.website}" target="_blank" class="site-icon" title="Website"><i class="fas fa-globe"></i></a>`;
-        if (coll.twitter) icons.innerHTML += `<a href="${coll.twitter}" target="_blank" class="collection-social-link" title="Twitter"><i class="fab fa-x-twitter"></i></a>`;
-        header.appendChild(icons);
-    }
-    const addBtn = document.createElement('button'); addBtn.type = 'button'; addBtn.className = 'add-item-btn admin-only'; addBtn.title = `${getTranslation('add_nft')} ${coll.title}`; addBtn.innerHTML = '<span class="btn-plus">+</span>';
-    addBtn.addEventListener('click', (e) => { e.stopPropagation(); currentAddContext = { zone: coll.id, config: ZONE_CONFIG[coll.id] || { type:'nft-item', label: coll.title, trackType:'track-once' } }; openModal(`${getTranslation('add_to')}: ${getTranslation('add_nft')} ${coll.title}`, ['fieldTitle','fieldUrl','fieldImage','descFieldEn','descFieldUa']); });
-    header.appendChild(addBtn); card.appendChild(header);
-    const linkColl = document.createElement('div'); linkColl.className = 'link-collection'; card.appendChild(linkColl); grid.appendChild(card);
-    const items = userItemsData.items[coll.id] || []; items.forEach(item => renderUserItemInZone(coll.id, item));
-    requestAnimationFrame(() => card.classList.add('anim-visible'));
-}
-
-function renderUserDappCategory(cat) {
-    const sectionContent = document.querySelector(`[data-section-zone="${cat.parentZone}"]`); if (!sectionContent) return;
-    const table = sectionContent.querySelector('.dapp-table tbody'); if (!table) return;
-    const tr = document.createElement('tr'); tr.dataset.zone = cat.id;
-    const tdCat = document.createElement('td'); tdCat.setAttribute('data-label', getTranslation('category')); tdCat.innerHTML = `<strong>${cat.title}</strong>`;
-    const delCatBtn = document.createElement('button'); delCatBtn.type = 'button'; delCatBtn.className = 'user-item-delete admin-only'; delCatBtn.style.marginLeft = '8px'; delCatBtn.title = getTranslation('delete_category'); delCatBtn.innerHTML = '×';
-    delCatBtn.addEventListener('click', async () => {
-        if (!confirm(getTranslation('confirm_delete'))) return;
-        userItemsData.dappCategories = userItemsData.dappCategories.filter(c => c.id !== cat.id); delete userItemsData.items[cat.id]; delete ZONE_CONFIG[cat.id];
-        await saveArcUserItems(); tr.remove(); showToast(getTranslation('category_removed'), 'info');
-    });
-    tdCat.appendChild(delCatBtn); tr.appendChild(tdCat);
-    const tdLinks = document.createElement('td'); tdLinks.setAttribute('data-label', getTranslation('all_links')); tdLinks.className = 'dapp-links';
-    const addBtn = document.createElement('button'); addBtn.type = 'button'; addBtn.className = 'add-item-btn admin-only'; addBtn.title = `${getTranslation('add_to')} ${cat.title}`; addBtn.innerHTML = '<span class="btn-plus">+</span>';
-    addBtn.addEventListener('click', (e) => { e.stopPropagation(); currentAddContext = { zone: cat.id, config: ZONE_CONFIG[cat.id] || { type:'link-item', label: cat.title, trackType:'track-daily' } }; openModal(`${getTranslation('add_to')}: ${cat.title}`, ['fieldTitle','fieldUrl','fieldImage','descFieldEn','descFieldUa']); });
-    tdLinks.appendChild(addBtn); tr.appendChild(tdLinks);
-    const tdDesc = document.createElement('td'); tdDesc.setAttribute('data-label', getTranslation('action')); tdDesc.className = 'task-desc'; tdDesc.textContent = ''; tr.appendChild(tdDesc);
-    table.appendChild(tr);
-    const items = userItemsData.items[cat.id] || []; items.forEach(item => renderUserItemInZone(cat.id, item));
-}
-
-function renderUserDeployGroup(grp) {
-    const sectionContent = document.querySelector(`[data-section-zone="${grp.parentZone}"]`); if (!sectionContent) return;
-    const grid = sectionContent.querySelector('.resource-grid'); if (!grid) return;
-    const card = document.createElement('div'); card.className = 'resource-item user-collection-card'; card.dataset.zone = grp.id;
-    const delTop = document.createElement('button'); delTop.type = 'button'; delTop.className = 'user-collection-delete-top admin-only'; delTop.title = getTranslation('delete_collection'); delTop.innerHTML = '×';
-    delTop.addEventListener('click', async () => {
-        if (!confirm(getTranslation('confirm_delete'))) return;
-        userItemsData.collections = userItemsData.collections.filter(c => c.id !== grp.id); delete userItemsData.items[grp.id]; delete ZONE_CONFIG[grp.id];
-        await saveArcUserItems(); card.remove();
-    });
-    card.appendChild(delTop);
-    const header = document.createElement('div'); header.className = 'resource-header'; header.innerHTML = `<span class="resource-title">${grp.title}</span>`;
-    const addBtn = document.createElement('button'); addBtn.type = 'button'; addBtn.className = 'add-item-btn admin-only'; addBtn.title = `${getTranslation('add_to')} ${grp.title}`; addBtn.innerHTML = '<span class="btn-plus">+</span>';
-    addBtn.addEventListener('click', (e) => { e.stopPropagation(); currentAddContext = { zone: grp.id, config: ZONE_CONFIG[grp.id] || { type:'link-item', label: grp.title, trackType:'track-daily' } }; openModal(`${getTranslation('add_to')}: ${grp.title}`, ['fieldTitle','fieldUrl','descFieldEn','descFieldUa']); });
-    header.appendChild(addBtn); card.appendChild(header);
-    const linkColl = document.createElement('div'); linkColl.className = 'link-collection'; card.appendChild(linkColl); grid.appendChild(card);
-    const items = userItemsData.items[grp.id] || []; items.forEach(item => renderUserItemInZone(grp.id, item));
-    requestAnimationFrame(() => card.classList.add('anim-visible'));
-}
-
 function injectAddButtons() {
     document.querySelectorAll('[data-zone]').forEach(container => {
-        const zone = container.dataset.zone; const config = ZONE_CONFIG[zone];
+        const zone = container.dataset.zone;
+        const config = ZONE_CONFIG[zone];
         if (!config || container.querySelector('.add-item-btn')) return;
-        const btn = document.createElement('button'); btn.type = 'button'; btn.className = 'add-item-btn admin-only'; btn.title = `${getTranslation('add_to')} ${config.label}`; btn.innerHTML = '<span class="btn-plus">+</span>';
-        btn.addEventListener('click', (e) => { e.stopPropagation(); currentAddContext = { zone, config }; openModal(`${getTranslation('add_to')}: ${config.label}`, ['fieldTitle','fieldUrl','fieldImage','descFieldEn','descFieldUa']); });
-        if (container.tagName === 'TR') { const linksCell = container.querySelector('.dapp-links'); if (linksCell) linksCell.appendChild(btn); } 
-        else { const header = container.querySelector('.resource-header'); if (header) header.appendChild(btn); else { const lc = container.querySelector('.link-collection,.link-row'); if (lc) lc.appendChild(btn); } }
+        
+        const btn = document.createElement('button');
+        btn.type = 'button';
+        btn.className = 'add-item-btn admin-only';
+        btn.title = `${getTranslation('add_to')} ${config.label}`;
+        btn.innerHTML = '<span class="btn-plus">+</span>';
+        
+        btn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            currentAddContext = { zone, config };
+            openModal(`${getTranslation('add_to')}: ${config.label}`, ['fieldTitle','fieldUrl','fieldImage','descFieldEn','descFieldUa']);
+        });
+        
+        if (container.tagName === 'TR') {
+            const linksCell = container.querySelector('.dapp-links');
+            if (linksCell) linksCell.appendChild(btn);
+        } else {
+            const header = container.querySelector('.resource-header');
+            if (header) { header.appendChild(btn); }
+            else {
+                const lc = container.querySelector('.link-collection,.link-row');
+                if (lc) lc.appendChild(btn);
+            }
+        }
     });
+
     document.querySelectorAll('[data-section-zone]').forEach(sectionContent => {
-        const sectionZone = sectionContent.dataset.sectionZone; const sConfig = SECTION_ZONE_CONFIG[sectionZone]; if (!sConfig) return;
-        const section = sectionContent.closest('.collapsible-section'); if (!section) return;
-        const sectionHeader = section.querySelector('.section-header'); if (!sectionHeader || sectionHeader.querySelector('.section-add-btn')) return;
-        const btn = document.createElement('button'); btn.type = 'button'; btn.className = 'section-add-btn admin-only'; btn.title = `Add ${sConfig.label}`; btn.innerHTML = '<span class="btn-plus">+</span>';
-        btn.addEventListener('click', (e) => { e.stopPropagation(); currentAddContext = { sectionZone, config: sConfig };
+        const sectionZone = sectionContent.dataset.sectionZone;
+        const sConfig = SECTION_ZONE_CONFIG[sectionZone];
+        if (!sConfig) return;
+        
+        const section = sectionContent.closest('.collapsible-section');
+        if (!section) return;
+        
+        const sectionHeader = section.querySelector('.section-header');
+        if (!sectionHeader || sectionHeader.querySelector('.section-add-btn')) return;
+        
+        const btn = document.createElement('button');
+        btn.type = 'button';
+        btn.className = 'section-add-btn admin-only';
+        btn.title = `Add ${sConfig.label}`;
+        btn.innerHTML = '<span class="btn-plus">+</span>';
+        
+        btn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            currentAddContext = { sectionZone, config: sConfig };
             if (sConfig.type === 'nft-collection') openModal(`Add ${sConfig.label}`, ['fieldTitle','fieldWebsite','fieldTwitter']);
             else if (sConfig.type === 'dapp-category') openModal(`Add ${sConfig.label}`, ['fieldTitle']);
             else if (sConfig.type === 'deploy-group') openModal(`Add ${sConfig.label}`, ['fieldTitle']);
         });
-        const toggle = sectionHeader.querySelector('.section-toggle'); if (toggle) sectionHeader.insertBefore(btn, toggle); else sectionHeader.appendChild(btn);
+        
+        const toggle = sectionHeader.querySelector('.section-toggle');
+        if (toggle) sectionHeader.insertBefore(btn, toggle);
+        else sectionHeader.appendChild(btn);
     });
-}
-
-function clearAllUserItems() {
-    document.querySelectorAll('.user-item-wrapper').forEach(el => el.remove());
-    document.querySelectorAll('.user-collection-card').forEach(el => el.remove());
-    document.querySelectorAll('.dapp-table tbody tr').forEach(tr => { const zone = tr.dataset.zone; if (zone && zone.startsWith('u_')) tr.remove(); });
-    document.querySelectorAll('.add-item-btn, .section-add-btn').forEach(btn => btn.remove());
-}
-
-function renderArcUserItems() {
-    loadArcUserItems();
-    clearAllUserItems();
-    userItemsData.collections.forEach(coll => { if (!ZONE_CONFIG[coll.id]) { const isNft = coll.parentZone === 'nfts'; ZONE_CONFIG[coll.id] = { type: isNft ? 'nft-item' : 'link-item', label: coll.title, trackType: isNft ? 'track-once' : 'track-daily' }; } });
-    userItemsData.dappCategories.forEach(cat => { if (!ZONE_CONFIG[cat.id]) ZONE_CONFIG[cat.id] = { type:'link-item', label: cat.title, trackType:'track-daily' }; });
-    userItemsData.collections.forEach(coll => { if (coll.parentZone === 'nfts') renderUserCollection(coll); else if (coll.parentZone === 'deploy') renderUserDeployGroup(coll); });
-    userItemsData.dappCategories.forEach(cat => renderUserDappCategory(cat));
-    Object.keys(userItemsData.items).forEach(zone => { const items = userItemsData.items[zone]; if (!items || !items.length) return; items.forEach(item => renderUserItemInZone(zone, item)); });
-    injectAddButtons(); bindTrackingHandlersToAll(); attachFavoriteControls(); initializeTooltips(); initLightbox(); updateUI();
 }
 
 function loadArcEditsOverride() {
@@ -2101,16 +1999,13 @@ function openArcEditModal(link) {
     const id = link.dataset.id; const title = getLinkTitle(link); currentEditTarget = { id, link };
     document.getElementById('addModalTitle').textContent = 'Edit: ' + title; 
     showFields(['fieldTitle', 'fieldUrl', 'fieldImage', 'descFieldEn', 'descFieldUa']);
-    
     document.getElementById('addFieldTitle').value = title; 
     document.getElementById('addFieldUrl').value = link.href;
     document.getElementById('addFieldTooltipEn').value = link.getAttribute('data-desc-en') || '';
     document.getElementById('addFieldTooltipUa').value = link.getAttribute('data-desc-ua') || '';
     document.getElementById('addFieldImage').value = link.getAttribute('data-image') || '';
-    
     document.getElementById('descFieldEn').classList.remove('field-hidden');
     document.getElementById('descFieldUa').classList.remove('field-hidden');
-    
     const saveBtn = document.getElementById('addModalSave'); 
     saveBtn.textContent = getTranslation('save'); 
     saveBtn.dataset.editMode = 'true';
@@ -2148,7 +2043,7 @@ async function uploadConfigToGithub() {
         if (!putEditsResp.ok) throw new Error('GitHub edits update failed');
 
         showToast('Changes uploaded to GitHub!', 'success');
-        setTimeout(async () => { await loadArcSharedData(); renderArcContent(); showToast('Page data updated!', 'info'); }, 2000);
+        setTimeout(async () => { await loadArcSharedData(); showToast('Page data updated!', 'info'); }, 2000);
     } catch (e) {
         showToast('GitHub upload error: ' + e.message, 'error');
     }
@@ -2214,7 +2109,6 @@ document.addEventListener('DOMContentLoaded', () => {
     setupModalLanguageTabs();
     setupAutoTranslate();
     
-    // Language toggle button
     document.getElementById('languageToggleBtn').addEventListener('click', toggleLanguage);
     
     const localData = JSON.parse(localStorage.getItem(NEW_INDICATORS_KEY) || '{}');
