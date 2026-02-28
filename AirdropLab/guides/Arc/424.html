@@ -305,9 +305,15 @@
 
         .edit-item-btn { width:22px; height:22px; border-radius:6px; border:1px solid rgba(96,165,250,0.4); background:rgba(96,165,250,0.12); color:#60a5fa; font-size:0.65rem; display:none; align-items:center; justify-content:center; cursor:pointer; padding:0; margin-left:4px; transition:all .2s; flex-shrink:0; }
         .edit-item-btn:hover { background:#2563eb; color:#fff; border-color:#2563eb; transform:scale(1.1); }
+        
+        /* Стили для кнопки удаления в режиме редактирования */
+        .delete-item-btn { width:22px; height:22px; border-radius:6px; border:1px solid rgba(239,68,68,0.5); background:rgba(239,68,68,0.15); color:#ef4444; font-size:0.7rem; display:none; align-items:center; justify-content:center; cursor:pointer; padding:0; margin-left:4px; transition:all .2s; flex-shrink:0; }
+        .delete-item-btn:hover { background:#ef4444; color:#fff; border-color:#ef4444; transform:scale(1.1); }
+
         body.light-theme .edit-item-btn { border-color:rgba(37,99,235,0.3); background:rgba(37,99,235,0.06); color:#2563eb; }
         body.light-theme .edit-item-btn:hover { background:#2563eb; color:#fff; }
-        body.edit-mode .edit-item-btn { display:inline-flex; }
+        body.edit-mode .edit-item-btn, 
+        body.edit-mode .delete-item-btn { display:inline-flex; }
         body.edit-mode .link-inline[data-id] { outline:1px dashed rgba(96,165,250,0.3); outline-offset:3px; border-radius:4px; }
         body.light-theme.edit-mode .link-inline[data-id] { outline-color:rgba(37,99,235,0.2); }
         .edit-mode-banner { display:none; position:fixed; top:0; left:0; right:0; z-index:9500; background:linear-gradient(90deg,#f59e0b,#d97706); color:#fff; text-align:center; padding:6px 16px; font-size:0.8rem; font-weight:700; letter-spacing:0.04em; }
@@ -344,15 +350,6 @@
         .lang-tab, .language-toggle-btn, #languageToggleText, .lightbox-lang-btn {
             font-family: 'Noto Color Emoji', 'Apple Color Emoji', 'Segoe UI Emoji', sans-serif !important;
         }
-        .modal-btn-delete { 
-    background: var(--alert-red); 
-    border-color: var(--alert-red); 
-    color: #fff; 
-    margin-right: auto; 
-}
-.modal-btn-delete:hover { 
-    background: var(--alert-red-dark); 
-}
     </style>
 </head>
 <body>
@@ -404,11 +401,10 @@
         <label id="fieldWebsite"><span data-i18n="website_label">Project Website URL</span><input type="url" id="addFieldWebsite" placeholder="https://..."></label>
         <label id="fieldTwitter"><span data-i18n="twitter_label">Project Twitter URL</span><input type="url" id="addFieldTwitter" placeholder="https://x.com/..."></label>
         
-       <div class="modal-actions">
-    <button type="button" class="modal-btn modal-btn-delete" id="addModalDelete" data-i18n="delete_item" style="display:none;">🗑️ <span data-i18n="delete">Delete</span></button>
-    <button type="button" class="modal-btn modal-btn-cancel" id="addModalCancel" data-i18n="cancel">Cancel</button>
-    <button type="button" class="modal-btn modal-btn-save" id="addModalSave" data-i18n="add">Add</button>
-</div>
+        <div class="modal-actions">
+            <button type="button" class="modal-btn modal-btn-cancel" id="addModalCancel" data-i18n="cancel">Cancel</button>
+            <button type="button" class="modal-btn modal-btn-save" id="addModalSave" data-i18n="add">Add</button>
+        </div>
     </div>
 </div>
 
@@ -1106,14 +1102,26 @@ function renderAllContent() {
             allCollections = [...allCollections, ...userItemsData.collections];
         }
         
-        const nftCollections = allCollections.filter(c => c.id.startsWith('nft_'));
-        nftsGrid.innerHTML = nftCollections.map(coll => {
+        // 🔥 ИСПРАВЛЕНО: показываем ВСЕ коллекции, не только с nft_ префиксом
+        // Но приоритет отдаем тем, которые имеют items
+        const collectionsWithItems = allCollections.filter(c => {
+            const items = mergedItems[c.id];
+            return items && items.length > 0;
+        });
+        
+        // Также добавляем коллекции без items (пустые)
+        const emptyCollections = allCollections.filter(c => {
+            const items = mergedItems[c.id];
+            return !items || items.length === 0;
+        });
+        
+        const finalCollections = [...collectionsWithItems, ...emptyCollections];
+        
+        nftsGrid.innerHTML = finalCollections.map(coll => {
             const items = mergedItems[coll.id] || [];
-            // 👇 ИСПРАВЛЕНИЕ: Показываем коллекцию даже если в ней нет элементов
             const title = currentLanguage === 'ua' ? (coll.titleUa || coll.title) : coll.title;
             const website = coll.website || '';
             const twitter = coll.twitter || '';
-            
             return `
                 <div class="resource-item" data-zone="${coll.id}">
                     <div class="resource-header">
@@ -1124,7 +1132,7 @@ function renderAllContent() {
                         </span>
                     </div>
                     <div class="link-collection">
-                        ${items.length > 0 ? items.map(n => renderLink(n, 'track-once')).join('') : '<p style="color: var(--text-muted); font-size: 0.85rem; margin: 0;">No items yet</p>'}
+                        ${items.map(n => renderLink(n, 'track-once')).join('')}
                     </div>
                 </div>
             `;
@@ -1152,7 +1160,6 @@ function renderAllContent() {
             const action = cat.action || desc || '';
             const zoneKey = 'dapp_' + cat.id;
             const items = mergedItems[zoneKey] || [];
-            // 👇 ИСПРАВЛЕНИЕ: Показываем категорию даже если в ней нет элементов
             if (items.length === 0) return '';
             return `
                 <tr data-zone="${zoneKey}">
@@ -1189,13 +1196,8 @@ async function loadArcSharedData() {
         if (itemsResp.ok) {
             const data = await itemsResp.json();
             sharedItemsData = data;
-            // Also merge user items if exist
-            if (userItemsData && userItemsData.items) {
-                // Already handled in renderAllContent
-            }
         } else {
             console.log('GitHub items not found, using local data only');
-            // Use empty data, will rely on userItemsData
             sharedItemsData = { items: {}, collections: [], dappCategories: [] };
         }
     } catch (e) {
@@ -1610,7 +1612,7 @@ function loadArcUserItems() {
         if (raw) { 
             const p = JSON.parse(raw); 
             userItemsData = { items: p.items||{}, collections: p.collections||[], dappCategories: p.dappCategories||[] }; 
-            console.log('Loaded user items:', Object.keys(userItemsData.items).length, 'zones');
+            console.log('Loaded user items:', Object.keys(userItemsData.items).length, 'zones, collections:', userItemsData.collections.length);
         } 
     } catch(e) { console.error(e); }
 }
@@ -1722,10 +1724,6 @@ function closeModal() {
     const saveBtn = document.getElementById('addModalSave'); 
     saveBtn.textContent = getTranslation('add'); 
     delete saveBtn.dataset.editMode;
-    
-    // Скрываем кнопку удаления при закрытии
-    const deleteBtn = document.getElementById('addModalDelete');
-    if (deleteBtn) deleteBtn.style.display = 'none';
 }
 
 document.getElementById('addModalCancel').addEventListener('click', closeModal);
@@ -1817,16 +1815,18 @@ document.getElementById('addModalSave').addEventListener('click', async () => {
             if (sConfig.type === 'nft-collection') {
                 if (!title) { alert('Title is required!'); return; }
                 const collId = generateId(); 
-                const coll = { id: collId, title, website, twitter, parentZone: currentAddContext.sectionZone, items: [], addedAt: Date.now() };
+                const coll = { id: collId, title, titleUa: title, website, twitter, parentZone: currentAddContext.sectionZone, items: [], addedAt: Date.now() };
                 userItemsData.collections.push(coll); 
+                // Создаем зону для элементов этой коллекции
                 ZONE_CONFIG[collId] = { type: 'nft-item', label: 'NFT in ' + title, trackType: 'track-once' };
                 await saveArcUserItems(); 
+                console.log('Collection added:', coll);
                 renderAllContent(); 
                 showToast(getTranslation('collection_created'), 'success');
             } else if (sConfig.type === 'dapp-category') {
                 if (!title) { alert('Title is required!'); return; }
                 const catId = generateId(); 
-                const cat = { id: catId, title, description: '', parentZone: currentAddContext.sectionZone, items: [], addedAt: Date.now() };
+                const cat = { id: catId, title, titleUa: title, description: '', parentZone: currentAddContext.sectionZone, items: [], addedAt: Date.now() };
                 userItemsData.dappCategories.push(cat); 
                 ZONE_CONFIG[catId] = { type: 'link-item', label: title, trackType: 'track-daily' };
                 await saveArcUserItems(); 
@@ -1835,7 +1835,7 @@ document.getElementById('addModalSave').addEventListener('click', async () => {
             } else if (sConfig.type === 'deploy-group') {
                 if (!title) { alert('Title is required!'); return; }
                 const grpId = generateId(); 
-                const grp = { id: grpId, title, parentZone: currentAddContext.sectionZone, items: [], addedAt: Date.now() };
+                const grp = { id: grpId, title, titleUa: title, parentZone: currentAddContext.sectionZone, items: [], addedAt: Date.now() };
                 userItemsData.collections.push(grp); 
                 ZONE_CONFIG[grpId] = { type: 'link-item', label: grp.title, trackType: 'track-daily' };
                 await saveArcUserItems(); 
@@ -1857,66 +1857,6 @@ document.getElementById('addModalSave').addEventListener('click', async () => {
     finally { 
         saveBtn.disabled = false; 
         saveBtn.textContent = originalText; 
-    }
-});
-    // Обработчик кнопки удаления
-// Обработчик кнопки удаления
-document.getElementById('addModalDelete').addEventListener('click', async () => {
-    if (!currentEditTarget || !currentEditTarget.id) return;
-    if (!confirm(getTranslation('confirm_delete'))) return;
-    
-    const id = currentEditTarget.id;
-    const btn = document.getElementById('addModalDelete');
-    btn.disabled = true; 
-    btn.innerHTML = '⏳';
-    
-    try {
-        // Удаляем из userItemsData
-        for (const zone in userItemsData.items) {
-            if (userItemsData.items[zone]) {
-                userItemsData.items[zone] = userItemsData.items[zone].filter(i => i.id !== id);
-            }
-        }
-        
-        // Удаляем из collections
-        if (userItemsData.collections) {
-            userItemsData.collections.forEach(c => {
-                if (c.items) c.items = c.items.filter(i => i.id !== id);
-            });
-        }
-        
-        // Удаляем из dappCategories
-        if (userItemsData.dappCategories) {
-            userItemsData.dappCategories.forEach(c => {
-                if (c.items) c.items = c.items.filter(i => i.id !== id);
-            });
-        }
-        
-        // Удаляем из overrides
-        if (editsOverride[id]) {
-            delete editsOverride[id];
-            await saveArcEditsOverride();
-        }
-        
-        await saveArcUserItems();
-        
-        // Удаляем из избранного
-        if (favoritesState[id]) {
-            delete favoritesState[id];
-            favoritesOrder = favoritesOrder.filter(x => x !== id);
-            await saveArcFavorites();
-        }
-        
-        renderAllContent();
-        refreshAllVisuals();
-        
-        showToast(getTranslation('removed') || 'Element deleted', 'success');
-        closeModal();
-        
-    } catch (error) {
-        showToast('❌ Delete error: ' + error.message, 'error');
-        btn.disabled = false; 
-        btn.innerHTML = '🗑️ <span data-i18n="delete">Delete</span>';
     }
 });
 
@@ -2055,122 +1995,104 @@ function toggleArcEditMode() {
     else { removeArcEditButtons(); showToast(getTranslation('edit_mode_finished'), 'info'); }
 }
 
+// 🔥 ИСПРАВЛЕНО: Добавляем кнопки редактирования И УДАЛЕНИЯ
 function injectArcEditButtons() {
     document.querySelectorAll('a.link-inline[data-id]').forEach(link => {
         if (link.dataset.editBtnBound) return;
         
-        // Создаем контейнер для кнопок
-        const buttonContainer = document.createElement('span');
-        buttonContainer.className = 'edit-button-container';
-        buttonContainer.style.display = 'inline-flex';
-        buttonContainer.style.gap = '4px';
-        buttonContainer.style.alignItems = 'center';
+        // Находим или создаем wrapper
+        let wrapper = link.closest('.link-with-favorite') || link.closest('.user-item-wrapper');
+        if (!wrapper) {
+            wrapper = document.createElement('span');
+            wrapper.className = 'link-with-favorite';
+            link.parentNode.insertBefore(wrapper, link);
+            wrapper.appendChild(link);
+        }
         
-        // Кнопка редактирования
+        // Кнопка редактирования (карандаш)
         const editBtn = document.createElement('button'); 
         editBtn.type = 'button'; 
         editBtn.className = 'edit-item-btn'; 
         editBtn.title = getTranslation('start_editing'); 
         editBtn.innerHTML = '<i class="fas fa-pen"></i>';
-        editBtn.addEventListener('click', (e) => { 
-            e.preventDefault(); 
-            e.stopPropagation(); 
-            openArcEditModal(link); 
-        });
+        editBtn.addEventListener('click', (e) => { e.preventDefault(); e.stopPropagation(); openArcEditModal(link); });
+        wrapper.appendChild(editBtn);
         
-        // Кнопка удаления
+        // Кнопка удаления (крестик)
         const deleteBtn = document.createElement('button'); 
         deleteBtn.type = 'button'; 
-        deleteBtn.className = 'edit-item-btn delete-item-btn'; 
-        deleteBtn.title = getTranslation('delete_item');
+        deleteBtn.className = 'delete-item-btn'; 
+        deleteBtn.title = getTranslation('delete_item'); 
         deleteBtn.innerHTML = '<i class="fas fa-times"></i>';
-        deleteBtn.addEventListener('click', async (e) => {
+        deleteBtn.addEventListener('click', (e) => { 
             e.preventDefault(); 
             e.stopPropagation(); 
-            const id = link.dataset.id;
-            if (!confirm(getTranslation('confirm_delete'))) return;
-            
-            try {
-                // Удаляем из userItemsData
-                for (const zone in userItemsData.items) {
-                    if (userItemsData.items[zone]) {
-                        userItemsData.items[zone] = userItemsData.items[zone].filter(i => i.id !== id);
-                    }
-                }
-                
-                // Удаляем из collections
-                if (userItemsData.collections) {
-                    userItemsData.collections.forEach(c => {
-                        if (c.items) c.items = c.items.filter(i => i.id !== id);
-                    });
-                }
-                
-                // Удаляем из dappCategories
-                if (userItemsData.dappCategories) {
-                    userItemsData.dappCategories.forEach(c => {
-                        if (c.items) c.items = c.items.filter(i => i.id !== id);
-                    });
-                }
-                
-                // Удаляем из overrides
-                if (editsOverride[id]) {
-                    delete editsOverride[id];
-                    await saveArcEditsOverride();
-                }
-                
-                await saveArcUserItems();
-                
-                // Удаляем из избранного
-                if (favoritesState[id]) {
-                    delete favoritesState[id];
-                    favoritesOrder = favoritesOrder.filter(x => x !== id);
-                    await saveArcFavorites();
-                }
-                
-                // Удаляем элемент из DOM
-                const wrapper = link.closest('.link-with-favorite, .user-item-wrapper');
-                if (wrapper) {
-                    wrapper.style.transition = 'opacity 0.3s, transform 0.3s';
-                    wrapper.style.opacity = '0';
-                    wrapper.style.transform = 'scale(0.8)';
-                    setTimeout(() => wrapper.remove(), 300);
-                } else {
-                    link.remove();
-                }
-                
-                showToast(`${getTranslation('removed')}: ${getLinkTitle(link)}`, 'success');
-                
-            } catch (error) {
-                showToast('❌ Delete error: ' + error.message, 'error');
-            }
+            deleteArcItem(link); 
         });
-        
-        // Добавляем кнопки в контейнер
-        buttonContainer.appendChild(editBtn);
-        buttonContainer.appendChild(deleteBtn);
-        
-        // Вставляем контейнер после ссылки
-        const wrapper = link.closest('.link-with-favorite') || link.closest('.user-item-wrapper');
-        if (wrapper) {
-            wrapper.appendChild(buttonContainer);
-        } else {
-            link.parentNode.insertBefore(buttonContainer, link.nextSibling);
-        }
+        wrapper.appendChild(deleteBtn);
         
         link.dataset.editBtnBound = 'true';
     });
 }
 
 function removeArcEditButtons() {
-    document.querySelectorAll('.edit-item-btn').forEach(btn => btn.remove());
+    document.querySelectorAll('.edit-item-btn, .delete-item-btn').forEach(btn => btn.remove());
     document.querySelectorAll('[data-edit-btn-bound]').forEach(el => delete el.dataset.editBtnBound);
 }
 
-function openArcEditModal(link) {
-    const id = link.dataset.id; 
-    const title = getLinkTitle(link); 
-    currentEditTarget = { id, link };
+// 🔥 НОВАЯ ФУНКЦИЯ: Удаление элемента
+async function deleteArcItem(link) {
+    const id = link.dataset.id;
+    const title = getLinkTitle(link);
     
+    if (!confirm(getTranslation('confirm_delete'))) return;
+    
+    try {
+        // Ищем в userItemsData
+        let found = false;
+        
+        // Удаляем из items
+        for (const zone in userItemsData.items) {
+            if (userItemsData.items[zone]) {
+                const idx = userItemsData.items[zone].findIndex(i => i.id === id);
+                if (idx !== -1) {
+                    userItemsData.items[zone].splice(idx, 1);
+                    found = true;
+                    break;
+                }
+            }
+        }
+        
+        // Удаляем из overrides если там есть
+        if (editsOverride[id]) {
+            delete editsOverride[id];
+            await saveArcEditsOverride();
+        }
+        
+        // Удаляем из избранного
+        if (favoritesState[id]) {
+            delete favoritesState[id];
+            favoritesOrder = favoritesOrder.filter(x => x !== id);
+            await saveArcFavorites();
+        }
+        
+        if (found) {
+            await saveArcUserItems();
+        }
+        
+        showToast(`${getTranslation('removed')}: ${title}`, 'success');
+        
+        // Перерисовываем
+        renderAllContent();
+        refreshAllVisuals();
+        
+    } catch (error) {
+        showToast('❌ Delete error: ' + error.message, 'error');
+    }
+}
+
+function openArcEditModal(link) {
+    const id = link.dataset.id; const title = getLinkTitle(link); currentEditTarget = { id, link };
     document.getElementById('addModalTitle').textContent = 'Edit: ' + title; 
     showFields(['fieldTitle', 'fieldUrl', 'fieldImage', 'descFieldEn', 'descFieldUa']);
     document.getElementById('addFieldTitle').value = title; 
@@ -2180,16 +2102,12 @@ function openArcEditModal(link) {
     document.getElementById('addFieldImage').value = link.getAttribute('data-image') || '';
     document.getElementById('descFieldEn').classList.remove('field-hidden');
     document.getElementById('descFieldUa').classList.remove('field-hidden');
-    
-    // 👇 ПОКАЗЫВАЕМ кнопку удаления
-    const deleteBtn = document.getElementById('addModalDelete');
-    deleteBtn.style.display = 'inline-flex';
-    
     const saveBtn = document.getElementById('addModalSave'); 
     saveBtn.textContent = getTranslation('save'); 
     saveBtn.dataset.editMode = 'true';
     overlayEl().classList.add('open');
 }
+
 async function uploadConfigToGithub() {
     try {
         await saveArcUserItems();
@@ -2319,26 +2237,6 @@ document.addEventListener('DOMContentLoaded', () => {
     window.addEventListener('resize', () => { const wasMobile = isMobile; isMobile = window.innerWidth <= 768; if (isMobile && !wasMobile) { storedLegend = localStorage.getItem(LEGEND_COLLAPSE_KEY); isLegendCollapsed = storedLegend === 'true' || storedLegend === null; } if (!isMobile) isLegendCollapsed = false; applyLegendState(isLegendCollapsed); });
     applyLegendState(isLegendCollapsed); initializeTooltips(); updateBadgeVisibility();
 });
-    // Кнопка очистки данных (одноразовая)
-window.clearOldFirebaseData = async function() {
-    if (!currentUser) return alert('Сначала войди в аккаунт!');
-    
-    if (!confirm('Это удалит старые данные в Firebase. Продолжить?')) return;
-    
-    try {
-        await setDoc(doc(db, "users", currentUser.uid), {
-            arcUserItems: deleteField(),
-            arcEditsOverride: deleteField(),
-            arcUserItemsTimestamp: deleteField(),
-            arcEditsTimestamp: deleteField()
-        }, { merge: true });
-        
-        alert('Данные очищены! Перезагрузи страницу.');
-        location.reload();
-    } catch(e) {
-        alert('Ошибка: ' + e.message);
-    }
-};
 </script>
 
 <!-- LOGIN MODAL -->
