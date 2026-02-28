@@ -2,7 +2,7 @@
 <html lang="ru">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=1280">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>AirdropLab</title>
     <link rel="icon" href="assets/favicon.svg" type="image/svg+xml">
     <link rel="alternate icon" href="assets/favicon.ico">
@@ -10,6 +10,8 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link rel="stylesheet" href="styles.css">
     <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+        
         /* Дополнительные стили для новых функций */
         .activity-new-badge {
             background: linear-gradient(135deg, #f59e0b, #d97706);
@@ -29,7 +31,7 @@
         }
         
         .project-card-wrapper.has-new-activities {
-            border-color: rgba(245, 158, 11, 0.5);
+            border-color: rgba(245, 158, 11, 0.5) !important;
             box-shadow: 0 0 15px rgba(245, 158, 11, 0.2);
         }
         
@@ -43,15 +45,7 @@
             border-left: 8px solid transparent;
             border-right: 8px solid transparent;
             border-top: 8px solid #f59e0b;
-        }
-        
-        .modal-content, .modal-body {
-            user-select: text;
-            -webkit-user-select: text;
-        }
-        
-        .modal-content.no-close-on-select {
-            pointer-events: auto;
+            z-index: 10;
         }
         
         .activity-ended {
@@ -71,6 +65,35 @@
             padding: 2px 6px;
             border-radius: 4px;
             margin-left: 8px;
+        }
+        
+        .activity-new-indicator {
+            width: 8px;
+            height: 8px;
+            background: #f59e0b;
+            border-radius: 50%;
+            display: inline-block;
+            margin-right: 6px;
+            animation: pulse-indicator 1.5s infinite;
+            box-shadow: 0 0 8px rgba(245, 158, 11, 0.6);
+        }
+        
+        @keyframes pulse-indicator {
+            0%, 100% { opacity: 1; transform: scale(1); }
+            50% { opacity: 0.6; transform: scale(1.2); }
+        }
+        
+        /* Категории - сворачиваемые по умолчанию */
+        #categoriesAccordion {
+            max-height: 0;
+            overflow: hidden;
+            transition: max-height 0.3s ease-out, opacity 0.3s ease-out;
+            opacity: 0;
+        }
+        
+        #categoriesAccordion.open {
+            max-height: 400px;
+            opacity: 1;
         }
     </style>
 </head>
@@ -285,7 +308,7 @@
       <div class="category-block">
         <div class="flex items-center justify-between mb-1" onclick="toggleCategoriesDropdown()">
           <h3 class="font-semibold text-slate-300 text-sm">Категории</h3>
-          <i class="fas fa-chevron-down text-slate-500 text-xs" id="catDropdownIcon"></i>
+          <i class="fas fa-chevron-down text-slate-500 text-xs transition-transform" id="catDropdownIcon"></i>
         </div>
         <div id="selectedCategoriesTags" class="flex flex-wrap gap-1 mb-2 min-h-[20px]"><span class="text-xs text-slate-500 italic">Все</span></div>
         <div id="categoriesAccordion" class="bg-slate-900/50 rounded-lg border border-slate-700/50">
@@ -339,6 +362,11 @@
           <div class="tube-header"><span class="specimen-id">TMP-002</span><div class="specimen-status status-active"></div></div>
           <div class="specimen-banner"><img src="https://givemebit.com/wp-content/uploads/2025/12/tempo-testnet-logo-1024x235.jpg" alt="Tempo Testnet" class="specimen-logo" onerror="this.style.display='none'"></div>
           <div class="tube-info"><button class="analyze-btn" type="button" onclick="window.location.href='../AirdropLab/guides/Tempo/Tempo_Testnet.html'"><i class="fas fa-microscope"></i> Перейти к гайду</button></div>
+        </div>
+        <div class="specimen-tube active" data-guide="robinhood">
+          <div class="tube-header"><span class="specimen-id">RHB-003</span><div class="specimen-status status-active"></div></div>
+          <div class="specimen-banner"><img src="https://cryptologos.cc/logos/robinhood-rhb-logo.png" alt="Robinhood" class="specimen-logo" onerror="this.style.display='none'"></div>
+          <div class="tube-info"><button class="analyze-btn" type="button" onclick="window.location.href='../AirdropLab/guides/Robinhood/Robinhood_Crypto.html'"><i class="fas fa-microscope"></i> Перейти к гайду</button></div>
         </div>
       </div>
     </div>
@@ -520,7 +548,7 @@
 </div>
 
 <!-- Feedback Modal -->
-<div id="feedbackModal" class="modal" onmousedown="handleModalMouseDown(event)" onmouseup="handleModalMouseUp(event)">
+<div id="feedbackModal" class="modal">
   <div class="modal-content modal-lg relative overflow-hidden">
     <div class="modal-header">
       <div class="flex justify-between items-center w-full">
@@ -660,7 +688,9 @@ let currentEditingActivities = [];
 let editingActivityId = null;
 let mainProjectCategories = [];
 let currentSortType = 'latest';
-let isSelectingText = false;
+
+// Флаг для отслеживания состояния модального окна
+let modalClickStartTarget = null;
 
 function formatClickDate(dateString) {
   if (!dateString) return null;
@@ -761,25 +791,21 @@ function isProjectUnvisited(project) {
   return true;
 }
 
+// Обработчики для модальных окон - закрытие только при mousedown
 window.handleModalMouseDown = function(e) {
-  const target = e.target;
-  if (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || 
-      target.closest('input') || target.closest('textarea') ||
-      target.closest('#feedbackChatHistory') || target.closest('#feedbackFormNew') || 
-      target.closest('#feedbackFormReply')) {
-    isSelectingText = true;
-    setTimeout(() => isSelectingText = false, 50);
-  }
+  modalClickStartTarget = e.target;
 };
 
 window.handleModalMouseUp = function(e) {
-  const selection = window.getSelection();
-  if (selection && selection.toString().length > 0) {
-    isSelectingText = true;
-    setTimeout(() => isSelectingText = false, 200);
+  // Не закрываем если отпустили кнопку в том же месте где и нажали (это может быть клик по кнопке)
+  if (modalClickStartTarget !== e.target) {
+    // Если отпустили вне области - не закрываем автоматически
+    // Закрываем только если кликнули точно по фону модалки
   }
+  modalClickStartTarget = null;
 };
 
+// === AUTH ===
 window.openLoginModal = function() { document.getElementById('loginModal').classList.add('active'); };
 window.closeLoginModal = function() { document.getElementById('loginModal').classList.remove('active'); };
 window.loginGoogle = async function() { try { await signInWithPopup(auth, new GoogleAuthProvider()); closeLoginModal(); showToast('Вход: Google'); } catch(e) { showToast(e.message); } };
@@ -788,6 +814,7 @@ window.handleEmailAuth = async function(e) { e.preventDefault(); const email = d
 window.handleRegister = async function() { const email = document.getElementById('emailInput').value; const pass = document.getElementById('passInput').value; try { await createUserWithEmailAndPassword(auth, email, pass); closeLoginModal(); showToast('Аккаунт создан!'); } catch(e) { showToast(e.message); } };
 window.logout = function() { signOut(auth).then(() => { showToast('Выход'); localStorage.removeItem('favorites_backup'); localStorage.removeItem(STORAGE_KEY); userFavorites = []; userCompleted = []; arcData = {}; }); };
 
+// Feedback functions (same as original, abbreviated for brevity)
 let adminFeedbacks = [];
 let adminFeedbacksUnsubscribe = null;
 
@@ -906,13 +933,6 @@ window.sendUserFeedbackReply = async function() {
   } catch (e) { console.error(e); showToast('Ошибка'); }
 };
 
-window.deleteUserFeedback = async function() {
-  if (!confirm('Удалить переписку?')) return;
-  const docId = document.getElementById('feedbackDocId').value;
-  if (!docId) return;
-  try { await updateDoc(doc(db, "feedbacks", docId), { userDeleted: true }); showToast('Удалено'); closeFeedbackModal(); } catch (e) { console.error(e); }
-};
-
 window.closeFeedbackModal = function() { document.getElementById('feedbackModal').classList.remove('active'); if (window.currentFeedbackUnsub) { window.currentFeedbackUnsub(); window.currentFeedbackUnsub = null; } };
 
 window.renderFeedbackList = function() {
@@ -1014,6 +1034,7 @@ window.openFeedbackListModal = function() {
 
 window.closeFeedbackListModal = function() { document.getElementById('feedbackListModal').classList.remove('active'); };
 
+// Notifications
 function initNotificationsListener(uid) {
   if (notificationsUnsubscribe) notificationsUnsubscribe();
   const notifQuery = query(collection(db, "notifications"), where("userId", "==", uid));
@@ -1224,6 +1245,7 @@ document.addEventListener('DOMContentLoaded', function() {
     promptInput.addEventListener('keydown', function(e) { if (e.key === 'Enter') { e.preventDefault(); window.confirmLinkInsert(); } });
   }
 
+  // Настройка обработчиков модальных окон - закрытие только при клике по фону (mousedown)
   const modalConfigs = [
     { id: 'detailModal', closeFn: window.closeDetailModal },
     { id: 'loginModal', closeFn: window.closeLoginModal },
@@ -1240,9 +1262,11 @@ document.addEventListener('DOMContentLoaded', function() {
   modalConfigs.forEach(config => {
     const modalElement = document.getElementById(config.id);
     if (modalElement) {
-      modalElement.addEventListener('click', function(e) {
-        if (isSelectingText) { isSelectingText = false; return; }
-        if (e.target === this) config.closeFn();
+      modalElement.addEventListener('mousedown', function(e) {
+        // Закрываем только если кликнули точно по фону модалки, а не по её содержимому
+        if (e.target === modalElement) {
+          config.closeFn();
+        }
       });
     }
   });
@@ -1320,7 +1344,10 @@ window.toggleFavorite = async function(id) {
 window.toggleFavoriteFromDetail = async function() { if (!currentDetailId) return; await window.toggleFavorite(currentDetailId); updateDetailFavoriteIcon(); };
 function updateDetailFavoriteIcon() { if (!currentDetailId) return; const btn = document.getElementById('detailFavoriteBtn'); const isFav = userFavorites.includes(currentDetailId); if (btn) btn.classList.toggle('active', isFav); }
 
-window.toggleCategoriesDropdown = function() { document.getElementById('categoriesAccordion').classList.toggle('open'); document.getElementById('catDropdownIcon').classList.toggle('rotate-180'); };
+window.toggleCategoriesDropdown = function() { 
+  document.getElementById('categoriesAccordion').classList.toggle('open'); 
+  document.getElementById('catDropdownIcon').classList.toggle('rotate-180'); 
+};
 
 window.toggleCategoryFilter = function(catName) {
   if (currentFilters.categories.includes(catName)) currentFilters.categories = currentFilters.categories.filter(function(c) { return c !== catName; });
@@ -1436,7 +1463,7 @@ function renderProjects(filteredProjects) {
 ${isCompleted ? '<div class="absolute -top-2 -left-2 z-20"><span class="completed-badge"><i class="fas fa-check mr-1"></i>Готово</span></div>' : ''}
 ${hasNewActs ? '<div class="absolute -top-2 -right-2 z-20"><span class="activity-new-badge">' + newActsCount + ' NEW</span></div>' : ''}
             ${project.deleted ? '<div class="absolute top-2 left-2"><span class="deleted-badge text-xs">Архив</span></div>' : ''}
-            <button onclick="openFeedbackModal('${project.id}', '${project.name.replace(/'/g, "\\'")}'); event.stopPropagation();" class="feedback-trigger-btn text-slate-300 hover:text-blue-400 rounded-lg text-xs font-bold flex items-center gap-1" title="Отзыв"><i class="fas fa-comment-dots"></i></button>
+            <button onclick="event.stopPropagation(); openFeedbackModal('${project.id}', '${project.name.replace(/'/g, "\\'")}');" class="feedback-trigger-btn text-slate-300 hover:text-blue-400 rounded-lg text-xs font-bold flex items-center gap-1" title="Отзыв"><i class="fas fa-comment-dots"></i></button>
             <div class="flex items-start gap-4 pt-2">
                 <div class="shrink-0">${project.image ? '<img src="' + project.image + '" alt="' + project.name + '" class="w-12 h-12 rounded-lg object-cover border border-slate-700">' : '<div class="w-12 h-12 rounded-lg bg-slate-800 border border-slate-700 flex items-center justify-center text-xl">' + project.name.charAt(0).toUpperCase() + '</div>'}</div>
                 <div class="flex-1 min-w-0 flex flex-col">
@@ -1591,7 +1618,9 @@ window.openDetail = function(id) {
         '<div class="flex items-center gap-3 flex-1">' +
         '<i id="icon-' + act.id + '" class="fas fa-chevron-down text-slate-400 transition-transform"></i>' +
         '<div class="flex-1">' +
-        '<div class="font-bold text-white flex items-center gap-2 flex-wrap">' + act.title + 
+        '<div class="font-bold text-white flex items-center gap-2 flex-wrap">' + 
+        (isActNew ? '<span class="activity-new-indicator"></span>' : '') + 
+        act.title + 
         (isActNew ? ' <span class="activity-new-badge">NEW</span>' : '') +
         (isActEnded ? ' <span class="text-[10px] bg-red-900/50 text-red-300 px-1.5 py-0.5 rounded uppercase">Ended</span>' : '') +
         (actEndDate ? ' <span class="activity-autodate-badge">до ' + actEndDate + '</span>' : '') +
@@ -1660,6 +1689,7 @@ function setupSearchListener() {
   searchInput.addEventListener('keyup', function() { applyFilters(null, true); });
 }
 
+// ============ ACTIVITY EDITOR FUNCTIONS ============
 window.openActivityEditor = function(actId = null) {
   editingActivityId = actId;
   document.getElementById('activityModalTitle').textContent = actId ? 'Редактировать активность' : 'Новая активность';
