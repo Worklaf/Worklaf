@@ -1109,10 +1109,11 @@ function renderAllContent() {
         const nftCollections = allCollections.filter(c => c.id.startsWith('nft_'));
         nftsGrid.innerHTML = nftCollections.map(coll => {
             const items = mergedItems[coll.id] || [];
-            if (items.length === 0) return '';
+            // 👇 ИСПРАВЛЕНИЕ: Показываем коллекцию даже если в ней нет элементов
             const title = currentLanguage === 'ua' ? (coll.titleUa || coll.title) : coll.title;
             const website = coll.website || '';
             const twitter = coll.twitter || '';
+            
             return `
                 <div class="resource-item" data-zone="${coll.id}">
                     <div class="resource-header">
@@ -1123,7 +1124,7 @@ function renderAllContent() {
                         </span>
                     </div>
                     <div class="link-collection">
-                        ${items.map(n => renderLink(n, 'track-once')).join('')}
+                        ${items.length > 0 ? items.map(n => renderLink(n, 'track-once')).join('') : '<p style="color: var(--text-muted); font-size: 0.85rem; margin: 0;">No items yet</p>'}
                     </div>
                 </div>
             `;
@@ -1151,6 +1152,7 @@ function renderAllContent() {
             const action = cat.action || desc || '';
             const zoneKey = 'dapp_' + cat.id;
             const items = mergedItems[zoneKey] || [];
+            // 👇 ИСПРАВЛЕНИЕ: Показываем категорию даже если в ней нет элементов
             if (items.length === 0) return '';
             return `
                 <tr data-zone="${zoneKey}">
@@ -1858,6 +1860,7 @@ document.getElementById('addModalSave').addEventListener('click', async () => {
     }
 });
     // Обработчик кнопки удаления
+// Обработчик кнопки удаления
 document.getElementById('addModalDelete').addEventListener('click', async () => {
     if (!currentEditTarget || !currentEditTarget.id) return;
     if (!confirm(getTranslation('confirm_delete'))) return;
@@ -2055,10 +2058,105 @@ function toggleArcEditMode() {
 function injectArcEditButtons() {
     document.querySelectorAll('a.link-inline[data-id]').forEach(link => {
         if (link.dataset.editBtnBound) return;
-        const editBtn = document.createElement('button'); editBtn.type = 'button'; editBtn.className = 'edit-item-btn'; editBtn.title = getTranslation('start_editing'); editBtn.innerHTML = '<i class="fas fa-pen"></i>';
-        editBtn.addEventListener('click', (e) => { e.preventDefault(); e.stopPropagation(); openArcEditModal(link); });
+        
+        // Создаем контейнер для кнопок
+        const buttonContainer = document.createElement('span');
+        buttonContainer.className = 'edit-button-container';
+        buttonContainer.style.display = 'inline-flex';
+        buttonContainer.style.gap = '4px';
+        buttonContainer.style.alignItems = 'center';
+        
+        // Кнопка редактирования
+        const editBtn = document.createElement('button'); 
+        editBtn.type = 'button'; 
+        editBtn.className = 'edit-item-btn'; 
+        editBtn.title = getTranslation('start_editing'); 
+        editBtn.innerHTML = '<i class="fas fa-pen"></i>';
+        editBtn.addEventListener('click', (e) => { 
+            e.preventDefault(); 
+            e.stopPropagation(); 
+            openArcEditModal(link); 
+        });
+        
+        // Кнопка удаления
+        const deleteBtn = document.createElement('button'); 
+        deleteBtn.type = 'button'; 
+        deleteBtn.className = 'edit-item-btn delete-item-btn'; 
+        deleteBtn.title = getTranslation('delete_item');
+        deleteBtn.innerHTML = '<i class="fas fa-times"></i>';
+        deleteBtn.addEventListener('click', async (e) => {
+            e.preventDefault(); 
+            e.stopPropagation(); 
+            const id = link.dataset.id;
+            if (!confirm(getTranslation('confirm_delete'))) return;
+            
+            try {
+                // Удаляем из userItemsData
+                for (const zone in userItemsData.items) {
+                    if (userItemsData.items[zone]) {
+                        userItemsData.items[zone] = userItemsData.items[zone].filter(i => i.id !== id);
+                    }
+                }
+                
+                // Удаляем из collections
+                if (userItemsData.collections) {
+                    userItemsData.collections.forEach(c => {
+                        if (c.items) c.items = c.items.filter(i => i.id !== id);
+                    });
+                }
+                
+                // Удаляем из dappCategories
+                if (userItemsData.dappCategories) {
+                    userItemsData.dappCategories.forEach(c => {
+                        if (c.items) c.items = c.items.filter(i => i.id !== id);
+                    });
+                }
+                
+                // Удаляем из overrides
+                if (editsOverride[id]) {
+                    delete editsOverride[id];
+                    await saveArcEditsOverride();
+                }
+                
+                await saveArcUserItems();
+                
+                // Удаляем из избранного
+                if (favoritesState[id]) {
+                    delete favoritesState[id];
+                    favoritesOrder = favoritesOrder.filter(x => x !== id);
+                    await saveArcFavorites();
+                }
+                
+                // Удаляем элемент из DOM
+                const wrapper = link.closest('.link-with-favorite, .user-item-wrapper');
+                if (wrapper) {
+                    wrapper.style.transition = 'opacity 0.3s, transform 0.3s';
+                    wrapper.style.opacity = '0';
+                    wrapper.style.transform = 'scale(0.8)';
+                    setTimeout(() => wrapper.remove(), 300);
+                } else {
+                    link.remove();
+                }
+                
+                showToast(`${getTranslation('removed')}: ${getLinkTitle(link)}`, 'success');
+                
+            } catch (error) {
+                showToast('❌ Delete error: ' + error.message, 'error');
+            }
+        });
+        
+        // Добавляем кнопки в контейнер
+        buttonContainer.appendChild(editBtn);
+        buttonContainer.appendChild(deleteBtn);
+        
+        // Вставляем контейнер после ссылки
         const wrapper = link.closest('.link-with-favorite') || link.closest('.user-item-wrapper');
-        if (wrapper) wrapper.appendChild(editBtn); else link.parentNode.insertBefore(editBtn, link.nextSibling);
+        if (wrapper) {
+            wrapper.appendChild(buttonContainer);
+        } else {
+            link.parentNode.insertBefore(buttonContainer, link.nextSibling);
+        }
+        
         link.dataset.editBtnBound = 'true';
     });
 }
@@ -2092,7 +2190,6 @@ function openArcEditModal(link) {
     saveBtn.dataset.editMode = 'true';
     overlayEl().classList.add('open');
 }
-
 async function uploadConfigToGithub() {
     try {
         await saveArcUserItems();
