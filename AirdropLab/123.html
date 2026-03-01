@@ -1,230 +1,261 @@
 <!DOCTYPE html>
 <html lang="ru">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AirdropLab</title>
-    <link rel="icon" href="assets/favicon.svg" type="image/svg+xml">
-    <link rel="alternate icon" href="assets/favicon.ico">
-    <script src="https://cdn.tailwindcss.com"></script>
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <link rel="stylesheet" href="styles.css">
-    <style>
-        /* Автоперевод - панель */
-        .translate-panel {
-            background: linear-gradient(135deg, rgba(139, 92, 246, 0.1), rgba(99, 102, 241, 0.1));
-            border: 1px solid rgba(139, 92, 246, 0.3);
-            border-radius: 12px;
-            padding: 16px;
-            margin-bottom: 16px;
-            display: none;
-        }
-        
-        .translate-panel.active {
-            display: block;
-            animation: slideDown 0.3s ease;
-        }
-        
-        @keyframes slideDown {
-            from { opacity: 0; transform: translateY(-10px); }
-            to { opacity: 1; transform: translateY(0); }
-        }
-        
-        .translate-panel-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 12px;
-        }
-        
-        .translate-panel-title {
-            font-size: 14px;
-            font-weight: 600;
-            color: #a78bfa;
-            display: flex;
-            align-items: center;
-            gap: 8px;
-        }
-        
-        .translate-loading {
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            gap: 12px;
-            padding: 24px;
-            color: #94a3b8;
-            font-size: 14px;
-        }
-        
-        .translate-loading i {
-            font-size: 24px;
-            animation: spin 1s linear infinite;
-        }
-        
-        @keyframes spin {
-            from { transform: rotate(0deg); }
-            to { transform: rotate(360deg); }
-        }
-        
-        .translate-result {
-            display: none;
-        }
-        
-        .translate-result.show {
-            display: block;
-            animation: fadeIn 0.3s ease;
-        }
-        
-        @keyframes fadeIn {
-            from { opacity: 0; }
-            to { opacity: 1; }
-        }
-        
-        .translate-field {
-            margin-bottom: 12px;
-        }
-        
-        .translate-field label {
-            display: block;
-            font-size: 12px;
-            color: #94a3b8;
-            margin-bottom: 6px;
-            font-weight: 500;
-        }
-        
-        .translate-field input,
-        .translate-field textarea {
-            width: 100%;
-            background: #0f172a;
-            border: 1px solid #334155;
-            border-radius: 8px;
-            padding: 10px 12px;
-            color: #e2e8f0;
-            font-size: 13px;
-            font-family: inherit;
-            transition: border-color 0.2s;
-        }
-        
-        .translate-field textarea {
-            min-height: 80px;
-            resize: vertical;
-        }
-        
-        .translate-actions {
-            display: flex;
-            gap: 8px;
-            justify-content: flex-end;
-            margin-top: 16px;
-            padding-top: 12px;
-            border-top: 1px solid rgba(139, 92, 246, 0.2);
-        }
-        
-        .translate-btn {
-            padding: 8px 16px;
-            border-radius: 8px;
-            font-size: 12px;
-            font-weight: 600;
-            cursor: pointer;
-            border: 1px solid transparent;
-            transition: all 0.2s;
-        }
-        
-        .translate-btn-cancel {
-            background: transparent;
-            border-color: #334155;
-            color: #94a3b8;
-        }
-        
-        .translate-btn-cancel:hover {
-            background: rgba(255, 255, 255, 0.05);
-            color: #e2e8f0;
-        }
-        
-        .translate-btn-apply {
-            background: #8b5cf6;
-            color: #fff;
-        }
-        
-        .translate-btn-apply:hover {
-            background: #7c3aed;
-        }
-        
-        .translate-btn-apply:disabled {
-            background: #4c1d95;
-            cursor: not-allowed;
-            opacity: 0.6;
-        }
-        
-        .translate-cat-badge {
-            display: inline-flex;
-            align-items: center;
-            gap: 6px;
-            padding: 6px 12px;
-            border-radius: 8px;
-            font-size: 12px;
-            background: rgba(139, 92, 246, 0.15);
-            border: 1px solid rgba(139, 92, 246, 0.3);
-            color: #a78bfa;
-            margin: 4px;
-            cursor: pointer;
-            transition: all 0.2s;
-        }
-        
-        .translate-cat-badge:hover {
-            background: rgba(139, 92, 246, 0.25);
-        }
-        
-        .translate-cat-badge .arrow {
-            color: #64748b;
-        }
-        
-        .translate-success-icon {
-            color: #10b981;
-            font-size: 16px;
-            margin-right: 8px;
-        }
-        
-        /* Остальные стили */
-        .activity-new-badge {
-            background: linear-gradient(135deg, #f59e0b, #d97706);
-            color: white;
-            font-size: 9px;
-            padding: 2px 6px;
-            border-radius: 4px;
-            font-weight: bold;
-            text-transform: uppercase;
-            animation: pulse-new 2s infinite;
-            box-shadow: 0 0 10px rgba(245, 158, 11, 0.5);
-        }
-        
-        @keyframes pulse-new {
-            0%, 100% { transform: scale(1); opacity: 1; }
-            50% { transform: scale(1.05); opacity: 0.8; }
-        }
-        
-        .project-card-wrapper.has-new-activities {
-            border-color: rgba(245, 158, 11, 0.5) !important;
-            box-shadow: 0 0 15px rgba(245, 158, 11, 0.2);
-        }
-        
-        .activity-ended {
-            opacity: 0.6;
-            background: rgba(239, 68, 68, 0.1);
-            border-left: 3px solid #ef4444;
-        }
-        
-        #categoriesAccordion {
-            max-height: 0;
-            overflow: hidden;
-            transition: max-height 0.3s ease-out, opacity 0.3s ease-out;
-            opacity: 0;
-        }
-        
-        #categoriesAccordion.open {
-            max-height: 400px;
-            opacity: 1;
-        }
-    </style>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AirdropLab</title>
+  <link rel="icon" href="assets/favicon.svg" type="image/svg+xml">
+  <link rel="alternate icon" href="assets/favicon.ico">
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <link rel="stylesheet" href="styles.css">
+  <style>
+    /* Стили для кнопки переключения языка */
+    .lang-toggle-btn {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      padding: 8px 14px;
+      background: linear-gradient(135deg, rgba(6, 182, 212, 0.15), rgba(6, 182, 212, 0.05));
+      border: 1px solid rgba(6, 182, 212, 0.4);
+      border-radius: 10px;
+      color: #22d3ee;
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s ease;
+    }
+    
+    .lang-toggle-btn:hover {
+      background: linear-gradient(135deg, rgba(6, 182, 212, 0.25), rgba(6, 182, 212, 0.1));
+      transform: translateY(-1px);
+      box-shadow: 0 4px 12px rgba(6, 182, 212, 0.3);
+    }
+    
+    .lang-toggle-btn.active {
+      background: linear-gradient(135deg, rgba(6, 182, 212, 0.3), rgba(6, 182, 212, 0.15));
+      border-color: #22d3ee;
+    }
+    
+    .lang-toggle-btn .lang-flag {
+      font-size: 16px;
+    }
+    
+    /* Автоперевод - панель */
+    .translate-panel {
+      background: linear-gradient(135deg, rgba(139, 92, 246, 0.1), rgba(99, 102, 241, 0.1));
+      border: 1px solid rgba(139, 92, 246, 0.3);
+      border-radius: 12px;
+      padding: 16px;
+      margin-bottom: 16px;
+      display: none;
+    }
+    
+    .translate-panel.active {
+      display: block;
+      animation: slideDown 0.3s ease;
+    }
+    
+    @keyframes slideDown {
+      from { opacity: 0; transform: translateY(-10px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+    
+    .translate-panel-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 12px;
+    }
+    
+    .translate-panel-title {
+      font-size: 14px;
+      font-weight: 600;
+      color: #a78bfa;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    
+    .translate-loading {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 12px;
+      padding: 24px;
+      color: #94a3b8;
+      font-size: 14px;
+    }
+    
+    .translate-loading i {
+      font-size: 24px;
+      animation: spin 1s linear infinite;
+    }
+    
+    @keyframes spin {
+      from { transform: rotate(0deg); }
+      to { transform: rotate(360deg); }
+    }
+    
+    .translate-result {
+      display: none;
+    }
+    
+    .translate-result.show {
+      display: block;
+      animation: fadeIn 0.3s ease;
+    }
+    
+    @keyframes fadeIn {
+      from { opacity: 0; }
+      to { opacity: 1; }
+    }
+    
+    .translate-field {
+      margin-bottom: 12px;
+    }
+    
+    .translate-field label {
+      display: block;
+      font-size: 12px;
+      color: #94a3b8;
+      margin-bottom: 6px;
+      font-weight: 500;
+    }
+    
+    .translate-field input,
+    .translate-field textarea {
+      width: 100%;
+      background: #0f172a;
+      border: 1px solid #334155;
+      border-radius: 8px;
+      padding: 10px 12px;
+      color: #e2e8f0;
+      font-size: 13px;
+      font-family: inherit;
+      transition: border-color 0.2s;
+    }
+    
+    .translate-field textarea {
+      min-height: 80px;
+      resize: vertical;
+    }
+    
+    .translate-actions {
+      display: flex;
+      gap: 8px;
+      justify-content: flex-end;
+      margin-top: 16px;
+      padding-top: 12px;
+      border-top: 1px solid rgba(139, 92, 246, 0.2);
+    }
+    
+    .translate-btn {
+      padding: 8px 16px;
+      border-radius: 8px;
+      font-size: 12px;
+      font-weight: 600;
+      cursor: pointer;
+      border: 1px solid transparent;
+      transition: all 0.2s;
+    }
+    
+    .translate-btn-cancel {
+      background: transparent;
+      border-color: #334155;
+      color: #94a3b8;
+    }
+    
+    .translate-btn-cancel:hover {
+      background: rgba(255, 255, 255, 0.05);
+      color: #e2e8f0;
+    }
+    
+    .translate-btn-apply {
+      background: #8b5cf6;
+      color: #fff;
+    }
+    
+    .translate-btn-apply:hover {
+      background: #7c3aed;
+    }
+    
+    .translate-btn-apply:disabled {
+      background: #4c1d95;
+      cursor: not-allowed;
+      opacity: 0.6;
+    }
+    
+    .translate-cat-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 6px 12px;
+      border-radius: 8px;
+      font-size: 12px;
+      background: rgba(139, 92, 246, 0.15);
+      border: 1px solid rgba(139, 92, 246, 0.3);
+      color: #a78bfa;
+      margin: 4px;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    
+    .translate-cat-badge:hover {
+      background: rgba(139, 92, 246, 0.25);
+    }
+    
+    .translate-cat-badge .arrow {
+      color: #64748b;
+    }
+    
+    .translate-success-icon {
+      color: #10b981;
+      font-size: 16px;
+      margin-right: 8px;
+    }
+    
+    /* Остальные стили */
+    .activity-new-badge {
+      background: linear-gradient(135deg, #f59e0b, #d97706);
+      color: white;
+      font-size: 9px;
+      padding: 2px 6px;
+      border-radius: 4px;
+      font-weight: bold;
+      text-transform: uppercase;
+      animation: pulse-new 2s infinite;
+      box-shadow: 0 0 10px rgba(245, 158, 11, 0.5);
+    }
+    
+    @keyframes pulse-new {
+      0%, 100% { transform: scale(1); opacity: 1; }
+      50% { transform: scale(1.05); opacity: 0.8; }
+    }
+    
+    .project-card-wrapper.has-new-activities {
+      border-color: rgba(245, 158, 11, 0.5) !important;
+      box-shadow: 0 0 15px rgba(245, 158, 11, 0.2);
+    }
+    
+    .activity-ended {
+      opacity: 0.6;
+      background: rgba(239, 68, 68, 0.1);
+      border-left: 3px solid #ef4444;
+    }
+    
+    #categoriesAccordion {
+      max-height: 0;
+      overflow: hidden;
+      transition: max-height 0.3s ease-out, opacity 0.3s ease-out;
+      opacity: 0;
+    }
+    
+    #categoriesAccordion.open {
+      max-height: 400px;
+      opacity: 1;
+    }
+  </style>
 </head>
 <body class="antialiased">
 <!-- SVG Спрайт -->
@@ -273,7 +304,7 @@
   <div class="relative w-20 h-20">
     <svg class="w-full h-full text-cyan-400"><use href="#lab-logo"/></svg>
   </div>
-  <p class="mt-4 text-sm font-medium text-cyan-400 tracking-widest animate-pulse">ЗАГРУЗКА ЛАБОРАТОРИИ...</p>
+  <p class="mt-4 text-sm font-medium text-cyan-400 tracking-widest animate-pulse" id="loadingText">ЗАГРУЗКА ЛАБОРАТОРИИ...</p>
 </div>
 
 <!-- Header -->
@@ -328,6 +359,12 @@
         </div>
       </div>
       <div class="flex gap-2 items-center">
+        <!-- Кнопка переключения языка -->
+        <button onclick="toggleLanguage()" class="lang-toggle-btn" id="langToggleBtn" title="Переключить язык">
+          <span class="lang-flag">🇷🇺</span>
+          <span class="lang-text">RU</span>
+        </button>
+        
         <div id="notificationPanel" class="relative">
           <button onclick="showNotifications()" class="relative p-2.5 text-slate-400 hover:text-cyan-400 transition-all rounded-xl hover:bg-cyan-500/10 group border border-transparent hover:border-cyan-500/30">
             <i class="fas fa-bell text-lg group-hover:animate-bounce"></i>
@@ -1010,7 +1047,7 @@ const translationDictionary = {
   'волны': 'waves',
 };
 
-// Функция автоперевода текста
+// Функция автоперевода текста (работает автоматически)
 function autoTranslate(text) {
   if (!text) return '';
   
@@ -1108,6 +1145,162 @@ window.autoTranslateActivity = function() {
   });
 };
 
+// ==================== ПЕРЕКЛЮЧАТЕЛЬ ЯЗЫКА ====================
+// Текущий язык (по умолчанию русский)
+window.currentLang = localStorage.getItem('airdropLabLang') || 'ru';
+
+// Переводы для интерфейса
+const interfaceTranslations = {
+  ru: {
+    'loading': 'ЗАГРУЗКА ЛАБОРАТОРИИ...',
+    'experimental_zone': 'Экспериментальная зона',
+    'edit_mode': 'Режим редактирования',
+    'all_projects': 'Все проекты',
+    'unvisited': 'Не посещённые',
+    'today': 'Сегодня',
+    'active_filter': 'Активные',
+    'daily': 'Ежедневные',
+    'favorites': 'Избранное',
+    'completed': 'Завершённые',
+    'archive': 'Архив',
+    'categories': 'Категории',
+    'search_placeholder': 'Поиск проектов...',
+    'per_page': 'На странице:',
+    'newest_first': 'Сначала новые',
+    'by_priority': 'По приоритету',
+    'by_name': 'По названию',
+    'filters': 'Фильтры',
+    'all': 'Все'
+  },
+  en: {
+    'loading': 'LOADING LABORATORY...',
+    'experimental_zone': 'Experimental Zone',
+    'edit_mode': 'Edit Mode',
+    'all_projects': 'All Projects',
+    'unvisited': 'Unvisited',
+    'today': 'Today',
+    'active_filter': 'Active',
+    'daily': 'Daily',
+    'favorites': 'Favorites',
+    'completed': 'Completed',
+    'archive': 'Archive',
+    'categories': 'Categories',
+    'search_placeholder': 'Search projects...',
+    'per_page': 'Per page:',
+    'newest_first': 'Newest first',
+    'by_priority': 'By priority',
+    'by_name': 'By name',
+    'filters': 'Filters',
+    'all': 'All'
+  }
+};
+
+// Функция переключения языка
+window.toggleLanguage = function() {
+  const newLang = window.currentLang === 'ru' ? 'en' : 'ru';
+  window.currentLang = newLang;
+  localStorage.setItem('airdropLabLang', newLang);
+  
+  // Обновляем кнопку
+  updateLanguageButton();
+  
+  // Перерисовываем проекты с новым языком
+  applyFilters();
+  
+  // Обновляем переводы интерфейса
+  updateInterfaceTranslations();
+};
+
+// Обновление кнопки языка
+function updateLanguageButton() {
+  const btn = document.getElementById('langToggleBtn');
+  if (!btn) return;
+  
+  const flag = btn.querySelector('.lang-flag');
+  const text = btn.querySelector('.lang-text');
+  
+  if (window.currentLang === 'en') {
+    flag.textContent = '🇬🇧';
+    text.textContent = 'EN';
+    btn.classList.add('active');
+  } else {
+    flag.textContent = '🇷🇺';
+    text.textContent = 'RU';
+    btn.classList.remove('active');
+  }
+}
+
+// Обновление переводов интерфейса
+function updateInterfaceTranslations() {
+  const t = interfaceTranslations[window.currentLang] || interfaceTranslations.ru;
+  
+  // Загрузка
+  const loadingText = document.getElementById('loadingText');
+  if (loadingText) loadingText.textContent = t.loading;
+  
+  // Mode indicator
+  const modeIndicator = document.getElementById('modeIndicator');
+  if (modeIndicator) {
+    const isAdmin = document.getElementById('adminPanel').style.display !== 'none';
+    modeIndicator.textContent = isAdmin ? t.edit_mode : t.experimental_zone;
+  }
+  
+  // Поиск
+  const searchInput = document.getElementById('searchInput');
+  if (searchInput) searchInput.placeholder = t.search_placeholder;
+  
+  // Сортировка
+  const sortSelect = document.getElementById('sortSelect');
+  if (sortSelect) {
+    const options = sortSelect.querySelectorAll('option');
+    if (options[0]) options[0].textContent = t.newest_first;
+    if (options[1]) options[1].textContent = t.by_priority;
+    if (options[2]) options[2].textContent = t.by_name;
+  }
+  
+  // Фильтры
+  document.querySelectorAll('.sidebar-link').forEach(btn => {
+    const filter = btn.dataset.filter;
+    const span = btn.querySelector('span');
+    if (!span) return;
+    
+    const icons = {
+      'all': '<i class="fas fa-layer-group mr-2 w-5"></i>',
+      'unvisited': '<i class="fas fa-eye-slash mr-2 w-5 text-red-400"></i>',
+      'today': '<i class="fas fa-calendar-day mr-2 w-5 text-pink-400"></i>',
+      'active': '<i class="fas fa-play mr-2 w-5 text-emerald-400"></i>',
+      'daily': '<i class="fas fa-fire mr-2 w-5 text-orange-400"></i>',
+      'favorites': '<i class="fas fa-heart mr-2 w-5 text-red-400"></i>',
+      'completed': '<i class="fas fa-check-double mr-2 w-5 text-emerald-400"></i>',
+      'ended': '<i class="fas fa-check-circle mr-2 w-5 text-slate-500"></i>'
+    };
+    
+    const labels = {
+      'all': t.all_projects,
+      'unvisited': t.unvisited,
+      'today': t.today,
+      'active': t.active_filter,
+      'daily': t.daily,
+      'favorites': t.favorites,
+      'completed': t.completed,
+      'ended': t.archive
+    };
+    
+    if (icons[filter] && labels[filter]) {
+      span.innerHTML = icons[filter] + labels[filter];
+    }
+  });
+  
+  // Категории
+  const selectedCatsTags = document.getElementById('selectedCategoriesTags');
+  if (selectedCatsTags) {
+    const hasCategories = window.currentFilters && window.currentFilters.categories && window.currentFilters.categories.length > 0;
+    if (!hasCategories) {
+      selectedCatsTags.innerHTML = '<span class="text-xs text-slate-500 italic">' + t.all + '</span>';
+    }
+  }
+}
+
 // ==================== ОСТАЛЬНОЙ КОД ====================
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
 import { getAuth, signInWithPopup, GoogleAuthProvider, TwitterAuthProvider, signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
@@ -1159,9 +1352,6 @@ let currentEditingActivities = [];
 let editingActivityId = null;
 let mainProjectCategories = [];
 let currentSortType = 'latest';
-
-// Текущий язык просмотра
-window.currentLang = 'ru';
 
 function getProjectData(project) {
   if (window.currentLang === 'en' && project.name_eng) {
@@ -1293,11 +1483,11 @@ function isProjectUnvisited(project) {
 // === AUTH ===
 window.openLoginModal = function() { document.getElementById('loginModal').classList.add('active'); };
 window.closeLoginModal = function() { document.getElementById('loginModal').classList.remove('active'); };
-window.loginGoogle = async function() { try { await signInWithPopup(auth, new GoogleAuthProvider()); closeLoginModal(); showToast('Вход: Google'); } catch(e) { showToast(e.message); } };
-window.loginTwitter = async function() { try { await signInWithPopup(auth, new TwitterAuthProvider()); closeLoginModal(); showToast('Вход: Twitter'); } catch(e) { showToast(e.message); } };
-window.handleEmailAuth = async function(e) { e.preventDefault(); const email = document.getElementById('emailInput').value; const pass = document.getElementById('passInput').value; try { await signInWithEmailAndPassword(auth, email, pass); closeLoginModal(); showToast('Вход выполнен'); } catch(e) { showToast(e.message); } };
-window.handleRegister = async function() { const email = document.getElementById('emailInput').value; const pass = document.getElementById('passInput').value; try { await createUserWithEmailAndPassword(auth, email, pass); closeLoginModal(); showToast('Аккаунт создан!'); } catch(e) { showToast(e.message); } };
-window.logout = function() { signOut(auth).then(() => { showToast('Выход'); localStorage.removeItem('favorites_backup'); localStorage.removeItem(STORAGE_KEY); userFavorites = []; userCompleted = []; arcData = {}; }); };
+window.loginGoogle = async function() { try { await signInWithPopup(auth, new GoogleAuthProvider()); closeLoginModal(); } catch(e) { showToast(e.message); } };
+window.loginTwitter = async function() { try { await signInWithPopup(auth, new TwitterAuthProvider()); closeLoginModal(); } catch(e) { showToast(e.message); } };
+window.handleEmailAuth = async function(e) { e.preventDefault(); const email = document.getElementById('emailInput').value; const pass = document.getElementById('passInput').value; try { await signInWithEmailAndPassword(auth, email, pass); closeLoginModal(); } catch(e) { showToast(e.message); } };
+window.handleRegister = async function() { const email = document.getElementById('emailInput').value; const pass = document.getElementById('passInput').value; try { await createUserWithEmailAndPassword(auth, email, pass); closeLoginModal(); } catch(e) { showToast(e.message); } };
+window.logout = function() { signOut(auth).then(() => { localStorage.removeItem('favorites_backup'); localStorage.removeItem(STORAGE_KEY); userFavorites = []; userCompleted = []; arcData = {}; }); };
 
 // Feedback functions
 let adminFeedbacks = [];
@@ -1732,8 +1922,8 @@ window.toggleComplete = async function(uid, aid) {
   const btn = event.currentTarget;
   const idx = userCompleted.indexOf(uniqueId);
   let newCompleted = [...userCompleted];
-  if (idx > -1) { newCompleted.splice(idx, 1); btn.classList.remove('active'); showToast('Отмечено как незавершённое'); } 
-  else { newCompleted.push(uniqueId); btn.classList.add('active'); createSuccessRipple(btn); showToast('Задача завершена!'); }
+  if (idx > -1) { newCompleted.splice(idx, 1); btn.classList.remove('active'); } 
+  else { newCompleted.push(uniqueId); btn.classList.add('active'); createSuccessRipple(btn); }
   userCompleted = newCompleted;
   localStorage.setItem(COMPLETED_KEY, JSON.stringify(newCompleted));
   if (currentDetailId === uid) openDetail(uid);
@@ -1769,6 +1959,10 @@ function createSuccessRipple(button) {
 
 const EXTERNAL_DATA_URL = './data/projects.json';
 document.addEventListener('DOMContentLoaded', function() { 
+  // Инициализация языка при загрузке
+  updateLanguageButton();
+  updateInterfaceTranslations();
+  
   checkAndAutoEndActivities();
   setInterval(checkAndAutoEndActivities, 60 * 60 * 1000);
   loadData(); 
@@ -1879,7 +2073,6 @@ window.trackGuideClick = async function(id, url) {
   arcData[id].totalClicks = (arcData[id].totalClicks || 0) + 1;
   arcData[id].lastClick = now;
   localStorage.setItem(STORAGE_KEY, JSON.stringify(arcData));
-  showToast('Задание засчитано!');
   if (currentUser) {
     try { const userRef = doc(db, "users", currentUser.uid); await updateDoc(userRef, { [`arcGuideStats.${id}.totalClicks`]: arcData[id].totalClicks, [`arcGuideStats.${id}.lastClick`]: now }); } catch(e) { console.error('Error:', e); }
   }
@@ -1891,8 +2084,8 @@ window.toggleFavorite = async function(id) {
   const btn = event.currentTarget;
   const idx = userFavorites.indexOf(id);
   let newFavs = [...userFavorites];
-  if (idx > -1) { newFavs.splice(idx, 1); btn.classList.remove('active'); showToast('Удалено'); } 
-  else { newFavs.push(id); btn.classList.add('active'); createHeartParticles(btn); showToast('Добавлено!'); }
+  if (idx > -1) { newFavs.splice(idx, 1); btn.classList.remove('active'); } 
+  else { newFavs.push(id); btn.classList.add('active'); createHeartParticles(btn); }
   userFavorites = newFavs;
   applyFilters();
   localStorage.setItem('favorites_backup', JSON.stringify(newFavs));
@@ -2753,13 +2946,6 @@ document.addEventListener('DOMContentLoaded', function() {
   }
 });
 
-// ==================== LANGUAGE TOGGLE ====================
-window.toggleLanguage = function(lang) {
-  window.currentLang = lang;
-  applyFilters();
-  showToast(lang === 'en' ? 'Язык: English' : 'Язык: Русский');
-};
-
 // ==================== INIT ====================
 window.initApp = function() {
   // Hide loading screen
@@ -2803,22 +2989,13 @@ window.openInNewTab = function(url) {
   }
 };
 
-// ==================== SERVICE WORKER REGISTRATION ====================
-if ('serviceWorker' in navigator) {
-  window.addEventListener('load', function() {
-    // Service worker registration can be added here
-  });
-}
-
 // ==================== ANALYTICS (placeholder) ====================
 window.trackEvent = function(eventName, data) {
   console.log('Event:', eventName, data);
-  // Add analytics tracking here (Google Analytics, Yandex Metrika, etc.)
 };
 
 window.trackPageView = function(pageName) {
   console.log('Page view:', pageName);
-  // Add page view tracking here
 };
 
 // Track page views
