@@ -1482,7 +1482,6 @@ const ENGLISH_PROJECTS_URL = 'english_projects.json';
 
 // Хранилище для английских проектов
 let englishProjectsData = {};
-let firestoreUnsubscribe = null;
 
 // Функция загрузки английских проектов
 async function loadEnglishProjects() {
@@ -1490,6 +1489,7 @@ async function loadEnglishProjects() {
     const response = await fetch(ENGLISH_PROJECTS_URL);
     if (response.ok) {
       const data = await response.json();
+      // Конвертируем массив в объект для быстрого доступа по ID
       if (Array.isArray(data)) {
         englishProjectsData = {};
         data.forEach(project => {
@@ -1613,63 +1613,35 @@ let firstDataLoadComplete = false;
 // Замени эту функцию в своём коде:
 
 window.loadData = async function() {
-  // Загружаем english_projects.json
-  await loadEnglishProjects();
+  // Сначала загружаем english_projects.json если ещё не загружен
+  if (Object.keys(englishProjectsData).length === 0) {
+    await loadEnglishProjects();
+  }
 
-  // В зависимости от языка загружаем данные
+  try {
+    const response = await fetch(EXTERNAL_DATA_URL);
+    if (response.ok) {
+      const data = await response.json();
+      if (data.projects) projects = data.projects.map(normalizeData);
+      if (data.categories) categories = data.categories;
+    }
+  } catch (e) { 
+    console.log('JSON load error', e); 
+  }
+
+  // Показываем хотя бы JSON данные сразу
+  if (projects.length > 0) {
+    sortProjects('latest');
+  }
+      // Применяем английские данные если выбран английский язык
   if (window.currentLang === 'en') {
-    // АНГЛИЙСКИЙ - грузим из english_projects.json
-    loadFromEnglish();
-  } else {
-    // РУССКИЙ - грузим из Firebase (оригинальная логика)
-    loadFromFirebase();
+    projects = projects.map(project => applyEnglishData(project));
   }
 };
 
-// Функция загрузки из английского файла
-function loadFromEnglish() {
-  // Останавливаем подписку Firebase если она есть
-  if (firestoreUnsubscribe) {
-    firestoreUnsubscribe();
-    firestoreUnsubscribe = null;
-  }
-
-  const englishArray = Object.values(englishProjectsData);
   
-  if (englishArray.length > 0) {
-    projects = englishArray.map(normalizeData);
-    sortProjects('latest');
-    applyFilters();
-  } else {
-    projects = [];
-    console.log('No English projects data');
-  }
-  
-  hideLoadingScreen();
-}
-
-// Функция загрузки из Firebase (оригинальная логика)
-function loadFromFirebase() {
-  // Сначала пробуем загрузить локальный JSON как резерв
-  fetch(EXTERNAL_DATA_URL)
-    .then(response => {
-      if (response.ok) return response.json();
-      throw new Error('No local JSON');
-    })
-    .then(data => {
-      if (data.projects) {
-        projects = data.projects.map(normalizeData);
-        sortProjects('latest');
-        applyFilters();
-      }
-    })
-    .catch(e => { 
-      console.log('Local JSON not loaded, using Firebase only');
-    });
-
   // Подписываемся на обновления Firestore
-  const q = query(collection(db, "projects"), where("deleted", "==", false));
-  firestoreUnsubscribe = onSnapshot(q, function(snapshot) {
+  const unsubscribe = onSnapshot(query(collection(db, "projects"), where("deleted", "==", false)), function(snapshot) {
     snapshot.forEach(function(docSnap) {
       const fireProject = docSnap.data();
       const idx = projects.findIndex(function(p) { return p.id === fireProject.id; });
@@ -1684,31 +1656,22 @@ function loadFromFirebase() {
   });
   
   // Также слушаем удаленные проекты для админа
-  if (isAdminMode) {
-    onSnapshot(query(collection(db, "projects"), where("deleted", "==", true)), function(snapshot) {
-      snapshot.forEach(function(docSnap) {
-        const fireProject = docSnap.data();
-        const idx = projects.findIndex(function(p) { return p.id === fireProject.id; });
-        if (idx !== -1) {
-          projects[idx] = { ...projects[idx], ...fireProject };
-        } else {
-          projects.push(normalizeData(fireProject));
-        }
-      });
-      applyFilters();
+ // Также слушаем удаленные проекты для админа
+if (isAdminMode) {
+  onSnapshot(query(collection(db, "projects"), where("deleted", "==", true)), function(snapshot) {
+    snapshot.forEach(function(docSnap) {
+      const fireProject = docSnap.data();
+      const idx = projects.findIndex(function(p) { return p.id === fireProject.id; });
+      if (idx !== -1) {
+        projects[idx] = { ...projects[idx], ...fireProject };
+      } else {
+        projects.push(normalizeData(fireProject));
+      }
     });
-  }
-}
-
-// Функция скрытия экрана загрузки
-function hideLoadingScreen() {
-  const loadingScreen = document.getElementById('loading-screen');
-  if (loadingScreen) {
-    loadingScreen.style.opacity = '0';
-    setTimeout(() => {
-      loadingScreen.style.display = 'none';
-    }, 500);
-  }
+    applyFilters();
+  });
+  
+  firstDataLoadComplete = true;
 }
 
 function normalizeData(project) {
