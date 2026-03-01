@@ -407,14 +407,17 @@ window.toggleLang = function() {
   const newLang = window.currentLang === 'ru' ? 'en' : 'ru';
   window.setLang(newLang);
   
-  // Перезагружаем данные в зависимости от языка
-  if (newLang === 'en') {
-    loadFromEnglish();
-  } else {
-    loadFromFirebase();
-  }
+  // Перезагружаем данные при смене языка
+  projects = projects.map(p => {
+    // Возвращаем исходные данные
+    const original = projects.find(op => op.id === p.id);
+    if (newLang === 'en' && englishProjectsData[p.id]) {
+      return applyEnglishData(p);
+    }
+    return original || p;
+  });
   
-  window.updatePageTranslations();
+  applyFilters();
 };
 
 // Обновить переводы на странице
