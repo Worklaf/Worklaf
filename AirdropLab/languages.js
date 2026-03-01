@@ -455,7 +455,7 @@ function updateLanguageButton() {
   
   // Качественный SVG флаг Великобритании
   const ukFlagSVG = `
-    <svg viewBox="0 0 78 51" xmlns="http://www.w3.org/2000/svg" width="80" height="52">
+    <svg viewBox="0 0 78 51" xmlns="http://www.w3.org/2000/svg" width="40" height="26">
   <defs>
     <linearGradient id="shine" x1="0%" y1="0%" x2="100%" y2="100%">
       <stop offset="0%" style="stop-color:#fff;stop-opacity:0.25"/>
@@ -487,7 +487,7 @@ function updateLanguageButton() {
     <text x="3.1" y="18.6">★</text><text x="9.3" y="18.6">★</text><text x="15.5" y="18.6">★</text><text x="21.7" y="18.6">★</text><text x="27.9" y="18.6">★</text>
     <text x="6.2" y="22.2">★</text><text x="12.4" y="22.2">★</text><text x="18.6" y="22.2">★</text><text x="24.8" y="22.2">★</text>
   </g>
-  <rect width="39" height="25.5" fill="url(#shine)"/>
+  <rect width="78" height="51" fill="url(#shine)"/>
 </svg>
   `;
   
