@@ -1,5 +1,4 @@
-// languages.js - Исправленный языковой файл
-
+// languages.js
 window.translations = {
     ru: {
         'loading': 'ЗАГРУЗКА ЛАБОРАТОРИИ...',
@@ -365,8 +364,11 @@ window.translations = {
     }
 };
 
-// Текущий язык
+// Текущий язык (по умолчанию русский)
 window.currentLang = localStorage.getItem('lang') || 'ru';
+
+// Хранилище для английских данных проектов
+window.englishProjectsData = {};
 
 // Функция перевода
 window.t = function(key) {
@@ -379,11 +381,57 @@ window.t = function(key) {
     return key;
 };
 
+// Загрузка английских данных проектов
+window.loadEnglishProjectsData = async function() {
+    try {
+        const response = await fetch('./english_projects.json');
+        if (response.ok) {
+            const data = await response.json();
+            if (Array.isArray(data)) {
+                window.englishProjectsData = {};
+                data.forEach(project => {
+                    window.englishProjectsData[project.id] = project;
+                });
+            } else {
+                window.englishProjectsData = data;
+            }
+            console.log('English projects loaded:', Object.keys(window.englishProjectsData).length);
+        } else {
+            console.log('english_projects.json not found');
+            window.englishProjectsData = {};
+        }
+    } catch (e) {
+        console.log('Error loading english_projects.json:', e);
+        window.englishProjectsData = {};
+    }
+};
+
+// Применение английских данных к проекту
+window.applyEnglishData = function(project) {
+    if (window.currentLang === 'en' && window.englishProjectsData[project.id]) {
+        const engData = window.englishProjectsData[project.id];
+        return {
+            ...project,
+            name: engData.name || project.name,
+            description: engData.description || project.description,
+            shortDescription: engData.shortDescription || project.shortDescription,
+            activities: engData.activities || project.activities,
+            guideUrl: engData.guideUrl || project.guideUrl,
+            website: engData.website || project.website,
+            twitterUrl: engData.twitterUrl || project.twitterUrl,
+            cryptoRankUrl: engData.cryptoRankUrl || project.cryptoRankUrl,
+            referralLink: engData.referralLink || project.referralLink
+        };
+    }
+    return project;
+};
+
 // Установить язык
 window.setLang = function(lang) {
     window.currentLang = lang;
     localStorage.setItem('lang', lang);
     
+    // Обновляем вид кнопки
     const langBtn = document.getElementById('langBtn');
     if (langBtn) {
         if (lang === 'en') {
@@ -395,29 +443,29 @@ window.setLang = function(lang) {
         }
     }
     
-    // НЕ вызываем loadData/loadEnglishData - эти функции делают запросы к Firebase
-    // Просто обновляем переводы на странице
-    
-    // Обновляем статический текст на странице
+    // Обновляем переводы на странице
     window.updatePageTranslations();
 };
 
 // Переключить язык
-window.toggleLang = function() {
-  const newLang = window.currentLang === 'ru' ? 'en' : 'ru';
-  window.setLang(newLang);
-  
-  // Перезагружаем данные при смене языка
-  projects = projects.map(p => {
-    // Возвращаем исходные данные
-    const original = projects.find(op => op.id === p.id);
-    if (newLang === 'en' && englishProjectsData[p.id]) {
-      return applyEnglishData(p);
+window.toggleLang = async function() {
+    const newLang = window.currentLang === 'ru' ? 'en' : 'ru';
+    
+    // Если включаем английский - загружаем данные
+    if (newLang === 'en' && Object.keys(window.englishProjectsData).length === 0) {
+        await window.loadEnglishProjectsData();
     }
-    return original || p;
-  });
-  
-  applyFilters();
+    
+    // Устанавливаем язык
+    window.setLang(newLang);
+    
+    // Перерисовываем проекты с учетом языка
+    if (typeof window.applyFilters === 'function') {
+        window.applyFilters();
+    }
+    
+    // Показываем уведомление
+    window.showToast(newLang === 'en' ? 'Language: English' : 'Мова: Українська');
 };
 
 // Обновить переводы на странице
@@ -425,20 +473,18 @@ window.updatePageTranslations = function() {
     // Элементы с data-translate
     document.querySelectorAll('[data-translate]').forEach(function(el) {
         const key = el.getAttribute('data-translate');
-        if (key) el.textContent = window.t(key);
+        if (key) {
+            el.textContent = window.t(key);
+        }
     });
     
-    // Поиск
+    // Поиск placeholder
     const searchInput = document.getElementById('searchInput');
-    if (searchInput) searchInput.placeholder = window.t('search_placeholder');
+    if (searchInput) {
+        searchInput.placeholder = window.t('search_placeholder');
+    }
     
-    // Статистика в хедере
-    const statActive = document.getElementById('statActive');
-    const statNew = document.getElementById('statNew');
-    const statInWork = document.getElementById('statInWork');
-    const statDone = document.getElementById('statDone');
-    
-    // Фильтры
+    // Фильтры sidebar
     document.querySelectorAll('.sidebar-link').forEach(function(btn) {
         const filter = btn.dataset.filter;
         const span = btn.querySelector('span');
@@ -554,14 +600,15 @@ window.updatePageTranslations = function() {
     if (inSystemSpan) inSystemSpan.textContent = window.t('in_system');
 };
 
-// Toast
-window.showToast = function(msg) { 
-    const translated = window.t(msg);
-    const t = document.getElementById('toast'); 
-    if (t) {
-        const msgEl = document.getElementById('toastMessage');
-        if (msgEl) msgEl.textContent = translated; 
-        t.classList.remove('translate-y-20', 'opacity-0'); 
-        setTimeout(function() { t.classList.add('translate-y-20', 'opacity-0'); }, 3000); 
-    }
+// Инициализация языка при загрузке страницы
+window.initLanguage = function() {
+    // Устанавливаем начальный язык
+    window.setLang(window.currentLang);
 };
+
+// Запускаем инициализацию когда DOM готов
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', window.initLanguage);
+} else {
+    window.initLanguage();
+}
