@@ -450,6 +450,7 @@ function updateFeedbackModalTranslations() {
 }
 
 // Обновление кнопки языка
+// Обновление кнопки языка
 function updateLanguageButton() {
   const langBtn = document.getElementById('langBtn');
   if (!langBtn) return;
@@ -457,17 +458,41 @@ function updateLanguageButton() {
   const flagSpan = langBtn.querySelector('.lang-flag');
   const textSpan = langBtn.querySelector('.lang-text');
   
+  // Используем SVG-иконки вместо эмодзи для надёжности
+  const ukFlagSVG = `<svg width="20" height="15" viewBox="0 0 60 45" xmlns="http://www.w3.org/2000/svg">
+    <defs>
+      <clipPath id="t">
+        <path d="M0,0h60v45h-60z"/>
+      </clipPath>
+    </defs>
+    <g clip-path="url(#t)">
+      <path fill="#00247d" d="M0,0h60v45h-60z"/>
+      <path d="M0,0l60,45M60,0l-60,45" stroke="#fff" stroke-width="6"/>
+      <path d="M0,0l60,45M60,0l-60,45" clip-path="url(#t)" stroke="#cf142b" stroke-width="4"/>
+      <path d="M30,0v45M0,15h60" stroke="#fff" stroke-width="10"/>
+      <path d="M30,0v45M0,15h60" stroke="#cf142b" stroke-width="6"/>
+    </g>
+  </svg>`;
+  
+  const ruFlagSVG = `<svg width="20" height="15" viewBox="0 0 9 6" xmlns="http://www.w3.org/2000/svg">
+    <path fill="#fff" d="M0,0h9v6h-9z"/>
+    <path fill="#0039a6" d="M0,0h9v4h-9z"/>
+    <path fill="#d52b1e" d="M0,0h9v2h-9z"/>
+  </svg>`;
+  
+  if (flagSpan) {
+    flagSpan.innerHTML = currentLang === 'en' ? ukFlagSVG : ruFlagSVG;
+  }
+  
   if (currentLang === 'en') {
-    if (flagSpan) flagSpan.textContent = '🇬🇧';
     if (textSpan) {
       textSpan.textContent = 'ON';
       textSpan.classList.add('lang-on');
     }
     langBtn.classList.add('lang-active');
   } else {
-    if (flagSpan) flagSpan.textContent = '🇷🇺';
     if (textSpan) {
-      textSpan.textContent = 'ENG';
+      textSpan.textContent = 'OFF';
       textSpan.classList.remove('lang-on');
     }
     langBtn.classList.remove('lang-active');
