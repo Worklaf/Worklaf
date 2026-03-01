@@ -9,20 +9,9 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link rel="stylesheet" href="styles.css">
-    <!-- Подключаем файл с переводами -->
-    <script src="languages.js"></script>
     <style>
         
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
-        
-        /* Стили для переключателя языка */
-        #langBtn {
-            transition: all 0.3s ease;
-        }
-        #langBtn.lang-active {
-            background: linear-gradient(135deg, rgba(239, 68, 68, 0.2), rgba(239, 68, 68, 0.1));
-            border-color: rgba(239, 68, 68, 0.5);
-        }
         
         /* Дополнительные стили для новых функций */
         .activity-new-badge {
@@ -107,6 +96,267 @@
             max-height: 400px;
             opacity: 1;
         }
+        
+        /* Стили для перевода */
+        .translate-overlay {
+            position: fixed;
+            inset: 0;
+            z-index: 20000;
+            background: rgba(0, 0, 0, 0.88);
+            backdrop-filter: blur(12px);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            padding: 24px;
+        }
+        
+        .translate-overlay.open {
+            display: flex;
+        }
+        
+        .translate-content {
+            position: relative;
+            background: #1e293b;
+            border: 1px solid #334155;
+            border-radius: 18px;
+            padding: 24px;
+            max-width: 650px;
+            width: 100%;
+            box-shadow: 0 32px 80px rgba(0, 0, 0, 0.5);
+        }
+        
+        .translate-close {
+            position: absolute;
+            top: -14px;
+            right: -14px;
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            border: 2px solid #334155;
+            background: #1e293b;
+            color: #e2e8f0;
+            font-size: 1.2rem;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.2s;
+            z-index: 1;
+        }
+        
+        .translate-close:hover {
+            background: #ef4444;
+            color: #fff;
+            border-color: #ef4444;
+            transform: scale(1.1);
+        }
+        
+        .translate-title {
+            font-size: 1.1rem;
+            font-weight: 700;
+            color: #e2e8f0;
+            margin-bottom: 20px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .translate-lang-toggle {
+            display: flex;
+            justify-content: center;
+            gap: 8px;
+            margin-bottom: 20px;
+        }
+        
+        .translate-lang-btn {
+            padding: 10px 24px;
+            border-radius: 10px;
+            font-size: 0.9rem;
+            font-weight: 600;
+            cursor: pointer;
+            border: 1px solid #334155;
+            background: transparent;
+            color: #94a3b8;
+            transition: all 0.2s;
+        }
+        
+        .translate-lang-btn:hover {
+            border-color: #60a5fa;
+            color: #60a5fa;
+        }
+        
+        .translate-lang-btn.active {
+            background: #3b82f6;
+            color: #fff;
+            border-color: #3b82f6;
+        }
+        
+        .translate-field {
+            margin-bottom: 20px;
+        }
+        
+        .translate-field label {
+            display: block;
+            font-size: 0.85rem;
+            color: #94a3b8;
+            margin-bottom: 8px;
+            font-weight: 600;
+        }
+        
+        .translate-field input,
+        .translate-field textarea {
+            width: 100%;
+            background: #0f172a;
+            border: 1px solid #334155;
+            border-radius: 12px;
+            padding: 14px 16px;
+            color: #e2e8f0;
+            font-size: 0.95rem;
+            font-family: inherit;
+            transition: border-color 0.2s;
+        }
+        
+        .translate-field textarea {
+            min-height: 120px;
+            resize: vertical;
+        }
+        
+        .translate-field input:focus,
+        .translate-field textarea:focus {
+            outline: none;
+            border-color: #3b82f6;
+        }
+        
+        .translate-field-ru { display: block; }
+        .translate-field-eng { display: none; }
+        .translate-field-ru.hidden { display: none; }
+        .translate-field-eng.hidden { display: none; }
+        .translate-field-eng.active { display: block; }
+        .translate-field-ru.active { display: block; }
+        
+        .translate-categories {
+            margin-bottom: 20px;
+        }
+        
+        .translate-categories-label {
+            font-size: 0.85rem;
+            color: #94a3b8;
+            margin-bottom: 10px;
+            font-weight: 600;
+        }
+        
+        .translate-cats-list {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+        }
+        
+        .translate-cat-badge {
+            padding: 8px 14px;
+            border-radius: 10px;
+            font-size: 0.8rem;
+            background: rgba(59, 130, 246, 0.15);
+            border: 1px solid rgba(59, 130, 246, 0.3);
+            color: #60a5fa;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        
+        .translate-cat-badge:hover {
+            background: rgba(59, 130, 246, 0.25);
+        }
+        
+        .translate-cat-badge.selected {
+            background: #3b82f6;
+            color: #fff;
+            border-color: #3b82f6;
+        }
+        
+        .translate-actions {
+            display: flex;
+            gap: 12px;
+            justify-content: flex-end;
+            padding-top: 16px;
+            border-top: 1px solid #334155;
+        }
+        
+        .translate-btn {
+            padding: 12px 24px;
+            border-radius: 10px;
+            font-size: 0.9rem;
+            font-weight: 600;
+            cursor: pointer;
+            border: 1px solid transparent;
+            transition: all 0.2s;
+        }
+        
+        .translate-btn-cancel {
+            background: transparent;
+            border-color: #334155;
+            color: #94a3b8;
+        }
+        
+        .translate-btn-cancel:hover {
+            background: rgba(255, 255, 255, 0.05);
+            color: #e2e8f0;
+        }
+        
+        .translate-btn-save {
+            background: #3b82f6;
+            color: #fff;
+        }
+        
+        .translate-btn-save:hover {
+            background: #2563eb;
+        }
+        
+        .translate-loading {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+            padding: 20px;
+            color: #94a3b8;
+        }
+        
+        .translate-loading i {
+            animation: spin 1s linear infinite;
+        }
+        
+        @keyframes spin {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+        }
+        
+        .translate-auto-btn {
+            background: linear-gradient(135deg, #8b5cf6, #6366f1);
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 8px;
+            font-size: 0.8rem;
+            font-weight: 600;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            transition: all 0.2s;
+        }
+        
+        .translate-auto-btn:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba(139, 92, 246, 0.4);
+        }
+        
+        .translate-error {
+            background: rgba(239, 68, 68, 0.1);
+            border: 1px solid rgba(239, 68, 68, 0.3);
+            color: #fca5a5;
+            padding: 12px;
+            border-radius: 8px;
+            font-size: 0.85rem;
+            margin-bottom: 16px;
+        }
     </style>
 </head>
 <body class="antialiased">
@@ -178,7 +428,111 @@
   <div class="relative w-20 h-20">
     <svg class="w-full h-full text-cyan-400"><use href="#lab-logo"/></svg>
   </div>
-  <p class="mt-4 text-sm font-medium text-cyan-400 tracking-widest animate-pulse"><span id="loadingText" data-translate="loading">ЗАГРУЗКА ЛАБОРАТОРИИ...</span></p>
+  <p class="mt-4 text-sm font-medium text-cyan-400 tracking-widest animate-pulse">ЗАГРУЗКА ЛАБОРАТОРИИ...</p>
+</div>
+
+<!-- МОДАЛКА ПЕРЕВОДА ПРОЕКТА -->
+<div class="translate-overlay" id="translateModal">
+    <div class="translate-content">
+        <button class="translate-close" onclick="closeTranslateModal()">×</button>
+        <div class="translate-title">
+            <i class="fas fa-language text-purple-400"></i>
+            <span id="translateModalTitle">Перевод проекта</span>
+        </div>
+        
+        <div class="translate-lang-toggle">
+            <button class="translate-lang-btn active" data-lang="ru" onclick="switchTranslateLang('ru')">🇷🇺 Русский</button>
+            <button class="translate-lang-btn" data-lang="en" onclick="switchTranslateLang('en')">🇬🇧 English</button>
+        </div>
+        
+        <div id="translateLoading" class="translate-loading" style="display: none;">
+            <i class="fas fa-spinner fa-spin"></i>
+            <span>Выполняется перевод...</span>
+        </div>
+        
+        <div id="translateError" class="translate-error" style="display: none;"></div>
+        
+        <!-- Поля для названия -->
+        <div class="translate-field translate-field-ru active" id="translateNameField">
+            <label>Название проекта (RU)</label>
+            <input type="text" id="translateNameRu" placeholder="Название на русском">
+        </div>
+        <div class="translate-field translate-field-eng hidden" id="translateNameFieldEng">
+            <label>Project Name (EN)</label>
+            <input type="text" id="translateNameEn" placeholder="Name in English">
+        </div>
+        
+        <!-- Поля для категорий -->
+        <div class="translate-categories">
+            <div class="translate-categories-label">Категории</div>
+            <div class="translate-cats-list" id="translateCatsList"></div>
+        </div>
+        
+        <!-- Поля для описания -->
+        <div class="translate-field translate-field-ru active" id="translateDescField">
+            <label>Описание (RU)</label>
+            <textarea id="translateDescRu" placeholder="Описание проекта на русском..."></textarea>
+        </div>
+        <div class="translate-field translate-field-eng hidden" id="translateDescFieldEng">
+            <label>Description (EN)</label>
+            <textarea id="translateDescEn" placeholder="Project description in English..."></textarea>
+        </div>
+        
+        <div class="translate-actions">
+            <button class="translate-btn translate-btn-cancel" onclick="closeTranslateModal()">Отмена</button>
+            <button class="translate-btn translate-btn-save" onclick="applyTranslation()">
+                <i class="fas fa-check mr-2"></i>Применить
+            </button>
+        </div>
+    </div>
+</div>
+
+<!-- МОДАЛКА ПЕРЕВОДА АКТИВНОСТИ -->
+<div class="translate-overlay" id="translateActivityModal">
+    <div class="translate-content">
+        <button class="translate-close" onclick="closeTranslateActivityModal()">×</button>
+        <div class="translate-title">
+            <i class="fas fa-language text-purple-400"></i>
+            <span>Перевод активности</span>
+        </div>
+        
+        <div class="translate-lang-toggle">
+            <button class="translate-lang-btn active" data-lang="ru" onclick="switchActivityTranslateLang('ru')">🇷🇺 Русский</button>
+            <button class="translate-lang-btn" data-lang="en" onclick="switchActivityTranslateLang('en')">🇬🇧 English</button>
+        </div>
+        
+        <div id="actTransLoading" class="translate-loading" style="display: none;">
+            <i class="fas fa-spinner fa-spin"></i>
+            <span>Выполняется перевод...</span>
+        </div>
+        
+        <div id="actTransError" class="translate-error" style="display: none;"></div>
+        
+        <div class="translate-field translate-field-ru active" id="actTransNameRuField">
+            <label>Название активности (RU)</label>
+            <input type="text" id="actTransNameRu" placeholder="Название">
+        </div>
+        <div class="translate-field translate-field-eng hidden" id="actTransNameEnField">
+            <label>Activity Name (EN)</label>
+            <input type="text" id="actTransNameEn" placeholder="Name">
+        </div>
+        
+        <div class="translate-field translate-field-ru active" id="actTransDescRuField">
+            <label>Описание (RU)</label>
+            <textarea id="actTransDescRu" placeholder="Описание активности..."></textarea>
+        </div>
+        <div class="translate-field translate-field-eng hidden" id="actTransDescEnField">
+            <label>Description (EN)</label>
+            <textarea id="actTransDescEn" placeholder="Activity description..."></textarea>
+        </div>
+        
+        <div class="translate-actions">
+            <button class="translate-btn translate-btn-cancel" onclick="closeTranslateActivityModal()">Отмена</button>
+            <button class="translate-btn translate-btn-save" onclick="applyActivityTranslation()">
+                <i class="fas fa-check mr-2"></i>Применить
+            </button>
+        </div>
+    </div>
 </div>
 
 <!-- Header -->
@@ -203,7 +557,7 @@
           </div>
           <p class="text-[11px] text-slate-400 mt-0.5 flex items-center gap-2 font-medium">
             <span class="relative flex h-2 w-2"><span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span><span class="relative inline-flex rounded-full h-2 w-2 bg-emerald-400 shadow-lg shadow-emerald-400/50"></span></span>
-            <span id="modeIndicator" data-translate="experimental_zone">Экспериментальная зона</span>
+            <span id="modeIndicator">Экспериментальная зона</span>
           </p>
         </div>
       </div>
@@ -212,28 +566,28 @@
           <div class="absolute inset-0 bg-emerald-500/10 rounded-lg blur-sm opacity-0 group-hover:opacity-100 transition-opacity"></div>
           <div class="relative px-3 py-1">
             <div class="text-2xl font-black bg-gradient-to-br from-emerald-400 to-emerald-600 bg-clip-text text-transparent" id="statActive">0</div>
-            <div class="text-slate-400 text-[10px] uppercase tracking-wider font-bold group-hover:text-emerald-400 transition-colors" data-translate="active">Активных</div>
+            <div class="text-slate-400 text-[10px] uppercase tracking-wider font-bold group-hover:text-emerald-400 transition-colors">Активных</div>
           </div>
         </div>
         <div class="text-center group cursor-pointer relative" onclick="filterProjects('today')">
           <div class="absolute inset-0 bg-cyan-500/10 rounded-lg blur-sm opacity-0 group-hover:opacity-100 transition-opacity"></div>
           <div class="relative px-3 py-1">
             <div class="text-2xl font-black bg-gradient-to-br from-cyan-400 to-cyan-600 bg-clip-text text-transparent" id="statToday">0</div>
-            <div class="text-slate-400 text-[10px] uppercase tracking-wider font-bold group-hover:text-cyan-400 transition-colors" data-translate="new">Новых</div>
+            <div class="text-slate-400 text-[10px] uppercase tracking-wider font-bold group-hover:text-cyan-400 transition-colors">Новых</div>
           </div>
         </div>
         <div class="text-center group cursor-pointer relative" onclick="filterProjects('favorites')">
           <div class="absolute inset-0 bg-orange-500/10 rounded-lg blur-sm opacity-0 group-hover:opacity-100 transition-opacity"></div>
           <div class="relative px-3 py-1">
             <div class="text-2xl font-black bg-gradient-to-br from-orange-400 to-orange-600 bg-clip-text text-transparent" id="statFavorites">0</div>
-            <div class="text-slate-400 text-[10px] uppercase tracking-wider font-bold group-hover:text-orange-400 transition-colors" data-translate="in_work">В работе</div>
+            <div class="text-slate-400 text-[10px] uppercase tracking-wider font-bold group-hover:text-orange-400 transition-colors">В работе</div>
           </div>
         </div>
         <div class="text-center group cursor-pointer relative" onclick="filterProjects('completed')">
           <div class="absolute inset-0 bg-blue-500/10 rounded-lg blur-sm opacity-0 group-hover:opacity-100 transition-opacity"></div>
           <div class="relative px-3 py-1">
             <div class="text-2xl font-black bg-gradient-to-br from-blue-400 to-blue-600 bg-clip-text text-transparent" id="statCompleted">0</div>
-            <div class="text-slate-400 text-[10px] uppercase tracking-wider font-bold group-hover:text-blue-400 transition-colors" data-translate="done">Готово</div>
+            <div class="text-slate-400 text-[10px] uppercase tracking-wider font-bold group-hover:text-blue-400 transition-colors">Готово</div>
           </div>
         </div>
       </div>
@@ -251,28 +605,21 @@
           </button>
         </div>
         <div id="adminPanel" class="flex gap-2 items-center border-l border-slate-700/50 pl-3 ml-1" style="display: none;">
-  <button onclick="openAddModal()" class="px-3 py-2 bg-gradient-to-r from-cyan-600 to-blue-600 hover:from-cyan-500 hover:to-blue-500 rounded-lg text-xs font-bold transition-all hover:scale-105 shadow-lg shadow-cyan-500/30"><i class="fas fa-flask mr-1"></i><span class="hidden sm:inline" data-translate="new_test">Новый тест</span></button>
+  <button onclick="openAddModal()" class="px-3 py-2 bg-gradient-to-r from-cyan-600 to-blue-600 hover:from-cyan-500 hover:to-blue-500 rounded-lg text-xs font-bold transition-all hover:scale-105 shadow-lg shadow-cyan-500/30"><i class="fas fa-flask mr-1"></i><span class="hidden sm:inline">Новый тест</span></button>
   <button onclick="openStats()" class="admin-action-btn admin-btn-orange group" title="Посмотреть статистику проектов"><i class="fas fa-chart-pie text-base"></i></button>
   <button onclick="migrateToFirestore()" class="admin-action-btn admin-btn-purple group" title="Загрузить данные в базу Firebase"><i class="fas fa-cloud-upload-alt text-base"></i></button>
   <button onclick="exportAllData()" class="admin-action-btn admin-btn-emerald group" title="Экспортировать все данные в JSON файл"><i class="fas fa-file-export text-base"></i></button>
   <button onclick="openDeletedProjects()" class="admin-action-btn admin-btn-red group" title="Просмотреть удаленные проекты"><i class="fas fa-trash-restore text-base"></i></button>
-  <span class="px-2.5 py-1 bg-gradient-to-r from-cyan-600 to-cyan-500 rounded-md text-[10px] font-black text-white uppercase"><i class="fas fa-user-shield mr-1"></i><span data-translate="admin">Admin</span></span>
+  <span class="px-2.5 py-1 bg-gradient-to-r from-cyan-600 to-cyan-500 rounded-md text-[10px] font-black text-white uppercase"><i class="fas fa-user-shield mr-1"></i>Admin</span>
 </div>
-        
-        <!-- Кнопка переключения языка -->
-        <button onclick="window.toggleLang()" id="langBtn" class="flex items-center gap-2 px-3 py-2 rounded-lg border transition-all bg-slate-800/50 border-slate-700 hover:bg-slate-700">
-            <span class="text-lg">🇬🇧</span>
-            <span class="text-sm font-bold text-slate-300" data-translate="login_btn">ENG</span>
-        </button>
-
         <div id="authPanel" class="flex items-center gap-3 border-l border-slate-700/50 pl-3 ml-1">
           <div id="loggedOutView">
-            <button onclick="openLoginModal()" class="px-4 py-2 bg-gradient-to-r from-cyan-600 to-blue-600 hover:from-cyan-500 hover:to-blue-500 rounded-xl text-sm font-bold flex items-center gap-2"><i class="fas fa-sign-in-alt"></i><span data-translate="login">Вход</span></button>
+            <button onclick="openLoginModal()" class="px-4 py-2 bg-gradient-to-r from-cyan-600 to-blue-600 hover:from-cyan-500 hover:to-blue-500 rounded-xl text-sm font-bold flex items-center gap-2"><i class="fas fa-sign-in-alt"></i><span>Вход</span></button>
           </div>
           <div id="loggedInView" class="hidden flex items-center gap-3">
             <div class="text-right hidden sm:block">
               <div id="userName" class="text-xs font-bold text-white">Researcher</div>
-              <div class="text-[10px] text-emerald-400 flex items-center justify-end gap-1.5"><span class="relative flex h-1.5 w-1.5"><span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span><span class="relative inline-flex rounded-full h-1.5 w-1.5 bg-emerald-400"></span></span><span data-translate="in_system">В системе</span></div>
+              <div class="text-[10px] text-emerald-400 flex items-center justify-end gap-1.5"><span class="relative flex h-1.5 w-1.5"><span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span><span class="relative inline-flex rounded-full h-1.5 w-1.5 bg-emerald-400"></span></span>В системе</div>
             </div>
             <div class="relative group"><div class="absolute -inset-1 bg-gradient-to-r from-cyan-500 to-blue-500 rounded-full blur opacity-50 group-hover:opacity-75"></div><img id="userAvatar" src="" class="relative w-10 h-10 rounded-full object-cover border-2 border-cyan-500/50"></div>
             <button onclick="logout()" class="p-2 text-slate-400 hover:text-red-400 rounded-lg hover:bg-red-500/10"><i class="fas fa-sign-out-alt"></i></button>
@@ -294,11 +641,11 @@
       <div class="absolute -inset-2 bg-gradient-to-r from-cyan-500 to-blue-600 rounded-3xl blur-xl opacity-50 group-hover:opacity-75 animate-pulse"></div>
       <div class="relative w-full h-full rounded-3xl bg-slate-800/80 border-2 border-cyan-400/50 flex items-center justify-center"><svg class="w-16 h-16 text-cyan-400"><use href="#lab-logo"/></svg></div>
     </div>
-    <h1 class="text-4xl sm:text-5xl lg:text-6xl font-black"><span class="bg-gradient-to-br from-white to-slate-300 bg-clip-text text-transparent" data-translate="hero_title">Лаборатория Крипто-Возможностей</span></h1>
-    <p class="mt-6 text-lg max-w-2xl mx-auto text-slate-400" data-translate="hero_subtitle">AirdropLab - это ваш центр для исследования, тестирования и участия в самых перспективных аирдропах.</p>
-    <div class="mt-10"><a href="#projects" class="inline-flex items-center px-8 py-4 bg-gradient-to-r from-cyan-500 to-blue-600 rounded-xl text-base font-bold text-white shadow-lg shadow-cyan-500/40 hover:shadow-cyan-500/60 transform hover:scale-105"><svg class="w-5 h-5 mr-2"><use href="#icon-search"></use></svg><span data-translate="start_research">Начать исследование</span></a></div>
+    <h1 class="text-4xl sm:text-5xl lg:text-6xl font-black"><span class="bg-gradient-to-br from-white to-slate-300 bg-clip-text text-transparent">Лаборатория Крипто-Возможностей</span></h1>
+    <p class="mt-6 text-lg max-w-2xl mx-auto text-slate-400">AirdropLab - это ваш центр для исследования, тестирования и участия в самых перспективных аирдропах.</p>
+    <div class="mt-10"><a href="#projects" class="inline-flex items-center px-8 py-4 bg-gradient-to-r from-cyan-500 to-blue-600 rounded-xl text-base font-bold text-white shadow-lg shadow-cyan-500/40 hover:shadow-cyan-500/60 transform hover:scale-105"><svg class="w-5 h-5 mr-2"><use href="#icon-search"></use></svg><span>Начать исследование</span></a></div>
   </div>
-  <button onclick="toggleHeroSection()" class="hero-collapse-btn"><span id="heroCollapseText" data-translate="collapse_welcome">Свернуть приветствие</span><i class="fas fa-chevron-down"></i></button>
+  <button onclick="toggleHeroSection()" class="hero-collapse-btn"><span id="heroCollapseText">Свернуть приветствие</span><i class="fas fa-chevron-down"></i></button>
 </main>
 
 <div class="sticky top-[72px] z-40 bg-[#0b0f19]/95 backdrop-blur-md border-b border-slate-700/50">
@@ -311,25 +658,25 @@
   <aside class="hidden lg:block w-64 shrink-0">
     <div class="glass-card rounded-2xl p-4 sticky top-[130px]">
       <div class="filters-section">
-        <h3 class="font-semibold mb-4 text-slate-300" data-translate="filters">Фильтры</h3>
+        <h3 class="font-semibold mb-4 text-slate-300">Фильтры</h3>
         <div class="space-y-2">
-          <button onclick="filterProjects('all')" class="sidebar-link active w-full text-left px-4 py-2 rounded-lg text-sm text-slate-300 flex justify-between items-center" data-filter="all"><span><i class="fas fa-layer-group mr-2 w-5"></i><span data-translate="all_projects">Все проекты</span></span><span class="bg-slate-700 px-2 py-0.5 rounded text-xs" id="countAll">0</span></button>
-          <button onclick="filterProjects('unvisited')" class="sidebar-link w-full text-left px-4 py-2 rounded-lg text-sm text-slate-300 flex justify-between items-center" data-filter="unvisited"><span><i class="fas fa-eye-slash mr-2 w-5 text-red-400"></i><span data-translate="unvisited">Не посещённые</span></span><span class="bg-red-900/50 text-red-400 px-2 py-0.5 rounded text-xs" id="countUnvisited">0</span></button>
-          <button onclick="filterProjects('today')" class="sidebar-link w-full text-left px-4 py-2 rounded-lg text-sm text-slate-300 flex justify-between items-center" data-filter="today"><span><i class="fas fa-calendar-day mr-2 w-5 text-pink-400"></i><span data-translate="today">Сегодня</span></span><span class="bg-pink-900/50 text-pink-400 px-2 py-0.5 rounded text-xs" id="countToday">0</span></button>
-          <button onclick="filterProjects('active')" class="sidebar-link w-full text-left px-4 py-2 rounded-lg text-sm text-slate-300 flex justify-between items-center" data-filter="active"><span><i class="fas fa-play mr-2 w-5 text-emerald-400"></i><span data-translate="active_filter">Активные</span></span><span class="bg-emerald-900/50 text-emerald-400 px-2 py-0.5 rounded text-xs" id="countActive">0</span></button>
-          <button onclick="filterProjects('daily')" class="sidebar-link w-full text-left px-4 py-2 rounded-lg text-sm text-slate-300 flex justify-between items-center" data-filter="daily"><span><i class="fas fa-fire mr-2 w-5 text-orange-400"></i><span data-translate="daily">Ежедневные</span></span><span class="bg-orange-900/50 text-orange-400 px-2 py-0.5 rounded text-xs" id="countDaily">0</span></button>
-          <button onclick="filterProjects('favorites')" class="sidebar-link w-full text-left px-4 py-2 rounded-lg text-sm text-slate-300 flex justify-between items-center" data-filter="favorites"><span><i class="fas fa-heart mr-2 w-5 text-red-400"></i><span data-translate="favorites">Избранное</span></span><span class="bg-red-900/50 text-red-400 px-2 py-0.5 rounded text-xs" id="countFavoritesSidebar">0</span></button>
-          <button onclick="filterProjects('completed')" class="sidebar-link w-full text-left px-4 py-2 rounded-lg text-sm text-slate-300 flex justify-between items-center" data-filter="completed"><span><i class="fas fa-check-double mr-2 w-5 text-emerald-400"></i><span data-translate="completed">Завершённые</span></span><span class="bg-emerald-900/50 text-emerald-400 px-2 py-0.5 rounded text-xs" id="countCompletedSidebar">0</span></button>
-          <button onclick="filterProjects('ended')" class="sidebar-link w-full text-left px-4 py-2 rounded-lg text-sm text-slate-300 flex justify-between items-center" data-filter="ended"><span><i class="fas fa-check-circle mr-2 w-5 text-slate-500"></i><span data-translate="archive">Архив</span></span><span class="bg-slate-700 px-2 py-0.5 rounded text-xs" id="countEnded">0</span></button>
+          <button onclick="filterProjects('all')" class="sidebar-link active w-full text-left px-4 py-2 rounded-lg text-sm text-slate-300 flex justify-between items-center" data-filter="all"><span><i class="fas fa-layer-group mr-2 w-5"></i>Все проекты</span><span class="bg-slate-700 px-2 py-0.5 rounded text-xs" id="countAll">0</span></button>
+          <button onclick="filterProjects('unvisited')" class="sidebar-link w-full text-left px-4 py-2 rounded-lg text-sm text-slate-300 flex justify-between items-center" data-filter="unvisited"><span><i class="fas fa-eye-slash mr-2 w-5 text-red-400"></i>Не посещённые</span><span class="bg-red-900/50 text-red-400 px-2 py-0.5 rounded text-xs" id="countUnvisited">0</span></button>
+          <button onclick="filterProjects('today')" class="sidebar-link w-full text-left px-4 py-2 rounded-lg text-sm text-slate-300 flex justify-between items-center" data-filter="today"><span><i class="fas fa-calendar-day mr-2 w-5 text-pink-400"></i>Сегодня</span><span class="bg-pink-900/50 text-pink-400 px-2 py-0.5 rounded text-xs" id="countToday">0</span></button>
+          <button onclick="filterProjects('active')" class="sidebar-link w-full text-left px-4 py-2 rounded-lg text-sm text-slate-300 flex justify-between items-center" data-filter="active"><span><i class="fas fa-play mr-2 w-5 text-emerald-400"></i>Активные</span><span class="bg-emerald-900/50 text-emerald-400 px-2 py-0.5 rounded text-xs" id="countActive">0</span></button>
+          <button onclick="filterProjects('daily')" class="sidebar-link w-full text-left px-4 py-2 rounded-lg text-sm text-slate-300 flex justify-between items-center" data-filter="daily"><span><i class="fas fa-fire mr-2 w-5 text-orange-400"></i>Ежедневные</span><span class="bg-orange-900/50 text-orange-400 px-2 py-0.5 rounded text-xs" id="countDaily">0</span></button>
+          <button onclick="filterProjects('favorites')" class="sidebar-link w-full text-left px-4 py-2 rounded-lg text-sm text-slate-300 flex justify-between items-center" data-filter="favorites"><span><i class="fas fa-heart mr-2 w-5 text-red-400"></i>Избранное</span><span class="bg-red-900/50 text-red-400 px-2 py-0.5 rounded text-xs" id="countFavoritesSidebar">0</span></button>
+          <button onclick="filterProjects('completed')" class="sidebar-link w-full text-left px-4 py-2 rounded-lg text-sm text-slate-300 flex justify-between items-center" data-filter="completed"><span><i class="fas fa-check-double mr-2 w-5 text-emerald-400"></i>Завершённые</span><span class="bg-emerald-900/50 text-emerald-400 px-2 py-0.5 rounded text-xs" id="countCompletedSidebar">0</span></button>
+          <button onclick="filterProjects('ended')" class="sidebar-link w-full text-left px-4 py-2 rounded-lg text-sm text-slate-300 flex justify-between items-center" data-filter="ended"><span><i class="fas fa-check-circle mr-2 w-5 text-slate-500"></i>Архив</span><span class="bg-slate-700 px-2 py-0.5 rounded text-xs" id="countEnded">0</span></button>
         </div>
       </div>
       <div class="h-px bg-slate-700/50 my-4"></div>
       <div class="category-block">
         <div class="flex items-center justify-between mb-1" onclick="toggleCategoriesDropdown()">
-          <h3 class="font-semibold text-slate-300 text-sm" data-translate="categories">Категории</h3>
+          <h3 class="font-semibold text-slate-300 text-sm">Категории</h3>
           <i class="fas fa-chevron-down text-slate-500 text-xs transition-transform" id="catDropdownIcon"></i>
         </div>
-        <div id="selectedCategoriesTags" class="flex flex-wrap gap-1 mb-2 min-h-[20px]"><span class="text-xs text-slate-500 italic" data-translate="all">Все</span></div>
+        <div id="selectedCategoriesTags" class="flex flex-wrap gap-1 mb-2 min-h-[20px]"><span class="text-xs text-slate-500 italic">Все</span></div>
         <div id="categoriesAccordion" class="bg-slate-900/50 rounded-lg border border-slate-700/50">
           <div class="p-2 max-h-[300px] overflow-y-auto custom-scrollbar space-y-1"><div id="categoryCheckboxesList"></div></div>
         </div>
@@ -345,18 +692,18 @@
       </div>
       <div class="flex gap-3 items-center w-full md:w-auto">
         <div class="flex items-center gap-2 bg-slate-800/50 border border-slate-700 rounded-xl px-3 py-2">
-          <span class="text-xs text-slate-400" data-translate="per_page">На странице:</span>
+          <span class="text-xs text-slate-400">На странице:</span>
           <select id="itemsPerPageSelect" onchange="changeItemsPerPage(this.value)" class="bg-transparent text-sm text-slate-200 outline-none cursor-pointer">
             <option value="10">10</option><option value="20">20</option><option value="30">30</option><option value="50">50</option><option value="100">100</option>
           </select>
         </div>
         <select onchange="sortProjects(this.value)" id="sortSelect" class="bg-slate-800/50 border border-slate-700 rounded-xl px-4 text-sm focus:border-blue-500 outline-none">
-          <option value="latest" data-translate="newest_first">Сначала новые</option><option value="priority" data-translate="by_priority">По приоритету</option><option value="name" data-translate="by_name">По названию</option>
+          <option value="latest">Сначала новые</option><option value="priority">По приоритету</option><option value="name">По названию</option>
         </select>
       </div>
     </div>
-    <div id="publicInfo" class="mb-4 p-3 bg-blue-900/20 border border-blue-800/50 rounded-lg text-sm text-blue-300 flex items-center gap-2"><i class="fas fa-info-circle"></i><span data-translate="info_click_project">Нажмите на название проекта для подробной информации или на "Гайд" для выполнения.</span></div>
-    <div id="guestWarning" class="hidden mb-4 p-3 bg-yellow-900/20 border border-yellow-700/50 rounded-lg text-sm text-yellow-500 flex items-center gap-2"><i class="fas fa-exclamation-triangle"></i><span data-translate="guest_warning">Вы не вошли в аккаунт. Избранное и выполненные задания сохраняются только в этом браузере.</span></div>
+    <div id="publicInfo" class="mb-4 p-3 bg-blue-900/20 border border-blue-800/50 rounded-lg text-sm text-blue-300 flex items-center gap-2"><i class="fas fa-info-circle"></i><span>Нажмите на <strong>название проекта</strong> для подробной информации или на <strong>"Гайд"</strong> для выполнения.</span></div>
+    <div id="guestWarning" class="hidden mb-4 p-3 bg-yellow-900/20 border border-yellow-700/50 rounded-lg text-sm text-yellow-500 flex items-center gap-2"><i class="fas fa-exclamation-triangle"></i><span>Вы не вошли в аккаунт. Избранное и выполненные задания сохраняются только в этом браузере.</span></div>
     <div id="loadingProjects" class="text-center py-20">
   <div class="inline-flex items-center gap-3 bg-slate-800/50 px-6 py-3 rounded-xl">
     <i class="fas fa-spinner fa-spin text-cyan-400 text-xl"></i>
@@ -365,7 +712,7 @@
 </div>
       <div id="projectsGrid" class="grid grid-cols-1 gap-4"></div>
     <div id="paginationControls" class="pagination-wrapper"></div>
-    <div id="emptyState" class="hidden text-center py-20"><div class="text-6xl mb-4">📭</div><h3 class="text-xl font-semibold text-slate-300 mb-2" data-translate="nothing_found">Ничего не найдено</h3><button onclick="resetFilters()" class="bg-blue-600 hover:bg-blue-500 px-4 py-2 rounded-lg text-sm" data-translate="reset_filters">Сбросить фильтры</button></div>
+    <div id="emptyState" class="hidden text-center py-20"><div class="text-6xl mb-4">📭</div><h3 class="text-xl font-semibold text-slate-300 mb-2">Ничего не найдено</h3><button onclick="resetFilters()" class="bg-blue-600 hover:bg-blue-500 px-4 py-2 rounded-lg text-sm">Сбросить фильтры</button></div>
   </main>
 
   <aside class="right-sidebar">
@@ -373,7 +720,7 @@
       <div class="lab-header">
         <div class="lab-title-wrapper">
           <div class="lab-beaker-icon"><svg class="lab-beaker" viewBox="0 0 24 24"><use href="#lab-logo"/></svg></div>
-          <div><h3 class="lab-subtitle" data-translate="active_research">Активные исследования</h3></div>
+          <div><h3 class="lab-subtitle">Активные исследования</h3></div>
         </div>
         <div class="lab-activity-indicator"><div class="pulse-ring"></div><div class="pulse-core"></div></div>
       </div>
@@ -381,12 +728,12 @@
         <div class="specimen-tube active" data-guide="arc">
           <div class="tube-header"><span class="specimen-id">ARC-001</span><div class="specimen-status status-active"></div></div>
           <div class="specimen-banner"><img src="https://givemebit.com/wp-content/uploads/2025/11/arc-testnet-logo-1024x235.jpg" alt="Arc Testnet" class="specimen-logo" onerror="this.style.display='none'"></div>
-          <div class="tube-info"><button type="button" class="analyze-btn" onclick="window.location.href='../AirdropLab/guides/Arc/Arc_Testnet_by_Circle.html'"><i class="fas fa-microscope"></i> <span data-translate="go_to_guide">Перейти к гайду</span></button></div>
+          <div class="tube-info"><button type="button" class="analyze-btn" onclick="window.location.href='../AirdropLab/guides/Arc/Arc_Testnet_by_Circle.html'"><i class="fas fa-microscope"></i> Перейти к гайду</button></div>
         </div>
         <div class="specimen-tube active" data-guide="tempo">
           <div class="tube-header"><span class="specimen-id">TMP-002</span><div class="specimen-status status-active"></div></div>
           <div class="specimen-banner"><img src="https://givemebit.com/wp-content/uploads/2025/12/tempo-testnet-logo-1024x235.jpg" alt="Tempo Testnet" class="specimen-logo" onerror="this.style.display='none'"></div>
-          <div class="tube-info"><button class="analyze-btn" type="button" onclick="window.location.href='../AirdropLab/guides/Tempo/Tempo_Testnet.html'"><i class="fas fa-microscope"></i> <span data-translate="go_to_guide">Перейти к гайду</span></button></div>
+          <div class="tube-info"><button class="analyze-btn" type="button" onclick="window.location.href='../AirdropLab/guides/Tempo/Tempo_Testnet.html'"><i class="fas fa-microscope"></i> Перейти к гайду</button></div>
         </div>
         <div class="specimen-tube new" data-guide="robinhood">
     <div class="tube-header">
@@ -517,7 +864,7 @@
     
     <div class="tube-info">
         <button class="analyze-btn" type="button" onclick="window.location.href='../AirdropLab/guides/Robinhood/robinhood-chain.html'">
-            <i class="fas fa-microscope"></i> <span data-translate="go_to_guide">Перейти к гайду</span>
+            <i class="fas fa-microscope"></i> Перейти к гайду
         </button>
     </div>
 </div>
@@ -530,17 +877,17 @@
 <div id="loginModal" class="modal">
   <div class="modal-content modal-sm p-6 relative">
     <button onclick="closeLoginModal()" class="absolute top-4 right-4 text-slate-400 hover:text-white"><i class="fas fa-times"></i></button>
-    <h2 class="text-2xl font-bold mb-6 text-center" data-translate="login">Вход</h2>
+    <h2 class="text-2xl font-bold mb-6 text-center">Вход</h2>
     <div class="space-y-3">
-      <button onclick="loginGoogle()" class="w-full bg-white text-slate-900 font-bold py-3 rounded-xl flex items-center justify-center gap-3 hover:bg-slate-200"><i class="fab fa-google text-red-500"></i> <span data-translate="google">Google</span></button>
-      <button onclick="loginTwitter()" class="w-full bg-[#1DA1F2] text-white font-bold py-3 rounded-xl flex items-center justify-center gap-3"><i class="fab fa-twitter"></i> <span data-translate="twitter_auth">Twitter</span></button>
-      <div class="relative py-2"><div class="absolute inset-0 flex items-center"><div class="w-full border-t border-slate-700"></div></div><div class="relative flex justify-center"><span class="bg-[#1e2538] px-2 text-xs text-slate-500" data-translate="or_email">ИЛИ EMAIL</span></div></div>
+      <button onclick="loginGoogle()" class="w-full bg-white text-slate-900 font-bold py-3 rounded-xl flex items-center justify-center gap-3 hover:bg-slate-200"><i class="fab fa-google text-red-500"></i> Google</button>
+      <button onclick="loginTwitter()" class="w-full bg-[#1DA1F2] text-white font-bold py-3 rounded-xl flex items-center justify-center gap-3"><i class="fab fa-twitter"></i> Twitter</button>
+      <div class="relative py-2"><div class="absolute inset-0 flex items-center"><div class="w-full border-t border-slate-700"></div></div><div class="relative flex justify-center"><span class="bg-[#1e2538] px-2 text-xs text-slate-500">ИЛИ EMAIL</span></div></div>
       <form onsubmit="handleEmailAuth(event)" class="space-y-3">
         <input type="email" id="emailInput" placeholder="Email" required class="w-full bg-slate-800 border border-slate-700 rounded-lg px-4 py-2 text-sm">
         <input type="password" id="passInput" placeholder="Пароль" required class="w-full bg-slate-800 border border-slate-700 rounded-lg px-4 py-2 text-sm" autocomplete="current-password">
         <div class="flex gap-2 pt-2">
-          <button type="button" onclick="handleRegister()" class="flex-1 bg-slate-700 hover:bg-slate-600 py-2 rounded-lg text-sm" data-translate="register">Регистрация</button>
-          <button type="submit" class="flex-1 bg-blue-600 hover:bg-blue-500 py-2 rounded-lg text-sm font-bold" data-translate="login_btn">Войти</button>
+          <button type="button" onclick="handleRegister()" class="flex-1 bg-slate-700 hover:bg-slate-600 py-2 rounded-lg text-sm">Регистрация</button>
+          <button type="submit" class="flex-1 bg-blue-600 hover:bg-blue-500 py-2 rounded-lg text-sm font-bold">Войти</button>
         </div>
       </form>
     </div>
@@ -551,16 +898,24 @@
 <div id="addModal" class="modal">
   <div class="modal-content modal-large">
     <div class="modal-header flex justify-between items-center">
-      <h2 class="text-xl font-bold" id="modalTitle" data-translate="add_project">Добавить проект</h2>
+      <h2 class="text-xl font-bold" id="modalTitle">Добавить проект</h2>
       <button onclick="closeAddModal()" class="text-slate-400 hover:text-white"><i class="fas fa-times text-xl"></i></button>
     </div>
     <div class="modal-body">
       <form id="addProjectForm" onsubmit="saveProject(event)">
         <input type="hidden" id="projId">
+        
+        <!-- Кнопка перевода -->
+        <div class="flex justify-end mb-4">
+            <button type="button" onclick="openTranslateModal()" class="translate-auto-btn">
+                <i class="fas fa-language"></i> Перевести на English
+            </button>
+        </div>
+        
         <div class="grid grid-cols-1 gap-4 mb-4">
-          <div><label class="block text-sm font-medium text-slate-300 mb-2" data-translate="project_name">Название проекта *</label><input type="text" id="projName" required class="w-full bg-slate-800 border border-slate-700 rounded-lg px-4 py-2 text-sm"></div>
+          <div><label class="block text-sm font-medium text-slate-300 mb-2">Название проекта *</label><input type="text" id="projName" required class="w-full bg-slate-800 border border-slate-700 rounded-lg px-4 py-2 text-sm"></div>
           <div>
-            <label class="block text-sm font-medium text-slate-300 mb-2" data-translate="project_categories">Категории проекта</label>
+            <label class="block text-sm font-medium text-slate-300 mb-2">Категории проекта</label>
             <div id="categoryCheckboxes" class="flex flex-wrap gap-2 mb-3 max-h-32 overflow-y-auto p-2 bg-slate-900/50 rounded-lg border border-slate-700"></div>
             <div class="bg-slate-800/50 rounded-lg p-3 border border-slate-700">
               <div class="flex gap-2 mb-2">
@@ -570,25 +925,25 @@
               <div id="customCategories" class="flex flex-wrap gap-2"></div>
             </div>
           </div>
-          <div><label class="block text-sm font-medium text-slate-300 mb-2" data-translate="logo_url">URL Логотипа</label><input type="url" id="projImage" placeholder="https://..." class="w-full bg-slate-800 border border-slate-700 rounded-lg px-4 py-2 text-sm"></div>
-          <div><label class="block text-sm font-medium text-slate-300 mb-2" data-translate="guide_link">Ссылка на гайд</label><input type="url" id="projGuideUrl" placeholder="https://..." class="w-full bg-slate-800 border border-slate-700 rounded-lg px-4 py-2 text-sm"></div>
-          <div><label class="block text-sm font-medium text-slate-300 mb-2" data-translate="cryptorank_link">Ссылка на CryptoRank</label><input type="url" id="projCryptoRank" placeholder="https://cryptorank.io/..." class="w-full bg-slate-800 border border-slate-700 rounded-lg px-4 py-2 text-sm"></div>
-          <div><label class="block text-sm font-medium text-slate-300 mb-2" data-translate="project_twitter">Twitter проекта</label><input type="url" id="projTwitter" placeholder="https://twitter.com/..." class="w-full bg-slate-800 border border-slate-700 rounded-lg px-4 py-2 text-sm"></div>
-          <div><label class="block text-sm font-medium text-slate-300 mb-2" data-translate="referral_link">Реферальная ссылка</label><input type="url" id="projRef" placeholder="https://..." class="w-full bg-slate-800 border border-slate-700 rounded-lg px-4 py-2 text-sm"></div>
-          <div><label class="block text-sm font-medium text-slate-300 mb-2" data-translate="short_description">Краткое описание</label><textarea id="projDesc" rows="2" class="w-full bg-slate-800 border border-slate-700 rounded-lg px-4 py-2 text-sm" placeholder="Краткое описание"></textarea></div>
+          <div><label class="block text-sm font-medium text-slate-300 mb-2">URL Логотипа</label><input type="url" id="projImage" placeholder="https://..." class="w-full bg-slate-800 border border-slate-700 rounded-lg px-4 py-2 text-sm"></div>
+          <div><label class="block text-sm font-medium text-slate-300 mb-2">Ссылка на гайд</label><input type="url" id="projGuideUrl" placeholder="https://..." class="w-full bg-slate-800 border border-slate-700 rounded-lg px-4 py-2 text-sm"></div>
+          <div><label class="block text-sm font-medium text-slate-300 mb-2">Ссылка на CryptoRank</label><input type="url" id="projCryptoRank" placeholder="https://cryptorank.io/..." class="w-full bg-slate-800 border border-slate-700 rounded-lg px-4 py-2 text-sm"></div>
+          <div><label class="block text-sm font-medium text-slate-300 mb-2">Twitter проекта</label><input type="url" id="projTwitter" placeholder="https://twitter.com/..." class="w-full bg-slate-800 border border-slate-700 rounded-lg px-4 py-2 text-sm"></div>
+          <div><label class="block text-sm font-medium text-slate-300 mb-2">Реферальная ссылка</label><input type="url" id="projRef" placeholder="https://..." class="w-full bg-slate-800 border border-slate-700 rounded-lg px-4 py-2 text-sm"></div>
+          <div><label class="block text-sm font-medium text-slate-300 mb-2">Краткое описание</label><textarea id="projDesc" rows="2" class="w-full bg-slate-800 border border-slate-700 rounded-lg px-4 py-2 text-sm" placeholder="Краткое описание"></textarea></div>
           <div class="grid grid-cols-2 gap-4">
-            <div><label class="block text-sm font-medium text-slate-300 mb-2" data-translate="status">Статус</label><select id="projStatus" class="w-full bg-slate-800 border border-slate-700 rounded-lg px-4 py-2 text-sm"><option value="active">🟢 Active</option><option value="soon">🟡 Soon</option><option value="ended">🔴 Ended</option></select></div>
-            <div><label class="block text-sm font-medium text-slate-300 mb-2" data-translate="last_update">Дата обновления</label><input type="date" id="projLastUpdated" class="w-full bg-slate-800 border border-slate-700 rounded-lg px-4 py-2 text-sm"></div>
+            <div><label class="block text-sm font-medium text-slate-300 mb-2">Статус</label><select id="projStatus" class="w-full bg-slate-800 border border-slate-700 rounded-lg px-4 py-2 text-sm"><option value="active">🟢 Active</option><option value="soon">🟡 Soon</option><option value="ended">🔴 Ended</option></select></div>
+            <div><label class="block text-sm font-medium text-slate-300 mb-2">Дата обновления</label><input type="date" id="projLastUpdated" class="w-full bg-slate-800 border border-slate-700 rounded-lg px-4 py-2 text-sm"></div>
           </div>
           <div class="flex gap-6">
-            <label class="flex items-center gap-2 text-sm text-slate-300 cursor-pointer"><input type="checkbox" id="projDaily" class="rounded bg-slate-800 border-slate-700 text-blue-600"><span data-translate="has_daily_quests">Есть ежедневные квесты</span></label>
-            <label class="flex items-center gap-2 text-sm text-slate-300 cursor-pointer"><input type="checkbox" id="projPriority" class="rounded bg-slate-800 border-slate-700 text-blue-600"><span data-translate="high_priority_check">Высокий приоритет</span></label>
+            <label class="flex items-center gap-2 text-sm text-slate-300 cursor-pointer"><input type="checkbox" id="projDaily" class="rounded bg-slate-800 border-slate-700 text-blue-600"><span>Есть ежедневные квесты</span></label>
+            <label class="flex items-center gap-2 text-sm text-slate-300 cursor-pointer"><input type="checkbox" id="projPriority" class="rounded bg-slate-800 border-slate-700 text-blue-600"><span>Высокий приоритет</span></label>
           </div>
         </div>
         <div class="border-t border-slate-700 pt-6 mt-6">
           <div class="flex justify-between items-center mb-4">
-            <h3 class="text-lg font-bold text-white"><i class="fas fa-tasks mr-2 text-blue-400"></i><span data-translate="project_activities">Активности проекта</span></h3>
-            <button type="button" onclick="openActivityEditor()" class="bg-blue-600 hover:bg-blue-500 text-white px-4 py-2 rounded-lg text-sm font-medium"><i class="fas fa-plus"></i> <span data-translate="add_activity">Добавить активность</span></button>
+            <h3 class="text-lg font-bold text-white"><i class="fas fa-tasks mr-2 text-blue-400"></i>Активности проекта</h3>
+            <button type="button" onclick="openActivityEditor()" class="bg-blue-600 hover:bg-blue-500 text-white px-4 py-2 rounded-lg text-sm font-medium"><i class="fas fa-plus"></i> Добавить активность</button>
           </div>
           <div id="activitiesListAdmin" class="space-y-3"><p class="text-slate-500 text-sm italic text-center py-4">Активности еще не добавлены.</p></div>
         </div>
@@ -596,9 +951,9 @@
     </div>
     <div class="modal-footer">
       <div class="flex gap-3 pt-4 border-t border-slate-700">
-        <button type="button" onclick="deleteProject()" id="deleteBtn" class="hidden bg-red-600/20 hover:bg-red-600/30 text-red-400 px-4 py-2 rounded-lg text-sm"><i class="fas fa-trash"></i> <span data-translate="delete_project">Удалить проект</span></button>
-        <button type="button" onclick="closeAddModal()" class="flex-1 bg-slate-700 hover:bg-slate-600 py-2.5 rounded-lg text-sm" data-translate="cancel">Отмена</button>
-        <button type="submit" form="addProjectForm" class="flex-1 bg-blue-600 hover:bg-blue-500 py-2.5 rounded-lg text-sm font-bold" data-translate="save_project">Сохранить проект</button>
+        <button type="button" onclick="deleteProject()" id="deleteBtn" class="hidden bg-red-600/20 hover:bg-red-600/30 text-red-400 px-4 py-2 rounded-lg text-sm"><i class="fas fa-trash"></i> Удалить проект</button>
+        <button type="button" onclick="closeAddModal()" class="flex-1 bg-slate-700 hover:bg-slate-600 py-2.5 rounded-lg text-sm">Отмена</button>
+        <button type="submit" form="addProjectForm" class="flex-1 bg-blue-600 hover:bg-blue-500 py-2.5 rounded-lg text-sm font-bold">Сохранить проект</button>
       </div>
     </div>
   </div>
@@ -608,20 +963,28 @@
 <div id="activityModal" class="modal">
   <div class="modal-content custom-modal">
     <div class="modal-header flex justify-between items-center">
-      <h2 class="text-xl font-bold" id="activityModalTitle" data-translate="new_activity">Добавить активность</h2>
+      <h2 class="text-xl font-bold" id="activityModalTitle">Добавить активность</h2>
       <button onclick="closeActivityModal()" class="text-slate-400 hover:text-white"><i class="fas fa-times text-xl"></i></button>
     </div>
     <div class="modal-body">
       <input type="hidden" id="editActivityId">
+      
+      <!-- Кнопка перевода для активности -->
+      <div class="flex justify-end mb-4">
+          <button type="button" onclick="openTranslateActivityModal()" class="translate-auto-btn">
+              <i class="fas fa-language"></i> Перевести на English
+          </button>
+      </div>
+      
       <div class="space-y-4">
-        <div><label class="block text-sm font-medium text-slate-300 mb-2" data-translate="activity_name">Название активности *</label><input type="text" id="actName" required class="w-full bg-slate-800 border border-slate-700 rounded-lg px-4 py-2 text-sm"></div>
+        <div><label class="block text-sm font-medium text-slate-300 mb-2">Название активности *</label><input type="text" id="actName" required class="w-full bg-slate-800 border border-slate-700 rounded-lg px-4 py-2 text-sm"></div>
         <div class="grid grid-cols-2 gap-4">
-          <div><label class="block text-sm font-medium text-slate-300 mb-2" data-translate="activity_date">Дата активности (начало)</label><input type="date" id="actDate" class="w-full bg-slate-800 border border-slate-700 rounded-lg px-4 py-2 text-sm"></div>
-          <div><label class="block text-sm font-medium text-slate-300 mb-2" data-translate="end_date">Дата окончания (автозавершение)</label><input type="date" id="actEndDate" class="w-full bg-slate-800 border border-slate-700 rounded-lg px-4 py-2 text-sm"></div>
+          <div><label class="block text-sm font-medium text-slate-300 mb-2">Дата активности (начало)</label><input type="date" id="actDate" class="w-full bg-slate-800 border border-slate-700 rounded-lg px-4 py-2 text-sm"></div>
+          <div><label class="block text-sm font-medium text-slate-300 mb-2">Дата окончания (автозавершение)</label><input type="date" id="actEndDate" class="w-full bg-slate-800 border border-slate-700 rounded-lg px-4 py-2 text-sm"></div>
         </div>
         <div><label class="block text-sm font-medium text-slate-300 mb-2">Категории</label><div id="activityCategoryCheckboxes" class="flex flex-wrap gap-2 max-h-24 overflow-y-auto p-2 bg-slate-900/50 rounded-lg border border-slate-700"></div></div>
         <div>
-          <label class="block text-sm font-medium text-slate-300 mb-2" data-translate="detailed_description">Подробное описание</label>
+          <label class="block text-sm font-medium text-slate-300 mb-2">Подробное описание</label>
           <div class="editor-wrapper">
             <div class="editor-toolbar">
   <button type="button" onclick="insertActivityFormat('img')" title="Вставить картинку"><i class="fas fa-image"></i></button>
@@ -639,10 +1002,10 @@
     </div>
     <div class="modal-footer">
       <div class="flex gap-3 w-full">
-        <button type="button" onclick="deleteActivity()" id="deleteActivityBtn" class="hidden bg-red-600/20 text-red-400 px-4 py-2 rounded-lg text-sm"><i class="fas fa-trash"></i> <span data-translate="delete">Удалить</span></button>
+        <button type="button" onclick="deleteActivity()" id="deleteActivityBtn" class="hidden bg-red-600/20 text-red-400 px-4 py-2 rounded-lg text-sm"><i class="fas fa-trash"></i> Удалить</button>
         <div class="flex-1"></div>
-        <button type="button" onclick="closeActivityModal()" class="bg-slate-700 px-4 py-2 rounded-lg text-sm" data-translate="cancel">Отмена</button>
-        <button type="button" onclick="saveActivityData()" class="bg-blue-600 hover:bg-blue-500 px-6 py-2 rounded-lg text-sm font-bold" data-translate="save_project">Сохранить</button>
+        <button type="button" onclick="closeActivityModal()" class="bg-slate-700 px-4 py-2 rounded-lg text-sm">Отмена</button>
+        <button type="button" onclick="saveActivityData()" class="bg-blue-600 hover:bg-blue-500 px-6 py-2 rounded-lg text-sm font-bold">Сохранить</button>
       </div>
     </div>
   </div>
@@ -666,24 +1029,24 @@
       </div>
       <div class="flex items-center gap-2 shrink-0">
         <button id="detailFavoriteBtn" onclick="toggleFavoriteFromDetail()" class="favorite-btn text-slate-500 hover:text-red-500 w-10 h-10 flex items-center justify-center rounded-lg hover:bg-slate-800"><i class="fas fa-heart text-xl"></i></button>
-        <button id="detailEditBtn" onclick="editCurrentProject()" class="hidden bg-blue-600/20 text-blue-400 px-3 py-2 rounded-lg text-sm"><i class="fas fa-edit"></i> <span data-translate="edit">Редактировать</span></button>
+        <button id="detailEditBtn" onclick="editCurrentProject()" class="hidden bg-blue-600/20 text-blue-400 px-3 py-2 rounded-lg text-sm"><i class="fas fa-edit"></i> Редактировать</button>
         <button onclick="closeDetailModal()" class="text-slate-400 hover:text-white"><i class="fas fa-times text-xl"></i></button>
       </div>
     </div>
     <div class="modal-body">
       <div class="bg-slate-800/50 p-4 rounded-xl border border-slate-700 mb-6">
-        <h3 class="text-sm font-bold text-blue-400 mb-2 uppercase"><i class="fas fa-info-circle mr-2"></i><span data-translate="about_project">О проекте</span></h3>
+        <h3 class="text-sm font-bold text-blue-400 mb-2 uppercase"><i class="fas fa-info-circle mr-2"></i>О проекте</h3>
         <p id="detailDesc" class="text-slate-300 text-sm leading-relaxed whitespace-pre-line"></p>
       </div>
-      <h3 class="text-lg font-bold text-white mb-4 flex items-center"><i class="fas fa-layer-group mr-2 text-purple-400"></i> <span data-translate="activities">Активности</span></h3>
+      <h3 class="text-lg font-bold text-white mb-4 flex items-center"><i class="fas fa-layer-group mr-2 text-purple-400"></i> Активности</h3>
       <div id="detailActivitiesList" class="space-y-4"></div>
     </div>
     <div class="modal-footer">
       <div class="flex gap-3 pt-4 border-t border-slate-700 flex-wrap w-full justify-center">
-        <button onclick="openGuideFromDetail()" class="guide-btn-small text-white rounded-lg text-sm font-medium flex items-center justify-center gap-2"><i class="fas fa-book-open"></i> <span data-translate="guide">Гайд</span></button>
-        <button onclick="openDetailLink('ref')" class="flex-1 bg-emerald-600 hover:bg-emerald-500 py-3 rounded-lg text-sm font-medium flex items-center justify-center gap-2 min-w-[140px]"><i class="fas fa-rocket"></i> <span data-translate="start">Начать</span></button>
-        <button onclick="openDetailLink('twitter')" class="flex-1 bg-sky-600 hover:bg-sky-500 py-3 rounded-lg text-sm font-medium flex items-center justify-center gap-2 min-w-[120px]"><i class="fab fa-twitter"></i> <span data-translate="twitter">Twitter</span></button>
-        <button onclick="openDetailLink('cryptorank')" class="flex-1 bg-slate-700 hover:bg-slate-600 py-3 rounded-lg text-sm font-medium flex items-center justify-center gap-2 min-w-[120px]"><i class="fas fa-chart-line"></i> <span data-translate="cr">CR</span></button>
+        <button onclick="openGuideFromDetail()" class="guide-btn-small text-white rounded-lg text-sm font-medium flex items-center justify-center gap-2"><i class="fas fa-book-open"></i> Гайд</button>
+        <button onclick="openDetailLink('ref')" class="flex-1 bg-emerald-600 hover:bg-emerald-500 py-3 rounded-lg text-sm font-medium flex items-center justify-center gap-2 min-w-[140px]"><i class="fas fa-rocket"></i> Начать</button>
+        <button onclick="openDetailLink('twitter')" class="flex-1 bg-sky-600 hover:bg-sky-500 py-3 rounded-lg text-sm font-medium flex items-center justify-center gap-2 min-w-[120px]"><i class="fab fa-twitter"></i> Twitter</button>
+        <button onclick="openDetailLink('cryptorank')" class="flex-1 bg-slate-700 hover:bg-slate-600 py-3 rounded-lg text-sm font-medium flex items-center justify-center gap-2 min-w-[120px]"><i class="fas fa-chart-line"></i> CR</button>
       </div>
     </div>
   </div>
@@ -693,10 +1056,10 @@
 <div id="notificationsModal" class="modal">
   <div class="modal-content modal-sm p-6 relative">
     <div class="flex justify-between items-center mb-4">
-      <h2 class="text-xl font-bold flex items-center gap-2"><i class="fas fa-bell text-blue-400"></i><span data-translate="notifications">Уведомления</span></h2>
+      <h2 class="text-xl font-bold flex items-center gap-2"><i class="fas fa-bell text-blue-400"></i>Уведомления</h2>
       <button onclick="closeNotificationsModal()" class="text-slate-400 hover:text-white"><i class="fas fa-times text-xl"></i></button>
     </div>
-    <div id="notificationsList" class="space-y-3 max-h-[60vh] overflow-y-auto pr-2"><p class="text-slate-500 text-center py-8" data-translate="no_notifications">Нет уведомлений</p></div>
+    <div id="notificationsList" class="space-y-3 max-h-[60vh] overflow-y-auto pr-2"><p class="text-slate-500 text-center py-8">Нет уведомлений</p></div>
   </div>
 </div>
 
@@ -705,7 +1068,7 @@
   <div class="modal-content modal-lg relative overflow-hidden">
     <div class="modal-header">
       <div class="flex justify-between items-center w-full">
-        <h2 class="text-xl font-bold flex items-center gap-2"><i class="fas fa-comments text-purple-400"></i><span id="feedbackModalTitle" data-translate="feedback">Обратная связь</span></h2>
+        <h2 class="text-xl font-bold flex items-center gap-2"><i class="fas fa-comments text-purple-400"></i><span id="feedbackModalTitle">Обратная связь</span></h2>
         <button onclick="closeFeedbackModal()" class="text-slate-400 hover:text-white"><i class="fas fa-times text-xl"></i></button>
       </div>
     </div>
@@ -715,11 +1078,11 @@
       <div class="mb-3 pb-3 border-b border-slate-700"><span class="text-sm text-slate-400">Проект: </span><span id="feedbackProjectName" class="text-sm font-bold text-blue-400">...</span></div>
       <div id="feedbackChatHistory" class="h-80 overflow-y-auto pr-3 custom-scrollbar bg-slate-900/30 rounded-xl p-4"><div class="flex flex-col items-center justify-center h-full text-slate-500"><i class="fas fa-comments text-4xl mb-3 opacity-50"></i><p class="text-sm">Загрузка переписки...</p></div></div>
       <div id="feedbackFormNew" class="space-y-4">
-        <div><label class="block text-sm font-medium text-slate-300 mb-2" data-translate="subject">Тема обращения</label><select id="feedbackCategory" class="w-full bg-slate-800 border border-slate-700 rounded-lg px-4 py-2 text-sm text-slate-200"><option value="suggestion">💡 <span data-translate="suggestion">Предложение</span></option><option value="bug">🐛 <span data-translate="bug">Ошибка</span></option><option value="question">❓ <span data-translate="question">Вопрос</span></option><option value="other">💬 <span data-translate="other">Другое</span></option></select></div>
-        <div><label class="block text-sm font-medium text-slate-300 mb-2" data-translate="message">Сообщение</label><textarea id="feedbackText" rows="4" class="w-full bg-slate-800 border border-slate-700 rounded-lg px-4 py-2 text-sm text-slate-200" placeholder="Опишите суть обращения..."></textarea></div>
+        <div><label class="block text-sm font-medium text-slate-300 mb-2">Тема обращения</label><select id="feedbackCategory" class="w-full bg-slate-800 border border-slate-700 rounded-lg px-4 py-2 text-sm text-slate-200"><option value="suggestion">💡 Предложение</option><option value="bug">🐛 Ошибка</option><option value="question">❓ Вопрос</option><option value="other">💬 Другое</option></select></div>
+        <div><label class="block text-sm font-medium text-slate-300 mb-2">Сообщение</label><textarea id="feedbackText" rows="4" class="w-full bg-slate-800 border border-slate-700 rounded-lg px-4 py-2 text-sm text-slate-200" placeholder="Опишите суть обращения..."></textarea></div>
       </div>
       <div id="feedbackFormReply" class="hidden">
-        <label class="block text-sm font-medium text-slate-300 mb-2" data-translate="your_reply">Ваш ответ</label>
+        <label class="block text-sm font-medium text-slate-300 mb-2">Ваш ответ</label>
         <div class="flex gap-2">
           <input type="text" id="feedbackUserReplyText" placeholder="Напишите ответ..." class="flex-1 bg-slate-800 border border-slate-700 rounded-lg px-4 py-2 text-sm text-white">
           <button onclick="sendUserFeedbackReply()" class="bg-blue-600 hover:bg-blue-500 px-4 py-2 rounded-lg text-sm font-bold"><i class="fas fa-paper-plane"></i></button>
@@ -729,8 +1092,8 @@
     </div>
     <div class="modal-footer bg-[#1e2538] border-t border-slate-700 p-4 shrink-0">
       <div class="flex gap-3 w-full justify-end" id="feedbackModalFooter">
-        <button onclick="closeFeedbackModal()" class="flex-1 bg-slate-700 hover:bg-slate-600 py-2.5 rounded-lg text-sm" data-translate="close">Закрыть</button>
-        <button id="feedbackSendBtn" onclick="window.sendUserFeedback()" class="flex-1 bg-blue-600 hover:bg-blue-500 py-2.5 rounded-lg text-sm font-bold" data-translate="send">Отправить</button>
+        <button onclick="closeFeedbackModal()" class="flex-1 bg-slate-700 hover:bg-slate-600 py-2.5 rounded-lg text-sm">Закрыть</button>
+        <button id="feedbackSendBtn" onclick="window.sendUserFeedback()" class="flex-1 bg-blue-600 hover:bg-blue-500 py-2.5 rounded-lg text-sm font-bold">Отправить</button>
       </div>
     </div>
   </div>
@@ -741,28 +1104,28 @@
   <div class="modal-content modal-large">
     <div class="modal-header">
       <div class="flex justify-between items-center w-full">
-        <h2 class="text-xl font-bold flex items-center gap-2"><i class="fas fa-comments text-purple-400"></i><span data-translate="feedback_title">Отзывы и предложения</span></h2>
+        <h2 class="text-xl font-bold flex items-center gap-2"><i class="fas fa-comments text-purple-400"></i>Отзывы и предложения</h2>
         <button onclick="closeFeedbackListModal()" class="text-slate-400 hover:text-white"><i class="fas fa-times text-xl"></i></button>
       </div>
     </div>
     <div class="modal-body">
       <div id="feedbacksContainer" class="space-y-4 max-h-[60vh] overflow-y-auto pr-2"><p class="text-slate-500 text-center py-8">Загрузка отзывов...</p></div>
     </div>
-    <div class="modal-footer"><div class="flex justify-center w-full"><button onclick="closeFeedbackListModal()" class="bg-slate-700 hover:bg-slate-600 px-6 py-2 rounded-lg text-sm" data-translate="close">Закрыть</button></div></div>
+    <div class="modal-footer"><div class="flex justify-center w-full"><button onclick="closeFeedbackListModal()" class="bg-slate-700 hover:bg-slate-600 px-6 py-2 rounded-lg text-sm">Закрыть</button></div></div>
   </div>
 </div>
 
 <div id="toast" class="fixed bottom-4 right-4 bg-slate-800 border border-slate-700 text-white px-6 py-3 rounded-xl shadow-2xl transform translate-y-20 opacity-0 transition-all duration-300 z-50 flex items-center gap-3">
-  <i class="fas fa-check-circle text-emerald-400"></i><span id="toastMessage" data-translate="action_completed">Действие выполнено</span>
+  <i class="fas fa-check-circle text-emerald-400"></i><span id="toastMessage">Действие выполнено</span>
 </div>
 
 <!-- Prompt Modal -->
 <div id="promptModal" class="modal">
   <div class="modal-content modal-sm p-6 relative">
-    <h2 class="text-lg font-bold mb-4" data-translate="insert_link">Вставьте ссылку</h2>
+    <h2 class="text-lg font-bold mb-4">Вставьте ссылку</h2>
     <input type="url" id="promptInput" placeholder="https://..." class="w-full bg-slate-800 border border-slate-700 rounded-lg px-4 py-2 text-sm mb-4">
     <div class="flex gap-3">
-      <button type="button" onclick="closePromptModal()" class="flex-1 bg-slate-700 hover:bg-slate-600 py-2 rounded-lg text-sm" data-translate="cancel">Отмена</button>
+      <button type="button" onclick="closePromptModal()" class="flex-1 bg-slate-700 hover:bg-slate-600 py-2 rounded-lg text-sm">Отмена</button>
       <button type="button" onclick="confirmLinkInsert()" class="flex-1 bg-blue-600 hover:bg-blue-500 py-2 rounded-lg text-sm font-bold">ОК</button>
     </div>
   </div>
@@ -772,13 +1135,13 @@
 <div id="deletedProjectsModal" class="modal">
   <div class="modal-content modal-large">
     <div class="modal-header flex justify-between items-center">
-      <h2 class="text-xl font-bold flex items-center gap-2"><i class="fas fa-trash-restore text-blue-400"></i><span data-translate="deleted_projects">Удаленные проекты</span></h2>
+      <h2 class="text-xl font-bold flex items-center gap-2"><i class="fas fa-trash-restore text-blue-400"></i>Удаленные проекты</h2>
       <button onclick="closeDeletedProjectsModal()" class="text-slate-400 hover:text-white"><i class="fas fa-times text-xl"></i></button>
     </div>
     <div class="modal-body">
       <div class="mb-4"><div class="relative"><i class="fas fa-search absolute left-3 top-1/2 -translate-y-1/2 text-slate-400"></i><input type="text" id="searchDeletedInput" placeholder="Поиск..." class="w-full bg-slate-800 border border-slate-700 rounded-lg px-4 py-2 pl-10 text-sm"></div></div>
       <div class="space-y-3 max-h-[60vh] overflow-y-auto pr-2" id="deletedProjectsList"></div>
-      <div id="deletedEmptyState" class="hidden text-center py-8"><div class="text-4xl mb-3">🗑️</div><p class="text-slate-500" data-translate="no_deleted">Нет удаленных проектов</p></div>
+      <div id="deletedEmptyState" class="hidden text-center py-8"><div class="text-4xl mb-3">🗑️</div><p class="text-slate-500">Нет удаленных проектов</p></div>
     </div>
   </div>
 </div>
@@ -820,7 +1183,6 @@ let editingId = null;
 let isEditModalOpen = false;
 let currentDetailId = null;
 let isAdminMode = false;
-window.isAdminMode = isAdminMode; // Экспортируем в глобальную область
 let currentUser = null;
 let userFavorites = [];
 let userCompleted = [];
@@ -843,20 +1205,312 @@ let editingActivityId = null;
 let mainProjectCategories = [];
 let currentSortType = 'latest';
 
+// Словарь переводов категорий
+const categoryTranslations = {
+  'DeFi': 'DeFi',
+  'Gaming': 'Gaming',
+  'Infra': 'Infrastructure',
+  'L1/L2': 'L1/L2',
+  'NFT': 'NFT',
+  'Social': 'Social',
+  'Other': 'Other',
+  'Соц. активность': 'Social Activity',
+  'DeFi Протоколы': 'DeFi Protocols',
+  'Тестнет': 'Testnet',
+  'NFT Коллекции': 'NFT Collections',
+  'Игры': 'Games',
+  'Инфраструктура': 'Infrastructure',
+  'Социальные': 'Social',
+  'Другое': 'Other'
+};
+
+// Текущий язык интерфейса
+window.currentLang = 'ru';
+
+// Функция перевода категории
+function translateCategory(cat) {
+  return categoryTranslations[cat] || cat;
+}
+
+// Получить данные проекта с учетом языка
+function getProjectData(project) {
+  if (window.currentLang === 'en') {
+    return {
+      ...project,
+      name: project.name_eng || project.name,
+      description: project.description_eng || project.description,
+      categories: project.categories_eng || (project.categories ? project.categories.map(c => translateCategory(c)) : ['Other'])
+    };
+  }
+  return project;
+}
+
+// Получить данные активности с учетом языка
+function getActivityData(activity) {
+  if (window.currentLang === 'en') {
+    return {
+      ...activity,
+      title: activity.title_eng || activity.title,
+      description: activity.description_eng || activity.description,
+      categories: activity.categories_eng || (activity.categories ? activity.categories.map(c => translateCategory(c)) : [])
+    };
+  }
+  return activity;
+}
+
+// ============ ФУНКЦИИ ПЕРЕВОДА ============
+let translateModalLang = 'ru';
+let translateSelectedCategories = [];
+
+// Открыть модалку перевода проекта
+window.openTranslateModal = function() {
+  translateModalLang = 'ru';
+  translateSelectedCategories = getSelectedCategories();
+  
+  // Заполняем текущие данные
+  document.getElementById('translateNameRu').value = document.getElementById('projName').value || '';
+  document.getElementById('translateNameEn').value = '';
+  document.getElementById('translateDescRu').value = document.getElementById('projDesc').value || '';
+  document.getElementById('translateDescEn').value = '';
+  
+  // Категории
+  renderTranslateCategories();
+  switchTranslateLang('ru');
+  document.getElementById('translateModal').classList.add('open');
+  
+  // Автоматический перевод
+  autoTranslateProject();
+};
+
+window.closeTranslateModal = function() {
+  document.getElementById('translateModal').classList.remove('open');
+};
+
+window.switchTranslateLang = function(lang) {
+  translateModalLang = lang;
+  document.querySelectorAll('#translateModal .translate-lang-btn').forEach(btn => {
+    btn.classList.toggle('active', btn.dataset.lang === lang);
+  });
+  document.getElementById('translateNameRu').closest('.translate-field').classList.toggle('hidden', lang !== 'ru');
+  document.getElementById('translateNameEn').closest('.translate-field').classList.toggle('hidden', lang !== 'en');
+  document.getElementById('translateDescRu').closest('.translate-field').classList.toggle('hidden', lang !== 'ru');
+  document.getElementById('translateDescEn').closest('.translate-field').classList.toggle('hidden', lang !== 'en');
+};
+
+function renderTranslateCategories() {
+  const container = document.getElementById('translateCatsList');
+  const allCats = categories;
+  
+  container.innerHTML = allCats.map(cat => {
+    const isSelected = translateSelectedCategories.includes(cat);
+    const engCat = translateCategory(cat);
+    return `
+      <span class="translate-cat-badge ${isSelected ? 'selected' : ''}" 
+            data-cat-ru="${cat}" data-cat-en="${engCat}"
+            onclick="toggleTranslateCategory(this)">
+        ${cat} → ${engCat}
+      </span>
+    `;
+  }).join('');
+}
+
+window.toggleTranslateCategory = function(el) {
+  const ruCat = el.dataset.catRu;
+  const enCat = el.dataset.catEn;
+  
+  if (translateSelectedCategories.includes(ruCat)) {
+    translateSelectedCategories = translateSelectedCategories.filter(c => c !== ruCat);
+    el.classList.remove('selected');
+  } else {
+    translateSelectedCategories.push(ruCat);
+    el.classList.add('selected');
+  }
+};
+
+// Автоматический перевод проекта
+async function autoTranslateProject() {
+  const nameRu = document.getElementById('translateNameRu').value;
+  const descRu = document.getElementById('translateDescRu').value;
+  
+  if (!nameRu && !descRu) return;
+  
+  const loadingEl = document.getElementById('translateLoading');
+  const errorEl = document.getElementById('translateError');
+  
+  loadingEl.style.display = 'flex';
+  errorEl.style.display = 'none';
+  
+  try {
+    // Переводим название
+    let translatedName = nameRu;
+    if (nameRu) {
+      translatedName = await translateText(nameRu, 'ru', 'en');
+    }
+    
+    // Переводим описание
+    let translatedDesc = descRu;
+    if (descRu) {
+      translatedDesc = await translateText(descRu, 'ru', 'en');
+    }
+    
+    // Переводим категории
+    const translatedCats = translateSelectedCategories.map(cat => translateCategory(cat));
+    
+    // Заполняем переведенные поля
+    document.getElementById('translateNameEn').value = translatedName || '';
+    document.getElementById('translateDescEn').value = translatedDesc || '';
+    
+    // Обновляем отображение категорий
+    translateSelectedCategories = [...translatedCats];
+    renderTranslateCategories();
+    
+  } catch (err) {
+    errorEl.textContent = 'Ошибка перевода: ' + err.message;
+    errorEl.style.display = 'block';
+  } finally {
+    loadingEl.style.display = 'none';
+  }
+}
+
+// Функция перевода через LibreTranslate (бесплатный API)
+async function translateText(text, sourceLang, targetLang) {
+  if (!text) return '';
+  
+  try {
+    // Используем бесплатный переводчик
+    const response = await fetch('https://libretranslate.com/translate', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        q: text,
+        source: sourceLang,
+        target: targetLang,
+        format: 'text'
+      })
+    });
+    
+    if (!response.ok) {
+      throw new Error('Translation failed');
+    }
+    
+    const data = await response.json();
+    return data.translatedText;
+  } catch (err) {
+    // Если не удалось через API, возвращаем исходный текст с пометкой
+    console.log('Translation API error, using fallback:', err);
+    return text + ' [EN]';
+  }
+}
+
+window.applyTranslation = function() {
+  const nameRu = document.getElementById('translateNameRu').value;
+  const nameEn = document.getElementById('translateNameEn').value;
+  const descRu = document.getElementById('translateDescRu').value;
+  const descEn = document.getElementById('translateDescEn').value;
+  
+  // Записываем в основные поля (русские)
+  document.getElementById('projName').value = nameRu;
+  document.getElementById('projDesc').value = descRu;
+  
+  // Сохраняем английские версии в глобальные переменные
+  window._tempNameEng = nameEn || nameRu;
+  window._tempDescEng = descEn || descRu;
+  window._tempCategoriesEng = translateSelectedCategories.map(c => translateCategory(c));
+  
+  closeTranslateModal();
+  showToast('Перевод применён! Не забудьте сохранить проект.');
+};
+
+// ============ ПЕРЕВОД АКТИВНОСТИ ============
+let actTranslateLang = 'ru';
+
+window.openTranslateActivityModal = function() {
+  actTranslateLang = 'ru';
+  
+  document.getElementById('actTransNameRu').value = document.getElementById('actName').value || '';
+  document.getElementById('actTransNameEn').value = '';
+  document.getElementById('actTransDescRu').value = document.getElementById('actRichDesc').value || '';
+  document.getElementById('actTransDescEn').value = '';
+  
+  switchActivityTranslateLang('ru');
+  document.getElementById('translateActivityModal').classList.add('open');
+  
+  // Автоматический перевод
+  autoTranslateActivity();
+};
+
+window.closeTranslateActivityModal = function() {
+  document.getElementById('translateActivityModal').classList.remove('open');
+};
+
+window.switchActivityTranslateLang = function(lang) {
+  actTranslateLang = lang;
+  document.querySelectorAll('#translateActivityModal .translate-lang-btn').forEach(btn => {
+    btn.classList.toggle('active', btn.dataset.lang === lang);
+  });
+  document.getElementById('actTransNameRu').closest('.translate-field').classList.toggle('hidden', lang !== 'ru');
+  document.getElementById('actTransNameEn').closest('.translate-field').classList.toggle('hidden', lang !== 'en');
+  document.getElementById('actTransDescRu').closest('.translate-field').classList.toggle('hidden', lang !== 'ru');
+  document.getElementById('actTransDescEn').closest('.translate-field').classList.toggle('hidden', lang !== 'en');
+};
+
+async function autoTranslateActivity() {
+  const nameRu = document.getElementById('actTransNameRu').value;
+  const descRu = document.getElementById('actTransDescRu').value;
+  
+  if (!nameRu && !descRu) return;
+  
+  const loadingEl = document.getElementById('actTransLoading');
+  const errorEl = document.getElementById('actTransError');
+  
+  loadingEl.style.display = 'flex';
+  errorEl.style.display = 'none';
+  
+  try {
+    let translatedName = nameRu;
+    if (nameRu) {
+      translatedName = await translateText(nameRu, 'ru', 'en');
+    }
+    
+    let translatedDesc = descRu;
+    if (descRu) {
+      translatedDesc = await translateText(descRu, 'ru', 'en');
+    }
+    
+    document.getElementById('actTransNameEn').value = translatedName || '';
+    document.getElementById('actTransDescEn').value = translatedDesc || '';
+    
+  } catch (err) {
+    errorEl.textContent = 'Ошибка перевода: ' + err.message;
+    errorEl.style.display = 'block';
+  } finally {
+    loadingEl.style.display = 'none';
+  }
+}
+
+window.applyActivityTranslation = function() {
+  const nameRu = document.getElementById('actTransNameRu').value;
+  const nameEn = document.getElementById('actTransNameEn').value;
+  const descRu = document.getElementById('actTransDescRu').value;
+  const descEn = document.getElementById('actTransDescEn').value;
+  
+  document.getElementById('actName').value = nameRu;
+  document.getElementById('actRichDesc').value = descRu;
+  
+  window._tempActNameEng = nameEn || nameRu;
+  window._tempActDescEng = descEn || descRu;
+  
+  closeTranslateActivityModal();
+  showToast('Перевод применён! Не забудьте сохранить активность.');
+};
+
+// ============ ОСТАЛЬНОЙ КОД (СОХРАНЕНО) ============
+
 // Флаг для отслеживания состояния модального окна
 let modalClickStartTarget = null;
-// Инициализация переводов при загрузке
-window.addEventListener('load', function() {
-    // Применяем переводы к статическим элементам
-    if (typeof window.updatePageTranslations === 'function') {
-        window.updatePageTranslations();
-    }
-});
 
-// Восстановление состояния языка
-if (window.currentLang === 'en') {
-    window.setLang('en');
-}
 function formatClickDate(dateString) {
   if (!dateString) return null;
   const date = new Date(dateString);
@@ -956,16 +1610,12 @@ function isProjectUnvisited(project) {
   return true;
 }
 
-// Обработчики для модальных окон - закрытие только при mousedown
 window.handleModalMouseDown = function(e) {
   modalClickStartTarget = e.target;
 };
 
 window.handleModalMouseUp = function(e) {
-  // Не закрываем если отпустили кнопку в том же месте где и нажали (это может быть клик по кнопке)
   if (modalClickStartTarget !== e.target) {
-    // Если отпустили вне области - не закрываем автоматически
-    // Закрываем только если кликнули точно по фону модалки
   }
   modalClickStartTarget = null;
 };
@@ -979,7 +1629,7 @@ window.handleEmailAuth = async function(e) { e.preventDefault(); const email = d
 window.handleRegister = async function() { const email = document.getElementById('emailInput').value; const pass = document.getElementById('passInput').value; try { await createUserWithEmailAndPassword(auth, email, pass); closeLoginModal(); showToast('Аккаунт создан!'); } catch(e) { showToast(e.message); } };
 window.logout = function() { signOut(auth).then(() => { showToast('Выход'); localStorage.removeItem('favorites_backup'); localStorage.removeItem(STORAGE_KEY); userFavorites = []; userCompleted = []; arcData = {}; }); };
 
-// Feedback functions (same as original, abbreviated for brevity)
+// Feedback functions
 let adminFeedbacks = [];
 let adminFeedbacksUnsubscribe = null;
 
@@ -1116,16 +1766,13 @@ window.renderFeedbackList = function() {
     const date = item.createdAt?.toDate() || new Date(item.createdAt || 0);
     const isUnread = isAdmin ? !item.read : !item.userRead;
     
-    // Получаем данные проекта
     const project = getProj(item.projectId);
     const projectName = project.name || item.projectId || 'Неизвестный проект';
     const projectLogo = project.image || '';
     const projectId = item.projectId || '';
     
-    // Для админа показываем: логотип проекта + название проекта + имя пользователя
     let titleHtml = '';
     if (isAdmin) {
-      // Блок с информацией о проекте
       let projectInfoHtml = '';
       if (projectLogo) {
         projectInfoHtml += `<img src="${projectLogo}" class="w-5 h-5 rounded object-cover mr-1.5" alt="${projectName}" onerror="this.style.display='none'">`;
@@ -1142,25 +1789,22 @@ window.renderFeedbackList = function() {
         </div>
       `;
     } else {
-      // Для обычного пользователя - только название проекта
       titleHtml = `<div class="flex items-center gap-2">${projectLogo ? `<img src="${projectLogo}" class="w-6 h-6 rounded">` : ''}<span class="font-bold text-white">${projectName}</span></div>`;
     }
     
     return `<div onclick="${isAdmin ? `openAdminFeedbackChat('${item.id}')` : `openFeedbackFromList('${item.id}', '${projectId}', '${(projectName).replace(/'/g,"\\'")}')`}" class="cursor-pointer group relative bg-slate-800/40 border border-slate-700/50 hover:bg-slate-800 hover:border-slate-600 rounded-xl p-4 transition-all">${isUnread ? '<div class="absolute top-4 right-4 w-3 h-3 bg-purple-500 rounded-full animate-pulse"></div>' : ''}<div class="flex justify-between items-start mb-2"><div>${titleHtml}<span class="text-xs text-slate-500 mt-0.5 block">${formatTimeAgo(date)}</span></div>${isUnread ? '<span class="bg-purple-600 text-white text-xs px-2 py-1 rounded-full font-bold">NEW</span>' : ''}</div><div class="text-sm text-slate-300 line-clamp-2">${lastMsg.text}</div></div>`;
   }).join('');
 };
-// Функция для закрытия чата и возврата к списку (для пользователя)
+
 window.closeFeedbackChat = function() {
   document.getElementById('feedbackModal').classList.remove('active');
   if (window.currentFeedbackUnsub) {
     window.currentFeedbackUnsub();
     window.currentFeedbackUnsub = null;
   }
-  // Открываем список обращений
   openFeedbackListModal();
 };
 
-// Функция для возврата к списку обращений (для админа)
 window.backToFeedbackList = function() {
   document.getElementById('feedbackModal').classList.remove('active');
   if (window.currentFeedbackUnsub) {
@@ -1177,7 +1821,6 @@ window.openFeedbackFromList = function(docId, projectId, projectName) {
   document.getElementById('feedbackProjectId').value = projectId;
   document.getElementById('feedbackDocId').value = docId;
   
-  // Добавляем кнопку назад в заголовок
   document.getElementById('feedbackModalTitle').innerHTML = '<button onclick="closeFeedbackChat()" class="flex items-center justify-center w-8 h-8 rounded-lg bg-slate-700 hover:bg-slate-600 text-white mr-2 transition-colors"><i class="fas fa-arrow-left text-sm"></i></button>Чат с поддержкой';
   
   document.getElementById('feedbackFormNew').classList.add('hidden');
@@ -1191,19 +1834,16 @@ window.openAdminFeedbackChat = function(feedbackId) {
   const fb = adminFeedbacks.find(f => f.id === feedbackId);
   if (!fb) return;
 
-  // Информация о проекте
   const project = projects.find(p => p.id === fb.projectId);
   const projectName = project?.name || fb.projectId || 'Неизвестный проект';
   const projectLogo = project?.image || '';
 
-  // Закрываем список и открываем модалку чата
   const listModal = document.getElementById('feedbackListModal');
   if (listModal) listModal.classList.remove('active');
   const chatModal = document.getElementById('feedbackModal');
 
   document.getElementById('feedbackProjectId').value = fb.projectId;
 
-  // Заголовок + кнопка «Назад»
   let projectDisplayHtml = '';
   projectDisplayHtml += '<button onclick="backToFeedbackList()" class="flex items-center justify-center w-8 h-8 rounded-lg bg-slate-700 hover:bg-slate-600 text-white mr-2 transition-colors flex-shrink-0"><i class="fas fa-arrow-left text-sm"></i></button>';
   if (projectLogo) {
@@ -1259,7 +1899,7 @@ window.openAdminFeedbackChat = function(feedbackId) {
   markFeedbackRead(feedbackId);
 };
   
-  window.sendAdminReply = async function(feedbackId) {
+window.sendAdminReply = async function(feedbackId) {
   const inp = document.getElementById('feedbackUserReplyText');
   const text = inp.value.trim();
   if (!text) return showToast('Введите ответ');
@@ -1478,64 +2118,12 @@ function createSuccessRipple(button) {
 }
 
 const EXTERNAL_DATA_URL = './data/projects.json';
-const ENGLISH_PROJECTS_URL = 'english_projects.json';
-
-// Хранилище для английских проектов
-let englishProjectsData = {};
-let firestoreUnsubscribe = null;
-
-// Функция загрузки английских проектов
-async function loadEnglishProjects() {
-  try {
-    const response = await fetch(ENGLISH_PROJECTS_URL);
-    if (response.ok) {
-      const data = await response.json();
-      if (Array.isArray(data)) {
-        englishProjectsData = {};
-        data.forEach(project => {
-          englishProjectsData[project.id] = project;
-        });
-      } else {
-        englishProjectsData = data;
-      }
-      console.log('English projects loaded:', Object.keys(englishProjectsData).length);
-    } else {
-      console.log('english_projects.json not found');
-      englishProjectsData = {};
-    }
-  } catch (e) {
-    console.log('Error loading english_projects.json:', e);
-    englishProjectsData = {};
-  }
-}
-
-// Функция применения английских данных к проекту
-function applyEnglishData(project) {
-  if (window.currentLang === 'en' && englishProjectsData[project.id]) {
-    const engData = englishProjectsData[project.id];
-    // Перезаписываем основные поля на английские
-    return {
-      ...project,
-      name: engData.name || project.name,
-      description: engData.description || project.description,
-      shortDescription: engData.shortDescription || project.shortDescription,
-      activities: engData.activities || project.activities,
-      guideUrl: engData.guideUrl || project.guideUrl,
-      website: engData.website || project.website,
-      twitterUrl: engData.twitterUrl || project.twitterUrl,
-      cryptoRankUrl: engData.cryptoRankUrl || project.cryptoRankUrl,
-      referralLink: engData.referralLink || project.referralLink
-    };
-  }
-  return project;
-}
 document.addEventListener('DOMContentLoaded', function() { 
   checkAndAutoEndActivities();
   setInterval(checkAndAutoEndActivities, 60 * 60 * 1000);
   loadData(); 
   setupSearchListener();
   
-  // Сохраняем позицию прокрутки при работе с textarea
   const richDescTextarea = document.getElementById('actRichDesc');
   if (richDescTextarea) {
     richDescTextarea.addEventListener('scroll', function() {
@@ -1548,7 +2136,6 @@ document.addEventListener('DOMContentLoaded', function() {
       }
     });
   }
-  // Принудительно обновляем UI после загрузки
 setTimeout(() => {
   if (projects.length > 0) {
     applyFilters();
@@ -1568,7 +2155,6 @@ setTimeout(() => {
     promptInput.addEventListener('keydown', function(e) { if (e.key === 'Enter') { e.preventDefault(); window.confirmLinkInsert(); } });
   }
 
-  // Настройка обработчиков модальных окон - закрытие только при клике по фону (mousedown)
   const modalConfigs = [
     { id: 'detailModal', closeFn: window.closeDetailModal },
     { id: 'loginModal', closeFn: window.closeLoginModal },
@@ -1585,7 +2171,6 @@ setTimeout(() => {
     modalConfigs.forEach(config => {
     const modalElement = document.getElementById(config.id);
     if (modalElement) {
-      // Закрытие только при mousedown+mouseup на фоне модалки
       modalElement.addEventListener('mousedown', function(e) {
         if (e.target === modalElement) {
           modalElement.dataset.mouseDownOnBg = 'true';
@@ -1610,66 +2195,23 @@ setTimeout(() => {
 
 let firstDataLoadComplete = false;
 
-// Замени эту функцию в своём коде:
-
 window.loadData = async function() {
-  // Загружаем english_projects.json
-  await loadEnglishProjects();
-
-  // В зависимости от языка загружаем данные
-  if (window.currentLang === 'en') {
-    // АНГЛИЙСКИЙ - грузим из english_projects.json
-    loadFromEnglish();
-  } else {
-    // РУССКИЙ - грузим из Firebase (оригинальная логика)
-    loadFromFirebase();
+  try {
+    const response = await fetch(EXTERNAL_DATA_URL);
+    if (response.ok) {
+      const data = await response.json();
+      if(data.projects) projects = data.projects.map(normalizeData);
+      if(data.categories) categories = data.categories;
+    }
+  } catch (e) { 
+    console.log('JSON load error', e); 
   }
-};
-
-// Функция загрузки из английского файла
-function loadFromEnglish() {
-  // Останавливаем подписку Firebase если она есть
-  if (firestoreUnsubscribe) {
-    firestoreUnsubscribe();
-    firestoreUnsubscribe = null;
-  }
-
-  const englishArray = Object.values(englishProjectsData);
   
-  if (englishArray.length > 0) {
-    projects = englishArray.map(normalizeData);
+  if (projects.length > 0) {
     sortProjects('latest');
-    applyFilters();
-  } else {
-    projects = [];
-    console.log('No English projects data');
   }
   
-  hideLoadingScreen();
-}
-
-// Функция загрузки из Firebase (оригинальная логика)
-function loadFromFirebase() {
-  // Сначала пробуем загрузить локальный JSON как резерв
-  fetch(EXTERNAL_DATA_URL)
-    .then(response => {
-      if (response.ok) return response.json();
-      throw new Error('No local JSON');
-    })
-    .then(data => {
-      if (data.projects) {
-        projects = data.projects.map(normalizeData);
-        sortProjects('latest');
-        applyFilters();
-      }
-    })
-    .catch(e => { 
-      console.log('Local JSON not loaded, using Firebase only');
-    });
-
-  // Подписываемся на обновления Firestore
-  const q = query(collection(db, "projects"), where("deleted", "==", false));
-  firestoreUnsubscribe = onSnapshot(q, function(snapshot) {
+  const unsubscribe = onSnapshot(query(collection(db, "projects"), where("deleted", "==", false)), function(snapshot) {
     snapshot.forEach(function(docSnap) {
       const fireProject = docSnap.data();
       const idx = projects.findIndex(function(p) { return p.id === fireProject.id; });
@@ -1683,7 +2225,6 @@ function loadFromFirebase() {
     applyFilters();
   });
   
-  // Также слушаем удаленные проекты для админа
   if (isAdminMode) {
     onSnapshot(query(collection(db, "projects"), where("deleted", "==", true)), function(snapshot) {
       snapshot.forEach(function(docSnap) {
@@ -1698,18 +2239,9 @@ function loadFromFirebase() {
       applyFilters();
     });
   }
-}
-
-// Функция скрытия экрана загрузки
-function hideLoadingScreen() {
-  const loadingScreen = document.getElementById('loading-screen');
-  if (loadingScreen) {
-    loadingScreen.style.opacity = '0';
-    setTimeout(() => {
-      loadingScreen.style.display = 'none';
-    }, 500);
-  }
-}
+  
+  firstDataLoadComplete = true;
+};
 
 function normalizeData(project) {
   if (!project.categories) project.categories = project.category ? [project.category] : ['Other'];
@@ -1851,7 +2383,6 @@ function renderProjects(filteredProjects) {
   const loadingEl = document.getElementById('loadingProjects');
   const empty = document.getElementById('emptyState');
   
-  // Скрываем индикатор загрузки
   if (loadingEl) loadingEl.classList.add('hidden');
   
   const pagination = document.getElementById('paginationControls');
@@ -1866,6 +2397,9 @@ function renderProjects(filteredProjects) {
   document.getElementById('countUnvisited').textContent = totalUnvisited;
 
   grid.innerHTML = projectsToShow.map(function(project) {
+    // Используем перевод если выбран английский
+    const p = getProjectData(project);
+    
     const isFav = userFavorites.includes(project.id);
     const isCompleted = userCompleted.includes(project.id + '_project');
     const lastActivityDate = getLatestActivityDate(project);
@@ -1875,7 +2409,7 @@ function renderProjects(filteredProjects) {
     const lastClickRecord = arcData[project.id];
     const lastClickDate = lastClickRecord && lastClickRecord.lastClick ? formatClickDate(lastClickRecord.lastClick) : null;
     const lastUpdatedDate = lastActivityDate ? formatDateForDisplay(lastActivityDate) : null;
-    const categoriesHtml = (project.categories || ['Other']).map(cat => `<span class="bg-slate-800 px-2 py-1 rounded cursor-pointer hover:bg-slate-700" onclick="event.stopPropagation(); toggleCategoryFilter('${cat}')">${cat}</span>`).join('');
+    const categoriesHtml = (p.categories || ['Other']).map(cat => `<span class="bg-slate-800 px-2 py-1 rounded cursor-pointer hover:bg-slate-700" onclick="event.stopPropagation(); toggleCategoryFilter('${cat}')">${cat}</span>`).join('');
     const completedTheme = 'theme-indigo';
     
     return `
@@ -1883,14 +2417,14 @@ function renderProjects(filteredProjects) {
 ${isCompleted ? '<div class="absolute -top-2 -left-2 z-20"><span class="completed-badge"><i class="fas fa-check mr-1"></i>Готово</span></div>' : ''}
 ${hasNewActs ? '<div class="absolute -top-2 -right-2 z-20"><span class="activity-new-badge">' + newActsCount + ' NEW</span></div>' : ''}
             ${project.deleted ? '<div class="absolute top-2 left-2"><span class="deleted-badge text-xs">Архив</span></div>' : ''}
-            <button onclick="event.stopPropagation(); openFeedbackModal('${project.id}', '${project.name.replace(/'/g, "\\'")}');" class="feedback-trigger-btn text-slate-300 hover:text-blue-400 rounded-lg text-xs font-bold flex items-center gap-1" title="Оставить отзыв"><i class="fas fa-comment-dots"></i><span>Отзыв</span></button>
+            <button onclick="event.stopPropagation(); openFeedbackModal('${project.id}', '${(p.name || project.name).replace(/'/g, "\\'")}');" class="feedback-trigger-btn text-slate-300 hover:text-blue-400 rounded-lg text-xs font-bold flex items-center gap-1" title="Оставить отзыв"><i class="fas fa-comment-dots"></i><span>Отзыв</span></button>
             <div class="flex items-start gap-4 pt-2">
-                <div class="shrink-0">${project.image ? '<img src="' + project.image + '" alt="' + project.name + '" class="w-12 h-12 rounded-lg object-cover border border-slate-700">' : '<div class="w-12 h-12 rounded-lg bg-slate-800 border border-slate-700 flex items-center justify-center text-xl">' + project.name.charAt(0).toUpperCase() + '</div>'}</div>
+                <div class="shrink-0">${project.image ? '<img src="' + project.image + '" alt="' + (p.name || project.name) + '" class="w-12 h-12 rounded-lg object-cover border border-slate-700">' : '<div class="w-12 h-12 rounded-lg bg-slate-800 border border-slate-700 flex items-center justify-center text-xl">' + (p.name || project.name).charAt(0).toUpperCase() + '</div>'}</div>
                 <div class="flex-1 min-w-0 flex flex-col">
                     <div class="flex items-start justify-between gap-2">
                         <div class="flex-1">
                             <div class="flex items-center gap-2 flex-wrap">
-                                <h3 class="font-bold text-lg leading-tight text-white cursor-pointer hover:text-blue-400" onclick="openDetail('${project.id}')">${project.name}</h3>
+                                <h3 class="font-bold text-lg leading-tight text-white cursor-pointer hover:text-blue-400" onclick="openDetail('${project.id}')">${p.name || project.name}</h3>
                                 ${lastUpdatedDate ? '<span class="last-updated-date" title="Дата последней активности">🔄 ' + lastUpdatedDate + '</span>' : ''}
                                 ${isAdminMode ? '<button onclick="event.stopPropagation(); editProject(\'' + project.id + '\')" class="text-slate-500 hover:text-blue-400 text-xs edit-btn"><i class="fas fa-pencil-alt"></i></button>' : ''}
                             </div>
@@ -1908,7 +2442,7 @@ ${hasNewActs ? '<div class="absolute -top-2 -right-2 z-20"><span class="activity
                             <button onclick="event.stopPropagation(); toggleFavorite('${project.id}')" class="lab-favorite-btn ${isFav ? 'active' : ''}" title="Избранное"><svg width="24" height="24"><use href="#lab-heart"/></svg></button>
                         </div>
                     </div>
-                    <p class="text-slate-400 text-sm mt-2 line-clamp-2">${project.description || 'Нет описания'}</p>
+                    <p class="text-slate-400 text-sm mt-2 line-clamp-2">${p.description || project.description || 'Нет описания'}</p>
                 </div>
             </div>
             <div class="mt-4 pt-3 border-t border-slate-700/50 flex gap-2">
@@ -1969,7 +2503,7 @@ window.resetFilters = function() { currentFilters = { status: 'all', categories:
 
 window.sortProjects = function(by) {
   currentSortType = by;
-  if (by === 'name') projects.sort(function(a, b) { return a.name.localeCompare(b.name); });
+  if (by === 'name') projects.sort(function(a, b) { return (getProjectData(a).name || '').localeCompare(getProjectData(b).name || ''); });
   else if (by === 'priority') projects.sort(function(a, b) { return (b.priority === 'high' ? 1 : 0) - (a.priority === 'high' ? 1 : 0); });
   else if (by === 'latest') projects.sort(function(a, b) { const aDate = getLatestActivityDate(a); const bDate = getLatestActivityDate(b); return new Date(bDate || 0).getTime() - new Date(aDate || 0).getTime(); });
   applyFilters();
@@ -1999,10 +2533,14 @@ function parseRichContent(text) {
 window.openDetail = function(id) {
   const project = projects.find(function(p) { return p.id === id; });
   if (!project) return;
+  
+  // Получаем данные с учетом языка
+  const p = getProjectData(project);
+  
   currentDetailId = id;
-  document.getElementById('detailName').textContent = project.name;
-  document.getElementById('detailDesc').textContent = project.description || 'Описание отсутствует';
-  document.getElementById('detailCategory').innerHTML = (project.categories || ['Other']).map(function(cat) { return '<span class="tag cursor-pointer hover:bg-blue-600/20" onclick="closeDetailModal(); toggleCategoryFilter(\'' + cat + '\')">' + cat + '</span>'; }).join('');
+  document.getElementById('detailName').textContent = p.name || project.name;
+  document.getElementById('detailDesc').textContent = p.description || project.description || 'Описание отсутствует';
+  document.getElementById('detailCategory').innerHTML = (p.categories || ['Other']).map(function(cat) { return '<span class="tag cursor-pointer hover:bg-blue-600/20" onclick="closeDetailModal(); toggleCategoryFilter(\'' + cat + '\')">' + cat + '</span>'; }).join('');
   const statusEl = document.getElementById('detailStatus');
   statusEl.textContent = project.status === 'active' ? 'Active' : project.status === 'soon' ? 'Soon' : 'Ended';
   statusEl.className = 'px-2 py-1 rounded-full text-xs font-medium status-' + project.status;
@@ -2010,20 +2548,21 @@ window.openDetail = function(id) {
   document.getElementById('detailNewBadge').classList.toggle('hidden', !isNew);
   const img = document.getElementById('detailImage');
   img.src = project.image || '';
-  img.onerror = function() { img.src = 'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" width="64" height="64"><rect width="64" height="64" fill="#333"/><text x="32" y="32" fill="white" text-anchor="middle">' + (project.name[0] || '?') + '</text></svg>'; };
+  img.onerror = function() { img.src = 'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" width="64" height="64"><rect width="64" height="64" fill="#333"/><text x="32" y="32" fill="white" text-anchor="middle">' + ((p.name || project.name)[0] || '?') + '</text></svg>'; };
   const created = project.createdAt || project.created_at;
   document.getElementById('detailCreated').innerHTML = 'Добавлено: <span class="text-slate-300">' + (created ? new Date(created).toLocaleDateString() : '—') + '</span>';
   const actsContainer = document.getElementById('detailActivitiesList');
   if (project.activities && project.activities.length > 0) {
     const sortedActivities = [...project.activities].sort(function(a, b) { const dateA = a.date ? new Date(a.date) : new Date(0); const dateB = b.date ? new Date(b.date) : new Date(0); return dateB - dateA; });
     actsContainer.innerHTML = sortedActivities.map(function(act) {
+      const actData = getActivityData(act);
       const isActCompleted = userCompleted.includes(project.id + '_' + act.id);
       const isActEnded = act.status === 'ended';
       const isActNew = isActivityNew(project.id, act.id);
       const actDate = act.date ? formatDateForDisplay(act.date) : '';
       const actEndDate = act.endDate ? formatDateForDisplay(act.endDate) : '';
-      const actCats = act.categories ? act.categories.map(c => '<span class="text-xs bg-slate-700 px-1.5 py-0.5 rounded text-slate-300">' + c + '</span>').join('') : '';
-      const actDesc = parseRichContent(act.description);
+      const actCats = actData.categories ? actData.categories.map(c => '<span class="text-xs bg-slate-700 px-1.5 py-0.5 rounded text-slate-300">' + c + '</span>').join('') : '';
+      const actDesc = parseRichContent(actData.description || act.description);
       let actionsHtml = '';
       if (!isActEnded) {
         actionsHtml += '<button onclick="event.stopPropagation(); trackGuideClick(\'' + project.id + '\', \'\');" class="text-blue-400 hover:text-blue-300 text-xs px-2 py-1 rounded hover:bg-slate-800"><i class="fas fa-check mr-1"></i>Клик</button>';
@@ -2040,7 +2579,7 @@ window.openDetail = function(id) {
         '<div class="flex-1">' +
         '<div class="font-bold text-white flex items-center gap-2 flex-wrap">' + 
         (isActNew ? '<span class="activity-new-indicator"></span>' : '') + 
-        act.title + 
+        (actData.title || act.title || 'Без названия') + 
         (isActNew ? ' <span class="activity-new-badge">NEW</span>' : '') +
         (isActEnded ? ' <span class="text-[10px] bg-red-900/50 text-red-300 px-1.5 py-0.5 rounded uppercase">Ended</span>' : '') +
         (actEndDate ? ' <span class="activity-autodate-badge">до ' + actEndDate + '</span>' : '') +
@@ -2090,7 +2629,7 @@ window.openDetailLink = function(type) {
   if (url) trackGuideClick(currentDetailId, url);
   else showToast('Ссылка не найдена');
 };
-window.openGuideFromDetail = function() { if(currentDetailId) { const project = projects.find(function(p) { return p.id === currentDetailId; }); window.trackGuideClick(currentDetailId, project ? project.guideUrl : ''); } };
+window.openGuideFromDetail = function() { if(currentDetailId) { const project = projects.find(function(p) { return p.id === currentDetailId }); window.trackGuideClick(currentDetailId, project ? project.guideUrl : ''); } };
 
 function activateAdminMode() {
   if (!currentUser || currentUser.uid !== "SAkz4mdW9reDaIsvqigCNZhEKJR2") return;
@@ -2124,7 +2663,7 @@ window.openActivityEditor = function(actId = null) {
   if (actId) {
     const act = currentEditingActivities.find(a => a.id === actId);
     if (act) {
-      document.getElementById('actName').value = act.title;
+      document.getElementById('actName').value = act.title || '';
       document.getElementById('actDate').value = act.date || '';
       document.getElementById('actEndDate').value = act.endDate || '';
       document.getElementById('actRichDesc').value = act.description || '';
@@ -2142,15 +2681,26 @@ window.saveActivityData = function() {
   const title = document.getElementById('actName').value;
   if (!title) { showToast('Введите название'); return; }
   const selectedCats = Array.from(document.querySelectorAll('.act-cat-checkbox:checked')).map(cb => cb.value);
+  
+  const titleEng = window._tempActNameEng || title;
+  const descEng = window._tempActDescEng || document.getElementById('actRichDesc').value;
+  
   const actData = {
     id: editingActivityId || 'act_' + Date.now(),
     title: title,
+    title_eng: titleEng,
     date: document.getElementById('actDate').value,
     endDate: document.getElementById('actEndDate').value,
     categories: selectedCats.length > 0 ? selectedCats : mainProjectCategories,
+    categories_eng: (selectedCats.length > 0 ? selectedCats : mainProjectCategories).map(c => translateCategory(c)),
     description: document.getElementById('actRichDesc').value,
+    description_eng: descEng,
     status: 'active'
   };
+  
+  window._tempActNameEng = null;
+  window._tempActDescEng = null;
+  
   if (editingActivityId) {
     const idx = currentEditingActivities.findIndex(a => a.id === editingActivityId);
     if (idx !== -1) currentEditingActivities[idx] = actData;
@@ -2211,109 +2761,29 @@ window.resumeActivity = async function(projId, actId) {
   }
 };
 
-// ============ INSERT ACTIVITY FORMAT (с сохранением позиции курсора) ============
 window.insertActivityFormat = function(type) {
   const textarea = document.getElementById('actRichDesc');
   if (!textarea) return;
   
-  // Сохраняем текущую позицию выделения ДО закрытия модального окна
   const start = textarea.selectionStart;
   const end = textarea.selectionEnd;
   const selectedText = textarea.value.substring(start, end);
-  const textareaValue = textarea.value;
   
-  // Сохраняем позицию прокрутки
-  const scrollTop = textarea.scrollTop;
-  
-  // Для img и link - открываем модальное окно
-  if (type === 'img' || type === 'link') {
-    const promptInput = document.getElementById('promptInput');
-    promptInput.value = '';
-    
-    if (type === 'img') {
-      promptInput.placeholder = 'Вставьте ссылку на картинку...';
-      document.querySelector('#promptModal h2').textContent = 'Вставить картинку';
-      document.querySelector('#promptModal button:last-child').textContent = 'Вставить';
-    } else if (type === 'link') {
-      promptInput.placeholder = 'Вставьте ссылку...';
-      document.querySelector('#promptModal h2').textContent = 'Вставить ссылку';
-      document.querySelector('#promptModal button:last-child').textContent = 'Применить';
-    }
-    
-    // Сохраняем позицию выделения для использования после закрытия модального окна
-    window.pendingActivityFormat = {
-      type: type,
-      start: start,
-      end: end,
-      selectedText: selectedText,
-      textarea: textarea // Ссылка на textarea
-    };
-    
-    document.getElementById('promptModal').classList.add('active');
-    promptInput.focus();
-    return;
-  }
-  
-  // Для остальных типов - применяем сразу без окна
   let insertion = '';
-  const textBefore = textareaValue.substring(0, start);
-  const textAfter = textareaValue.substring(end);
+  if (type === 'img') insertion = `![описание](URL)`;
+  else if (type === 'link') insertion = `[текст](URL)`;
+  else if (type === 'h3') insertion = `\n### Заголовок\n`;
+  else if (type === 'ul') insertion = `\n- Пункт 1\n- Пункт 2\n`;
+  else if (type === 'quote') insertion = `\n> Цитата\n`;
+  else if (type === 'hr') insertion = `\n---\n`;
   
-  switch(type) {
-    case 'h3':
-      // Обрабатываем случай, когда есть выделенный текст
-      if (selectedText) {
-        insertion = '### ' + selectedText;
-      } else {
-        insertion = '### Заголовок';
-      }
-      break;
-    case 'ul':
-      if (selectedText) {
-        // Если несколько строк - добавляем маркер к каждой
-        const lines = selectedText.split('\n');
-        insertion = lines.map(line => '- ' + line).join('\n');
-      } else {
-        insertion = '- Пункт списка';
-      }
-      break;
-    case 'quote':
-      if (selectedText) {
-        const lines = selectedText.split('\n');
-        insertion = lines.map(line => '> ' + line).join('\n');
-      } else {
-        insertion = '> Цитата';
-      }
-      break;
-    case 'hr':
-      insertion = '\n---\n';
-      break;
-    default:
-      insertion = selectedText;
-  }
-  
-  // Вставляем текст
-  textarea.value = textBefore + insertion + textAfter;
-  
-  // Восстанавливаем позицию курсора ПОСЛЕ выделенного текста
-  const newCursorPos = start + insertion.length;
+  textarea.value = textarea.value.substring(0, start) + insertion + textarea.value.substring(end);
   textarea.focus();
-  textarea.selectionStart = newCursorPos;
-  textarea.selectionEnd = newCursorPos;
-  
-  // Восстанавливаем позицию прокрутки
-  textarea.scrollTop = scrollTop;
-  
-  showToast(type === 'h3' ? 'Заголовок добавлен' : type === 'ul' ? 'Список добавлен' : type === 'quote' ? 'Цитата добавлена' : 'Разделитель добавлен');
 };
 
-// ============ PROMPT MODAL - АВТОЗАКРЫТИЕ И ВСТАВКА ============
-
-// Добавляем обработку Ctrl+V и Enter при загрузке
 document.addEventListener('DOMContentLoaded', function() {
   const promptInput = document.getElementById('promptInput');
   if (promptInput) {
-    // Enter для подтверждения
     promptInput.addEventListener('keydown', function(e) {
       if (e.key === 'Enter') {
         e.preventDefault();
@@ -2321,9 +2791,7 @@ document.addEventListener('DOMContentLoaded', function() {
       }
     });
     
-    // ✅ НОВОЕ: Ctrl+V автоматически вставляет и закрывает
     promptInput.addEventListener('paste', function(e) {
-      // Небольшая задержка, чтобы значение успело вставиться
       setTimeout(function() {
         if (promptInput.value.trim()) {
           window.confirmLinkInsert();
@@ -2333,8 +2801,6 @@ document.addEventListener('DOMContentLoaded', function() {
   }
 });
 
-// ============ CONFIRM LINK INSERT (исправленная позиция курсора) ============
-// ============ CONFIRM LINK INSERT (с сохранением позиции курсора) ============
 window.confirmLinkInsert = function() {
   const textarea = document.getElementById('actRichDesc');
   const url = document.getElementById('promptInput').value.trim();
@@ -2344,65 +2810,46 @@ window.confirmLinkInsert = function() {
     return;
   }
   
-  // Используем pendingActivityFormat
   const format = window.pendingActivityFormat;
   
   if (format && textarea) {
     const { type, start, end, selectedText } = format;
     const textareaValue = textarea.value;
-    
-    // Сохраняем позицию прокрутки ДО изменений
     const scrollTop = textarea.scrollTop;
-    
     const textBefore = textareaValue.substring(0, start);
     const textAfter = textareaValue.substring(end);
     let insertion = '';
     
     if (type === 'img') {
-      // Для картинки: ![alt](url)
       const altText = selectedText.trim() || 'изображение';
       insertion = `![${altText}](${url})`;
     } else if (type === 'link') {
-      // Для ссылки: [текст](url)
       const linkText = selectedText.trim() || 'ссылка';
       insertion = `[${linkText}](${url})`;
     } else {
       insertion = selectedText;
     }
     
-    // Вставляем текст
     textarea.value = textBefore + insertion + textAfter;
-    
-    // Курсор после вставленного текста
     const newCursorPos = start + insertion.length;
-    
-    // Возвращаем фокус и устанавливаем курсор
     textarea.focus();
     textarea.selectionStart = newCursorPos;
     textarea.selectionEnd = newCursorPos;
-    
-    // Восстанавливаем позицию прокрутки
     textarea.scrollTop = scrollTop;
     
     showToast(type === 'img' ? 'Картинка добавлена' : 'Ссылка добавлена');
   }
   
-  // Закрываем модалку
   closePromptModal();
 };
 
 window.closePromptModal = function() {
   const textarea = document.getElementById('actRichDesc');
-  
-  // Сохраняем позицию прокрутки перед закрытием
   if (textarea && window.pendingActivityFormat) {
     textarea.dataset.savedScrollTop = textarea.scrollTop;
   }
-  
   document.getElementById('promptModal').classList.remove('active');
   document.getElementById('promptInput').value = '';
-  
-  // Восстанавливаем позицию прокрутки после закрытия
   setTimeout(() => {
     if (textarea && textarea.dataset.savedScrollTop) {
       textarea.scrollTop = parseInt(textarea.dataset.savedScrollTop);
@@ -2410,7 +2857,6 @@ window.closePromptModal = function() {
       delete textarea.dataset.savedScrollTop;
     }
   }, 50);
-  
   window.pendingActivityFormat = null;
   pendingLinkInsert = null;
 };
@@ -2422,6 +2868,12 @@ window.openAddModal = function() {
   document.getElementById('modalTitle').textContent = 'Добавить проект';
   document.getElementById('deleteBtn').classList.add('hidden');
   document.getElementById('projLastUpdated').valueAsDate = new Date();
+  
+  // Сброс переводов
+  window._tempNameEng = null;
+  window._tempDescEng = null;
+  window._tempCategoriesEng = null;
+  
   renderCategoryOptions();
   currentEditingActivities = [];
   renderActivitiesAdminList();
@@ -2437,7 +2889,7 @@ window.editProject = function(id) {
   if (!project) return;
   editingId = id;
   document.getElementById('projId').value = id;
-  document.getElementById('projName').value = project.name;
+  document.getElementById('projName').value = project.name || '';
   document.getElementById('projImage').value = project.image || '';
   document.getElementById('projGuideUrl').value = project.guideUrl || '';
   document.getElementById('projCryptoRank').value = project.cryptoRankUrl || '';
@@ -2449,6 +2901,12 @@ window.editProject = function(id) {
   document.getElementById('projLastUpdated').value = latestActivityDate ? latestActivityDate.split('T')[0] : '';
   document.getElementById('projDaily').checked = project.hasDaily || false;
   document.getElementById('projPriority').checked = project.priority === 'high';
+  
+  // Заполнить английские версии
+  window._tempNameEng = project.name_eng || project.name;
+  window._tempDescEng = project.description_eng || project.description;
+  window._tempCategoriesEng = project.categories_eng || [];
+  
   renderCategoryOptions();
   setSelectedCategories(project.categories || []);
   currentEditingActivities = project.activities || [];
@@ -2476,12 +2934,19 @@ window.saveProject = async function(e) {
     if (existingProject) id = id + '_' + Math.random().toString(36).substring(2, 5);
   }
   const selectedCats = getSelectedCategories();
+  const selectedCatsEng = window._tempCategoriesEng || selectedCats.map(c => translateCategory(c));
+  const nameEng = window._tempNameEng || projName;
+  const descEng = window._tempDescEng || document.getElementById('projDesc').value;
+  
   const projectData = {
     id: id,
     name: projName,
+    name_eng: nameEng,
     categories: selectedCats,
+    categories_eng: selectedCatsEng,
     status: document.getElementById('projStatus').value,
     description: document.getElementById('projDesc').value,
+    description_eng: descEng,
     image: document.getElementById('projImage').value || '',
     guideUrl: document.getElementById('projGuideUrl').value || '',
     cryptoRankUrl: document.getElementById('projCryptoRank').value,
@@ -2494,6 +2959,11 @@ window.saveProject = async function(e) {
     activities: currentEditingActivities,
     deleted: false
   };
+  
+  window._tempNameEng = null;
+  window._tempDescEng = null;
+  window._tempCategoriesEng = null;
+  
   try {
     if (!id || id.trim() === '') throw new Error('Неверный ID');
     await setDoc(doc(db, "projects", id), projectData, { merge: true });
