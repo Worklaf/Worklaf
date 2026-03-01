@@ -61,33 +61,30 @@ const translations = {
     edit_project: 'Редактировать проект',
     project_name: 'Название проекта *',
     project_categories: 'Категории проекта',
-    new_category: 'Новая категория...',
+    new_category_placeholder: 'Новая категория...',
     logo_url: 'URL Логотипа',
-    guide_link: 'Ссылка на гайд',
-    cryptorank_link: 'Ссылка на CryptoRank',
-    twitter_link: 'Twitter проекта',
+    guide_url: 'Ссылка на гайд',
+    cryptorank_url: 'Ссылка на CryptoRank',
+    twitter_url: 'Twitter проекта',
     referral_link: 'Реферальная ссылка',
-    short_description: 'Краткое описание',
+    short_desc: 'Краткое описание',
     status: 'Статус',
-    update_date: 'Дата обновления',
-    has_daily: 'Есть ежедневные квесты',
-    high_priority_check: 'Высокий приоритет',
+    last_updated: 'Дата обновления',
+    has_daily_quests: 'Есть ежедневные квесты',
+    high_priority: 'Высокий приоритет',
     project_activities: 'Активности проекта',
     add_activity: 'Добавить активность',
     no_activities: 'Активности еще не добавлены.',
     activity_name: 'Название активности *',
     activity_date: 'Дата активности (начало)',
     activity_end_date: 'Дата окончания (автозавершение)',
-    activity_description: 'Подробное описание',
-    activity_help: '![текст](ссылка) картинка, [текст](ссылка) ссылка',
-    save_activity: 'Сохранить',
-    delete_activity: 'Удалить',
-    cancel: 'Отмена',
-    save_project: 'Сохранить проект',
-    delete_project: 'Удалить проект',
+    detailed_desc: 'Подробное описание',
+    instructions_placeholder: 'Инструкция по выполнению...',
+    save: 'Сохранить',
+    delete: 'Удалить',
     login_title: 'Вход',
     google: 'Google',
-    twitter_auth: 'Twitter',
+    twitter: 'Twitter',
     or_email: 'ИЛИ EMAIL',
     email: 'Email',
     password: 'Пароль',
@@ -103,10 +100,10 @@ const translations = {
     send: 'Отправить',
     close: 'Закрыть',
     no_messages: 'Нет сообщений',
-    your_reply: 'Ваш ответ',
+    your_answer: 'Ваш ответ',
+    reply_placeholder: 'Напишите ответ...',
     chat_support: 'Чат с поддержкой',
     chat_user: 'Чат с пользователем',
-    reply_placeholder: 'Ответ пользователю...',
     notifications: 'Уведомления',
     no_notifications: 'Нет уведомлений',
     mark_read: 'Отметить',
@@ -117,7 +114,6 @@ const translations = {
     deleted_projects: 'Удаленные проекты',
     restore: 'Восстановить',
     delete_permanent: 'Удалить навсегда',
-    archive_text: 'Архив',
     task_completed: 'Задача завершена!',
     task_uncompleted: 'Отмечено как незавершённое',
     added_favorites: 'Добавлено!',
@@ -134,17 +130,7 @@ const translations = {
     enter_name: 'Введите название',
     confirm_delete: 'Переместить в архив?',
     confirm_restore: 'Восстановить проект?',
-    confirm_end_activity: 'Завершить эту активность?',
-    confirm_resume_activity: 'Возобновить эту активность?',
-    img_added: 'Картинка добавлена',
-    link_added: 'Ссылка добавлена',
-    heading_added: 'Заголовок добавлен',
-    list_added: 'Список добавлен',
-    quote_added: 'Цитата добавлена',
-    divider_added: 'Разделитель добавлен',
     enter_link: 'Вставьте ссылку',
-    insert_image: 'Вставить картинку',
-    insert_link: 'Вставить ссылку',
     no_access: 'Нет доступа',
     only_admin: 'Только для админа',
     hero_title: 'Лаборатория Крипто-Возможностей',
@@ -166,20 +152,24 @@ const translations = {
     mark_complete: 'Отметить',
     add_favorites: 'Избранное',
     deleted_count: 'Удаленных',
+    // Новые переводы для feedback
     chat_with_user: 'Чат с пользователем',
-chat_with_support: 'Чат с поддержкой',
-feedbacks_list: 'Отзывы и предложения',
-loading_chat: 'Загрузка переписки...',
-loading_feedbacks: 'Загрузка отзывов...',
-topic: 'Тема обращения',
-message: 'Сообщение',
-your_answer: 'Ваш ответ',
-no_messages_chat: 'Нет сообщений',
-start_new_feedback: 'Начните новое обращение',
-all_requests: 'Все обращения',
-my_messages: 'Мои сообщения',
-confirm_delete_chat: 'Удалить переписку?',
-delete_feedback: 'Удалить'
+    chat_with_support: 'Чат с поддержкой',
+    feedbacks_list: 'Отзывы и предложения',
+    loading_chat: 'Загрузка переписки...',
+    loading_feedbacks: 'Загрузка отзывов...',
+    topic: 'Тема обращения',
+    message: 'Сообщение',
+    start_new_feedback: 'Начните новое обращение',
+    confirm_delete_chat: 'Удалить переписку?',
+    delete_feedback: 'Удалить',
+    you: 'Вы',
+    support: 'Поддержка',
+    user: 'Пользователь',
+    all_feedbacks: 'Все обращения',
+    no_deleted_projects: 'Нет удаленных проектов',
+    new_category: 'Новая категория...',
+    project: 'Проект'
   },
   
   en: {
@@ -243,33 +233,30 @@ delete_feedback: 'Удалить'
     edit_project: 'Edit Project',
     project_name: 'Project Name *',
     project_categories: 'Project Categories',
-    new_category: 'New category...',
+    new_category_placeholder: 'New category...',
     logo_url: 'Logo URL',
-    guide_link: 'Guide Link',
-    cryptorank_link: 'CryptoRank Link',
-    twitter_link: 'Project Twitter',
+    guide_url: 'Guide Link',
+    cryptorank_url: 'CryptoRank Link',
+    twitter_url: 'Project Twitter',
     referral_link: 'Referral Link',
-    short_description: 'Short Description',
+    short_desc: 'Short Description',
     status: 'Status',
-    update_date: 'Update Date',
-    has_daily: 'Has daily quests',
-    high_priority_check: 'High Priority',
+    last_updated: 'Update Date',
+    has_daily_quests: 'Has daily quests',
+    high_priority: 'High Priority',
     project_activities: 'Project Activities',
     add_activity: 'Add Activity',
     no_activities: 'No activities added yet.',
     activity_name: 'Activity Name *',
     activity_date: 'Activity Date (start)',
     activity_end_date: 'End Date (auto-complete)',
-    activity_description: 'Detailed Description',
-    activity_help: '![text](url) image, [text](url) link',
-    save_activity: 'Save',
-    delete_activity: 'Delete',
-    cancel: 'Cancel',
-    save_project: 'Save Project',
-    delete_project: 'Delete Project',
+    detailed_desc: 'Detailed Description',
+    instructions_placeholder: 'Instructions...',
+    save: 'Save',
+    delete: 'Delete',
     login_title: 'Login',
     google: 'Google',
-    twitter_auth: 'Twitter',
+    twitter: 'Twitter',
     or_email: 'OR EMAIL',
     email: 'Email',
     password: 'Password',
@@ -285,10 +272,10 @@ delete_feedback: 'Удалить'
     send: 'Send',
     close: 'Close',
     no_messages: 'No messages',
-    your_reply: 'Your reply',
+    your_answer: 'Your Answer',
+    reply_placeholder: 'Write a reply...',
     chat_support: 'Support Chat',
     chat_user: 'User Chat',
-    reply_placeholder: 'Reply to user...',
     notifications: 'Notifications',
     no_notifications: 'No notifications',
     mark_read: 'Mark as read',
@@ -299,7 +286,6 @@ delete_feedback: 'Удалить'
     deleted_projects: 'Deleted Projects',
     restore: 'Restore',
     delete_permanent: 'Delete Forever',
-    archive_text: 'Archive',
     task_completed: 'Task completed!',
     task_uncompleted: 'Marked as incomplete',
     added_favorites: 'Added!',
@@ -316,17 +302,7 @@ delete_feedback: 'Удалить'
     enter_name: 'Enter name',
     confirm_delete: 'Move to archive?',
     confirm_restore: 'Restore project?',
-    confirm_end_activity: 'End this activity?',
-    confirm_resume_activity: 'Resume this activity?',
-    img_added: 'Image added',
-    link_added: 'Link added',
-    heading_added: 'Heading added',
-    list_added: 'List added',
-    quote_added: 'Quote added',
-    divider_added: 'Divider added',
     enter_link: 'Insert link',
-    insert_image: 'Insert Image',
-    insert_link: 'Insert Link',
     no_access: 'No access',
     only_admin: 'Admin only',
     hero_title: 'Crypto Opportunities Laboratory',
@@ -348,20 +324,24 @@ delete_feedback: 'Удалить'
     mark_complete: 'Mark complete',
     add_favorites: 'Add to favorites',
     deleted_count: 'Deleted',
+    // Новые переводы для feedback
     chat_with_user: 'Chat with User',
-chat_with_support: 'Support Chat',
-feedbacks_list: 'Feedback & Suggestions',
-loading_chat: 'Loading chat...',
-loading_feedbacks: 'Loading feedbacks...',
-topic: 'Topic',
-message: 'Message',
-your_answer: 'Your Answer',
-no_messages_chat: 'No messages',
-start_new_feedback: 'Start new conversation',
-all_requests: 'All Requests',
-my_messages: 'My Messages',
-confirm_delete_chat: 'Delete chat?',
-delete_feedback: 'Delete'
+    chat_with_support: 'Support Chat',
+    feedbacks_list: 'Feedback & Suggestions',
+    loading_chat: 'Loading chat...',
+    loading_feedbacks: 'Loading feedbacks...',
+    topic: 'Topic',
+    message: 'Message',
+    start_new_feedback: 'Start new conversation',
+    confirm_delete_chat: 'Delete chat?',
+    delete_feedback: 'Delete',
+    you: 'You',
+    support: 'Support',
+    user: 'User',
+    all_feedbacks: 'All Requests',
+    no_deleted_projects: 'No deleted projects',
+    new_category: 'New category...',
+    project: 'Project'
   }
 };
 
@@ -388,11 +368,15 @@ function setLanguage(lang) {
     
     // Обновляем глобальную переменную
     window.currentLang = currentLang;
-    
+
+    // Обновляем переводы модального окна обратной связи
+    updateFeedbackModalTranslations();
+
     return true;
   }
   return false;
 }
+
 
 // Загрузка английских проектов
 async function loadEnglishProjects() {
@@ -412,25 +396,17 @@ async function loadEnglishProjects() {
   }
 }
 
-// Сброс на русский язык
-function resetToRussian() {
-  if (window.resetToDefaultDataSource) {
-    window.resetToDefaultDataSource();
-  }
-}
-
 // Обновление всех переводов на странице
-// Обновлённая функция updateAllTranslations
 function updateAllTranslations() {
   // Переводы для элементов с data-translate
   document.querySelectorAll('[data-translate]').forEach(el => {
     const key = el.getAttribute('data-translate');
     const translated = t(key);
-    if (translated) {
+    if (translated && translated !== key) {
       if (el.tagName === 'INPUT' || el.tagName === 'TEXTAREA') {
         el.placeholder = translated;
       } else if (el.tagName === 'OPTION') {
-        // Не меняем value у option, только текст
+        el.textContent = translated;
       } else {
         el.innerHTML = translated;
       }
@@ -441,23 +417,7 @@ function updateAllTranslations() {
   document.querySelectorAll('[data-translate-title]').forEach(el => {
     const key = el.getAttribute('data-translate-title');
     const translated = t(key);
-    if (translated) el.setAttribute('title', translated);
-  });
-  
-  // Переводы для placeholder
-  document.querySelectorAll('[data-translate-placeholder]').forEach(el => {
-    const key = el.getAttribute('data-translate-placeholder');
-    const translated = t(key);
-    if (translated) el.placeholder = translated;
-  });
-  
-  // Переводы для select option
-  document.querySelectorAll('select option').forEach(el => {
-    const key = el.getAttribute('data-translate');
-    if (key) {
-      const translated = t(key);
-      if (translated) el.textContent = translated;
-    }
+    if (translated && translated !== key) el.setAttribute('title', translated);
   });
   
   updateLanguageButton();
@@ -471,12 +431,17 @@ function updateAllTranslations() {
   updateFeedbackModalTranslations();
 }
 
-// Добавь новую функцию для обновления переводов в модальных окнах
+// Обновление переводов в модальных окнах feedback
 function updateFeedbackModalTranslations() {
-  // Обновляем переводы в Feedback модалке если она открыта
-  const feedbackModal = document.getElementById('feedbackModal');
-  if (feedbackModal && feedbackModal.classList.contains('active')) {
-    // Здесь можно обновить специфичные элементы если нужно
+  // Обновляем форму нового обращения
+  const feedbackTextPlaceholder = document.getElementById('feedbackText');
+  if (feedbackTextPlaceholder) {
+    feedbackTextPlaceholder.placeholder = t('message_placeholder');
+  }
+  
+  const replyInput = document.getElementById('feedbackUserReplyText');
+  if (replyInput) {
+    replyInput.placeholder = t('reply_placeholder');
   }
 }
 
@@ -511,21 +476,17 @@ window.toggleLang = function() {
     setLanguage('en');
   } else {
     setLanguage('ru');
-    resetToRussian();
+    if (window.resetToDefaultDataSource) {
+      window.resetToDefaultDataSource();
+    }
   }
 };
 
-// Функция для установки английских данных проектов (вызывается из основного скрипта)
+// Функция для установки английских данных проектов
 window.setEnglishProjectsData = function(englishProjects) {
   if (englishProjects && Array.isArray(englishProjects)) {
-    // Эта функция должна быть определена в основном скрипте
-    if (window.setEnglishProjectsDataInternal) {
-      window.setEnglishProjectsDataInternal(englishProjects);
-    } else {
-      // Если функция не определена, сохраняем данные
-      window.englishProjectsData = englishProjects;
-      console.log('English data saved:', englishProjects.length, 'projects');
-    }
+    window.englishProjectsData = englishProjects;
+    console.log('English data saved:', englishProjects.length, 'projects');
   }
 };
 
@@ -543,7 +504,6 @@ window.t = t;
 document.addEventListener('DOMContentLoaded', function() {
   updateLanguageButton();
   
-  // Если язык английский - загружаем английские проекты
   if (currentLang === 'en') {
     loadEnglishProjects();
   }
