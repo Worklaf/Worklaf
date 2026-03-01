@@ -165,7 +165,21 @@ const translations = {
     last_activity_date: 'Дата последней активности',
     mark_complete: 'Отметить',
     add_favorites: 'Избранное',
-    deleted_count: 'Удаленных'
+    deleted_count: 'Удаленных',
+    chat_with_user: 'Чат с пользователем',
+chat_with_support: 'Чат с поддержкой',
+feedbacks_list: 'Отзывы и предложения',
+loading_chat: 'Загрузка переписки...',
+loading_feedbacks: 'Загрузка отзывов...',
+topic: 'Тема обращения',
+message: 'Сообщение',
+your_answer: 'Ваш ответ',
+no_messages_chat: 'Нет сообщений',
+start_new_feedback: 'Начните новое обращение',
+all_requests: 'Все обращения',
+my_messages: 'Мои сообщения',
+confirm_delete_chat: 'Удалить переписку?',
+delete_feedback: 'Удалить'
   },
   
   en: {
@@ -333,7 +347,21 @@ const translations = {
     last_activity_date: 'Last activity date',
     mark_complete: 'Mark complete',
     add_favorites: 'Add to favorites',
-    deleted_count: 'Deleted'
+    deleted_count: 'Deleted',
+    chat_with_user: 'Chat with User',
+chat_with_support: 'Support Chat',
+feedbacks_list: 'Feedback & Suggestions',
+loading_chat: 'Loading chat...',
+loading_feedbacks: 'Loading feedbacks...',
+topic: 'Topic',
+message: 'Message',
+your_answer: 'Your Answer',
+no_messages_chat: 'No messages',
+start_new_feedback: 'Start new conversation',
+all_requests: 'All Requests',
+my_messages: 'My Messages',
+confirm_delete_chat: 'Delete chat?',
+delete_feedback: 'Delete'
   }
 };
 
@@ -392,6 +420,7 @@ function resetToRussian() {
 }
 
 // Обновление всех переводов на странице
+// Обновлённая функция updateAllTranslations
 function updateAllTranslations() {
   // Переводы для элементов с data-translate
   document.querySelectorAll('[data-translate]').forEach(el => {
@@ -400,6 +429,8 @@ function updateAllTranslations() {
     if (translated) {
       if (el.tagName === 'INPUT' || el.tagName === 'TEXTAREA') {
         el.placeholder = translated;
+      } else if (el.tagName === 'OPTION') {
+        // Не меняем value у option, только текст
       } else {
         el.innerHTML = translated;
       }
@@ -413,18 +444,39 @@ function updateAllTranslations() {
     if (translated) el.setAttribute('title', translated);
   });
   
-  // Переводы для текстовых элементов
-  document.querySelectorAll('[data-translate-text]').forEach(el => {
-    const key = el.getAttribute('data-translate-text');
+  // Переводы для placeholder
+  document.querySelectorAll('[data-translate-placeholder]').forEach(el => {
+    const key = el.getAttribute('data-translate-placeholder');
     const translated = t(key);
-    if (translated) el.textContent = translated;
+    if (translated) el.placeholder = translated;
+  });
+  
+  // Переводы для select option
+  document.querySelectorAll('select option').forEach(el => {
+    const key = el.getAttribute('data-translate');
+    if (key) {
+      const translated = t(key);
+      if (translated) el.textContent = translated;
+    }
   });
   
   updateLanguageButton();
   
   // Перерисовываем проекты с новыми переводами
-  if (window.applyFilters) {
+  if (typeof window.applyFilters === 'function') {
     window.applyFilters();
+  }
+  
+  // Обновляем динамические модальные окна
+  updateFeedbackModalTranslations();
+}
+
+// Добавь новую функцию для обновления переводов в модальных окнах
+function updateFeedbackModalTranslations() {
+  // Обновляем переводы в Feedback модалке если она открыта
+  const feedbackModal = document.getElementById('feedbackModal');
+  if (feedbackModal && feedbackModal.classList.contains('active')) {
+    // Здесь можно обновить специфичные элементы если нужно
   }
 }
 
