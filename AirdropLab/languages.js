@@ -158,7 +158,13 @@ const translations = {
     preview: 'Просмотр',
     view: 'Посмотреть',
     edit: 'Редактировать',
-    copied: 'Скопировано!'
+    copied: 'Скопировано!',
+    no_description: 'Нет описания',
+    leave_feedback: 'Оставить отзыв',
+    last_activity_date: 'Дата последней активности',
+    mark_complete: 'Отметить',
+    add_favorites: 'Избранное',
+    deleted_count: 'Удаленных'
   },
   
   en: {
@@ -319,7 +325,13 @@ const translations = {
     preview: 'Preview',
     view: 'View',
     edit: 'Edit',
-    copied: 'Copied!'
+    copied: 'Copied!',
+    no_description: 'No description',
+    leave_feedback: 'Leave feedback',
+    last_activity_date: 'Last activity date',
+    mark_complete: 'Mark complete',
+    add_favorites: 'Add to favorites',
+    deleted_count: 'Deleted'
   }
 };
 
