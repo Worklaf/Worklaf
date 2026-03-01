@@ -455,12 +455,55 @@ function updateLanguageButton() {
   
   // Качественный SVG флаг Великобритании
   const ukFlagSVG = `
-    <svg width="22" height="15" viewBox="0 0 60 40" fill="none" xmlns="http://www.w3.org/2000/svg">
-  <rect width="60" height="40" rx="3" fill="#012169"/>
-  <path d="M30 0V40M0 20H60" stroke="#fff" stroke-width="6"/>
-  <path d="M0 0L60 40M60 0L0 40" stroke="#fff" stroke-width="4"/>
-  <path d="M30 0V40M0 20H60" stroke="#C8102E" stroke-width="4"/>
-</svg>
+    <svg width="24" height="15" viewBox="0 0 78 51" xmlns="http://www.w3.org/2000/svg" class="us-flag">
+      <defs>
+        <linearGradient id="usShine" x1="0%" y1="0%" x2="100%" y2="100%">
+          <stop offset="0%" style="stop-color:rgba(255,255,255,0.2)"/>
+          <stop offset="50%" style="stop-color:rgba(255,255,255,0)"/>
+          <stop offset="100%" style="stop-color:rgba(255,255,255,0.15)"/>
+        </linearGradient>
+        <filter id="usGlow">
+          <feGaussianBlur stdDeviation="0.3" result="blur"/>
+          <feMerge>
+            <feMergeNode in="blur"/>
+            <feMergeNode in="SourceGraphic"/>
+          </feMerge>
+        </filter>
+      </defs>
+      
+      <!-- 13 полос -->
+      <g>
+        <rect width="78" height="3.92" y="0" fill="#B22234"/>
+        <rect width="78" height="3.92" y="3.92" fill="#fff"/>
+        <rect width="78" height="3.92" y="7.84" fill="#B22234"/>
+        <rect width="78" height="3.92" y="11.76" fill="#fff"/>
+        <rect width="78" height="3.92" y="15.68" fill="#B22234"/>
+        <rect width="78" height="3.92" y="19.6" fill="#fff"/>
+        <rect width="78" height="3.92" y="23.52" fill="#B22234"/>
+        <rect width="78" height="3.92" y="27.44" fill="#fff"/>
+        <rect width="78" height="3.92" y="31.36" fill="#B22234"/>
+        <rect width="78" height="3.92" y="35.28" fill="#fff"/>
+        <rect width="78" height="3.92" y="39.2" fill="#B22234"/>
+        <rect width="78" height="3.92" y="43.12" fill="#fff"/>
+        <rect width="78" height="3.92" y="47.04" fill="#B22234"/>
+      </g>
+      
+      <!-- Синий canton со звёздами -->
+      <rect width="31" height="23.52" fill="#3C3B6E"/>
+      
+      <!-- Звёзды 5x6 -->
+      <g fill="#fff" font-family="Arial" font-size="2.5" text-anchor="middle">
+        <text x="3.1" y="4.5">★</text><text x="9.3" y="4.5">★</text><text x="15.5" y="4.5">★</text><text x="21.7" y="4.5">★</text><text x="27.9" y="4.5">★</text>
+        <text x="6.2" y="8.2">★</text><text x="12.4" y="8.2">★</text><text x="18.6" y="8.2">★</text><text x="24.8" y="8.2">★</text>
+        <text x="3.1" y="11.9">★</text><text x="9.3" y="11.9">★</text><text x="15.5" y="11.9">★</text><text x="21.7" y="11.9">★</text><text x="27.9" y="11.9">★</text>
+        <text x="6.2" y="15.6">★</text><text x="12.4" y="15.6">★</text><text x="18.6" y="15.6">★</text><text x="24.8" y="15.6">★</text>
+        <text x="3.1" y="19.3">★</text><text x="9.3" y="19.3">★</text><text x="15.5" y="19.3">★</text><text x="21.7" y="19.3">★</text><text x="27.9" y="19.3">★</text>
+        <text x="6.2" y="23">★</text><text x="12.4" y="23">★</text><text x="18.6" y="23">★</text><text x="24.8" y="23">★</text>
+      </g>
+      
+      <!-- Блик -->
+      <rect width="78" height="51" fill="url(#usShine)"/>
+    </svg>
   `;
   
   const flagSpan = langBtn.querySelector('.lang-flag');
