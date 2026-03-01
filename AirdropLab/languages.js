@@ -18,7 +18,7 @@ const translations = {
     unvisited: 'Не посещённые',
     today: 'Сегодня',
     active_filter: 'Активные',
-    daily: 'Ежедневные',
+    daily_filter: 'Ежедневные',
     favorites: 'Избранное',
     completed: 'Завершённые',
     archive: 'Архив',
@@ -116,7 +116,7 @@ const translations = {
     deleted_projects: 'Удаленные проекты',
     restore: 'Восстановить',
     delete_permanent: 'Удалить навсегда',
-    archive: 'Архив',
+    archive_text: 'Архив',
     task_completed: 'Задача завершена!',
     task_uncompleted: 'Отмечено как незавершённое',
     added_favorites: 'Добавлено!',
@@ -179,7 +179,7 @@ const translations = {
     unvisited: 'Unvisited',
     today: 'Today',
     active_filter: 'Active',
-    daily: 'Daily',
+    daily_filter: 'Daily',
     favorites: 'Favorites',
     completed: 'Completed',
     archive: 'Archive',
@@ -277,7 +277,7 @@ const translations = {
     deleted_projects: 'Deleted Projects',
     restore: 'Restore',
     delete_permanent: 'Delete Forever',
-    archive: 'Archive',
+    archive_text: 'Archive',
     task_completed: 'Task completed!',
     task_uncompleted: 'Marked as incomplete',
     added_favorites: 'Added!',
@@ -323,12 +323,15 @@ const translations = {
   }
 };
 
+// Текущий язык
 let currentLang = localStorage.getItem('airdropLabLang') || 'ru';
 
+// Функция перевода
 function t(key) {
   return translations[currentLang]?.[key] || translations['ru'][key] || key;
 }
 
+// Установить язык
 function setLanguage(lang) {
   if (translations[lang]) {
     currentLang = lang;
@@ -340,11 +343,16 @@ function setLanguage(lang) {
     }
     
     updateLanguageButton();
+    
+    // Обновляем глобальную переменную
+    window.currentLang = currentLang;
+    
     return true;
   }
   return false;
 }
 
+// Загрузка английских проектов
 async function loadEnglishProjects() {
   console.log('Loading English projects...');
   try {
@@ -362,13 +370,16 @@ async function loadEnglishProjects() {
   }
 }
 
+// Сброс на русский язык
 function resetToRussian() {
   if (window.resetToDefaultDataSource) {
     window.resetToDefaultDataSource();
   }
 }
 
+// Обновление всех переводов на странице
 function updateAllTranslations() {
+  // Переводы для элементов с data-translate
   document.querySelectorAll('[data-translate]').forEach(el => {
     const key = el.getAttribute('data-translate');
     const translated = t(key);
@@ -381,19 +392,29 @@ function updateAllTranslations() {
     }
   });
   
+  // Переводы для title атрибутов
   document.querySelectorAll('[data-translate-title]').forEach(el => {
     const key = el.getAttribute('data-translate-title');
+    const translated = t(key);
+    if (translated) el.setAttribute('title', translated);
+  });
+  
+  // Переводы для текстовых элементов
+  document.querySelectorAll('[data-translate-text]').forEach(el => {
+    const key = el.getAttribute('data-translate-text');
     const translated = t(key);
     if (translated) el.textContent = translated;
   });
   
   updateLanguageButton();
   
+  // Перерисовываем проекты с новыми переводами
   if (window.applyFilters) {
     window.applyFilters();
   }
 }
 
+// Обновление кнопки языка
 function updateLanguageButton() {
   const langBtn = document.getElementById('langBtn');
   if (!langBtn) return;
@@ -411,13 +432,14 @@ function updateLanguageButton() {
   } else {
     if (flagSpan) flagSpan.textContent = '🇷🇺';
     if (textSpan) {
-      textSpan.textContent = 'OFF';
+      textSpan.textContent = 'ENG';
       textSpan.classList.remove('lang-on');
     }
     langBtn.classList.remove('lang-active');
   }
 }
 
+// Переключение языка
 window.toggleLang = function() {
   if (currentLang === 'ru') {
     setLanguage('en');
@@ -427,13 +449,40 @@ window.toggleLang = function() {
   }
 };
 
+// Функция для установки английских данных проектов (вызывается из основного скрипта)
+window.setEnglishProjectsData = function(englishProjects) {
+  if (englishProjects && Array.isArray(englishProjects)) {
+    // Эта функция должна быть определена в основном скрипте
+    if (window.setEnglishProjectsDataInternal) {
+      window.setEnglishProjectsDataInternal(englishProjects);
+    } else {
+      // Если функция не определена, сохраняем данные
+      window.englishProjectsData = englishProjects;
+      console.log('English data saved:', englishProjects.length, 'projects');
+    }
+  }
+};
+
+// Функция для сброса на источник по умолчанию
+window.resetToDefaultDataSource = function() {
+  if (window.resetToDefaultDataSourceInternal) {
+    window.resetToDefaultDataSourceInternal();
+  }
+};
+
+// Функция для перевода (доступна глобально)
+window.t = t;
+
+// Инициализация при загрузке
 document.addEventListener('DOMContentLoaded', function() {
   updateLanguageButton();
   
+  // Если язык английский - загружаем английские проекты
   if (currentLang === 'en') {
     loadEnglishProjects();
   }
 });
 
+// Экспорт глобальных переменных
 window.currentLang = currentLang;
 window.translations = translations;
