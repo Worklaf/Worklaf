@@ -1,7 +1,6 @@
 // language.js - система перевода интерфейса
 const translations = {
   ru: {
-    // Header
     loading: 'ЗАГРУЗКА ЛАБОРАТОРИИ...',
     experimental_zone: 'Экспериментальная зона',
     admin_mode: 'Режим редактирования',
@@ -14,8 +13,6 @@ const translations = {
     login: 'Вход',
     login_btn: 'Войти',
     in_system: 'В системе',
-    
-    // Sidebar filters
     filters: 'Фильтры',
     all_projects: 'Все проекты',
     unvisited: 'Не посещённые',
@@ -27,26 +24,18 @@ const translations = {
     archive: 'Архив',
     categories: 'Категории',
     all: 'Все',
-    
-    // Search & Sort
     search_placeholder: 'Поиск проектов...',
     per_page: 'На странице:',
     newest_first: 'Сначала новые',
     by_priority: 'По приоритету',
     by_name: 'По названию',
-    
-    // Info messages
     info_click_project: 'Нажмите на название проекта для подробной информации или на "Гайд" для выполнения.',
     guest_warning: 'Вы не вошли в аккаунт. Избранное и выполненные задания сохраняются только в этом браузере.',
     loading_projects: 'Загрузка проектов...',
     nothing_found: 'Ничего не найдено',
     reset_filters: 'Сбросить фильтры',
-    
-    // Right sidebar
     active_research: 'Активные исследования',
     go_to_guide: 'Перейти к гайду',
-    
-    // Project card
     guide: 'Гайд',
     website: 'Website',
     status_active: 'Active',
@@ -57,9 +46,7 @@ const translations = {
     completed_badge: 'Готово',
     last_click_today: 'сегодня',
     last_click_yesterday: 'вчера',
-    
-    // Detail modal
-    about_project: 'Описание',
+    about_project: 'О проекте',
     activities: 'Активности',
     activities_not_added: 'Активности не добавлены.',
     added: 'Добавлено:',
@@ -67,12 +54,8 @@ const translations = {
     click: 'Клик',
     end: 'Завершить',
     resume: 'Возобновить',
-    
-    // Activity
     new_activity: 'NEW',
     ended_activity: 'Ended',
-    
-    // Modals
     add_project: 'Добавить проект',
     edit_project: 'Редактировать проект',
     project_name: 'Название проекта *',
@@ -101,8 +84,6 @@ const translations = {
     cancel: 'Отмена',
     save_project: 'Сохранить проект',
     delete_project: 'Удалить проект',
-    
-    // Auth
     login_title: 'Вход',
     google: 'Google',
     twitter_auth: 'Twitter',
@@ -110,8 +91,6 @@ const translations = {
     email: 'Email',
     password: 'Пароль',
     register: 'Регистрация',
-    
-    // Feedback
     feedback: 'Обратная связь',
     my_messages: 'Мои сообщения',
     all_requests: 'Все обращения',
@@ -127,13 +106,9 @@ const translations = {
     chat_support: 'Чат с поддержкой',
     chat_user: 'Чат с пользователем',
     reply_placeholder: 'Ответ пользователю...',
-    
-    // Notifications
     notifications: 'Уведомления',
     no_notifications: 'Нет уведомлений',
     mark_read: 'Отметить',
-    
-    // Admin
     view_stats: 'Посмотреть статистику',
     upload_firebase: 'Загрузить данные в базу',
     export_json: 'Экспортировать все данные',
@@ -142,8 +117,6 @@ const translations = {
     restore: 'Восстановить',
     delete_permanent: 'Удалить навсегда',
     archive: 'Архив',
-    
-    // Toast messages
     task_completed: 'Задача завершена!',
     task_uncompleted: 'Отмечено как незавершённое',
     added_favorites: 'Добавлено!',
@@ -173,15 +146,11 @@ const translations = {
     insert_link: 'Вставить ссылку',
     no_access: 'Нет доступа',
     only_admin: 'Только для админа',
-    
-    // Hero section
     hero_title: 'Лаборатория Крипто-Возможностей',
     hero_subtitle: 'AirdropLab - это ваш центр для исследования, тестирования и участия в самых перспективных аирдропах.',
     start_research: 'Начать исследование',
     collapse_hero: 'Свернуть приветствие',
     expand_hero: 'Развернуть приветствие',
-    
-    // Misc
     yes: 'Да',
     no: 'Нет',
     ok: 'ОК',
@@ -193,7 +162,6 @@ const translations = {
   },
   
   en: {
-    // Header
     loading: 'LOADING LABORATORY...',
     experimental_zone: 'Experimental Zone',
     admin_mode: 'Admin Mode',
@@ -206,8 +174,6 @@ const translations = {
     login: 'Login',
     login_btn: 'Login',
     in_system: 'Online',
-    
-    // Sidebar filters
     filters: 'Filters',
     all_projects: 'All Projects',
     unvisited: 'Unvisited',
@@ -219,26 +185,18 @@ const translations = {
     archive: 'Archive',
     categories: 'Categories',
     all: 'All',
-    
-    // Search & Sort
     search_placeholder: 'Search projects...',
     per_page: 'Per page:',
     newest_first: 'Newest first',
     by_priority: 'By priority',
     by_name: 'By name',
-    
-    // Info messages
     info_click_project: 'Click on the project name for details or "Guide" to start.',
     guest_warning: 'You are not logged in. Favorites and completed tasks are saved only in this browser.',
     loading_projects: 'Loading projects...',
     nothing_found: 'Nothing found',
     reset_filters: 'Reset filters',
-    
-    // Right sidebar
     active_research: 'Active Research',
     go_to_guide: 'Go to Guide',
-    
-    // Project card
     guide: 'Guide',
     website: 'Website',
     status_active: 'Active',
@@ -249,8 +207,6 @@ const translations = {
     completed_badge: 'Done',
     last_click_today: 'today',
     last_click_yesterday: 'yesterday',
-    
-    // Detail modal
     about_project: 'About',
     activities: 'Activities',
     activities_not_added: 'No activities added.',
@@ -259,12 +215,8 @@ const translations = {
     click: 'Click',
     end: 'End',
     resume: 'Resume',
-    
-    // Activity
     new_activity: 'NEW',
     ended_activity: 'ENDED',
-    
-    // Modals
     add_project: 'Add Project',
     edit_project: 'Edit Project',
     project_name: 'Project Name *',
@@ -293,8 +245,6 @@ const translations = {
     cancel: 'Cancel',
     save_project: 'Save Project',
     delete_project: 'Delete Project',
-    
-    // Auth
     login_title: 'Login',
     google: 'Google',
     twitter_auth: 'Twitter',
@@ -302,8 +252,6 @@ const translations = {
     email: 'Email',
     password: 'Password',
     register: 'Register',
-    
-    // Feedback
     feedback: 'Feedback',
     my_messages: 'My Messages',
     all_requests: 'All Requests',
@@ -319,13 +267,9 @@ const translations = {
     chat_support: 'Support Chat',
     chat_user: 'User Chat',
     reply_placeholder: 'Reply to user...',
-    
-    // Notifications
     notifications: 'Notifications',
     no_notifications: 'No notifications',
     mark_read: 'Mark as read',
-    
-    // Admin
     view_stats: 'View Statistics',
     upload_firebase: 'Upload to Database',
     export_json: 'Export All Data',
@@ -334,8 +278,6 @@ const translations = {
     restore: 'Restore',
     delete_permanent: 'Delete Forever',
     archive: 'Archive',
-    
-    // Toast messages
     task_completed: 'Task completed!',
     task_uncompleted: 'Marked as incomplete',
     added_favorites: 'Added!',
@@ -365,15 +307,11 @@ const translations = {
     insert_link: 'Insert Link',
     no_access: 'No access',
     only_admin: 'Admin only',
-    
-    // Hero section
     hero_title: 'Crypto Opportunities Laboratory',
     hero_subtitle: 'AirdropLab is your hub for researching, testing, and participating in the most promising airdrops.',
     start_research: 'Start Research',
     collapse_hero: 'Collapse Welcome',
     expand_hero: 'Expand Welcome',
-    
-    // Misc
     yes: 'Yes',
     no: 'No',
     ok: 'OK',
@@ -385,22 +323,18 @@ const translations = {
   }
 };
 
-// Текущий язык
 let currentLang = localStorage.getItem('airdropLabLang') || 'ru';
 
-// Функция перевода
 function t(key) {
   return translations[currentLang]?.[key] || translations['ru'][key] || key;
 }
 
-// Переключение языка
 function setLanguage(lang) {
   if (translations[lang]) {
     currentLang = lang;
     localStorage.setItem('airdropLabLang', lang);
     updateAllTranslations();
     
-    // Если английский - загружаем english_projects.json
     if (lang === 'en') {
       loadEnglishProjects();
     }
@@ -411,7 +345,6 @@ function setLanguage(lang) {
   return false;
 }
 
-// Загрузка английских проектов
 async function loadEnglishProjects() {
   console.log('Loading English projects...');
   try {
@@ -429,16 +362,13 @@ async function loadEnglishProjects() {
   }
 }
 
-// Сброс на русский (загрузка из Firebase)
 function resetToRussian() {
   if (window.resetToDefaultDataSource) {
     window.resetToDefaultDataSource();
   }
 }
 
-// Обновление всех переводов на странице
 function updateAllTranslations() {
-  // data-translate атрибуты
   document.querySelectorAll('[data-translate]').forEach(el => {
     const key = el.getAttribute('data-translate');
     const translated = t(key);
@@ -451,23 +381,19 @@ function updateAllTranslations() {
     }
   });
   
-  // Обновление заголовков модальных окон
   document.querySelectorAll('[data-translate-title]').forEach(el => {
     const key = el.getAttribute('data-translate-title');
     const translated = t(key);
     if (translated) el.textContent = translated;
   });
   
-  // Обновление текста кнопки языка
   updateLanguageButton();
   
-  // Перерисовка проектов если данные загружены
   if (window.applyFilters) {
     window.applyFilters();
   }
 }
 
-// Обновление кнопки языка
 function updateLanguageButton() {
   const langBtn = document.getElementById('langBtn');
   if (!langBtn) return;
@@ -492,7 +418,6 @@ function updateLanguageButton() {
   }
 }
 
-// Глобальная функция переключения
 window.toggleLang = function() {
   if (currentLang === 'ru') {
     setLanguage('en');
@@ -502,16 +427,13 @@ window.toggleLang = function() {
   }
 };
 
-// Инициализация при загрузке
 document.addEventListener('DOMContentLoaded', function() {
   updateLanguageButton();
   
-  // Если сохранен английский - загружаем английские данные
   if (currentLang === 'en') {
     loadEnglishProjects();
   }
 });
 
-// Экспорт для использования в других скриптах
 window.currentLang = currentLang;
 window.translations = translations;
