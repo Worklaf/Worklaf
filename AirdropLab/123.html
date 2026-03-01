@@ -2720,6 +2720,8 @@ async function loadHeroStateFromFirestore(uid) {
 document.addEventListener('DOMContentLoaded', function() { initHeroState(); });
     // ==================== ИНТЕГРАЦИЯ С LANGUAGE.JS ====================
 
+// ==================== ИНТЕГРАЦИЯ С LANGUAGE.JS ====================
+
 // Ждем пока загрузится languages.js
 function initLanguageIntegration() {
     if (typeof window.toggleLang === 'function') {
@@ -2738,7 +2740,12 @@ function initLanguageIntegration() {
         // Перехватываем applyFilters для применения английских данных
         const originalApplyFilters = window.applyFilters;
         window.applyFilters = function(search, resetPage) {
-            if (window.currentLang === 'en' && window.englishProjectsData && Object.keys(window.englishProjectsData).length > 0) {
+            // БЕЗОПАСНАЯ ПРОВЕРКА - не трогаем projects если это не массив
+            if (window.currentLang === 'en' && 
+                window.englishProjectsData && 
+                Object.keys(window.englishProjectsData).length > 0 &&
+                Array.isArray(window.projects) && 
+                window.projects.length > 0) {
                 // Применяем английские названия к проектам
                 window.projects = window.projects.map(function(project) {
                     return window.applyEnglishData ? window.applyEnglishData(project) : project;
@@ -2751,7 +2758,12 @@ function initLanguageIntegration() {
         // Перехватываем renderProjects для правильного отображения
         const originalRenderProjects = window.renderProjects;
         window.renderProjects = function(filteredProjects) {
-            if (window.currentLang === 'en' && window.englishProjectsData && Object.keys(window.englishProjectsData).length > 0) {
+            // БЕЗОПАСНАЯ ПРОВЕРКА
+            if (window.currentLang === 'en' && 
+                window.englishProjectsData && 
+                Object.keys(window.englishProjectsData).length > 0 &&
+                Array.isArray(filteredProjects) && 
+                filteredProjects.length > 0) {
                 filteredProjects = filteredProjects.map(function(project) {
                     return window.applyEnglishData ? window.applyEnglishData(project) : project;
                 });
@@ -2763,9 +2775,11 @@ function initLanguageIntegration() {
         const originalOpenDetail = window.openDetail;
         window.openDetail = function(id) {
             // Находим проект и применяем английские данные если нужно
-            const projectIndex = window.projects.findIndex(function(p) { return p.id === id; });
-            if (projectIndex !== -1 && window.currentLang === 'en' && window.englishProjectsData && Object.keys(window.englishProjectsData).length > 0) {
-                window.projects[projectIndex] = window.applyEnglishData(window.projects[projectIndex]);
+            if (Array.isArray(window.projects)) {
+                const projectIndex = window.projects.findIndex(function(p) { return p.id === id; });
+                if (projectIndex !== -1 && window.currentLang === 'en' && window.englishProjectsData && Object.keys(window.englishProjectsData).length > 0) {
+                    window.projects[projectIndex] = window.applyEnglishData(window.projects[projectIndex]);
+                }
             }
             return originalOpenDetail.apply(this, arguments);
         };
