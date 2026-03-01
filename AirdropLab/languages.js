@@ -383,7 +383,7 @@ window.t = function(key) {
 // Загрузка английских данных проектов
 window.loadEnglishProjectsData = async function() {
     try {
-        const response = await fetch('./english_projects.json');
+        const response = await fetch('english_projects.json');
         if (response.ok) {
             const data = await response.json();
             // Поддержка формата { "projects": [...] } и простого массива [...]
