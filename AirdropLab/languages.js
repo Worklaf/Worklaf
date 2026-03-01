@@ -1,6 +1,5 @@
-// language.js - Полный языковой файл с автопереводом
+// languages.js - Исправленный языковой файл
 
-// === ОСНОВНЫЕ ПЕРЕВОДЫ ИНТЕРФЕЙСА ===
 window.translations = {
     ru: {
         'loading': 'ЗАГРУЗКА ЛАБОРАТОРИИ...',
@@ -60,7 +59,6 @@ window.translations = {
         'add_project': 'Добавить проект',
         'edit_project': 'Редактировать проект',
         'project_name': 'Название проекта *',
-        'project_name_eng': 'Название (английский) *',
         'project_categories': 'Категории проекта',
         'logo_url': 'URL Логотипа',
         'guide_link': 'Ссылка на гайд',
@@ -68,8 +66,6 @@ window.translations = {
         'project_twitter': 'Twitter проекта',
         'referral_link': 'Реферальная ссылка',
         'short_description': 'Краткое описание',
-        'full_description': 'Полное описание',
-        'full_description_eng': 'Полное описание (английский)',
         'status': 'Статус',
         'last_update': 'Дата обновления',
         'has_daily_quests': 'Есть ежедневные квесты',
@@ -82,11 +78,9 @@ window.translations = {
         'new_activity': 'Новая активность',
         'edit_activity': 'Редактировать активность',
         'activity_name': 'Название активности *',
-        'activity_name_eng': 'Название (английский)',
         'activity_date': 'Дата активности (начало)',
         'end_date': 'Дата окончания (автозавершение)',
         'detailed_description': 'Подробное описание',
-        'detailed_description_eng': 'Подробное описание (английский)',
         'insert_image': 'Вставить картинку',
         'insert_link': 'Вставить ссылку',
         'h3': 'Заголовок 3 уровня',
@@ -178,10 +172,15 @@ window.translations = {
         'researcher': 'Researcher',
         'today_date': 'сегодня',
         'yesterday': 'вчера',
-        'auto_translating': 'Перевод на английский...',
-        'auto_translated': 'Автоперевод выполнен',
-        'enter_project_name': 'Введите название проекта',
-        'enter_activity_name': 'Введите название активности'
+        'defi': 'DeFi',
+        'gaming': 'Gaming',
+        'infra': 'Infra',
+        'l1_l2': 'L1/L2',
+        'nft': 'NFT',
+        'social': 'Social',
+        'other': 'Other',
+        'back': 'Назад',
+        'forward': 'Вперёд'
     },
     en: {
         'loading': 'LOADING LABORATORY...',
@@ -241,7 +240,6 @@ window.translations = {
         'add_project': 'Add Project',
         'edit_project': 'Edit Project',
         'project_name': 'Project Name *',
-        'project_name_eng': 'Name (English) *',
         'project_categories': 'Project Categories',
         'logo_url': 'Logo URL',
         'guide_link': 'Guide Link',
@@ -249,8 +247,6 @@ window.translations = {
         'project_twitter': 'Project Twitter',
         'referral_link': 'Referral Link',
         'short_description': 'Short Description',
-        'full_description': 'Full Description',
-        'full_description_eng': 'Full Description (English)',
         'status': 'Status',
         'last_update': 'Last Update Date',
         'has_daily_quests': 'Has daily quests',
@@ -263,11 +259,9 @@ window.translations = {
         'new_activity': 'New Activity',
         'edit_activity': 'Edit Activity',
         'activity_name': 'Activity Name *',
-        'activity_name_eng': 'Name (English)',
         'activity_date': 'Activity Date (start)',
         'end_date': 'End Date (auto-complete)',
         'detailed_description': 'Detailed Description',
-        'detailed_description_eng': 'Detailed Description (English)',
         'insert_image': 'Insert Image',
         'insert_link': 'Insert Link',
         'h3': 'Heading level 3',
@@ -359,203 +353,22 @@ window.translations = {
         'researcher': 'Researcher',
         'today_date': 'today',
         'yesterday': 'yesterday',
-        'auto_translating': 'Translating to English...',
-        'auto_translated': 'Auto-translated',
-        'enter_project_name': 'Enter project name',
-        'enter_activity_name': 'Enter activity name'
+        'defi': 'DeFi',
+        'gaming': 'Gaming',
+        'infra': 'Infra',
+        'l1_l2': 'L1/L2',
+        'nft': 'NFT',
+        'social': 'Social',
+        'other': 'Other',
+        'back': 'Back',
+        'forward': 'Forward'
     }
 };
 
-// === СЛОВАРЬ АВТОПЕРЕВОДА ===
-window.translationDict = {
-    // Статусы
-    'Active': 'Active',
-    'Soon': 'Soon',
-    'Ended': 'Ended',
-    'Активный': 'Active',
-    'Скоро': 'Soon',
-    'Завершён': 'Ended',
-    
-    // Категории
-    'DeFi': 'DeFi',
-    'Гейминг': 'Gaming',
-    'Gaming': 'Gaming',
-    'Инфраструктура': 'Infrastructure',
-    'Infra': 'Infrastructure',
-    'Infrastructure': 'Infrastructure',
-    'L1/L2': 'L1/L2',
-    'NFT': 'NFT',
-    'НФТ': 'NFT',
-    'Social': 'Social',
-    'Социальные': 'Social',
-    'Other': 'Other',
-    'Другое': 'Other',
-    
-    // Действия
-    'Начать': 'Start',
-    'Клик': 'Click',
-    'Перейти': 'Go to',
-    'Подписаться': 'Subscribe',
-    'Подписка': 'Subscribe',
-    'Зарегистрироваться': 'Register',
-    'Выполнить': 'Complete',
-    'Проверить': 'Check',
-    'Сделать': 'Make',
-    'Создать': 'Create',
-    'Подключить': 'Connect',
-    'Подключение': 'Connect',
-    'Тестировать': 'Test',
-    'Тест': 'Test',
-    'Исследовать': 'Explore',
-    'Стейкать': 'Stake',
-    'Свап': 'Swap',
-    'Минт': 'Mint',
-    'Минтить': 'Mint',
-    'Клейм': 'Claim',
-    'Клеймить': 'Claim',
-    'Транзакция': 'Transaction',
-    'Вывод': 'Withdraw',
-    'Депозит': 'Deposit',
-    'Bridge': 'Bridge',
-    'Мост': 'Bridge',
-    
-    // Описание проектов
-    'проект': 'project',
-    'платформа': 'platform',
-    'косистемаэ': 'ecosystem',
-    'токен': 'token',
-    'криптовалюта': 'cryptocurrency',
-    'децентрализованный': 'decentralized',
-    'децентрализованная': 'decentralized',
-    'блокчейн': 'blockchain',
-    'DeFi': 'DeFi',
-    'протокол': 'protocol',
-    'приложение': 'application',
-    ''app': 'app',
-    'сайт': 'website',
-    'официальный': 'official',
-    'официальный сайт': 'official website',
-    'работает': 'works',
-    'позволяет': 'allows',
-    'пользователям': 'users',
-    'получить': 'get',
-    'награда': 'reward',
-    'награды': 'rewards',
-    'аирдроп': 'airdrop',
-    'токеномика': 'tokenomics',
-    ' Roadmap': 'roadmap',
-    'дорожная карта': 'roadmap',
-    'команда': 'team',
-    'инвесторы': 'investors',
-    'партнёры': 'partners',
-    
-    // Общие слова
-    'это': 'this is',
-    'является': 'is',
-    'для': 'for',
-    'с': 'with',
-    'по': 'by',
-    'в': 'in',
-    'на': 'on',
-    'за': 'for',
-    'от': 'from',
-    'до': 'to',
-    'или': 'or',
-    'и': 'and',
-    'не': 'not',
-    'но': 'but',
-    'также': 'also',
-    'только': 'only',
-    'нужно': 'need',
-    'можно': 'can',
-    'будет': 'will',
-    'есть': 'has',
-    'нет': 'no',
-    'быть': 'to be',
-    'быть будет': 'will be',
-    'был': 'was',
-    'будет': 'will be',
-    'уже': 'already',
-    'ещё': 'still',
-    'еще': 'still',
-    'тоже': 'also',
-    'очень': 'very',
-    'самый': 'most',
-    'более': 'more',
-    'менее': 'less',
-    'много': 'many',
-    'мало': 'few',
-    'один': 'one',
-    'два': 'two',
-    'три': 'three',
-    'первый': 'first',
-    'второй': 'second',
-    'третий': 'third',
-    'новый': 'new',
-    'новая': 'new',
-    'новое': 'new',
-    'старый': 'old',
-    'большой': 'big',
-    'маленький': 'small',
-    'лёгкий': 'easy',
-    'легкий': 'easy',
-    'сложный': 'hard',
-    'простой': 'simple',
-    'быстрый': 'fast',
-    'медленный': 'slow',
-    'важный': 'important',
-    'интересный': 'interesting',
-    'полезный': 'useful',
-    'бесплатный': 'free',
-    'платный': 'paid',
-    
-    // Времена
-    'сегодня': 'today',
-    'завтра': 'tomorrow',
-    'вчера': 'yesterday',
-    'сейчас': 'now',
-    'потом': 'later',
-    'скоро': 'soon',
-    'всегда': 'always',
-    'никогда': 'never',
-    'иногда': 'sometimes',
-    'часто': 'often',
-    'редко': 'rarely',
-    
-    // Числа и проценты
-    '%': '%',
-    'процент': 'percent',
-    'процентов': 'percent',
-    'доллар': 'dollar',
-    'долларов': 'dollars',
-    'доллара': 'dollars',
-    'евро': 'euro',
-    'рубль': 'ruble',
-    'рублей': 'rubles',
-    'ETH': 'ETH',
-    'BTC': 'BTC',
-    'USDT': 'USDT',
-    'USDC': 'USDC',
-    
-    // Остальное
-    'нет описания': 'No description',
-    'описание отсутствует': 'No description available',
-    'добавлено': 'Added',
-    'обновлено': 'Updated',
-    'завершено': 'Completed',
-    'в работе': 'In progress',
-    'в разработке': 'In development',
-    'запущен': 'Launched',
-    'запущена': 'Launched',
-    'тестовая сеть': 'testnet',
-    'Mainnet': 'mainnet',
-    'тестнет': 'testnet'
-};
-
-// === ТЕКУЩИЙ ЯЗЫК ===
+// Текущий язык
 window.currentLang = localStorage.getItem('lang') || 'ru';
 
-// === ФУНКЦИЯ ПЕРЕВОДА ИНТЕРФЕЙСА ===
+// Функция перевода
 window.t = function(key) {
     if (window.translations[window.currentLang] && window.translations[window.currentLang][key]) {
         return window.translations[window.currentLang][key];
@@ -566,156 +379,7 @@ window.t = function(key) {
     return key;
 };
 
-// === АВТОПЕРЕВОД ТЕКСТА ===
-window.autoTranslate = async function(text) {
-    if (!text || !text.trim()) return '';
-    if (window.currentLang === 'en') return text;
-    
-    const original = text.trim();
-    
-    // Проверяем словарь
-    if (window.translationDict[original]) {
-        return window.translationDict[original];
-    }
-    
-    // Проверяем каждое слово в словаре
-    let result = original;
-    let translated = false;
-    
-    // Сначала пробуем найти точное совпадение
-    const dictKeys = Object.keys(window.translationDict).sort((a, b) => b.length - a.length);
-    for (const key of dictKeys) {
-        const regex = new RegExp('\\b' + key.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '\\b', 'gi');
-        if (regex.test(result)) {
-            result = result.replace(regex, window.translationDict[key]);
-            translated = true;
-        }
-    }
-    
-    if (translated) {
-        return result;
-    }
-    
-    // Если не найдено в словаре - используем Google Translate API (бесплатный)
-    try {
-        const translatedText = await window.translateWithGoogle(original);
-        return translatedText;
-    } catch (e) {
-        console.log('Auto-translate failed, using original:', original);
-        // Фоллбек: возвращаем исходный текст с заглавной первой буквой
-        return original.charAt(0).toUpperCase() + original.slice(1);
-    }
-};
-
-// === ПЕРЕВОД ЧЕРЕЗ GOOGLE TRANSLATE ===
-window.translateWithGoogle = async function(text) {
-    return new Promise((resolve, reject) => {
-        // Пробуем использовать Google Translate API
-        const url = `https://translate.googleapis.com/translate_a/single?client=gtx&sl=ru&tl=en&dt=t&q=${encodeURIComponent(text)}`;
-        
-        fetch(url)
-            .then(response => response.json())
-            .then(data => {
-                if (data && data[0]) {
-                    const translated = data[0].map(item => item[0]).join('');
-                    resolve(translated);
-                } else {
-                    reject(new Error('No translation data'));
-                }
-            })
-            .catch(err => {
-                // Фоллбек: просто капитализируем первую букву
-                resolve(text.charAt(0).toUpperCase() + text.slice(1));
-            });
-    });
-};
-
-// === ПЕРЕВОД КАТЕГОРИЙ ===
-window.translateCategory = function(category) {
-    if (!category) return category;
-    
-    const catMap = {
-        'DeFi': 'DeFi',
-        'Гейминг': 'Gaming',
-        'Gaming': 'Gaming',
-        'Инфраструктура': 'Infrastructure',
-        'Infra': 'Infrastructure',
-        'Infrastructure': 'Infrastructure',
-        'L1/L2': 'L1/L2',
-        'NFT': 'NFT',
-        'НФТ': 'NFT',
-        'Social': 'Social',
-        'Социальные': 'Social',
-        'Other': 'Другое',
-        'Other (En)': 'Other',
-        'Другое': 'Other'
-    };
-    
-    return catMap[category] || category;
-};
-
-// === ПОЛУЧИТЬ НАЗВАНИЕ ПРОЕКТА ===
-window.getProjectName = function(project) {
-    if (window.currentLang === 'en') {
-        if (project['name.eng'] && project['name.eng'].trim()) {
-            return project['name.eng'];
-        }
-        // Если нет английского имени - пробуем перевести
-        if (project.name) {
-            window.autoTranslate(project.name).then(translated => {
-                // Можно сохранить перевод
-            });
-            return project.name;
-        }
-    }
-    return project.name || '';
-};
-
-// === ПОЛУЧИТЬ ОПИСАНИЕ ПРОЕКТА ===
-window.getProjectDescription = function(project) {
-    if (window.currentLang === 'en') {
-        if (project['description.eng'] && project['description.eng'].trim()) {
-            return project['description.eng'];
-        }
-        // Если нет английского описания - возвращаем русское
-        if (project.description) {
-            return project.description;
-        }
-    }
-    return project.description || '';
-};
-
-// === ПОЛУЧИТЬ КАТЕГОРИИ ПРОЕКТА ===
-window.getProjectCategories = function(project) {
-    if (window.currentLang === 'en') {
-        if (project['categories.eng'] && project['categories.eng'].length > 0) {
-            return project['categories.eng'];
-        }
-    }
-    return project.categories || ['Other'];
-};
-
-// === ПОЛУЧИТЬ НАЗВАНИЕ АКТИВНОСТИ ===
-window.getActivityTitle = function(activity) {
-    if (window.currentLang === 'en') {
-        if (activity['title.eng'] && activity['title.eng'].trim()) {
-            return activity['title.eng'];
-        }
-    }
-    return activity.title || '';
-};
-
-// === ПОЛУЧИТЬ ОПИСАНИЕ АКТИВНОСТИ ===
-window.getActivityDescription = function(activity) {
-    if (window.currentLang === 'en') {
-        if (activity['description.eng'] && activity['description.eng'].trim()) {
-            return activity['description.eng'];
-        }
-    }
-    return activity.description || '';
-};
-
-// === УСТАНОВИТЬ ЯЗЫК ===
+// Установить язык
 window.setLang = function(lang) {
     window.currentLang = lang;
     localStorage.setItem('lang', lang);
@@ -723,30 +387,37 @@ window.setLang = function(lang) {
     const langBtn = document.getElementById('langBtn');
     if (langBtn) {
         if (lang === 'en') {
+            langBtn.classList.add('lang-active');
             langBtn.innerHTML = '<span class="text-lg">🇷🇺</span> <span class="text-sm font-bold">RU</span>';
         } else {
+            langBtn.classList.remove('lang-active');
             langBtn.innerHTML = '<span class="text-lg">🇬🇧</span> <span class="text-sm font-bold">ENG</span>';
         }
     }
     
-    window.updatePageTranslations();
+    // НЕ вызываем loadData/loadEnglishData - эти функции делают запросы к Firebase
+    // Просто обновляем переводы на странице
     
-    // Перерисовываем контент
-    if (typeof applyFilters === 'function') {
-        applyFilters();
-    }
-    if (typeof openDetail === 'function' && window.currentDetailId) {
-        openDetail(window.currentDetailId);
-    }
+    // Обновляем статический текст на странице
+    window.updatePageTranslations();
 };
 
-// === ПЕРЕКЛЮЧИТЬ ЯЗЫК ===
+// Переключить язык
 window.toggleLang = function() {
-    const newLang = window.currentLang === 'ru' ? 'en' : 'ru';
-    window.setLang(newLang);
+  const newLang = window.currentLang === 'ru' ? 'en' : 'ru';
+  window.setLang(newLang);
+  
+  // Перезагружаем данные в зависимости от языка
+  if (newLang === 'en') {
+    loadFromEnglish();
+  } else {
+    loadFromFirebase();
+  }
+  
+  window.updatePageTranslations();
 };
 
-// === ОБНОВИТЬ ПЕРЕВОДЫ НА СТРАНИЦЕ ===
+// Обновить переводы на странице
 window.updatePageTranslations = function() {
     // Элементы с data-translate
     document.querySelectorAll('[data-translate]').forEach(function(el) {
@@ -754,11 +425,17 @@ window.updatePageTranslations = function() {
         if (key) el.textContent = window.t(key);
     });
     
-    // Placeholder для поиска
+    // Поиск
     const searchInput = document.getElementById('searchInput');
     if (searchInput) searchInput.placeholder = window.t('search_placeholder');
     
-    // Боковое меню (фильтры)
+    // Статистика в хедере
+    const statActive = document.getElementById('statActive');
+    const statNew = document.getElementById('statNew');
+    const statInWork = document.getElementById('statInWork');
+    const statDone = document.getElementById('statDone');
+    
+    // Фильтры
     document.querySelectorAll('.sidebar-link').forEach(function(btn) {
         const filter = btn.dataset.filter;
         const span = btn.querySelector('span');
@@ -840,12 +517,16 @@ window.updatePageTranslations = function() {
         if (options[2]) options[2].textContent = window.t('by_name');
     }
     
-    // Пагинация - пустое состояние
+    // Пагинация
     const emptyStateTitle = document.querySelector('#emptyState h3');
     if (emptyStateTitle) emptyStateTitle.textContent = window.t('nothing_found');
     
     const resetBtn = document.querySelector('#emptyState button');
     if (resetBtn) resetBtn.textContent = window.t('reset_filters');
+    
+    // Правая панель
+    const labSubtitle = document.querySelector('.lab-subtitle');
+    if (labSubtitle) labSubtitle.textContent = window.t('active_research');
     
     // Категории
     const selectedCatsTags = document.getElementById('selectedCategoriesTags');
@@ -856,9 +537,21 @@ window.updatePageTranslations = function() {
             selectedCatsTags.innerHTML = '<span class="text-xs text-slate-500 italic">' + window.t('all') + '</span>';
         }
     }
+    
+    // Admin панель
+    const newTestBtn = document.querySelector('#adminPanel button:first-child span');
+    if (newTestBtn) newTestBtn.textContent = window.t('new_test');
+    
+    // Логин кнопка
+    const loginSpan = document.querySelector('#loggedOutView button span');
+    if (loginSpan) loginSpan.textContent = window.t('login');
+    
+    // Логин статус
+    const inSystemSpan = document.querySelector('#loggedInView .text-emerald-400 span:last-child');
+    if (inSystemSpan) inSystemSpan.textContent = window.t('in_system');
 };
 
-// === TOAST УВЕДОМЛЕНИЕ ===
+// Toast
 window.showToast = function(msg) { 
     const translated = window.t(msg);
     const t = document.getElementById('toast'); 
@@ -868,9 +561,4 @@ window.showToast = function(msg) {
         t.classList.remove('translate-y-20', 'opacity-0'); 
         setTimeout(function() { t.classList.add('translate-y-20', 'opacity-0'); }, 3000); 
     }
-};
-
-// === ИНИЦИАЛИЗАЦИЯ ЯЗЫКА ПРИ ЗАГРУЗКЕ ===
-window.initLanguage = function() {
-    window.setLang(window.currentLang);
 };
