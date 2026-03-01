@@ -456,13 +456,11 @@ function updateLanguageButton() {
   // Качественный SVG флаг Великобритании
   const ukFlagSVG = `
     <svg width="22" height="15" viewBox="0 0 60 40" fill="none" xmlns="http://www.w3.org/2000/svg">
-      <rect width="60" height="40" rx="3" fill="#012169"/>
-      <path d="M0 0V40M60 0V40" stroke="#fff" stroke-width="6.67"/>
-      <path d="M0 0H60M0 40H60" stroke="#fff" stroke-width="6.67"/>
-      <path d="M0 0L60 40M60 0L0 40" stroke="#fff" stroke-width="6.67"/>
-      <path d="M30 0V40M0 20H60" stroke="#C8102E" stroke-width="6.67"/>
-      <path d="M0 20L60 40M60 20L0 40" stroke="#C8102E" stroke-width="6.67"/>
-    </svg>
+  <rect width="60" height="40" rx="3" fill="#012169"/>
+  <path d="M30 0V40M0 20H60" stroke="#fff" stroke-width="6"/>
+  <path d="M0 0L60 40M60 0L0 40" stroke="#fff" stroke-width="4"/>
+  <path d="M30 0V40M0 20H60" stroke="#C8102E" stroke-width="4"/>
+</svg>
   `;
   
   const flagSpan = langBtn.querySelector('.lang-flag');
