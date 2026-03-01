@@ -71,7 +71,7 @@ const translations = {
     status: 'Статус',
     last_updated: 'Дата обновления',
     has_daily_quests: 'Есть ежедневные квесты',
-    high_priority: 'Высокий приоритет',
+    high_priority: 'High Priority',
     project_activities: 'Активности проекта',
     add_activity: 'Добавить активность',
     no_activities: 'Активности еще не добавлены.',
