@@ -820,7 +820,7 @@ let editingId = null;
 let isEditModalOpen = false;
 let currentDetailId = null;
 let isAdminMode = false;
-window.isAdminMode = isAdminMode; // Экспортируем в глобальную область
+window.isAdminMode = isAdminMode;
 let currentUser = null;
 let userFavorites = [];
 let userCompleted = [];
@@ -842,21 +842,154 @@ let currentEditingActivities = [];
 let editingActivityId = null;
 let mainProjectCategories = [];
 let currentSortType = 'latest';
+let firestoreUnsubscribe = null;
+let adminFeedbacks = [];
+let adminFeedbacksUnsubscribe = null;
 
-// Флаг для отслеживания состояния модального окна
-let modalClickStartTarget = null;
-// Инициализация переводов при загрузке
-window.addEventListener('load', function() {
-    // Применяем переводы к статическим элементам
-    if (typeof window.updatePageTranslations === 'function') {
-        window.updatePageTranslations();
+const ENGLISH_PROJECTS_URL = 'english_projects.json';
+let englishProjectsData = {};
+
+// ============ ENGLISH PROJECTS ============
+async function loadEnglishProjects() {
+  try {
+    const response = await fetch(ENGLISH_PROJECTS_URL);
+    if (response.ok) {
+      const data = await response.json();
+      if (data.projects && Array.isArray(data.projects)) {
+        englishProjectsData = {};
+        data.projects.forEach(project => {
+          englishProjectsData[project.id] = project;
+        });
+      } else if (Array.isArray(data)) {
+        englishProjectsData = {};
+        data.forEach(project => {
+          englishProjectsData[project.id] = project;
+        });
+      }
+      console.log('English loaded:', Object.keys(englishProjectsData).length);
     }
-});
-
-// Восстановление состояния языка
-if (window.currentLang === 'en') {
-    window.setLang('en');
+  } catch (e) {
+    console.log('English load error:', e);
+    englishProjectsData = {};
+  }
 }
+
+// ============ MAIN LOAD FUNCTION ============
+window.loadData = async function() {
+  await loadEnglishProjects();
+  if (window.currentLang === 'en') {
+    loadFromEnglish();
+  } else {
+    loadFromFirebase();
+  }
+};
+
+function loadFromEnglish() {
+  if (firestoreUnsubscribe) {
+    firestoreUnsubscribe();
+    firestoreUnsubscribe = null;
+  }
+  
+  const englishArray = Object.values(englishProjectsData);
+  console.log('English projects:', englishArray.length);
+  
+  if (englishArray.length > 0) {
+    projects = englishArray.map(normalizeData);
+    sortProjects('latest');
+    applyFilters();
+  } else {
+    projects = [];
+  }
+  
+  hideLoadingScreen();
+}
+
+function loadFromFirebase() {
+  fetch('./data/projects.json')
+    .then(response => {
+      if (response.ok) return response.json();
+      throw new Error('No local JSON');
+    })
+    .then(data => {
+      if (data.projects) {
+        projects = data.projects.map(normalizeData);
+        sortProjects('latest');
+        applyFilters();
+      }
+    })
+    .catch(e => { 
+      console.log('Local JSON not loaded');
+    });
+
+  const q = query(collection(db, "projects"), where("deleted", "==", false));
+  firestoreUnsubscribe = onSnapshot(q, function(snapshot) {
+    snapshot.forEach(function(docSnap) {
+      const fireProject = docSnap.data();
+      const idx = projects.findIndex(function(p) { return p.id === fireProject.id; });
+      if (idx !== -1) {
+        projects[idx] = { ...projects[idx], ...fireProject };
+      } else if (!fireProject.deleted) {
+        projects.push(normalizeData(fireProject));
+      }
+    });
+    sortProjects(currentSortType);
+    applyFilters();
+  });
+  
+  if (isAdminMode) {
+    onSnapshot(query(collection(db, "projects"), where("deleted", "==", true)), function(snapshot) {
+      snapshot.forEach(function(docSnap) {
+        const fireProject = docSnap.data();
+        const idx = projects.findIndex(function(p) { return p.id === fireProject.id; });
+        if (idx !== -1) {
+          projects[idx] = { ...projects[idx], ...fireProject };
+        } else {
+          projects.push(normalizeData(fireProject));
+        }
+      });
+      applyFilters();
+    });
+  }
+}
+
+function hideLoadingScreen() {
+  const loadingScreen = document.getElementById('loading-screen');
+  if (loadingScreen) {
+    loadingScreen.style.opacity = '0';
+    setTimeout(() => {
+      loadingScreen.style.display = 'none';
+    }, 500);
+  }
+}
+
+function normalizeData(project) {
+  if (!project.categories) project.categories = project.category ? [project.category] : ['Other'];
+  if (!project.activities) project.activities = [];
+  project.activities = project.activities.map((act, index) => {
+    if (!act.id) {
+      const safeTitle = act.title ? act.title.toLowerCase().replace(/\s+/g, '_').replace(/[^a-z0-9_]/g, '') : 'act';
+      act.id = 'act_' + safeTitle + '_' + (project.id || 'proj') + '_' + index;
+    }
+    return act;
+  });
+  if (project.deleted === undefined) project.deleted = false;
+  
+  if (window.currentLang === 'en' && englishProjectsData[project.id]) {
+    const engData = englishProjectsData[project.id];
+    project.name = engData.name || project.name;
+    project.description = engData.description || project.description;
+    project.activities = engData.activities || project.activities;
+    project.guideUrl = engData.guideUrl || project.guideUrl;
+    project.twitterUrl = engData.twitterUrl || project.twitterUrl;
+    project.cryptoRankUrl = engData.cryptoRankUrl || project.cryptoRankUrl;
+    project.referralLink = engData.referralLink || project.referralLink;
+    project.image = engData.image || project.image;
+  }
+  
+  return project;
+}
+
+// ============ DATE FUNCTIONS ============
 function formatClickDate(dateString) {
   if (!dateString) return null;
   const date = new Date(dateString);
@@ -877,6 +1010,20 @@ function formatDateForDisplay(dateString) {
   return date.toLocaleDateString('ru-RU', { day: 'numeric', month: 'short', year: 'numeric' });
 }
 
+function formatTimeAgo(date) {
+  if (!date) return '';
+  const now = new Date();
+  const diff = now - date;
+  if (diff < 60000) return 'только что';
+  if (diff < 3600000) return Math.floor(diff/60000) + ' мин';
+  if (diff < 86400000) return Math.floor(diff/3600000) + ' ч';
+  if (diff < 604800000) return Math.floor(diff/86400000) + ' дн';
+  return date.toLocaleDateString('ru-RU', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' });
+}
+
+function formatDate(str) { if (!str) return '—'; return new Date(str).toLocaleDateString('ru-RU'); }
+
+// ============ ACTIVITIES FUNCTIONS ============
 function isClickedToday(projectId) {
   const record = arcData[projectId];
   if (!record || !record.lastClick) return false;
@@ -956,21 +1103,24 @@ function isProjectUnvisited(project) {
   return true;
 }
 
-// Обработчики для модальных окон - закрытие только при mousedown
-window.handleModalMouseDown = function(e) {
-  modalClickStartTarget = e.target;
-};
+function getLatestActivityDate(project) {
+  if (!project.activities || project.activities.length === 0) return project.lastUpdated || project.createdAt;
+  const latestActivity = project.activities.filter(a => a.date).sort((a, b) => new Date(b.date) - new Date(a.date))[0];
+  return latestActivity && latestActivity.date ? latestActivity.date : (project.lastUpdated || project.createdAt);
+}
 
-window.handleModalMouseUp = function(e) {
-  // Не закрываем если отпустили кнопку в том же месте где и нажали (это может быть клик по кнопке)
-  if (modalClickStartTarget !== e.target) {
-    // Если отпустили вне области - не закрываем автоматически
-    // Закрываем только если кликнули точно по фону модалки
-  }
-  modalClickStartTarget = null;
-};
+function isNewProject(dateString) {
+  if (!dateString) return false;
+  const created = new Date(dateString);
+  const now = new Date();
+  const diffTime = Math.abs(now - created);
+  const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+  return diffDays <= 7;
+}
 
-// === AUTH ===
+function isToday(dateString) { if (!dateString) return false; return new Date(dateString).toDateString() === new Date().toDateString(); }
+
+// ============ AUTH ============
 window.openLoginModal = function() { document.getElementById('loginModal').classList.add('active'); };
 window.closeLoginModal = function() { document.getElementById('loginModal').classList.remove('active'); };
 window.loginGoogle = async function() { try { await signInWithPopup(auth, new GoogleAuthProvider()); closeLoginModal(); showToast('Вход: Google'); } catch(e) { showToast(e.message); } };
@@ -979,10 +1129,147 @@ window.handleEmailAuth = async function(e) { e.preventDefault(); const email = d
 window.handleRegister = async function() { const email = document.getElementById('emailInput').value; const pass = document.getElementById('passInput').value; try { await createUserWithEmailAndPassword(auth, email, pass); closeLoginModal(); showToast('Аккаунт создан!'); } catch(e) { showToast(e.message); } };
 window.logout = function() { signOut(auth).then(() => { showToast('Выход'); localStorage.removeItem('favorites_backup'); localStorage.removeItem(STORAGE_KEY); userFavorites = []; userCompleted = []; arcData = {}; }); };
 
-// Feedback functions (same as original, abbreviated for brevity)
-let adminFeedbacks = [];
-let adminFeedbacksUnsubscribe = null;
+// ============ USER DATA SYNC ============
+async function saveUserData(user) {
+  try {
+    const userRef = doc(db, "users", user.uid);
+    const userSnap = await getDoc(userRef);
+    if (!userSnap.exists()) {
+      await setDoc(userRef, { email: user.email, displayName: user.displayName || 'Аноним', photoURL: user.photoURL || null, firstLogin: serverTimestamp(), provider: user.providerData[0]?.providerId || 'unknown', lastLogin: serverTimestamp(), favorites: [], completed: [], arcGuideStats: {} });
+    } else {
+      const userData = userSnap.data();
+      const updates = { lastLogin: serverTimestamp() };
+      if (!userData.firstLogin) updates.firstLogin = serverTimestamp();
+      if (!userData.provider && user.providerData[0]) updates.provider = user.providerData[0].providerId;
+      await updateDoc(userRef, updates);
+    }
+  } catch (e) { console.error('Error saving user:', e); }
+}
 
+async function syncLocalStorageToFirestore(userId) {
+  try {
+    const userRef = doc(db, "users", userId);
+    const userSnap = await getDoc(userRef);
+    if (!userSnap.exists()) return;
+    const updates = {};
+    const localFavorites = JSON.parse(localStorage.getItem('favorites_backup') || '[]');
+    if (localFavorites.length > 0) updates.favorites = localFavorites;
+    const localCompleted = JSON.parse(localStorage.getItem(COMPLETED_KEY) || '[]');
+    if (localCompleted.length > 0) updates.completed = localCompleted;
+    const localGuideStats = JSON.parse(localStorage.getItem(STORAGE_KEY) || '{}');
+    if (Object.keys(localGuideStats).length > 0) updates.arcGuideStats = localGuideStats;
+    if (Object.keys(updates).length > 0) await updateDoc(userRef, updates);
+  } catch (e) { console.error('Error sync:', e); }
+}
+
+function initUserSync(uid) {
+  const userRef = doc(db, "users", uid);
+  onSnapshot(userRef, function(docSnap) {
+    if (docSnap.exists()) {
+      const data = docSnap.data();
+      let cloudFavorites = data.favorites || [];
+      let localStorageFavorites = JSON.parse(localStorage.getItem('favorites_backup')) || [];
+      let mergedFavorites = [...new Set([...cloudFavorites, ...localStorageFavorites])];
+      if (JSON.stringify(cloudFavorites) !== JSON.stringify(mergedFavorites)) localStorage.setItem('favorites_backup', JSON.stringify(mergedFavorites));
+      userFavorites = mergedFavorites;
+      let cloudCompleted = data.completed || [];
+      let localStorageCompleted = JSON.parse(localStorage.getItem(COMPLETED_KEY)) || [];
+      let mergedCompleted = [...new Set([...cloudCompleted, ...localStorageCompleted])];
+      if (JSON.stringify(cloudCompleted) !== JSON.stringify(mergedCompleted)) localStorage.setItem(COMPLETED_KEY, JSON.stringify(mergedCompleted));
+      userCompleted = mergedCompleted;
+      if (data.arcGuideStats) {
+        let cloudArcData = data.arcGuideStats;
+        let localArcData = JSON.parse(localStorage.getItem(STORAGE_KEY)) || {};
+        let mergedArcData = { ...localArcData, ...cloudArcData };
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(mergedArcData));
+        arcData = mergedArcData;
+      }
+      applyFilters();
+    }
+  });
+}
+
+onAuthStateChanged(auth, async function(user) {
+  if (user) {
+    currentUser = user;
+    await saveUserData(user);
+    await syncLocalStorageToFirestore(user.uid);
+    document.getElementById('generalFeedbackPanel').classList.remove('hidden');
+    initFeedbacksListener(user.uid);
+    if (user.uid === "SAkz4mdW9reDaIsvqigCNZhEKJR2") activateAdminMode();
+    try {
+      const userRef = doc(db, "users", user.uid);
+      const userDoc = await getDoc(userRef);
+      if (userDoc.exists()) {
+        const data = userDoc.data();
+        userFavorites = data.favorites || [];
+        userCompleted = data.completed || [];
+        if (data.arcGuideStats) { arcData = { ...arcData, ...data.arcGuideStats }; localStorage.setItem(STORAGE_KEY, JSON.stringify(arcData)); }
+      } else { await setDoc(userRef, { favorites: [], completed: [], arcGuideStats: {} }); }
+    } catch (e) { console.error('Error:', e); }
+    document.getElementById('loggedOutView').classList.add('hidden');
+    document.getElementById('loggedInView').classList.remove('hidden');
+    document.getElementById('guestWarning').classList.add('hidden');
+    document.getElementById('userAvatar').src = user.photoURL || 'https://ui-avatars.com/api/?name=' + (user.email || 'User') + '&background=random';
+    document.getElementById('userName').textContent = user.displayName || user.email.split('@')[0];
+    initUserSync(user.uid);
+    initNotificationsListener(user.uid);
+    applyFilters();
+  } else {
+    currentUser = null; userFavorites = []; userCompleted = [];
+    document.getElementById('generalFeedbackPanel').classList.add('hidden');
+    if (notificationsUnsubscribe) { notificationsUnsubscribe(); notificationsUnsubscribe = null; }
+    if (adminFeedbacksUnsubscribe) { adminFeedbacksUnsubscribe(); adminFeedbacksUnsubscribe = null; }
+    notifications = []; unreadNotificationsCount = 0; updateNotificationBadge();
+    document.getElementById('loggedOutView').classList.remove('hidden');
+    document.getElementById('loggedInView').classList.add('hidden');
+    document.getElementById('guestWarning').classList.remove('hidden');
+    arcData = JSON.parse(localStorage.getItem(STORAGE_KEY)) || [];
+    userCompleted = JSON.parse(localStorage.getItem(COMPLETED_KEY) || []);
+    applyFilters();
+  }
+});
+
+// ============ NOTIFICATIONS ============
+function initNotificationsListener(uid) {
+  if (notificationsUnsubscribe) notificationsUnsubscribe();
+  const notifQuery = query(collection(db, "notifications"), where("userId", "==", uid));
+  notificationsUnsubscribe = onSnapshot(notifQuery, function(snapshot) {
+    notifications = snapshot.docs.map(function(doc) { return { id: doc.id, ...doc.data(), createdAt: doc.data().createdAt?.toDate() || new Date() }; }).sort(function(a, b) { return b.createdAt - a.createdAt; });
+    unreadNotificationsCount = notifications.filter(function(n) { return !n.read; }).length;
+    updateNotificationBadge();
+  });
+}
+
+function updateNotificationBadge() {
+  const badge = document.getElementById('notificationBadge');
+  if (badge) { if (unreadNotificationsCount > 0) { badge.textContent = unreadNotificationsCount > 99 ? '99+' : unreadNotificationsCount; badge.classList.remove('hidden'); } else { badge.classList.add('hidden'); } }
+}
+
+window.showNotifications = function() {
+  if (!currentUser) { showToast('Войдите'); return; }
+  const modal = document.getElementById('notificationsModal');
+  const list = document.getElementById('notificationsList');
+  if (notifications.length === 0) list.innerHTML = '<p class="text-slate-500 text-center py-8"><i class="fas fa-bell-slash text-4xl mb-3"></i><br>Нет уведомлений</p>';
+  else {
+    list.innerHTML = notifications.map(function(notif) {
+      const messageWithLinks = notif.message.replace(/(https?:\/\/[^\s]+)/g, '<a href="$1" target="_blank" class="text-blue-400 hover:underline break-all">$1</a>');
+      const typeIcons = { info: 'fa-info-circle text-blue-400', success: 'fa-check-circle text-green-400', warning: 'fa-exclamation-triangle text-yellow-400', promo: 'fa-gift text-pink-400', referral: 'fa-link text-purple-400' };
+      const typeIcon = typeIcons[notif.type] || 'fa-bell text-slate-400';
+      const unreadClass = !notif.read ? 'unread' : '';
+      return '<div class="notification-item p-3 bg-slate-800/50 rounded-lg ' + unreadClass + '" data-id="' + notif.id + '"><div class="flex items-start gap-3"><div class="w-8 h-8 rounded-lg bg-slate-700 flex items-center justify-center flex-shrink-0"><i class="fas ' + typeIcon + '"></i></div><div class="flex-1 min-w-0"><div class="text-sm text-slate-300">' + messageWithLinks + '</div><div class="flex items-center justify-between mt-2"><span class="text-xs text-slate-500">' + formatTimeAgo(notif.createdAt) + '</span>' + (!notif.read ? '<button onclick="markNotificationAsRead(\'' + notif.id + '\')" class="text-xs text-blue-400">Отметить</button>' : '') + '</div></div></div></div>';
+    }).join('');
+  }
+  modal.classList.add('active');
+};
+
+window.closeNotificationsModal = function() { document.getElementById('notificationsModal').classList.remove('active'); };
+
+window.markNotificationAsRead = async function(notifId) {
+  try { await updateDoc(doc(db, "notifications", notifId), { read: true }); const notif = notifications.find(function(n) { return n.id === notifId; }); if (notif) { notif.read = true; unreadNotificationsCount = Math.max(0, unreadNotificationsCount - 1); updateNotificationBadge(); const item = document.querySelector('[data-id="' + notifId + '"]'); if (item) { item.classList.remove('unread'); const btn = item.querySelector('button'); if (btn) btn.remove(); } } } catch (e) { console.error(e); }
+};
+
+// ============ FEEDBACK ============
 function initFeedbacksListener(uid) {
   if (adminFeedbacksUnsubscribe) { adminFeedbacksUnsubscribe(); adminFeedbacksUnsubscribe = null; }
   let q;
@@ -1115,52 +1402,52 @@ window.renderFeedbackList = function() {
     const lastMsg = messages[messages.length - 1] || { text: '...', sender: 'unknown' };
     const date = item.createdAt?.toDate() || new Date(item.createdAt || 0);
     const isUnread = isAdmin ? !item.read : !item.userRead;
-    
-    // Получаем данные проекта
     const project = getProj(item.projectId);
     const projectName = project.name || item.projectId || 'Неизвестный проект';
     const projectLogo = project.image || '';
     const projectId = item.projectId || '';
     
-    // Для админа показываем: логотип проекта + название проекта + имя пользователя
     let titleHtml = '';
     if (isAdmin) {
-      // Блок с информацией о проекте
       let projectInfoHtml = '';
       if (projectLogo) {
         projectInfoHtml += `<img src="${projectLogo}" class="w-5 h-5 rounded object-cover mr-1.5" alt="${projectName}" onerror="this.style.display='none'">`;
       }
       projectInfoHtml += `<span class="text-blue-400 font-medium">${projectName}</span>`;
       
-      titleHtml = `
-        <div class="flex flex-col gap-1">
-          <div class="flex items-center gap-1.5">${projectInfoHtml}</div>
-          <div class="text-xs text-slate-400 flex items-center gap-1">
-            <span>от</span>
-            <span class="text-white font-medium">${item.userName || 'Пользователь'}</span>
-          </div>
-        </div>
-      `;
+      titleHtml = `<div class="flex flex-col gap-1"><div class="flex items-center gap-1.5">${projectInfoHtml}</div><div class="text-xs text-slate-400 flex items-center gap-1"><span>от</span><span class="text-white font-medium">${item.userName || 'Пользователь'}</span></div></div>`;
     } else {
-      // Для обычного пользователя - только название проекта
       titleHtml = `<div class="flex items-center gap-2">${projectLogo ? `<img src="${projectLogo}" class="w-6 h-6 rounded">` : ''}<span class="font-bold text-white">${projectName}</span></div>`;
     }
     
     return `<div onclick="${isAdmin ? `openAdminFeedbackChat('${item.id}')` : `openFeedbackFromList('${item.id}', '${projectId}', '${(projectName).replace(/'/g,"\\'")}')`}" class="cursor-pointer group relative bg-slate-800/40 border border-slate-700/50 hover:bg-slate-800 hover:border-slate-600 rounded-xl p-4 transition-all">${isUnread ? '<div class="absolute top-4 right-4 w-3 h-3 bg-purple-500 rounded-full animate-pulse"></div>' : ''}<div class="flex justify-between items-start mb-2"><div>${titleHtml}<span class="text-xs text-slate-500 mt-0.5 block">${formatTimeAgo(date)}</span></div>${isUnread ? '<span class="bg-purple-600 text-white text-xs px-2 py-1 rounded-full font-bold">NEW</span>' : ''}</div><div class="text-sm text-slate-300 line-clamp-2">${lastMsg.text}</div></div>`;
   }).join('');
 };
-// Функция для закрытия чата и возврата к списку (для пользователя)
+
+window.openFeedbackFromList = function(docId, projectId, projectName) {
+  document.getElementById('feedbackProjectName').textContent = projectName || projectId;
+  document.getElementById('adminChatDeleteBtn').classList.add('hidden');
+  document.getElementById('feedbackListModal').classList.remove('active');
+  const modal = document.getElementById('feedbackModal');
+  document.getElementById('feedbackProjectId').value = projectId;
+  document.getElementById('feedbackDocId').value = docId;
+  document.getElementById('feedbackModalTitle').innerHTML = '<button onclick="closeFeedbackChat()" class="flex items-center justify-center w-8 h-8 rounded-lg bg-slate-700 hover:bg-slate-600 text-white mr-2 transition-colors"><i class="fas fa-arrow-left text-sm"></i></button>Чат с поддержкой';
+  document.getElementById('feedbackFormNew').classList.add('hidden');
+  document.getElementById('feedbackFormReply').classList.remove('hidden');
+  document.getElementById('feedbackSendBtn').classList.add('hidden');
+  loadFeedbackChat(docId, projectId);
+  modal.classList.add('active');
+};
+
 window.closeFeedbackChat = function() {
   document.getElementById('feedbackModal').classList.remove('active');
   if (window.currentFeedbackUnsub) {
     window.currentFeedbackUnsub();
     window.currentFeedbackUnsub = null;
   }
-  // Открываем список обращений
   openFeedbackListModal();
 };
 
-// Функция для возврата к списку обращений (для админа)
 window.backToFeedbackList = function() {
   document.getElementById('feedbackModal').classList.remove('active');
   if (window.currentFeedbackUnsub) {
@@ -1169,97 +1456,55 @@ window.backToFeedbackList = function() {
   }
   openFeedbackListModal();
 };
-window.openFeedbackFromList = function(docId, projectId, projectName) {
-  document.getElementById('feedbackProjectName').textContent = projectName || projectId;
-  document.getElementById('adminChatDeleteBtn').classList.add('hidden');
-  document.getElementById('feedbackListModal').classList.remove('active');
-  const modal = document.getElementById('feedbackModal');
-  document.getElementById('feedbackProjectId').value = projectId;
-  document.getElementById('feedbackDocId').value = docId;
-  
-  // Добавляем кнопку назад в заголовок
-  document.getElementById('feedbackModalTitle').innerHTML = '<button onclick="closeFeedbackChat()" class="flex items-center justify-center w-8 h-8 rounded-lg bg-slate-700 hover:bg-slate-600 text-white mr-2 transition-colors"><i class="fas fa-arrow-left text-sm"></i></button>Чат с поддержкой';
-  
-  document.getElementById('feedbackFormNew').classList.add('hidden');
-  document.getElementById('feedbackFormReply').classList.remove('hidden');
-  document.getElementById('feedbackSendBtn').classList.add('hidden');
-  loadFeedbackChat(docId, projectId);
-  modal.classList.add('active');
-};
 
 window.openAdminFeedbackChat = function(feedbackId) {
   const fb = adminFeedbacks.find(f => f.id === feedbackId);
   if (!fb) return;
-
-  // Информация о проекте
   const project = projects.find(p => p.id === fb.projectId);
   const projectName = project?.name || fb.projectId || 'Неизвестный проект';
   const projectLogo = project?.image || '';
-
-  // Закрываем список и открываем модалку чата
   const listModal = document.getElementById('feedbackListModal');
   if (listModal) listModal.classList.remove('active');
   const chatModal = document.getElementById('feedbackModal');
-
   document.getElementById('feedbackProjectId').value = fb.projectId;
-
-  // Заголовок + кнопка «Назад»
-  let projectDisplayHtml = '';
-  projectDisplayHtml += '<button onclick="backToFeedbackList()" class="flex items-center justify-center w-8 h-8 rounded-lg bg-slate-700 hover:bg-slate-600 text-white mr-2 transition-colors flex-shrink-0"><i class="fas fa-arrow-left text-sm"></i></button>';
-  if (projectLogo) {
-    projectDisplayHtml += `<img src="${projectLogo}" class="w-6 h-6 rounded mr-2 object-cover" alt="${projectName}" onerror="this.style.display='none'">`;
-  }
+  let projectDisplayHtml = '<button onclick="backToFeedbackList()" class="flex items-center justify-center w-8 h-8 rounded-lg bg-slate-700 hover:bg-slate-600 text-white mr-2 transition-colors flex-shrink-0"><i class="fas fa-arrow-left text-sm"></i></button>';
+  if (projectLogo) projectDisplayHtml += `<img src="${projectLogo}" class="w-6 h-6 rounded mr-2 object-cover" alt="${projectName}" onerror="this.style.display='none'">`;
   projectDisplayHtml += `<span class="font-bold text-white">${projectName}</span> <span class="text-xs text-slate-500 ml-1">(от ${fb.userName || 'Пользователь'})</span>`;
-
   document.getElementById('feedbackProjectName').innerHTML = projectDisplayHtml;
   document.getElementById('feedbackDocId').value = fb.id;
   document.getElementById('feedbackModalTitle').innerHTML = '<i class="fas fa-user-shield text-purple-400 mr-2"></i>Чат с пользователем';
-
   document.getElementById('feedbackFormNew').classList.add('hidden');
   document.getElementById('feedbackFormReply').classList.remove('hidden');
   document.getElementById('feedbackSendBtn').classList.add('hidden');
-
-  if (window.currentFeedbackUnsub) {
-    window.currentFeedbackUnsub();
-    window.currentFeedbackUnsub = null;
-  }
-
+  if (window.currentFeedbackUnsub) { window.currentFeedbackUnsub(); window.currentFeedbackUnsub = null; }
   const unsub = onSnapshot(doc(db, "feedbacks", feedbackId), (snap) => {
     if (!snap.exists()) return;
     const d = snap.data();
     const messages = (d.messages || []).sort((a, b) => new Date(a.timestamp || 0) - new Date(b.timestamp || 0));
-
     const html = messages.map(msg => {
       const bubbleSide = msg.sender;
       const senderName = msg.sender === 'admin' ? 'Вы' : (d.userName || 'Пользователь');
-      const avatar = msg.sender === 'admin'
-        ? `<div class="chat-avatar"><i class="fas fa-user-shield"></i></div>`
-        : `<img src="${d.userPhoto || 'https://ui-avatars.com/api/?name=P'}" class="chat-avatar" alt>`;
+      const avatar = msg.sender === 'admin' ? `<div class="chat-avatar"><i class="fas fa-user-shield"></i></div>` : `<img src="${d.userPhoto || 'https://ui-avatars.com/api/?name=P'}" class="chat-avatar" alt>`;
       const time = msg.timestamp ? formatTimeAgo(msg.timestamp.toDate ? msg.timestamp.toDate() : new Date(msg.timestamp)) : '';
       return `<div class="chat-bubble ${bubbleSide}">${avatar}<div class="chat-bubble-wrapper"><span class="chat-sender">${senderName}</span><div class="chat-content">${msg.text}</div><span class="chat-time">${time}</span></div></div>`;
     }).join('');
-
     const hist = document.getElementById('feedbackChatHistory');
     hist.innerHTML = html || '<p class="text-center text-slate-500 py-4">Нет сообщений</p>';
     hist.scrollTop = hist.scrollHeight;
   });
-
   window.currentFeedbackUnsub = unsub;
-
   const inp = document.getElementById('feedbackUserReplyText');
   inp.value = '';
   inp.placeholder = 'Ответ пользователю...';
-
   const replyBtn = inp.parentElement.querySelector('button');
   if (replyBtn) replyBtn.onclick = function() { sendAdminReply(feedbackId); };
   inp.onkeypress = e => { if (e.key === 'Enter') { e.preventDefault(); sendAdminReply(feedbackId); } };
-
   chatModal.classList.add('active');
   document.getElementById('adminChatDeleteBtn').classList.remove('hidden');
   markFeedbackRead(feedbackId);
 };
-  
-  window.sendAdminReply = async function(feedbackId) {
+
+window.sendAdminReply = async function(feedbackId) {
   const inp = document.getElementById('feedbackUserReplyText');
   const text = inp.value.trim();
   if (!text) return showToast('Введите ответ');
@@ -1287,155 +1532,26 @@ window.openFeedbackListModal = function() {
 
 window.closeFeedbackListModal = function() { document.getElementById('feedbackListModal').classList.remove('active'); };
 
-// Notifications
-function initNotificationsListener(uid) {
-  if (notificationsUnsubscribe) notificationsUnsubscribe();
-  const notifQuery = query(collection(db, "notifications"), where("userId", "==", uid));
-  notificationsUnsubscribe = onSnapshot(notifQuery, function(snapshot) {
-    notifications = snapshot.docs.map(function(doc) { return { id: doc.id, ...doc.data(), createdAt: doc.data().createdAt?.toDate() || new Date() }; }).sort(function(a, b) { return b.createdAt - a.createdAt; });
-    unreadNotificationsCount = notifications.filter(function(n) { return !n.read; }).length;
-    updateNotificationBadge();
-  });
-}
+function enableUserEnterSend() { const inp = document.getElementById('feedbackUserReplyText'); inp.onkeypress = e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendUserFeedbackReply(); } }; }
 
-function updateNotificationBadge() {
-  const badge = document.getElementById('notificationBadge');
-  if (badge) { if (unreadNotificationsCount > 0) { badge.textContent = unreadNotificationsCount > 99 ? '99+' : unreadNotificationsCount; badge.classList.remove('hidden'); } else { badge.classList.add('hidden'); } }
-}
-
-window.showNotifications = function() {
-  if (!currentUser) { showToast('Войдите'); return; }
-  const modal = document.getElementById('notificationsModal');
-  const list = document.getElementById('notificationsList');
-  if (notifications.length === 0) list.innerHTML = '<p class="text-slate-500 text-center py-8"><i class="fas fa-bell-slash text-4xl mb-3"></i><br>Нет уведомлений</p>';
-  else {
-    list.innerHTML = notifications.map(function(notif) {
-      const messageWithLinks = notif.message.replace(/(https?:\/\/[^\s]+)/g, '<a href="$1" target="_blank" class="text-blue-400 hover:underline break-all">$1</a>');
-      const typeIcons = { info: 'fa-info-circle text-blue-400', success: 'fa-check-circle text-green-400', warning: 'fa-exclamation-triangle text-yellow-400', promo: 'fa-gift text-pink-400', referral: 'fa-link text-purple-400' };
-      const typeIcon = typeIcons[notif.type] || 'fa-bell text-slate-400';
-      const unreadClass = !notif.read ? 'unread' : '';
-      return '<div class="notification-item p-3 bg-slate-800/50 rounded-lg ' + unreadClass + '" data-id="' + notif.id + '"><div class="flex items-start gap-3"><div class="w-8 h-8 rounded-lg bg-slate-700 flex items-center justify-center flex-shrink-0"><i class="fas ' + typeIcon + '"></i></div><div class="flex-1 min-w-0"><div class="text-sm text-slate-300">' + messageWithLinks + '</div><div class="flex items-center justify-between mt-2"><span class="text-xs text-slate-500">' + formatTimeAgo(notif.createdAt) + '</span>' + (!notif.read ? '<button onclick="markNotificationAsRead(\'' + notif.id + '\')" class="text-xs text-blue-400">Отметить</button>' : '') + '</div></div></div></div>';
-    }).join('');
-  }
-  modal.classList.add('active');
-};
-
-window.closeNotificationsModal = function() { document.getElementById('notificationsModal').classList.remove('active'); };
-
-window.markNotificationAsRead = async function(notifId) {
-  try { await updateDoc(doc(db, "notifications", notifId), { read: true }); const notif = notifications.find(function(n) { return n.id === notifId; }); if (notif) { notif.read = true; unreadNotificationsCount = Math.max(0, unreadNotificationsCount - 1); updateNotificationBadge(); const item = document.querySelector('[data-id="' + notifId + '"]'); if (item) { item.classList.remove('unread'); const btn = item.querySelector('button'); if (btn) btn.remove(); } } } catch (e) { console.error(e); }
-};
-
-function formatTimeAgo(date) {
-  if (!date) return '';
-  const now = new Date();
-  const diff = now - date;
-  if (diff < 60000) return 'только что';
-  if (diff < 3600000) return Math.floor(diff/60000) + ' мин';
-  if (diff < 86400000) return Math.floor(diff/3600000) + ' ч';
-  if (diff < 604800000) return Math.floor(diff/86400000) + ' дн';
-  return date.toLocaleDateString('ru-RU', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' });
-}
-
-async function saveUserData(user) {
-  try {
-    const userRef = doc(db, "users", user.uid);
-    const userSnap = await getDoc(userRef);
-    if (!userSnap.exists()) {
-      await setDoc(userRef, { email: user.email, displayName: user.displayName || 'Аноним', photoURL: user.photoURL || null, firstLogin: serverTimestamp(), provider: user.providerData[0]?.providerId || 'unknown', lastLogin: serverTimestamp(), favorites: [], completed: [], arcGuideStats: {} });
-    } else {
-      const userData = userSnap.data();
-      const updates = { lastLogin: serverTimestamp() };
-      if (!userData.firstLogin) updates.firstLogin = serverTimestamp();
-      if (!userData.provider && user.providerData[0]) updates.provider = user.providerData[0].providerId;
-      await updateDoc(userRef, updates);
-    }
-  } catch (e) { console.error('Error saving user:', e); }
-}
-
-async function syncLocalStorageToFirestore(userId) {
-  try {
-    const userRef = doc(db, "users", userId);
-    const userSnap = await getDoc(userRef);
-    if (!userSnap.exists()) return;
-    const updates = {};
-    const localFavorites = JSON.parse(localStorage.getItem('favorites_backup') || '[]');
-    if (localFavorites.length > 0) updates.favorites = localFavorites;
-    const localCompleted = JSON.parse(localStorage.getItem(COMPLETED_KEY) || '[]');
-    if (localCompleted.length > 0) updates.completed = localCompleted;
-    const localGuideStats = JSON.parse(localStorage.getItem(STORAGE_KEY) || '{}');
-    if (Object.keys(localGuideStats).length > 0) updates.arcGuideStats = localGuideStats;
-    if (Object.keys(updates).length > 0) await updateDoc(userRef, updates);
-  } catch (e) { console.error('Error sync:', e); }
-}
-
-onAuthStateChanged(auth, async function(user) {
-  if (user) {
-    currentUser = user;
-    await saveUserData(user);
-    await syncLocalStorageToFirestore(user.uid);
-    document.getElementById('generalFeedbackPanel').classList.remove('hidden');
-    initFeedbacksListener(user.uid);
-    if (user.uid === "SAkz4mdW9reDaIsvqigCNZhEKJR2") activateAdminMode();
+// ============ ACTIONS ============
+window.trackGuideClick = async function(id, url) {
+  if(url) window.open(url, '_blank');
+  else openDetail(id);
+  const now = new Date().toISOString();
+  if (!arcData[id]) arcData[id] = { totalClicks: 0, lastClick: null };
+  arcData[id].totalClicks = (arcData[id].totalClicks || 0) + 1;
+  arcData[id].lastClick = now;
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(arcData));
+  showToast('Задание засчитано!');
+  if (currentUser) {
     try {
-      const userRef = doc(db, "users", user.uid);
-      const userDoc = await getDoc(userRef);
-      if (userDoc.exists()) {
-        const data = userDoc.data();
-        userFavorites = data.favorites || [];
-        userCompleted = data.completed || [];
-        if (data.arcGuideStats) { arcData = { ...arcData, ...data.arcGuideStats }; localStorage.setItem(STORAGE_KEY, JSON.stringify(arcData)); }
-      } else { await setDoc(userRef, { favorites: [], completed: [], arcGuideStats: {} }); }
-    } catch (e) { console.error('Error:', e); }
-    document.getElementById('loggedOutView').classList.add('hidden');
-    document.getElementById('loggedInView').classList.remove('hidden');
-    document.getElementById('guestWarning').classList.add('hidden');
-    document.getElementById('userAvatar').src = user.photoURL || 'https://ui-avatars.com/api/?name=' + (user.email || 'User') + '&background=random';
-    document.getElementById('userName').textContent = user.displayName || user.email.split('@')[0];
-    initUserSync(user.uid);
-    initNotificationsListener(user.uid);
-    applyFilters();
-  } else {
-    currentUser = null; userFavorites = []; userCompleted = [];
-    document.getElementById('generalFeedbackPanel').classList.add('hidden');
-    if (notificationsUnsubscribe) { notificationsUnsubscribe(); notificationsUnsubscribe = null; }
-    if (adminFeedbacksUnsubscribe) { adminFeedbacksUnsubscribe(); adminFeedbacksUnsubscribe = null; }
-    notifications = []; unreadNotificationsCount = 0; updateNotificationBadge();
-    document.getElementById('loggedOutView').classList.remove('hidden');
-    document.getElementById('loggedInView').classList.add('hidden');
-    document.getElementById('guestWarning').classList.remove('hidden');
-    arcData = JSON.parse(localStorage.getItem(STORAGE_KEY)) || [];
-    userCompleted = JSON.parse(localStorage.getItem(COMPLETED_KEY) || []);
-    applyFilters();
+      const userRef = doc(db, "users", currentUser.uid);
+      await updateDoc(userRef, { [`arcGuideStats.${id}.totalClicks`]: arcData[id].totalClicks, [`arcGuideStats.${id}.lastClick`]: now });
+    } catch(e) { console.error('Error:', e); }
   }
-});
-
-function initUserSync(uid) {
-  const userRef = doc(db, "users", uid);
-  onSnapshot(userRef, function(docSnap) {
-    if (docSnap.exists()) {
-      const data = docSnap.data();
-      let cloudFavorites = data.favorites || [];
-      let localStorageFavorites = JSON.parse(localStorage.getItem('favorites_backup')) || [];
-      let mergedFavorites = [...new Set([...cloudFavorites, ...localStorageFavorites])];
-      if (JSON.stringify(cloudFavorites) !== JSON.stringify(mergedFavorites)) localStorage.setItem('favorites_backup', JSON.stringify(mergedFavorites));
-      userFavorites = mergedFavorites;
-      let cloudCompleted = data.completed || [];
-      let localStorageCompleted = JSON.parse(localStorage.getItem(COMPLETED_KEY)) || [];
-      let mergedCompleted = [...new Set([...cloudCompleted, ...localStorageCompleted])];
-      if (JSON.stringify(cloudCompleted) !== JSON.stringify(mergedCompleted)) localStorage.setItem(COMPLETED_KEY, JSON.stringify(mergedCompleted));
-      userCompleted = mergedCompleted;
-      if (data.arcGuideStats) {
-        let cloudArcData = data.arcGuideStats;
-        let localArcData = JSON.parse(localStorage.getItem(STORAGE_KEY)) || {};
-        let mergedArcData = { ...localArcData, ...cloudArcData };
-        localStorage.setItem(STORAGE_KEY, JSON.stringify(mergedArcData));
-        arcData = mergedArcData;
-      }
-      applyFilters();
-    }
-  });
-}
+  applyFilters();
+};
 
 window.toggleComplete = async function(uid, aid) {
   const uniqueId = uid + '_' + aid;
@@ -1477,308 +1593,6 @@ function createSuccessRipple(button) {
   ripple.animate([{ transform: 'translate(-50%,-50%) scale(0)', opacity: 1 }, { transform: 'translate(-50%,-50%) scale(2)', opacity: 0 }], { duration: 600, easing: 'ease-out' }).onfinish = () => ripple.remove();
 }
 
-const EXTERNAL_DATA_URL = './data/projects.json';
-const ENGLISH_PROJECTS_URL = 'english_projects.json';
-let englishProjectsData = {};
-
-async function loadEnglishProjects() {
-  try {
-    const response = await fetch(ENGLISH_PROJECTS_URL);
-    if (response.ok) {
-      const data = await response.json();
-      // ИСПРАВЛЕНИЕ: правильно обрабатываем структуру JSON
-      if (data.projects && Array.isArray(data.projects)) {
-        englishProjectsData = {};
-        data.projects.forEach(project => {
-          englishProjectsData[project.id] = project;
-        });
-      } else if (Array.isArray(data)) {
-        englishProjectsData = {};
-        data.forEach(project => {
-          englishProjectsData[project.id] = project;
-        });
-      }
-      console.log('English loaded:', Object.keys(englishProjectsData).length);
-    }
-  } catch (e) {
-    console.log('Error:', e);
-    englishProjectsData = {};
-  }
-}
-
-window.loadData = async function() {
-  await loadEnglishProjects();
-  if (window.currentLang === 'en') {
-    loadFromEnglish();
-  } else {
-    loadFromFirebase();
-  }
-};
-
-function loadFromEnglish() {
-  if (firestoreUnsubscribe) {
-    firestoreUnsubscribe();
-    firestoreUnsubscribe = null;
-  }
-  const englishArray = Object.values(englishProjectsData);
-  console.log('English projects:', englishArray.length);
-  
-  if (englishArray.length > 0) {
-    projects = englishArray.map(normalizeData);
-    sortProjects('latest');
-    applyFilters();
-  }
-  hideLoadingScreen();
-}
-
-// Функция применения английских данных к проекту
-function applyEnglishData(project) {
-  if (window.currentLang === 'en' && englishProjectsData[project.id]) {
-    const engData = englishProjectsData[project.id];
-    // Перезаписываем основные поля на английские
-    return {
-      ...project,
-      name: engData.name || project.name,
-      description: engData.description || project.description,
-      shortDescription: engData.shortDescription || project.shortDescription,
-      activities: engData.activities || project.activities,
-      guideUrl: engData.guideUrl || project.guideUrl,
-      website: engData.website || project.website,
-      twitterUrl: engData.twitterUrl || project.twitterUrl,
-      cryptoRankUrl: engData.cryptoRankUrl || project.cryptoRankUrl,
-      referralLink: engData.referralLink || project.referralLink
-    };
-  }
-  return project;
-}
-document.addEventListener('DOMContentLoaded', function() { 
-  checkAndAutoEndActivities();
-  setInterval(checkAndAutoEndActivities, 60 * 60 * 1000);
-  loadData(); 
-  setupSearchListener();
-  
-  // Сохраняем позицию прокрутки при работе с textarea
-  const richDescTextarea = document.getElementById('actRichDesc');
-  if (richDescTextarea) {
-    richDescTextarea.addEventListener('scroll', function() {
-      this.dataset.lastScrollTop = this.scrollTop;
-    });
-    
-    richDescTextarea.addEventListener('focus', function() {
-      if (this.dataset.lastScrollTop) {
-        this.scrollTop = parseInt(this.dataset.lastScrollTop);
-      }
-    });
-  }
-  // Принудительно обновляем UI после загрузки
-setTimeout(() => {
-  if (projects.length > 0) {
-    applyFilters();
-  }
-}, 1500);
-  const searchDeletedInput = document.getElementById('searchDeletedInput');
-  if (searchDeletedInput) {
-    let searchTimeout;
-    searchDeletedInput.addEventListener('input', function() { clearTimeout(searchTimeout); searchTimeout = setTimeout(() => loadDeletedProjects(this.value), 300); });
-  }
-  
-  const select = document.getElementById('itemsPerPageSelect');
-  if(select) select.value = itemsPerPage;
-  
-  const promptInput = document.getElementById('promptInput');
-  if(promptInput) {
-    promptInput.addEventListener('keydown', function(e) { if (e.key === 'Enter') { e.preventDefault(); window.confirmLinkInsert(); } });
-  }
-
-  // Настройка обработчиков модальных окон - закрытие только при клике по фону (mousedown)
-  const modalConfigs = [
-    { id: 'detailModal', closeFn: window.closeDetailModal },
-    { id: 'loginModal', closeFn: window.closeLoginModal },
-    { id: 'addModal', closeFn: window.closeAddModal },
-    { id: 'activityModal', closeFn: window.closeActivityModal },
-    { id: 'notificationsModal', closeFn: window.closeNotificationsModal },
-    { id: 'feedbackModal', closeFn: window.closeFeedbackModal },
-    { id: 'feedbackListModal', closeFn: window.closeFeedbackListModal },
-    { id: 'promptModal', closeFn: window.closePromptModal },
-    { id: 'deletedProjectsModal', closeFn: window.closeDeletedProjectsModal },
-    { id: 'imageModal', closeFn: window.closeImageModal }
-  ];
-
-    modalConfigs.forEach(config => {
-    const modalElement = document.getElementById(config.id);
-    if (modalElement) {
-      // Закрытие только при mousedown+mouseup на фоне модалки
-      modalElement.addEventListener('mousedown', function(e) {
-        if (e.target === modalElement) {
-          modalElement.dataset.mouseDownOnBg = 'true';
-        } else {
-          modalElement.dataset.mouseDownOnBg = 'false';
-        }
-      });
-      
-      modalElement.addEventListener('mouseup', function(e) {
-        if (modalElement.dataset.mouseDownOnBg === 'true' && e.target === modalElement) {
-          config.closeFn();
-        }
-        modalElement.dataset.mouseDownOnBg = 'false';
-      });
-      
-      modalElement.addEventListener('mouseleave', function(e) {
-        modalElement.dataset.mouseDownOnBg = 'false';
-      });
-    }
-  });
-});
-
-let firstDataLoadComplete = false;
-
-// Замени эту функцию в своём коде:
-
-window.loadData = async function() {
-  // Загружаем english_projects.json
-  await loadEnglishProjects();
-
-  // В зависимости от языка загружаем данные
-  if (window.currentLang === 'en') {
-    // АНГЛИЙСКИЙ - грузим из english_projects.json
-    loadFromEnglish();
-  } else {
-    // РУССКИЙ - грузим из Firebase (оригинальная логика)
-    loadFromFirebase();
-  }
-};
-
-// Функция загрузки из английского файла
-function loadFromEnglish() {
-  // Останавливаем подписку Firebase если она есть
-  if (firestoreUnsubscribe) {
-    firestoreUnsubscribe();
-    firestoreUnsubscribe = null;
-  }
-
-  const englishArray = Object.values(englishProjectsData);
-  
-  if (englishArray.length > 0) {
-    projects = englishArray.map(normalizeData);
-    sortProjects('latest');
-    applyFilters();
-  } else {
-    projects = [];
-    console.log('No English projects data');
-  }
-  
-  hideLoadingScreen();
-}
-
-// Функция загрузки из Firebase (оригинальная логика)
-function loadFromFirebase() {
-  // Сначала пробуем загрузить локальный JSON как резерв
-  fetch(EXTERNAL_DATA_URL)
-    .then(response => {
-      if (response.ok) return response.json();
-      throw new Error('No local JSON');
-    })
-    .then(data => {
-      if (data.projects) {
-        projects = data.projects.map(normalizeData);
-        sortProjects('latest');
-        applyFilters();
-      }
-    })
-    .catch(e => { 
-      console.log('Local JSON not loaded, using Firebase only');
-    });
-
-  // Подписываемся на обновления Firestore
-  const q = query(collection(db, "projects"), where("deleted", "==", false));
-  firestoreUnsubscribe = onSnapshot(q, function(snapshot) {
-    snapshot.forEach(function(docSnap) {
-      const fireProject = docSnap.data();
-      const idx = projects.findIndex(function(p) { return p.id === fireProject.id; });
-      if (idx !== -1) {
-        projects[idx] = { ...projects[idx], ...fireProject };
-      } else if (!fireProject.deleted) {
-        projects.push(normalizeData(fireProject));
-      }
-    });
-    sortProjects(currentSortType);
-    applyFilters();
-  });
-  
-  // Также слушаем удаленные проекты для админа
-  if (isAdminMode) {
-    onSnapshot(query(collection(db, "projects"), where("deleted", "==", true)), function(snapshot) {
-      snapshot.forEach(function(docSnap) {
-        const fireProject = docSnap.data();
-        const idx = projects.findIndex(function(p) { return p.id === fireProject.id; });
-        if (idx !== -1) {
-          projects[idx] = { ...projects[idx], ...fireProject };
-        } else {
-          projects.push(normalizeData(fireProject));
-        }
-      });
-      applyFilters();
-    });
-  }
-}
-
-// Функция скрытия экрана загрузки
-function hideLoadingScreen() {
-  const loadingScreen = document.getElementById('loading-screen');
-  if (loadingScreen) {
-    loadingScreen.style.opacity = '0';
-    setTimeout(() => {
-      loadingScreen.style.display = 'none';
-    }, 500);
-  }
-}
-
-function normalizeData(project) {
-  if (!project.categories) project.categories = project.category ? [project.category] : ['Other'];
-  if (!project.activities) project.activities = [];
-  project.activities = project.activities.map((act, index) => {
-    if (!act.id) {
-      const safeTitle = act.title ? act.title.toLowerCase().replace(/\s+/g, '_').replace(/[^a-z0-9_]/g, '') : 'act';
-      act.id = 'act_' + safeTitle + '_' + (project.id || 'proj') + '_' + index;
-    }
-    return act;
-  });
-  if (project.deleted === undefined) project.deleted = false;
-  
-  // ИСПРАВЛЕНИЕ: применяем английские данные
-  if (window.currentLang === 'en' && englishProjectsData[project.id]) {
-    const engData = englishProjectsData[project.id];
-    project.name = engData.name || project.name;
-    project.description = engData.description || project.description;
-    project.activities = engData.activities || project.activities;
-    project.guideUrl = engData.guideUrl || project.guideUrl;
-    project.twitterUrl = engData.twitterUrl || project.twitterUrl;
-    project.cryptoRankUrl = engData.cryptoRankUrl || project.cryptoRankUrl;
-    project.referralLink = engData.referralLink || project.referralLink;
-    project.image = engData.image || project.image;
-  }
-  
-  return project;
-}
-
-window.trackGuideClick = async function(id, url) {
-  if(url) window.open(url, '_blank');
-  else openDetail(id);
-  const now = new Date().toISOString();
-  if (!arcData[id]) arcData[id] = { totalClicks: 0, lastClick: null };
-  arcData[id].totalClicks = (arcData[id].totalClicks || 0) + 1;
-  arcData[id].lastClick = now;
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(arcData));
-  showToast('Задание засчитано!');
-  if (currentUser) {
-    try {
-      const userRef = doc(db, "users", currentUser.uid);
-      await updateDoc(userRef, { [`arcGuideStats.${id}.totalClicks`]: arcData[id].totalClicks, [`arcGuideStats.${id}.lastClick`]: now });
-    } catch(e) { console.error('Error:', e); }
-  }
-  applyFilters();
-};
-
 window.toggleFavorite = async function(id) {
   if (!currentUser) { showToast('Войдите'); return; }
   const btn = event.currentTarget;
@@ -1795,45 +1609,25 @@ window.toggleFavorite = async function(id) {
 window.toggleFavoriteFromDetail = async function() { if (!currentDetailId) return; await window.toggleFavorite(currentDetailId); updateDetailFavoriteIcon(); };
 function updateDetailFavoriteIcon() { if (!currentDetailId) return; const btn = document.getElementById('detailFavoriteBtn'); const isFav = userFavorites.includes(currentDetailId); if (btn) btn.classList.toggle('active', isFav); }
 
-window.toggleCategoriesDropdown = function() { 
-  document.getElementById('categoriesAccordion').classList.toggle('open'); 
-  document.getElementById('catDropdownIcon').classList.toggle('rotate-180'); 
+// ============ FILTER & SORT ============
+window.filterProjects = function(status) {
+  if (status === 'all') currentFilters.statuses = [];
+  else {
+    const index = currentFilters.statuses.indexOf(status);
+    if (index !== -1) currentFilters.statuses.splice(index, 1);
+    else currentFilters.statuses.push(status);
+  }
+  applyFilters(null, true);
 };
 
-window.toggleCategoryFilter = function(catName) {
-  if (currentFilters.categories.includes(catName)) currentFilters.categories = currentFilters.categories.filter(function(c) { return c !== catName; });
-  else currentFilters.categories.push(catName);
-  updateCategoryUI();
+window.resetFilters = function() { currentFilters = { status: 'all', categories: [] }; document.getElementById('searchInput').value = ''; applyFilters(); };
+
+window.sortProjects = function(by) {
+  currentSortType = by;
+  if (by === 'name') projects.sort(function(a, b) { return a.name.localeCompare(b.name); });
+  else if (by === 'priority') projects.sort(function(a, b) { return (b.priority === 'high' ? 1 : 0) - (a.priority === 'high' ? 1 : 0); });
+  else if (by === 'latest') projects.sort(function(a, b) { const aDate = getLatestActivityDate(a); const bDate = getLatestActivityDate(b); return new Date(bDate || 0).getTime() - new Date(aDate || 0).getTime(); });
   applyFilters();
-};
-
-function updateCategoryUI() {
-  const container = document.getElementById('categoryCheckboxesList');
-  if (!container) return;
-  const allCats = getAllCategoriesWithCounts(projects);
-  container.innerHTML = allCats.map(function(item) {
-    const cat = item[0];
-    const count = item[1];
-    const isChecked = currentFilters.categories.includes(cat) ? 'checked' : '';
-    return '<label class="flex items-center justify-between px-2 py-1.5 rounded hover:bg-slate-800 cursor-pointer text-sm"><div class="flex items-center gap-2"><input type="checkbox" ' + isChecked + ' onchange="toggleCategoryFilter(\'' + cat + '\')"><span class="text-slate-300">' + cat + '</span></div><span class="text-xs text-slate-500 bg-slate-800 px-1.5 py-0.5 rounded">' + count + '</span></label>';
-  }).join('');
-  const tagsContainer = document.getElementById('selectedCategoriesTags');
-  if (currentFilters.categories.length === 0) tagsContainer.innerHTML = '<span class="text-xs text-slate-500 italic">Все</span>';
-  else tagsContainer.innerHTML = currentFilters.categories.map(function(cat) { return '<span class="px-2 py-0.5 bg-blue-600/20 border border-blue-500/50 text-blue-300 text-xs rounded-full flex items-center gap-1">' + cat + ' <i onclick="toggleCategoryFilter(\'' + cat + '\')" class="fas fa-times cursor-pointer hover:text-white"></i></span>'; }).join('');
-}
-
-window.changeItemsPerPage = function(val) { itemsPerPage = parseInt(val); localStorage.setItem('currentPage', currentPage); applyFilters(null, true); };
-
-window.applyFilters = function(search, resetPage = false) {
-  if (!search) search = document.getElementById('searchInput').value;
-  if (resetPage) { currentPage = 1; localStorage.removeItem('currentPage'); }
-  currentFilteredList = getFilteredProjects(search);
-  updateCategoryUI();
-  renderProjects(currentFilteredList);
-  renderPaginationControls(currentFilteredList.length);
-  updateSidebarActive();
-  updateCounts(currentFilteredList);
-  updateStats(currentFilteredList);
 };
 
 function getFilteredProjects(search) {
@@ -1867,27 +1661,88 @@ function getFilteredProjects(search) {
   });
 }
 
-function getLatestActivityDate(project) {
-  if (!project.activities || project.activities.length === 0) return project.lastUpdated || project.createdAt;
-  const latestActivity = project.activities.filter(a => a.date).sort((a, b) => new Date(b.date) - new Date(a.date))[0];
-  return latestActivity && latestActivity.date ? latestActivity.date : (project.lastUpdated || project.createdAt);
+window.applyFilters = function(search, resetPage = false) {
+  if (!search) search = document.getElementById('searchInput').value;
+  if (resetPage) { currentPage = 1; localStorage.removeItem('currentPage'); }
+  currentFilteredList = getFilteredProjects(search);
+  updateCategoryUI();
+  renderProjects(currentFilteredList);
+  renderPaginationControls(currentFilteredList.length);
+  updateSidebarActive();
+  updateCounts(currentFilteredList);
+  updateStats(currentFilteredList);
+};
+
+window.changeItemsPerPage = function(val) { itemsPerPage = parseInt(val); localStorage.setItem('currentPage', currentPage); applyFilters(null, true); };
+
+// ============ UI UPDATES ============
+function updateCategoryUI() {
+  const container = document.getElementById('categoryCheckboxesList');
+  if (!container) return;
+  const allCats = getAllCategoriesWithCounts(projects);
+  container.innerHTML = allCats.map(function(item) {
+    const cat = item[0];
+    const count = item[1];
+    const isChecked = currentFilters.categories.includes(cat) ? 'checked' : '';
+    return '<label class="flex items-center justify-between px-2 py-1.5 rounded hover:bg-slate-800 cursor-pointer text-sm"><div class="flex items-center gap-2"><input type="checkbox" ' + isChecked + ' onchange="toggleCategoryFilter(\'' + cat + '\')"><span class="text-slate-300">' + cat + '</span></div><span class="text-xs text-slate-500 bg-slate-800 px-1.5 py-0.5 rounded">' + count + '</span></label>';
+  }).join('');
+  const tagsContainer = document.getElementById('selectedCategoriesTags');
+  if (currentFilters.categories.length === 0) tagsContainer.innerHTML = '<span class="text-xs text-slate-500 italic">Все</span>';
+  else tagsContainer.innerHTML = currentFilters.categories.map(function(cat) { return '<span class="px-2 py-0.5 bg-blue-600/20 border border-blue-500/50 text-blue-300 text-xs rounded-full flex items-center gap-1">' + cat + ' <i onclick="toggleCategoryFilter(\'' + cat + '\')" class="fas fa-times cursor-pointer hover:text-white"></i></span>'; }).join('');
 }
 
-function isNewProject(dateString) {
-  if (!dateString) return false;
-  const created = new Date(dateString);
-  const now = new Date();
-  const diffTime = Math.abs(now - created);
-  const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-  return diffDays <= 7;
+window.toggleCategoryFilter = function(catName) {
+  if (currentFilters.categories.includes(catName)) currentFilters.categories = currentFilters.categories.filter(function(c) { return c !== catName; });
+  else currentFilters.categories.push(catName);
+  updateCategoryUI();
+  applyFilters();
+};
+
+window.toggleCategoriesDropdown = function() { 
+  document.getElementById('categoriesAccordion').classList.toggle('open'); 
+  document.getElementById('catDropdownIcon').classList.toggle('rotate-180'); 
+};
+
+function updateSidebarActive() {
+  document.querySelectorAll('.sidebar-link').forEach(function(btn) {
+    const filter = btn.dataset.filter;
+    btn.classList.remove('active');
+    if (filter === 'all') { if (currentFilters.statuses.length === 0) btn.classList.add('active'); }
+    else { if (currentFilters.statuses.includes(filter)) btn.classList.add('active'); }
+  });
 }
 
+function updateCounts(filtered) {
+  document.getElementById('countAll').textContent = filtered.length;
+  document.getElementById('countToday').textContent = filtered.filter(function(p) { return isToday(p.createdAt); }).length;
+  document.getElementById('countActive').textContent = filtered.filter(function(p) { const projectCompleted = userCompleted.includes(p.id + '_project'); const hasActivities = p.activities && p.activities.length > 0; const allActivitiesCompleted = hasActivities && p.activities.every(a => userCompleted.includes(p.id + '_' + a.id)); return !(projectCompleted || allActivitiesCompleted); }).length;
+  document.getElementById('countDaily').textContent = filtered.filter(function(p) { return p.hasDaily && p.status === 'active'; }).length;
+  document.getElementById('countFavoritesSidebar').textContent = filtered.filter(function(p) { return userFavorites.includes(p.id); }).length;
+  document.getElementById('countCompletedSidebar').textContent = filtered.filter(function(p) { const projectCompleted = userCompleted.includes(p.id + '_project'); const hasActivities = p.activities && p.activities.length > 0; const allActivitiesCompleted = hasActivities && p.activities.every(a => userCompleted.includes(p.id + '_' + a.id)); return projectCompleted || allActivitiesCompleted; }).length;
+  document.getElementById('countEnded').textContent = filtered.filter(function(p) { return p.status === 'ended'; }).length;
+}
+
+function updateStats(filtered) {
+  document.getElementById('statActive').textContent = filtered.filter(function(p) { const projectCompleted = userCompleted.includes(p.id + '_project'); const hasActivities = p.activities && p.activities.length > 0; const allActivitiesCompleted = hasActivities && p.activities.every(a => userCompleted.includes(p.id + '_' + a.id)); return !(projectCompleted || allActivitiesCompleted); }).length;
+  document.getElementById('statToday').textContent = filtered.filter(function(p) { return isToday(p.createdAt); }).length;
+  document.getElementById('statFavorites').textContent = filtered.filter(function(p) { return userFavorites.includes(p.id); }).length;
+  document.getElementById('statCompleted').textContent = filtered.filter(function(p) { const projectCompleted = userCompleted.includes(p.id + '_project'); const hasActivities = p.activities && p.activities.length > 0; const allActivitiesCompleted = hasActivities && p.activities.every(a => userCompleted.includes(p.id + '_' + a.id)); return projectCompleted || allActivitiesCompleted; }).length;
+}
+
+function getAllCategoriesWithCounts(allProjects) {
+  const catCounts = {};
+  allProjects.forEach(function(p) { if (p.categories) p.categories.forEach(function(cat) { catCounts[cat] = (catCounts[cat] || 0) + 1; }); });
+  return Object.entries(catCounts).sort(function(a, b) { return a[0].localeCompare(b[0]); });
+}
+
+function getAllCategoriesFromProjects() { const cats = new Set(); projects.forEach(function(p) { if(p.categories) p.categories.forEach(function(c) { cats.add(c); }); }); return Array.from(cats); }
+
+// ============ RENDER ============
 function renderProjects(filteredProjects) {
- const grid = document.getElementById('projectsGrid');
+  const grid = document.getElementById('projectsGrid');
   const loadingEl = document.getElementById('loadingProjects');
   const empty = document.getElementById('emptyState');
   
-  // Скрываем индикатор загрузки
   if (loadingEl) loadingEl.classList.add('hidden');
   
   const pagination = document.getElementById('paginationControls');
@@ -1912,47 +1767,45 @@ function renderProjects(filteredProjects) {
     const lastClickDate = lastClickRecord && lastClickRecord.lastClick ? formatClickDate(lastClickRecord.lastClick) : null;
     const lastUpdatedDate = lastActivityDate ? formatDateForDisplay(lastActivityDate) : null;
     const categoriesHtml = (project.categories || ['Other']).map(cat => `<span class="bg-slate-800 px-2 py-1 rounded cursor-pointer hover:bg-slate-700" onclick="event.stopPropagation(); toggleCategoryFilter('${cat}')">${cat}</span>`).join('');
-    const completedTheme = 'theme-indigo';
     
-    return `
-  <div class="glass-card rounded-2xl p-4 relative group project-card-wrapper ${isNew ? 'border-pink-500/30' : ''} ${isCompleted ? 'completed ' + completedTheme : ''} ${hasNewActs ? 'has-new-activities' : ''}">
+    return `<div class="glass-card rounded-2xl p-4 relative group project-card-wrapper ${isNew ? 'border-pink-500/30' : ''} ${isCompleted ? 'completed theme-indigo' : ''} ${hasNewActs ? 'has-new-activities' : ''}">
 ${isCompleted ? '<div class="absolute -top-2 -left-2 z-20"><span class="completed-badge"><i class="fas fa-check mr-1"></i>Готово</span></div>' : ''}
 ${hasNewActs ? '<div class="absolute -top-2 -right-2 z-20"><span class="activity-new-badge">' + newActsCount + ' NEW</span></div>' : ''}
-            ${project.deleted ? '<div class="absolute top-2 left-2"><span class="deleted-badge text-xs">Архив</span></div>' : ''}
-            <button onclick="event.stopPropagation(); openFeedbackModal('${project.id}', '${project.name.replace(/'/g, "\\'")}');" class="feedback-trigger-btn text-slate-300 hover:text-blue-400 rounded-lg text-xs font-bold flex items-center gap-1" title="Оставить отзыв"><i class="fas fa-comment-dots"></i><span>Отзыв</span></button>
-            <div class="flex items-start gap-4 pt-2">
-                <div class="shrink-0">${project.image ? '<img src="' + project.image + '" alt="' + project.name + '" class="w-12 h-12 rounded-lg object-cover border border-slate-700">' : '<div class="w-12 h-12 rounded-lg bg-slate-800 border border-slate-700 flex items-center justify-center text-xl">' + project.name.charAt(0).toUpperCase() + '</div>'}</div>
-                <div class="flex-1 min-w-0 flex flex-col">
-                    <div class="flex items-start justify-between gap-2">
-                        <div class="flex-1">
-                            <div class="flex items-center gap-2 flex-wrap">
-                                <h3 class="font-bold text-lg leading-tight text-white cursor-pointer hover:text-blue-400" onclick="openDetail('${project.id}')">${project.name}</h3>
-                                ${lastUpdatedDate ? '<span class="last-updated-date" title="Дата последней активности">🔄 ' + lastUpdatedDate + '</span>' : ''}
-                                ${isAdminMode ? '<button onclick="event.stopPropagation(); editProject(\'' + project.id + '\')" class="text-slate-500 hover:text-blue-400 text-xs edit-btn"><i class="fas fa-pencil-alt"></i></button>' : ''}
-                            </div>
-                            <div class="flex flex-wrap gap-2 items-center text-xs text-slate-400 mb-2">
-                                <div class="flex flex-wrap gap-1">${categoriesHtml}</div>
-                                <span class="status-${project.status} px-2 py-1 rounded font-medium">${project.status === 'active' ? 'Active' : project.status === 'soon' ? 'Soon' : 'Ended'}</span>
-                                ${project.hasDaily ? '<span class="text-orange-400"><i class="fas fa-fire mr-1"></i>Daily</span>' : ''}
-                                ${project.priority === 'high' ? '<span class="text-red-400"><i class="fas fa-star mr-1"></i>High</span>' : ''}
-                            </div>
-                        </div>
-                        <div class="flex items-center gap-2 flex-wrap shrink-0">
-                            ${lastClickDate ? '<span class="last-click-date ' + lastClickDate.class + '">' + lastClickDate.text + '</span>' : ''}
-                            <button onclick="trackGuideClick('${project.id}', '${project.guideUrl || ''}')" class="guide-btn-small text-white rounded-lg text-sm font-medium flex items-center justify-center gap-2"><i class="fas fa-book-open"></i><span>Гайд</span></button>
-                            <button onclick="event.stopPropagation(); toggleComplete('${project.id}', 'project')" class="lab-complete-btn ${isCompleted ? 'active' : ''}" title="Отметить"><svg width="24" height="24"><use href="#lab-check"/></svg></button>
-                            <button onclick="event.stopPropagation(); toggleFavorite('${project.id}')" class="lab-favorite-btn ${isFav ? 'active' : ''}" title="Избранное"><svg width="24" height="24"><use href="#lab-heart"/></svg></button>
-                        </div>
-                    </div>
-                    <p class="text-slate-400 text-sm mt-2 line-clamp-2">${project.description || 'Нет описания'}</p>
-                </div>
-            </div>
-            <div class="mt-4 pt-3 border-t border-slate-700/50 flex gap-2">
-                <button onclick="trackGuideClick('${project.id}', '${project.referralLink || project.cryptoRankUrl || ''}'); event.stopPropagation();" class="flex-1 bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-300 py-2 rounded-lg text-sm font-medium flex items-center justify-center gap-2"><i class="fas fa-globe"></i> Website</button>
-                <button onclick="trackGuideClick('${project.id}', '${project.twitterUrl || ''}'); event.stopPropagation();" class="flex-1 bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-300 py-2 rounded-lg text-sm font-medium flex items-center justify-center gap-2"><i class="fab fa-twitter"></i> Twitter</button>
-                <button onclick="trackGuideClick('${project.id}', '${project.cryptoRankUrl || ''}'); event.stopPropagation();" class="flex-1 bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-300 py-2 rounded-lg text-sm font-medium flex items-center justify-center gap-2"><i class="fas fa-chart-line"></i> CR</button>
-            </div>
-        </div>`;
+${project.deleted ? '<div class="absolute top-2 left-2"><span class="deleted-badge text-xs">Архив</span></div>' : ''}
+<button onclick="event.stopPropagation(); openFeedbackModal('${project.id}', '${project.name.replace(/'/g, "\\'")}');" class="feedback-trigger-btn text-slate-300 hover:text-blue-400 rounded-lg text-xs font-bold flex items-center gap-1" title="Оставить отзыв"><i class="fas fa-comment-dots"></i><span>Отзыв</span></button>
+<div class="flex items-start gap-4 pt-2">
+<div class="shrink-0">${project.image ? '<img src="' + project.image + '" alt="' + project.name + '" class="w-12 h-12 rounded-lg object-cover border border-slate-700">' : '<div class="w-12 h-12 rounded-lg bg-slate-800 border border-slate-700 flex items-center justify-center text-xl">' + project.name.charAt(0).toUpperCase() + '</div>'}</div>
+<div class="flex-1 min-w-0 flex flex-col">
+<div class="flex items-start justify-between gap-2">
+<div class="flex-1">
+<div class="flex items-center gap-2 flex-wrap">
+<h3 class="font-bold text-lg leading-tight text-white cursor-pointer hover:text-blue-400" onclick="openDetail('${project.id}')">${project.name}</h3>
+${lastUpdatedDate ? '<span class="last-updated-date" title="Дата последней активности">🔄 ' + lastUpdatedDate + '</span>' : ''}
+${isAdminMode ? '<button onclick="event.stopPropagation(); editProject(\'' + project.id + '\')" class="text-slate-500 hover:text-blue-400 text-xs edit-btn"><i class="fas fa-pencil-alt"></i></button>' : ''}
+</div>
+<div class="flex flex-wrap gap-2 items-center text-xs text-slate-400 mb-2">
+<div class="flex flex-wrap gap-1">${categoriesHtml}</div>
+<span class="status-${project.status} px-2 py-1 rounded font-medium">${project.status === 'active' ? 'Active' : project.status === 'soon' ? 'Soon' : 'Ended'}</span>
+${project.hasDaily ? '<span class="text-orange-400"><i class="fas fa-fire mr-1"></i>Daily</span>' : ''}
+${project.priority === 'high' ? '<span class="text-red-400"><i class="fas fa-star mr-1"></i>High</span>' : ''}
+</div>
+</div>
+<div class="flex items-center gap-2 flex-wrap shrink-0">
+${lastClickDate ? '<span class="last-click-date ' + lastClickDate.class + '">' + lastClickDate.text + '</span>' : ''}
+<button onclick="trackGuideClick('${project.id}', '${project.guideUrl || ''}')" class="guide-btn-small text-white rounded-lg text-sm font-medium flex items-center justify-center gap-2"><i class="fas fa-book-open"></i><span>Гайд</span></button>
+<button onclick="event.stopPropagation(); toggleComplete('${project.id}', 'project')" class="lab-complete-btn ${isCompleted ? 'active' : ''}" title="Отметить"><svg width="24" height="24"><use href="#lab-check"/></svg></button>
+<button onclick="event.stopPropagation(); toggleFavorite('${project.id}')" class="lab-favorite-btn ${isFav ? 'active' : ''}" title="Избранное"><svg width="24" height="24"><use href="#lab-heart"/></svg></button>
+</div>
+</div>
+<p class="text-slate-400 text-sm mt-2 line-clamp-2">${project.description || 'Нет описания'}</p>
+</div>
+</div>
+<div class="mt-4 pt-3 border-t border-slate-700/50 flex gap-2">
+<button onclick="trackGuideClick('${project.id}', '${project.referralLink || project.cryptoRankUrl || ''}'); event.stopPropagation();" class="flex-1 bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-300 py-2 rounded-lg text-sm font-medium flex items-center justify-center gap-2"><i class="fas fa-globe"></i> Website</button>
+<button onclick="trackGuideClick('${project.id}', '${project.twitterUrl || ''}'); event.stopPropagation();" class="flex-1 bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-300 py-2 rounded-lg text-sm font-medium flex items-center justify-center gap-2"><i class="fab fa-twitter"></i> Twitter</button>
+<button onclick="trackGuideClick('${project.id}', '${project.cryptoRankUrl || ''}'); event.stopPropagation();" class="flex-1 bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-300 py-2 rounded-lg text-sm font-medium flex items-center justify-center gap-2"><i class="fas fa-chart-line"></i> CR</button>
+</div>
+</div>`;
   }).join('');
 }
 
@@ -1991,26 +1844,7 @@ function renderPaginationControls(totalItems) {
 
 window.changePage = function(page) { currentPage = page; renderProjects(currentFilteredList); renderPaginationControls(currentFilteredList.length); document.getElementById('projectsGrid').scrollIntoView({ behavior: 'smooth', block: 'start' }); };
 
-window.filterProjects = function(status) {
-  if (status === 'all') currentFilters.statuses = [];
-  else {
-    const index = currentFilters.statuses.indexOf(status);
-    if (index !== -1) currentFilters.statuses.splice(index, 1);
-    else currentFilters.statuses.push(status);
-  }
-  applyFilters(null, true);
-};
-
-window.resetFilters = function() { currentFilters = { status: 'all', categories: [] }; document.getElementById('searchInput').value = ''; applyFilters(); };
-
-window.sortProjects = function(by) {
-  currentSortType = by;
-  if (by === 'name') projects.sort(function(a, b) { return a.name.localeCompare(b.name); });
-  else if (by === 'priority') projects.sort(function(a, b) { return (b.priority === 'high' ? 1 : 0) - (a.priority === 'high' ? 1 : 0); });
-  else if (by === 'latest') projects.sort(function(a, b) { const aDate = getLatestActivityDate(a); const bDate = getLatestActivityDate(b); return new Date(bDate || 0).getTime() - new Date(aDate || 0).getTime(); });
-  applyFilters();
-};
-
+// ============ DETAIL MODAL ============
 function parseRichContent(text) {
   if (!text) return '';
   let html = text;
@@ -2104,13 +1938,7 @@ window.toggleActivityDetail = function(actId) {
   if (!body || !icon) return;
   if (event.target.closest('.flex.items-center.gap-2 button')) return;
   if (body.classList.contains('open')) { body.classList.remove('open'); icon.classList.remove('rotate-180'); }
-  else { 
-    body.classList.add('open'); 
-    icon.classList.add('rotate-180'); 
-    if (currentDetailId) {
-      markActivityAsViewed(currentDetailId, actId);
-    }
-  }
+  else { body.classList.add('open'); icon.classList.add('rotate-180'); if (currentDetailId) markActivityAsViewed(currentDetailId, actId); }
 };
 
 window.closeDetailModal = function() { document.getElementById('detailModal').classList.remove('active'); currentDetailId = null; };
@@ -2128,6 +1956,7 @@ window.openDetailLink = function(type) {
 };
 window.openGuideFromDetail = function() { if(currentDetailId) { const project = projects.find(function(p) { return p.id === currentDetailId; }); window.trackGuideClick(currentDetailId, project ? project.guideUrl : ''); } };
 
+// ============ ADMIN MODE ============
 function activateAdminMode() {
   if (!currentUser || currentUser.uid !== "SAkz4mdW9reDaIsvqigCNZhEKJR2") return;
   isAdminMode = true;
@@ -2140,12 +1969,7 @@ function activateAdminMode() {
   applyFilters();
 }
 
-function setupSearchListener() {
-  const searchInput = document.getElementById('searchInput');
-  searchInput.addEventListener('keyup', function() { applyFilters(null, true); });
-}
-
-// ============ ACTIVITY EDITOR FUNCTIONS ============
+// ============ ACTIVITY EDITOR ============
 window.openActivityEditor = function(actId = null) {
   editingActivityId = actId;
   document.getElementById('activityModalTitle').textContent = actId ? 'Редактировать активность' : 'Новая активность';
@@ -2247,21 +2071,16 @@ window.resumeActivity = async function(projId, actId) {
   }
 };
 
-// ============ INSERT ACTIVITY FORMAT (с сохранением позиции курсора) ============
 window.insertActivityFormat = function(type) {
   const textarea = document.getElementById('actRichDesc');
   if (!textarea) return;
   
-  // Сохраняем текущую позицию выделения ДО закрытия модального окна
   const start = textarea.selectionStart;
   const end = textarea.selectionEnd;
   const selectedText = textarea.value.substring(start, end);
   const textareaValue = textarea.value;
-  
-  // Сохраняем позицию прокрутки
   const scrollTop = textarea.scrollTop;
   
-  // Для img и link - открываем модальное окно
   if (type === 'img' || type === 'link') {
     const promptInput = document.getElementById('promptInput');
     promptInput.value = '';
@@ -2276,13 +2095,12 @@ window.insertActivityFormat = function(type) {
       document.querySelector('#promptModal button:last-child').textContent = 'Применить';
     }
     
-    // Сохраняем позицию выделения для использования после закрытия модального окна
     window.pendingActivityFormat = {
       type: type,
       start: start,
       end: end,
       selectedText: selectedText,
-      textarea: textarea // Ссылка на textarea
+      textarea: textarea
     };
     
     document.getElementById('promptModal').classList.add('active');
@@ -2290,155 +2108,83 @@ window.insertActivityFormat = function(type) {
     return;
   }
   
-  // Для остальных типов - применяем сразу без окна
   let insertion = '';
   const textBefore = textareaValue.substring(0, start);
   const textAfter = textareaValue.substring(end);
   
   switch(type) {
-    case 'h3':
-      // Обрабатываем случай, когда есть выделенный текст
+    case 'h3': insertion = selectedText ? '### ' + selectedText : '### Заголовок'; break;
+    case 'ul': 
       if (selectedText) {
-        insertion = '### ' + selectedText;
-      } else {
-        insertion = '### Заголовок';
-      }
-      break;
-    case 'ul':
-      if (selectedText) {
-        // Если несколько строк - добавляем маркер к каждой
         const lines = selectedText.split('\n');
         insertion = lines.map(line => '- ' + line).join('\n');
-      } else {
-        insertion = '- Пункт списка';
-      }
+      } else { insertion = '- Пункт списка'; }
       break;
     case 'quote':
       if (selectedText) {
         const lines = selectedText.split('\n');
         insertion = lines.map(line => '> ' + line).join('\n');
-      } else {
-        insertion = '> Цитата';
-      }
+      } else { insertion = '> Цитата'; }
       break;
-    case 'hr':
-      insertion = '\n---\n';
-      break;
-    default:
-      insertion = selectedText;
+    case 'hr': insertion = '\n---\n'; break;
+    default: insertion = selectedText;
   }
   
-  // Вставляем текст
   textarea.value = textBefore + insertion + textAfter;
-  
-  // Восстанавливаем позицию курсора ПОСЛЕ выделенного текста
   const newCursorPos = start + insertion.length;
   textarea.focus();
   textarea.selectionStart = newCursorPos;
   textarea.selectionEnd = newCursorPos;
-  
-  // Восстанавливаем позицию прокрутки
   textarea.scrollTop = scrollTop;
   
   showToast(type === 'h3' ? 'Заголовок добавлен' : type === 'ul' ? 'Список добавлен' : type === 'quote' ? 'Цитата добавлена' : 'Разделитель добавлен');
 };
 
-// ============ PROMPT MODAL - АВТОЗАКРЫТИЕ И ВСТАВКА ============
-
-// Добавляем обработку Ctrl+V и Enter при загрузке
-document.addEventListener('DOMContentLoaded', function() {
-  const promptInput = document.getElementById('promptInput');
-  if (promptInput) {
-    // Enter для подтверждения
-    promptInput.addEventListener('keydown', function(e) {
-      if (e.key === 'Enter') {
-        e.preventDefault();
-        window.confirmLinkInsert();
-      }
-    });
-    
-    // ✅ НОВОЕ: Ctrl+V автоматически вставляет и закрывает
-    promptInput.addEventListener('paste', function(e) {
-      // Небольшая задержка, чтобы значение успело вставиться
-      setTimeout(function() {
-        if (promptInput.value.trim()) {
-          window.confirmLinkInsert();
-        }
-      }, 50);
-    });
-  }
-});
-
-// ============ CONFIRM LINK INSERT (исправленная позиция курсора) ============
-// ============ CONFIRM LINK INSERT (с сохранением позиции курсора) ============
 window.confirmLinkInsert = function() {
   const textarea = document.getElementById('actRichDesc');
   const url = document.getElementById('promptInput').value.trim();
   
-  if (!url) {
-    showToast('Введите ссылку');
-    return;
-  }
+  if (!url) { showToast('Введите ссылку'); return; }
   
-  // Используем pendingActivityFormat
   const format = window.pendingActivityFormat;
   
   if (format && textarea) {
     const { type, start, end, selectedText } = format;
     const textareaValue = textarea.value;
-    
-    // Сохраняем позицию прокрутки ДО изменений
     const scrollTop = textarea.scrollTop;
-    
     const textBefore = textareaValue.substring(0, start);
     const textAfter = textareaValue.substring(end);
     let insertion = '';
     
     if (type === 'img') {
-      // Для картинки: ![alt](url)
       const altText = selectedText.trim() || 'изображение';
       insertion = `![${altText}](${url})`;
     } else if (type === 'link') {
-      // Для ссылки: [текст](url)
       const linkText = selectedText.trim() || 'ссылка';
       insertion = `[${linkText}](${url})`;
-    } else {
-      insertion = selectedText;
-    }
+    } else { insertion = selectedText; }
     
-    // Вставляем текст
     textarea.value = textBefore + insertion + textAfter;
-    
-    // Курсор после вставленного текста
     const newCursorPos = start + insertion.length;
-    
-    // Возвращаем фокус и устанавливаем курсор
     textarea.focus();
     textarea.selectionStart = newCursorPos;
     textarea.selectionEnd = newCursorPos;
-    
-    // Восстанавливаем позицию прокрутки
     textarea.scrollTop = scrollTop;
     
     showToast(type === 'img' ? 'Картинка добавлена' : 'Ссылка добавлена');
   }
   
-  // Закрываем модалку
   closePromptModal();
 };
 
 window.closePromptModal = function() {
   const textarea = document.getElementById('actRichDesc');
-  
-  // Сохраняем позицию прокрутки перед закрытием
   if (textarea && window.pendingActivityFormat) {
     textarea.dataset.savedScrollTop = textarea.scrollTop;
   }
-  
   document.getElementById('promptModal').classList.remove('active');
   document.getElementById('promptInput').value = '';
   
-  // Восстанавливаем позицию прокрутки после закрытия
   setTimeout(() => {
     if (textarea && textarea.dataset.savedScrollTop) {
       textarea.scrollTop = parseInt(textarea.dataset.savedScrollTop);
@@ -2451,6 +2197,7 @@ window.closePromptModal = function() {
   pendingLinkInsert = null;
 };
 
+// ============ PROJECT ADD/EDIT MODAL ============
 window.openAddModal = function() {
   if (!isAdminMode) return;
   editingId = null;
@@ -2557,21 +2304,7 @@ window.deleteProject = async function() {
   } catch (err) { console.error(err); showToast('Ошибка'); }
 };
 
-window.migrateToFirestore = async function() {
-  if(!confirm('Загрузить в базу?')) return;
-  let count = 0;
-  for(const p of projects) { await setDoc(doc(db, "projects", p.id), p, { merge: true }); count++; }
-  showToast('Загружено ' + count);
-};
-
-function getCategoriesWithCounts(allProjects) {
-  const catCounts = {};
-  allProjects.forEach(function(p) { if (p.categories) p.categories.forEach(function(cat) { catCounts[cat] = (catCounts[cat] || 0) + 1; }); });
-  return Object.entries(catCounts).sort(function(a, b) { return a[0].localeCompare(b[0]); });
-}
-
-function getAllCategoriesWithCounts(allProjects) { return getCategoriesWithCounts(allProjects); }
-
+// ============ CATEGORIES ============
 function renderCategoryOptions() {
   const allCatsSet = new Set([...categories, ...getAllCategoriesFromProjects()]);
   const sortedCategories = Array.from(allCatsSet).sort();
@@ -2612,40 +2345,7 @@ function setSelectedCategories(cats) {
   renderTempCategories();
 }
 
-function updateSidebarActive() {
-  document.querySelectorAll('.sidebar-link').forEach(function(btn) {
-    const filter = btn.dataset.filter;
-    btn.classList.remove('active');
-    if (filter === 'all') { if (currentFilters.statuses.length === 0) btn.classList.add('active'); }
-    else { if (currentFilters.statuses.includes(filter)) btn.classList.add('active'); }
-  });
-}
-
-function updateCounts(filtered) {
-  document.getElementById('countAll').textContent = filtered.length;
-  document.getElementById('countToday').textContent = filtered.filter(function(p) { return isToday(p.createdAt); }).length;
-  document.getElementById('countActive').textContent = filtered.filter(function(p) { const projectCompleted = userCompleted.includes(p.id + '_project'); const hasActivities = p.activities && p.activities.length > 0; const allActivitiesCompleted = hasActivities && p.activities.every(a => userCompleted.includes(p.id + '_' + a.id)); return !(projectCompleted || allActivitiesCompleted); }).length;
-  document.getElementById('countDaily').textContent = filtered.filter(function(p) { return p.hasDaily && p.status === 'active'; }).length;
-  document.getElementById('countFavoritesSidebar').textContent = filtered.filter(function(p) { return userFavorites.includes(p.id); }).length;
-  document.getElementById('countCompletedSidebar').textContent = filtered.filter(function(p) { const projectCompleted = userCompleted.includes(p.id + '_project'); const hasActivities = p.activities && p.activities.length > 0; const allActivitiesCompleted = hasActivities && p.activities.every(a => userCompleted.includes(p.id + '_' + a.id)); return projectCompleted || allActivitiesCompleted; }).length;
-  document.getElementById('countEnded').textContent = filtered.filter(function(p) { return p.status === 'ended'; }).length;
-}
-
-function updateStats(filtered) {
-  document.getElementById('statActive').textContent = filtered.filter(function(p) { const projectCompleted = userCompleted.includes(p.id + '_project'); const hasActivities = p.activities && p.activities.length > 0; const allActivitiesCompleted = hasActivities && p.activities.every(a => userCompleted.includes(p.id + '_' + a.id)); return !(projectCompleted || allActivitiesCompleted); }).length;
-  document.getElementById('statToday').textContent = filtered.filter(function(p) { return isToday(p.createdAt); }).length;
-  document.getElementById('statFavorites').textContent = filtered.filter(function(p) { return userFavorites.includes(p.id); }).length;
-  document.getElementById('statCompleted').textContent = filtered.filter(function(p) { const projectCompleted = userCompleted.includes(p.id + '_project'); const hasActivities = p.activities && p.activities.length > 0; const allActivitiesCompleted = hasActivities && p.activities.every(a => userCompleted.includes(p.id + '_' + a.id)); return projectCompleted || allActivitiesCompleted; }).length;
-}
-
-function isToday(dateString) { if (!dateString) return false; return new Date(dateString).toDateString() === new Date().toDateString(); }
-function formatDate(str) { if (!str) return '—'; return new Date(str).toLocaleDateString('ru-RU'); }
-window.showToast = function(msg) { const t = document.getElementById('toast'); document.getElementById('toastMessage').textContent = msg; t.classList.remove('translate-y-20', 'opacity-0'); setTimeout(function() { t.classList.add('translate-y-20', 'opacity-0'); }, 3000); };
-function getAllCategoriesFromProjects() { const cats = new Set(); projects.forEach(function(p) { if(p.categories) p.categories.forEach(function(c) { cats.add(c); }); }); return Array.from(cats); }
-
-window.openStats = function() { if (!currentUser) { showToast('Войдите'); return; } if (currentUser.uid !== "SAkz4mdW9reDaIsvqigCNZhEKJR2") { showToast('Нет доступа'); return; } window.open('admin/stats.html', '_blank'); };
-function enableUserEnterSend() { const inp = document.getElementById('feedbackUserReplyText'); inp.onkeypress = e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendUserFeedbackReply(); } }; }
-
+// ============ DELETED PROJECTS ============
 window.openDeletedProjects = function() { if (!isAdminMode) { showToast('Только для админа'); return; } loadDeletedProjects(); document.getElementById('deletedProjectsModal').classList.add('active'); };
 window.closeDeletedProjectsModal = function() { document.getElementById('deletedProjectsModal').classList.remove('active'); };
 
@@ -2690,6 +2390,7 @@ window.restoreProject = async function(projectId) {
   } catch (error) { console.error(error); showToast('Ошибка'); }
 };
 
+// ============ IMAGE MODAL ============
 window.openImageModal = function(imgElement) {
   const activityBody = imgElement.closest('.activity-body');
   if (activityBody) {
@@ -2716,6 +2417,7 @@ window.closeImageModal = function() { document.getElementById('imageModal').clas
 document.getElementById('imageModal').addEventListener('click', function(e) { if (e.target === this) closeImageModal(); });
 document.addEventListener('keydown', function(e) { const imageModal = document.getElementById('imageModal'); if (!imageModal.classList.contains('active')) return; switch(e.key) { case 'Escape': closeImageModal(); break; case 'ArrowRight': nextImage(); break; case 'ArrowLeft': prevImage(); break; } });
 
+// ============ EXPORT ============
 window.exportAllData = async function() {
   if (!currentUser || currentUser.uid !== "SAkz4mdW9reDaIsvqigCNZhEKJR2") { showToast('Только админ'); return; }
   if (!confirm('Экспортировать все проекты?')) return;
@@ -2742,26 +2444,24 @@ window.exportAllData = async function() {
   finally { if(btn) { btn.disabled = false; btn.innerHTML = originalHtml || '<i class="fas fa-download"></i>'; } }
 };
 
-async function createLocalBackup() {
-  try {
-    let allProjects = [];
-    if (projects.length > 0) allProjects = projects.map(p => ({ ...p }));
-    else { const snapshot = await getDocs(collection(db, "projects")); snapshot.forEach((doc) => { allProjects.push({ id: doc.id, ...doc.data() }); }); }
-    if (allProjects.length > 0) { const backupData = { timestamp: new Date().toISOString(), totalProjects: allProjects.length, projects: allProjects }; localStorage.setItem('testnet_hub_local_backup', JSON.stringify(backupData)); }
-  } catch (e) { console.error('Backup error:', e); }
-}
-
-const originalSaveProject = window.saveProject;
-window.saveProject = async function(e) {
-  await originalSaveProject(e);
-  if (currentUser && currentUser.uid === "SAkz4mdW9reDaIsvqigCNZhEKJR2") await createLocalBackup();
+window.migrateToFirestore = async function() {
+  if(!confirm('Загрузить в базу?')) return;
+  let count = 0;
+  for(const p of projects) { await setDoc(doc(db, "projects", p.id), p, { merge: true }); count++; }
+  showToast('Загружено ' + count);
 };
 
-window.addEventListener('load', function() {
-  const loadingScreen = document.getElementById('loading-screen');
-  if (loadingScreen) { loadingScreen.style.opacity = '0'; setTimeout(() => { loadingScreen.style.display = 'none'; }, 500); }
-});
+window.openStats = function() { if (!currentUser) { showToast('Войдите'); return; } if (currentUser.uid !== "SAkz4mdW9reDaIsvqigCNZhEKJR2") { showToast('Нет доступа'); return; } window.open('admin/stats.html', '_blank'); };
 
+// ============ UTILS ============
+window.showToast = function(msg) { const t = document.getElementById('toast'); document.getElementById('toastMessage').textContent = msg; t.classList.remove('translate-y-20', 'opacity-0'); setTimeout(function() { t.classList.add('translate-y-20', 'opacity-0'); }, 3000); };
+
+function setupSearchListener() {
+  const searchInput = document.getElementById('searchInput');
+  searchInput.addEventListener('keyup', function() { applyFilters(null, true); });
+}
+
+// ============ HERO SECTION ============
 let isHeroCollapsed = false;
 function initHeroState() { const savedState = localStorage.getItem('heroCollapsed'); if (savedState === 'true') collapseHero(false); }
 window.toggleHeroSection = function() {
@@ -2789,7 +2489,6 @@ async function saveHeroState(collapsed) {
 }
 async function loadHeroStateFromFirestore(uid) {
   try { const userRef = doc(db, "users", uid); const userDoc = await getDoc(userRef); if (userDoc.exists()) { const data = userDoc.data(); if (data.heroCollapsed !== undefined) { localStorage.setItem('heroCollapsed', data.heroCollapsed); if (data.heroCollapsed) collapseHero(false); } } } catch (e) { console.log('Error:', e); } }
-document.addEventListener('DOMContentLoaded', function() { initHeroState(); });
 </script>
 </body>
 </html>
