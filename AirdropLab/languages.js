@@ -364,7 +364,6 @@ window.translations = {
     }
 };
 
-// Текущий язык (по умолчанию русский)
 window.currentLang = localStorage.getItem('lang') || 'ru';
 
 // Хранилище для английских данных проектов
@@ -387,7 +386,13 @@ window.loadEnglishProjectsData = async function() {
         const response = await fetch('./english_projects.json');
         if (response.ok) {
             const data = await response.json();
-            if (Array.isArray(data)) {
+            // Поддержка формата { "projects": [...] } и простого массива [...]
+            if (data.projects && Array.isArray(data.projects)) {
+                window.englishProjectsData = {};
+                data.projects.forEach(project => {
+                    window.englishProjectsData[project.id] = project;
+                });
+            } else if (Array.isArray(data)) {
                 window.englishProjectsData = {};
                 data.forEach(project => {
                     window.englishProjectsData[project.id] = project;
@@ -452,17 +457,36 @@ window.toggleLang = async function() {
     const newLang = window.currentLang === 'ru' ? 'en' : 'ru';
     
     // Если включаем английский - загружаем данные
-    if (newLang === 'en' && Object.keys(window.englishProjectsData).length === 0) {
+    if (newLang === 'en') {
+        // Показываем загрузку
+        const loadingEl = document.getElementById('loadingProjects');
+        if (loadingEl) {
+            loadingEl.classList.remove('hidden');
+            loadingEl.querySelector('span').textContent = 'Loading projects...';
+        }
+        
         await window.loadEnglishProjectsData();
+        
+        // После загрузки обновляем данные проектов если они уже есть
+        if (window.projects && window.projects.length > 0) {
+            window.projects = window.projects.map(project => window.applyEnglishData(project));
+        }
+        
+        // Скрываем загрузку
+        if (loadingEl) {
+            loadingEl.classList.add('hidden');
+        }
     }
     
     // Устанавливаем язык
     window.setLang(newLang);
     
-    // Перерисовываем проекты с учетом языка
-    if (typeof window.applyFilters === 'function') {
-        window.applyFilters();
-    }
+    // Перерисовываем проекты с учетом языка - используем setTimeout для уверенности что данные готовы
+    setTimeout(() => {
+        if (typeof window.applyFilters === 'function') {
+            window.applyFilters();
+        }
+    }, 100);
     
     // Показываем уведомление
     window.showToast(newLang === 'en' ? 'Language: English' : 'Мова: Українська');
