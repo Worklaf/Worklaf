@@ -1565,14 +1565,13 @@ let firstDataLoadComplete = false;
 // Замени эту функцию в своём коде:
 
 window.loadData = async function() {
-  // 1. Загружаем основные данные проектов
+  // 1. Загружаем основные данные проектов из Firebase (ВСЕГДА!)
   try {
     const response = await fetch('./data/projects.json');
     if (response.ok) {
       const data = await response.json();
       if (data.projects) {
         window.projects = data.projects.map(normalizeData);
-        // Также создаем локальную копию для использования в функциях
         projects = window.projects;
       }
       if (data.categories) window.categories = data.categories;
@@ -1581,12 +1580,12 @@ window.loadData = async function() {
     console.log('JSON load error', e); 
   }
 
-  // 2. Если английский язык - загружаем английские данные
+  // 2. Если английский язык - загружаем английские данные ИЗ ФАЙЛА
   if (window.currentLang === 'en') {
     await window.loadEnglishProjectsData();
   }
 
-  // 3. Применяем фильтры
+  // 3. Применяем фильтры (renderProjects сам применит перевод если нужно)
   if (window.projects && window.projects.length > 0) {
     window.sortProjects('latest');
     window.applyFilters();
@@ -2675,6 +2674,9 @@ document.addEventListener('DOMContentLoaded', function() { initHeroState(); });
 
 // ========== ИНТЕГРАЦИЯ С LANGUAGE.JS ==========
 // ========== ИНТЕГРАЦИЯ С LANGUAGE.JS ==========
+// ==================== ИНТЕГРАЦИЯ С LANGUAGE.JS ====================
+
+// Простая интеграция - только перехват функций отображения
 function initLanguageIntegration() {
     // Ждем пока загрузится languages.js
     if (typeof window.toggleLang !== 'function') {
@@ -2682,72 +2684,51 @@ function initLanguageIntegration() {
         return;
     }
     
-    console.log('Language system connected, lang:', window.currentLang);
+    console.log('✅ Language system connected, lang:', window.currentLang);
     
-    // Перехватываем applyFilters для применения английских данных
-    // Замени функцию applyFilters в initLanguageIntegration:
-
-const originalApplyFilters = window.applyFilters;
-window.applyFilters = function(search, resetPage) {
-    // Фильтруем оригинальные данные
-    const result = originalApplyFilters.apply(this, arguments);
-    
-    // Применяем английские данные к результату для отображения
-    if (window.currentLang === 'en' && 
-        window.englishProjectsData && 
-        Object.keys(window.englishProjectsData).length > 0 &&
-        window.currentFilteredList && 
-        window.currentFilteredList.length > 0) {
-        
-        window.currentFilteredList = window.currentFilteredList.map(function(project) {
-            return window.applyEnglishData(project);
-        });
-    }
-    
-    return result;
-};
-    
+    // Перехватываем renderProjects для применения перевода данных
     const originalRenderProjects = window.renderProjects;
-window.renderProjects = function(filteredProjects) {
-    // Применяем английские данные
-    if (window.currentLang === 'en' && 
-        window.englishProjectsData && 
-        Object.keys(window.englishProjectsData).length > 0) {
-        
-        // Применяем к уже отфильтрованным
-        if (window.currentFilteredList && window.currentFilteredList.length > 0) {
-            filteredProjects = window.currentFilteredList.map(function(project) {
+    window.renderProjects = function(filteredProjects) {
+        // Применяем английские данные к проектам для отображения
+        if (window.currentLang === 'en' && 
+            window.englishProjectsData && 
+            Object.keys(window.englishProjectsData).length > 0 &&
+            filteredProjects) {
+            
+            filteredProjects = filteredProjects.map(function(project) {
                 return window.applyEnglishData(project);
             });
         }
-    }
-    
-    return originalRenderProjects.apply(this, [filteredProjects]);
-};
+        
+        return originalRenderProjects.apply(this, [filteredProjects]);
+    };
     
     // Перехватываем openDetail
     const originalOpenDetail = window.openDetail;
     window.openDetail = function(id) {
+        // Находим проект в оригинальном массиве
+        const originalProject = projects.find(p => p.id === id);
+        if (!originalProject) return;
+        
+        // Если английский - создаем копию с переведенными данными
         if (window.currentLang === 'en' && 
             window.englishProjectsData && 
-            Object.keys(window.englishProjectsData).length > 0 &&
-            window.projects) {
+            window.englishProjectsData[id]) {
             
-            const idx = window.projects.findIndex(p => p.id === id);
-            if (idx !== -1) {
-                // Создаем копию с английскими данными для отображения
-                const projectForDisplay = window.applyEnglishData(window.projects[idx]);
-                // Временно подменяем для openDetail
-                const originalProject = window.projects[idx];
-                window.projects[idx] = projectForDisplay;
-                
-                const result = originalOpenDetail.apply(this, arguments);
-                
-                // Восстанавливаем оригинальный проект
-                window.projects[idx] = originalProject;
-                return result;
-            }
+            const displayProject = window.applyEnglishData(originalProject);
+            
+            // Временно подменяем в массиве для отображения
+            const idx = projects.findIndex(p => p.id === id);
+            const savedOriginal = projects[idx];
+            projects[idx] = displayProject;
+            
+            const result = originalOpenDetail.apply(this, arguments);
+            
+            // Восстанавливаем оригинал
+            projects[idx] = savedOriginal;
+            return result;
         }
+        
         return originalOpenDetail.apply(this, arguments);
     };
     
@@ -2765,6 +2746,11 @@ window.renderProjects = function(filteredProjects) {
 }
 
 initLanguageIntegration();
+
+// УДАЛИ эту строку из кода - она дублируется!
+// if (window.currentLang === 'en') {
+//     await window.loadEnglishProjectsData();
+// }
 </script>
 </body>
 </html>
