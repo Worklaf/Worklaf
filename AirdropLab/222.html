@@ -854,8 +854,9 @@ window.addEventListener('load', function() {
 });
 
 // Восстановление состояния языка
+// Замени эту часть в window.loadData:
 if (window.currentLang === 'en') {
-    window.setLang('en');
+    await window.loadEnglishProjectsData();  // <-- добавь await!
 }
     
 function formatClickDate(dateString) {
@@ -2684,39 +2685,45 @@ function initLanguageIntegration() {
     console.log('Language system connected, lang:', window.currentLang);
     
     // Перехватываем applyFilters для применения английских данных
-    const originalApplyFilters = window.applyFilters;
-    window.applyFilters = function(search, resetPage) {
-        // Применяем английские данные если выбран английский
-        if (window.currentLang === 'en' && 
-            window.englishProjectsData && 
-            Object.keys(window.englishProjectsData).length > 0) {
-            
-            // Создаем копию для отображения, не меняя оригинальные данные
-            window.projectsDisplay = window.projects.map(function(project) {
-                return window.applyEnglishData(project);
-            });
-        } else {
-            window.projectsDisplay = window.projects;
-        }
-        return originalApplyFilters.apply(this, arguments);
-    };
+    // Замени функцию applyFilters в initLanguageIntegration:
+
+const originalApplyFilters = window.applyFilters;
+window.applyFilters = function(search, resetPage) {
+    // Фильтруем оригинальные данные
+    const result = originalApplyFilters.apply(this, arguments);
     
-    // Перехватываем renderProjects - используем projectsDisplay
+    // Применяем английские данные к результату для отображения
+    if (window.currentLang === 'en' && 
+        window.englishProjectsData && 
+        Object.keys(window.englishProjectsData).length > 0 &&
+        window.currentFilteredList && 
+        window.currentFilteredList.length > 0) {
+        
+        window.currentFilteredList = window.currentFilteredList.map(function(project) {
+            return window.applyEnglishData(project);
+        });
+    }
+    
+    return result;
+};
+    
     const originalRenderProjects = window.renderProjects;
-    window.renderProjects = function(filteredProjects) {
-        // Применяем английские данные к отфильтрованным
-        if (window.currentLang === 'en' && 
-            window.englishProjectsData && 
-            Object.keys(window.englishProjectsData).length > 0 &&
-            filteredProjects && 
-            filteredProjects.length > 0) {
-            
-            filteredProjects = filteredProjects.map(function(project) {
+window.renderProjects = function(filteredProjects) {
+    // Применяем английские данные
+    if (window.currentLang === 'en' && 
+        window.englishProjectsData && 
+        Object.keys(window.englishProjectsData).length > 0) {
+        
+        // Применяем к уже отфильтрованным
+        if (window.currentFilteredList && window.currentFilteredList.length > 0) {
+            filteredProjects = window.currentFilteredList.map(function(project) {
                 return window.applyEnglishData(project);
             });
         }
-        return originalRenderProjects.apply(this, [filteredProjects]);
-    };
+    }
+    
+    return originalRenderProjects.apply(this, [filteredProjects]);
+};
     
     // Перехватываем openDetail
     const originalOpenDetail = window.openDetail;
