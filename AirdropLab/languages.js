@@ -455,55 +455,40 @@ function updateLanguageButton() {
   
   // Качественный SVG флаг Великобритании
   const ukFlagSVG = `
-    <svg width="24" height="15" viewBox="0 0 78 51" xmlns="http://www.w3.org/2000/svg" class="us-flag">
-      <defs>
-        <linearGradient id="usShine" x1="0%" y1="0%" x2="100%" y2="100%">
-          <stop offset="0%" style="stop-color:rgba(255,255,255,0.2)"/>
-          <stop offset="50%" style="stop-color:rgba(255,255,255,0)"/>
-          <stop offset="100%" style="stop-color:rgba(255,255,255,0.15)"/>
-        </linearGradient>
-        <filter id="usGlow">
-          <feGaussianBlur stdDeviation="0.3" result="blur"/>
-          <feMerge>
-            <feMergeNode in="blur"/>
-            <feMergeNode in="SourceGraphic"/>
-          </feMerge>
-        </filter>
-      </defs>
-      
-      <!-- 13 полос -->
-      <g>
-        <rect width="78" height="3.92" y="0" fill="#B22234"/>
-        <rect width="78" height="3.92" y="3.92" fill="#fff"/>
-        <rect width="78" height="3.92" y="7.84" fill="#B22234"/>
-        <rect width="78" height="3.92" y="11.76" fill="#fff"/>
-        <rect width="78" height="3.92" y="15.68" fill="#B22234"/>
-        <rect width="78" height="3.92" y="19.6" fill="#fff"/>
-        <rect width="78" height="3.92" y="23.52" fill="#B22234"/>
-        <rect width="78" height="3.92" y="27.44" fill="#fff"/>
-        <rect width="78" height="3.92" y="31.36" fill="#B22234"/>
-        <rect width="78" height="3.92" y="35.28" fill="#fff"/>
-        <rect width="78" height="3.92" y="39.2" fill="#B22234"/>
-        <rect width="78" height="3.92" y="43.12" fill="#fff"/>
-        <rect width="78" height="3.92" y="47.04" fill="#B22234"/>
-      </g>
-      
-      <!-- Синий canton со звёздами -->
-      <rect width="31" height="23.52" fill="#3C3B6E"/>
-      
-      <!-- Звёзды 5x6 -->
-      <g fill="#fff" font-family="Arial" font-size="2.5" text-anchor="middle">
-        <text x="3.1" y="4.5">★</text><text x="9.3" y="4.5">★</text><text x="15.5" y="4.5">★</text><text x="21.7" y="4.5">★</text><text x="27.9" y="4.5">★</text>
-        <text x="6.2" y="8.2">★</text><text x="12.4" y="8.2">★</text><text x="18.6" y="8.2">★</text><text x="24.8" y="8.2">★</text>
-        <text x="3.1" y="11.9">★</text><text x="9.3" y="11.9">★</text><text x="15.5" y="11.9">★</text><text x="21.7" y="11.9">★</text><text x="27.9" y="11.9">★</text>
-        <text x="6.2" y="15.6">★</text><text x="12.4" y="15.6">★</text><text x="18.6" y="15.6">★</text><text x="24.8" y="15.6">★</text>
-        <text x="3.1" y="19.3">★</text><text x="9.3" y="19.3">★</text><text x="15.5" y="19.3">★</text><text x="21.7" y="19.3">★</text><text x="27.9" y="19.3">★</text>
-        <text x="6.2" y="23">★</text><text x="12.4" y="23">★</text><text x="18.6" y="23">★</text><text x="24.8" y="23">★</text>
-      </g>
-      
-      <!-- Блик -->
-      <rect width="78" height="51" fill="url(#usShine)"/>
-    </svg>
+    <svg viewBox="0 0 78 51" xmlns="http://www.w3.org/2000/svg" width="80" height="52">
+  <defs>
+    <linearGradient id="shine" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#fff;stop-opacity:0.25"/>
+      <stop offset="40%" style="stop-color:#fff;stop-opacity:0"/>
+      <stop offset="100%" style="stop-color:#000;stop-opacity:0.15"/>
+    </linearGradient>
+  </defs>
+  <g>
+    <rect width="78" height="3.92" y="0" fill="#BF0A30"/>
+    <rect width="78" height="3.92" y="3.92" fill="#FFF"/>
+    <rect width="78" height="3.92" y="7.84" fill="#BF0A30"/>
+    <rect width="78" height="3.92" y="11.76" fill="#FFF"/>
+    <rect width="78" height="3.92" y="15.68" fill="#BF0A30"/>
+    <rect width="78" height="3.92" y="19.6" fill="#FFF"/>
+    <rect width="78" height="3.92" y="23.52" fill="#BF0A30"/>
+    <rect width="78" height="3.92" y="27.44" fill="#FFF"/>
+    <rect width="78" height="3.92" y="31.36" fill="#BF0A30"/>
+    <rect width="78" height="3.92" y="35.28" fill="#FFF"/>
+    <rect width="78" height="3.92" y="39.2" fill="#BF0A30"/>
+    <rect width="78" height="3.92" y="43.12" fill="#FFF"/>
+    <rect width="78" height="3.92" y="47.04" fill="#BF0A30"/>
+  </g>
+  <rect width="31" height="23.52" fill="#002868"/>
+  <g fill="#FFF" font-size="2.2" text-anchor="middle">
+    <text x="3.1" y="4.2">★</text><text x="9.3" y="4.2">★</text><text x="15.5" y="4.2">★</text><text x="21.7" y="4.2">★</text><text x="27.9" y="4.2">★</text>
+    <text x="6.2" y="7.8">★</text><text x="12.4" y="7.8">★</text><text x="18.6" y="7.8">★</text><text x="24.8" y="7.8">★</text>
+    <text x="3.1" y="11.4">★</text><text x="9.3" y="11.4">★</text><text x="15.5" y="11.4">★</text><text x="21.7" y="11.4">★</text><text x="27.9" y="11.4">★</text>
+    <text x="6.2" y="15">★</text><text x="12.4" y="15">★</text><text x="18.6" y="15">★</text><text x="24.8" y="15">★</text>
+    <text x="3.1" y="18.6">★</text><text x="9.3" y="18.6">★</text><text x="15.5" y="18.6">★</text><text x="21.7" y="18.6">★</text><text x="27.9" y="18.6">★</text>
+    <text x="6.2" y="22.2">★</text><text x="12.4" y="22.2">★</text><text x="18.6" y="22.2">★</text><text x="24.8" y="22.2">★</text>
+  </g>
+  <rect width="78" height="51" fill="url(#shine)"/>
+</svg>
   `;
   
   const flagSpan = langBtn.querySelector('.lang-flag');
