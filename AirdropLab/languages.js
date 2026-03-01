@@ -487,7 +487,7 @@ function updateLanguageButton() {
     <text x="3.1" y="18.6">★</text><text x="9.3" y="18.6">★</text><text x="15.5" y="18.6">★</text><text x="21.7" y="18.6">★</text><text x="27.9" y="18.6">★</text>
     <text x="6.2" y="22.2">★</text><text x="12.4" y="22.2">★</text><text x="18.6" y="22.2">★</text><text x="24.8" y="22.2">★</text>
   </g>
-  <rect width="78" height="51" fill="url(#shine)"/>
+  <rect width="39" height="25,5" fill="url(#shine)"/>
 </svg>
   `;
   
