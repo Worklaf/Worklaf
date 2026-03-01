@@ -412,7 +412,11 @@ function updateAllTranslations() {
       }
     }
   });
-  
+  // Обновление "Проект:" в модальном окне feedback
+const projectLabel = document.getElementById('feedbackProjectLabel');
+if (projectLabel) {
+  projectLabel.textContent = t('project') + ': ';
+}
   // Переводы для title атрибутов
   document.querySelectorAll('[data-translate-title]').forEach(el => {
     const key = el.getAttribute('data-translate-title');
