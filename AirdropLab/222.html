@@ -9,6 +9,7 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link rel="stylesheet" href="styles.css">
+    <!-- languages.js ДОЛЖЕН загружаться ПЕРЕД основным скриптом -->
     <script src="languages.js"></script>
     <style>
         
@@ -749,6 +750,27 @@
   <div class="image-modal-nav"><button onclick="prevImage()">❮</button><button onclick="nextImage()">❯</button></div>
   <img class="image-modal-content" id="modalImage">
 </div>
+
+<!-- СКРИПТ ИНИЦИАЛИЗАЦИИ ЯЗЫКА - выполняется после languages.js, но до основного скрипта -->
+<script>
+  // Ждем немного чтобы languages.js успел полностью загрузиться
+  setTimeout(function() {
+    // Если languages.js загружен и есть функция updateAllTranslations
+    if (typeof updateAllTranslations === 'function') {
+      updateAllTranslations(); // Применяем переводы
+    }
+    
+    // Если язык был английский - загружаем английские данные
+    if (window.currentLang === 'en' && typeof loadEnglishProjects === 'function') {
+      loadEnglishProjects();
+    }
+    
+    // Инициализируем кнопку языка
+    if (typeof updateLanguageButton === 'function') {
+      updateLanguageButton();
+    }
+  }, 100);
+</script>
 
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
@@ -2575,6 +2597,18 @@ async function saveHeroState(collapsed) {
 async function loadHeroStateFromFirestore(uid) {
   try { const userRef = doc(db, "users", uid); const userDoc = await getDoc(userRef); if (userDoc.exists()) { const data = userDoc.data(); if (data.heroCollapsed !== undefined) { localStorage.setItem('heroCollapsed', data.heroCollapsed); if (data.heroCollapsed) collapseHero(false); } } } catch (e) { console.log('Error:', e); } }
 document.addEventListener('DOMContentLoaded', function() { initHeroState(); });
+
+// Переопределяем toggleLang для корректной работы с основным скриптом
+window.toggleLang = function() {
+  if (window.currentLang === 'ru') {
+    window.setLanguage('en');
+  } else {
+    window.setLanguage('ru');
+    if (typeof window.resetToDefaultDataSource === 'function') {
+      window.resetToDefaultDataSource();
+    }
+  }
+};
 
 console.log('App initialized');
 </script>
