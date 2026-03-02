@@ -454,39 +454,94 @@ function updateLanguageButton() {
   const langBtn = document.getElementById('langBtn');
   if (!langBtn) return;
   
-  // Британский флаг - более реалистичный SVG
+  // Британский флаг - точный SVG как в примере
   const ukFlagSVG = `
-    <svg viewBox="0 0 60 30" xmlns="http://www.w3.org/2000/svg" width="36" height="18" style="border-radius:2px;">
-      <clipPath id="t">
-        <path d="M30,15 h30 v15 z v15 h-30 z h-30 v-15 z v-15 h30 z"/>
-      </clipPath>
-      <path d="M0,0 v30 h60 v-30 z" fill="#012169"/>
-      <path d="M0,0 L60,30 M60,0 L0,30" stroke="#fff" stroke-width="6"/>
-      <path d="M0,0 L60,30 M60,0 L0,30" clip-path="url(#t)" stroke="#C8102E" stroke-width="4"/>
-      <path d="M30,0 v30 M0,15 h60" stroke="#fff" stroke-width="10"/>
-      <path d="M30,0 v30 M0,15 h60" stroke="#C8102E" stroke-width="6"/>
+    <svg class="flag-svg" viewBox="0 0 60 45" xmlns="http://www.w3.org/2000/svg">
+      <rect width="60" height="45" fill="#012169"/>
+      <rect width="60" height="15" y="15" fill="#FFF"/>
+      <rect width="60" height="15" y="30" fill="#FFF"/>
+      <rect width="15" height="45" fill="#FFF"/>
+      <rect width="15" x="45" height="45" fill="#FFF"/>
+      <rect width="15" height="45" fill="#C8102E"/>
+      <rect width="15" x="45" height="45" fill="#C8102E"/>
+      <rect width="60" height="15" y="15" fill="#C8102E"/>
+      <rect width="60" height="15" y="30" fill="#C8102E"/>
     </svg>
   `;
   
-  const flagSpan = langBtn.querySelector('.lang-flag');
-  const textSpan = langBtn.querySelector('.lang-text');
-  
-  if (flagSpan) {
-    flagSpan.innerHTML = ukFlagSVG;
+  // Проверяем, есть ли уже флаг внутри кнопки
+  let flagSpan = langBtn.querySelector('.flag-svg');
+  if (!flagSpan) {
+    // Создаем контейнер для флага
+    flagSpan = document.createElement('div');
+    flagSpan.className = 'flag-svg';
+    flagSpan.style.cssText = 'display: flex; align-items: center; margin-right: 2px;';
+    langBtn.insertBefore(flagSpan, langBtn.firstChild);
   }
+  flagSpan.innerHTML = ukFlagSVG;
   
-  // Текст ON/OFF
-  if (textSpan) {
-    textSpan.textContent = currentLang === 'en' ? 'ON' : 'OFF';
-  }
+  // Убеждаемся, что стили кнопки соответствуют примеру
+  langBtn.style.cssText = `
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 10px;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: background 0.15s, color 0.15s;
+    font-weight: 600;
+    font-family: 'Segoe UI', sans-serif;
+    font-size: 12px;
+  `;
   
-  // Цветовой индикатор
-  if (currentLang === 'en') {
+  // Устанавливаем текст и цвет в зависимости от языка
+  if (window.currentLang === 'en') {
+    langBtn.textContent = 'ON';
     langBtn.classList.add('lang-active');
+    langBtn.style.background = 'rgba(34, 197, 94, 0.15)';
+    langBtn.style.border = '1px solid rgba(34, 197, 94, 0.5)';
+    langBtn.style.color = '#86efac';
   } else {
+    langBtn.textContent = 'OFF';
     langBtn.classList.remove('lang-active');
+    langBtn.style.background = 'rgba(220, 38, 38, 0.15)';
+    langBtn.style.border = '1px solid rgba(220, 38, 38, 0.4)';
+    langBtn.style.color = '#fca5a5';
   }
+  
+  // Добавляем SVG флаг обратно после textContent
+  langBtn.insertBefore(flagSpan, langBtn.firstChild);
 }
+
+// Добавляем обработчик hover
+function addHoverStyles() {
+  const langBtn = document.getElementById('langBtn');
+  if (!langBtn) return;
+  
+  langBtn.addEventListener('mouseenter', function() {
+    if (window.currentLang === 'en') {
+      langBtn.style.background = 'rgba(34, 197, 94, 0.25)';
+    } else {
+      langBtn.style.background = 'rgba(220, 38, 38, 0.25)';
+    }
+  });
+  
+  langBtn.addEventListener('mouseleave', function() {
+    if (window.currentLang === 'en') {
+      langBtn.style.background = 'rgba(34, 197, 94, 0.15)';
+    } else {
+      langBtn.style.background = 'rgba(220, 38, 38, 0.15)';
+    }
+  });
+}
+
+// Вызываем при инициализации и при смене языка
+setTimeout(function() {
+  if (typeof updateLanguageButton === 'function') {
+    updateLanguageButton();
+    addHoverStyles();
+  }
+}, 100);
 
 // Переключение языка
 window.toggleLang = function() {
