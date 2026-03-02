@@ -1547,6 +1547,12 @@ function applyLegendState(collapsed) {
 const ZONE_CONFIG = {
     nft_oku: { type:'nft-item', label:'NFT in Oku', trackType:'track-once' },
     nft_draze: { type:'nft-item', label:'NFT in Draze', trackType:'track-once' },
+    nft_mintaura: { type:'nft-item', label:'NFT in MintAura', trackType:'track-once' },
+    nft_morkie: { type:'nft-item', label:'NFT in Morkie', trackType:'track-once' },
+    nft_clara: { type:'nft-item', label:'NFT in Clara', trackType:'track-once' },
+    nft_other: { type:'nft-item', label:'NFT in NFTs2Me', trackType:'track-once' },
+    nft_caset: { type:'nft-item', label:'NFT in Caset', trackType:'track-once' },
+    nft_other2: { type:'nft-item', label:'NFT in SweepHaus', trackType:'track-once' },
     deploy_basic:    { type:'link-item', label:'Basic Deploy', trackType:'track-daily' },
     deploy_advanced: { type:'link-item', label:'Advanced Deploy', trackType:'track-daily' },
     dapp_bridges:     { type:'link-item', label:'Bridges', trackType:'track-daily' },
@@ -1729,6 +1735,7 @@ function normalizeImageUrl(rawUrl) {
     return rawUrl;
 }
 
+// ===== ИСПРАВЛЕННАЯ ФУНКЦИЯ СОХРАНЕНИЯ =====
 document.getElementById('addModalSave').addEventListener('click', async () => {
     const saveBtn = document.getElementById('addModalSave');
     const isEdit = saveBtn.dataset.editMode === 'true';
@@ -1813,8 +1820,23 @@ document.getElementById('addModalSave').addEventListener('click', async () => {
 
         if (currentAddContext.zone) {
             if (!title || !url) { alert('Title and URL are required!'); return; }
+            
+            // ПОЛУЧАЕМ КОНФИГ ДЛЯ ЗОНЫ
             const config = currentAddContext.config; 
             const id = generateId();
+            
+            // ОПРЕДЕЛЯЕМ ТИП ТРЕКИНГА - ИСПРАВЛЕНО ДЛЯ NFT
+            let finalTrackType = config.trackType || 'track-daily';
+            
+            // Для NFT коллекций ВСЕГДА устанавливаем track-once
+            const zoneId = currentAddContext.zone;
+            // Проверяем: NFT зоны (oku, draze, mintaura, morkie, clara, caset, и т.д.)
+            if (zoneId.startsWith('nft_') || 
+                config.type === 'nft-item' ||
+                (config.label && config.label.toLowerCase().includes('nft'))) {
+                finalTrackType = 'track-once';
+            }
+            
             const item = { 
                 id, 
                 title, 
@@ -1823,9 +1845,10 @@ document.getElementById('addModalSave').addEventListener('click', async () => {
                 descEn,
                 descUa,
                 image, 
-                trackType: config.trackType, 
+                trackType: finalTrackType, 
                 addedAt: Date.now() 
             };
+            
             if (!userItemsData.items[currentAddContext.zone]) userItemsData.items[currentAddContext.zone] = [];
             userItemsData.items[currentAddContext.zone].push(item);
             if (isAdmin) await addToTempoGlobalNewIndicators(id);
@@ -1840,7 +1863,14 @@ document.getElementById('addModalSave').addEventListener('click', async () => {
                 const collId = generateId(); 
                 const coll = { id: collId, title, website, twitter, parentZone: currentAddContext.sectionZone, items: [], addedAt: Date.now() };
                 userItemsData.collections.push(coll); 
-                ZONE_CONFIG[collId] = { type: 'nft-item', label: 'NFT in ' + title, trackType: 'track-once' };
+                
+                // ДЛЯ NFT КОЛЛЕКЦИЙ - ВСЕГДА track-once
+                ZONE_CONFIG[collId] = { 
+                    type: 'nft-item', 
+                    label: 'NFT in ' + title, 
+                    trackType: 'track-once'  // <-- ИСПРАВЛЕНО
+                };
+                
                 await saveTempoUserItems(); 
                 renderUserCollection(coll); 
                 showToast(getTranslation('collection_created'), 'success');
@@ -1890,6 +1920,7 @@ function createUserLink(item, zone) {
     const link = document.createElement('a');
     link.href = item.url;
     link.target = '_blank';
+    // ИСПРАВЛЕНО: используем правильный trackType из объекта item
     link.className = 'link-inline link-compact ' + (item.trackType || 'track-once');
     link.dataset.id = item.id;
     
@@ -1955,7 +1986,15 @@ function renderUserCollection(coll) {
         header.appendChild(icons);
     }
     const addBtn = document.createElement('button'); addBtn.type = 'button'; addBtn.className = 'add-item-btn admin-only'; addBtn.title = `${getTranslation('add_nft')} ${coll.title}`; addBtn.innerHTML = '<span class="btn-plus">+</span>';
-    addBtn.addEventListener('click', (e) => { e.stopPropagation(); currentAddContext = { zone: coll.id, config: ZONE_CONFIG[coll.id] || { type:'nft-item', label: coll.title, trackType:'track-once' } }; openModal(`${getTranslation('add_to')}: ${getTranslation('add_nft')} ${coll.title}`, ['fieldTitle','fieldUrl','fieldImage','descFieldEn','descFieldUa']); });
+    addBtn.addEventListener('click', (e) => { 
+        e.stopPropagation(); 
+        currentAddContext = { 
+            zone: coll.id, 
+            // ИСПРАВЛЕНО: для NFT коллекций всегда используем track-once
+            config: ZONE_CONFIG[coll.id] || { type:'nft-item', label: coll.title, trackType:'track-once' } 
+        }; 
+        openModal(`${getTranslation('add_to')}: ${getTranslation('add_nft')} ${coll.title}`, ['fieldTitle','fieldUrl','fieldImage','descFieldEn','descFieldUa']); 
+    });
     header.appendChild(addBtn); card.appendChild(header);
     const linkColl = document.createElement('div'); linkColl.className = 'link-collection'; card.appendChild(linkColl); grid.appendChild(card);
     const items = userItemsData.items[coll.id] || []; items.forEach(item => renderUserItemInZone(coll.id, item));
@@ -1976,7 +2015,14 @@ function renderUserDappCategory(cat) {
     tdCat.appendChild(delCatBtn); tr.appendChild(tdCat);
     const tdLinks = document.createElement('td'); tdLinks.setAttribute('data-label', getTranslation('all_links')); tdLinks.className = 'dapp-links';
     const addBtn = document.createElement('button'); addBtn.type = 'button'; addBtn.className = 'add-item-btn admin-only'; addBtn.title = `${getTranslation('add_to')} ${cat.title}`; addBtn.innerHTML = '<span class="btn-plus">+</span>';
-    addBtn.addEventListener('click', (e) => { e.stopPropagation(); currentAddContext = { zone: cat.id, config: ZONE_CONFIG[cat.id] || { type:'link-item', label: cat.title, trackType:'track-daily' } }; openModal(`${getTranslation('add_to')}: ${cat.title}`, ['fieldTitle','fieldUrl','fieldImage','descFieldEn','descFieldUa']); });
+    addBtn.addEventListener('click', (e) => { 
+        e.stopPropagation(); 
+        currentAddContext = { 
+            zone: cat.id, 
+            config: ZONE_CONFIG[cat.id] || { type:'link-item', label: cat.title, trackType:'track-daily' } 
+        }; 
+        openModal(`${getTranslation('add_to')}: ${cat.title}`, ['fieldTitle','fieldUrl','fieldImage','descFieldEn','descFieldUa']); 
+    });
     tdLinks.appendChild(addBtn); tr.appendChild(tdLinks);
     const tdDesc = document.createElement('td'); tdDesc.setAttribute('data-label', getTranslation('action')); tdDesc.className = 'task-desc'; tdDesc.textContent = ''; tr.appendChild(tdDesc);
     table.appendChild(tr);
@@ -1996,7 +2042,14 @@ function renderUserDeployGroup(grp) {
     card.appendChild(delTop);
     const header = document.createElement('div'); header.className = 'resource-header'; header.innerHTML = `<span class="resource-title">${grp.title}</span>`;
     const addBtn = document.createElement('button'); addBtn.type = 'button'; addBtn.className = 'add-item-btn admin-only'; addBtn.title = `${getTranslation('add_to')} ${grp.title}`; addBtn.innerHTML = '<span class="btn-plus">+</span>';
-    addBtn.addEventListener('click', (e) => { e.stopPropagation(); currentAddContext = { zone: grp.id, config: ZONE_CONFIG[grp.id] || { type:'link-item', label: grp.title, trackType:'track-daily' } }; openModal(`${getTranslation('add_to')}: ${grp.title}`, ['fieldTitle','fieldUrl','descFieldEn','descFieldUa']); });
+    addBtn.addEventListener('click', (e) => { 
+        e.stopPropagation(); 
+        currentAddContext = { 
+            zone: grp.id, 
+            config: ZONE_CONFIG[grp.id] || { type:'link-item', label: grp.title, trackType:'track-daily' } 
+        }; 
+        openModal(`${getTranslation('add_to')}: ${grp.title}`, ['fieldTitle','fieldUrl','descFieldEn','descFieldUa']); 
+    });
     header.appendChild(addBtn); card.appendChild(header);
     const linkColl = document.createElement('div'); linkColl.className = 'link-collection'; card.appendChild(linkColl); grid.appendChild(card);
     const items = userItemsData.items[grp.id] || []; items.forEach(item => renderUserItemInZone(grp.id, item));
@@ -2008,7 +2061,11 @@ function injectAddButtons() {
         const zone = container.dataset.zone; const config = ZONE_CONFIG[zone];
         if (!config || container.querySelector('.add-item-btn')) return;
         const btn = document.createElement('button'); btn.type = 'button'; btn.className = 'add-item-btn admin-only'; btn.title = `${getTranslation('add_to')} ${config.label}`; btn.innerHTML = '<span class="btn-plus">+</span>';
-        btn.addEventListener('click', (e) => { e.stopPropagation(); currentAddContext = { zone, config }; openModal(`${getTranslation('add_to')}: ${config.label}`, ['fieldTitle','fieldUrl','fieldImage','descFieldEn','descFieldUa']); });
+        btn.addEventListener('click', (e) => { 
+            e.stopPropagation(); 
+            currentAddContext = { zone, config }; 
+            openModal(`${getTranslation('add_to')}: ${config.label}`, ['fieldTitle','fieldUrl','fieldImage','descFieldEn','descFieldUa']); 
+        });
         if (container.tagName === 'TR') { const linksCell = container.querySelector('.dapp-links'); if (linksCell) linksCell.appendChild(btn); } 
         else { const header = container.querySelector('.resource-header'); if (header) header.appendChild(btn); else { const lc = container.querySelector('.link-collection,.link-row'); if (lc) lc.appendChild(btn); } }
     });
