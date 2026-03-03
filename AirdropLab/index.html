@@ -987,16 +987,32 @@ function checkAndAutoEndActivities() {
 }
 
 function isProjectUnvisited(project) {
-  if (arcData[project.id] && arcData[project.id].totalClicks > 0) return false;
+  // Если есть новая активность - считаем непосещенным
+  if (hasNewActivities(project.id)) return true;
+  
+  // Если есть клики по проекту - считаем посещенным
+  if (arcData[project.id] && arcData[project.id].totalClicks > 0) {
+    // Но если есть непросмотренные активности - все равно непосещенный
+    const hasActivities = project.activities && project.activities.length > 0;
+    if (hasActivities) {
+      const hasUnviewed = project.activities.some(a => !isActivityViewed(project.id, a.id) && a.status !== 'ended');
+      if (hasUnviewed) return true;
+    }
+    return false;
+  }
+  
   const hasActivities = project.activities && project.activities.length > 0;
   if (hasActivities) {
     const allCompleted = project.activities.every(a => 
       a.status === 'ended' || userCompleted.includes(project.id + '_' + a.id)
     );
     if (allCompleted) return false;
+    
+    // Проверяем есть ли непросмотренные активности
     const allViewed = project.activities.every(a => isActivityViewed(project.id, a.id));
     if (allViewed) return false;
   }
+  
   return true;
 }
 
