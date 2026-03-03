@@ -12,26 +12,22 @@
     <!-- languages.js ДОЛЖЕН загружаться ПЕРЕД основным скриптом -->
     <script src="languages.js"></script>
    <style>
-       /* Стили для кнопки языка как в примере */
-.flag-svg {
-  width: 22px;
-  height: 16px;
-  border-radius: 3px;
+       #langBtn {
   display: flex;
   align-items: center;
-}
-
-.flag-svg svg {
-  width: 100%;
-  height: 100%;
-  border-radius: 2px;
-}
-
-/* Убедимся, что кнопка имеет правильный порядок элементов */
-#langBtn {
-  display: flex !important;
-  align-items: center !important;
-  flex-direction: row-reverse; /* Флаг справа от текста */
+  gap: 10px;
+  padding: 8px 16px;
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  border-radius: 25px;
+  color: #fff;
+  cursor: pointer;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  font-family: 'Inter', sans-serif;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
 }
 
 #langBtn:hover {
@@ -1808,7 +1804,7 @@ function renderProjects(filteredProjects) {
     const isFav = userFavorites.includes(project.id);
     const isCompleted = userCompleted.includes(project.id + '_project');
     const lastActivityDate = getLatestActivityDate(project);
-    const isNew = isNewProject(lastActivityDate);
+    const isNew = isNewProject(project.createdAt) || isNewProject(getLatestActivityDate(project)) || hasNewActivities(project.id);
     const hasNewActs = hasNewActivities(project.id);
     const newActsCount = getNewActivitiesCount(project.id);
     const lastClickRecord = arcData[project.id];
@@ -2679,6 +2675,54 @@ window.toggleLang = function() {
 };
 
 console.log('App initialized');
+    // Добавь эту функцию для определения новых активностей по датам
+function detectNewActivities() {
+  const now = new Date();
+  const weekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000); // 7 дней назад
+  
+  projects.forEach(project => {
+    // Проверяем новые активности
+    if (project.activities && project.activities.length > 0) {
+      project.activities.forEach(act => {
+        if (act.date) {
+          const actDate = new Date(act.date);
+          if (actDate >= weekAgo && actDate <= now) {
+            // Активность добавлена за последнюю неделю - считаем новой
+            addNewActivity(project.id, act.id);
+          }
+        }
+        // Также проверяем по createdAt если есть
+        if (act.createdAt) {
+          const createdDate = new Date(act.createdAt);
+          if (createdDate >= weekAgo && createdDate <= now) {
+            addNewActivity(project.id, act.id);
+          }
+        }
+      });
+    }
+    
+    // Проверяем новый проект (создан за последние 7 дней)
+    if (project.createdAt) {
+      const createdDate = new Date(project.createdAt);
+      if (createdDate >= weekAgo && createdDate <= now) {
+        // Проект новый - добавляем все активности как новые
+        if (project.activities) {
+          project.activities.forEach(act => {
+            addNewActivity(project.id, act.id);
+          });
+        }
+      }
+    }
+  });
+  
+  applyFilters();
+}
+
+// Вызови эту функцию после загрузки данных
+// В функции loadData или после applyFilters добавь:
+setTimeout(() => {
+  detectNewActivities();
+}, 1000);
 </script>
 </body>
 </html>
