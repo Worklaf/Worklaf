@@ -1644,6 +1644,7 @@ window.loadData = async function() {
   }
   
   firstDataLoadComplete = true;
+    detectNewActivities();
 };
 
 function normalizeData(project) {
@@ -1779,7 +1780,7 @@ function isNewProject(dateString) {
   const now = new Date();
   const diffTime = Math.abs(now - created);
   const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-  return diffDays <= 7;
+  return diffDays <= 7; // Проект/активность новые если созданы за последние 7 дней
 }
 
 function renderProjects(filteredProjects) {
@@ -1804,7 +1805,7 @@ function renderProjects(filteredProjects) {
     const isFav = userFavorites.includes(project.id);
     const isCompleted = userCompleted.includes(project.id + '_project');
     const lastActivityDate = getLatestActivityDate(project);
-    const isNew = isNewProject(lastActivityDate);
+    const isNew = isNewProject(project.createdAt) || isNewProject(getLatestActivityDate(project)) || hasNewActivities(project.id);
     const hasNewActs = hasNewActivities(project.id);
     const newActsCount = getNewActivitiesCount(project.id);
     const lastClickRecord = arcData[project.id];
@@ -2675,6 +2676,54 @@ window.toggleLang = function() {
 };
 
 console.log('App initialized');
+    // Добавь эту функцию для определения новых активностей по датам
+function detectNewActivities() {
+  const now = new Date();
+  const weekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000); // 7 дней назад
+  
+  projects.forEach(project => {
+    // Проверяем новые активности
+    if (project.activities && project.activities.length > 0) {
+      project.activities.forEach(act => {
+        if (act.date) {
+          const actDate = new Date(act.date);
+          if (actDate >= weekAgo && actDate <= now) {
+            // Активность добавлена за последнюю неделю - считаем новой
+            addNewActivity(project.id, act.id);
+          }
+        }
+        // Также проверяем по createdAt если есть
+        if (act.createdAt) {
+          const createdDate = new Date(act.createdAt);
+          if (createdDate >= weekAgo && createdDate <= now) {
+            addNewActivity(project.id, act.id);
+          }
+        }
+      });
+    }
+    
+    // Проверяем новый проект (создан за последние 7 дней)
+    if (project.createdAt) {
+      const createdDate = new Date(project.createdAt);
+      if (createdDate >= weekAgo && createdDate <= now) {
+        // Проект новый - добавляем все активности как новые
+        if (project.activities) {
+          project.activities.forEach(act => {
+            addNewActivity(project.id, act.id);
+          });
+        }
+      }
+    }
+  });
+  
+  applyFilters();
+}
+
+// Вызови эту функцию после загрузки данных
+// В функции loadData или после applyFilters добавь:
+setTimeout(() => {
+  detectNewActivities();
+}, 1000);
 </script>
 </body>
 </html>
