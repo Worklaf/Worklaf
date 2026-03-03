@@ -90,7 +90,7 @@ const translations = {
     email: 'Email',
     password: 'Пароль',
     register: 'Регистрация',
-    feedback: 'Обратная связь',
+    feedback: 'Отзыв',
     my_messages: 'Мои сообщения',
     all_requests: 'Все обращения',
     suggestion: '💡 Предложение',
