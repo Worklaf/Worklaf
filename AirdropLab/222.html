@@ -1413,24 +1413,25 @@ async function syncLocalStorageToFirestore(userId) {
 let isAuthReady = false;
 
 onAuthStateChanged(auth, async function(user) {
+  console.log('Auth state changed:', user ? 'logged in' : 'not logged in');
   isAuthReady = true;
   
   if (user) {
     currentUser = user;
     
-    // Сохраняем данные пользователя
-    await saveUserData(user);
-    await syncLocalStorageToFirestore(user.uid);
-    
-    // Загружаем данные из Firestore
     try {
+      // Сохраняем данные пользователя (без блокировки)
+      saveUserData(user).catch(e => console.log('Save user error:', e));
+      
+      // Синхронизируем данные (без блокировки)
+      syncLocalStorageToFirestore(user.uid).catch(e => console.log('Sync error:', e));
+      
+      // Загружаем пользовательские данные
       const userRef = doc(db, "users", user.uid);
       const userDoc = await getDoc(userRef);
       
       if (userDoc.exists()) {
         const data = userDoc.data();
-        
-        // Восстанавливаем из Firestore
         userFavorites = data.favorites || [];
         userCompleted = data.completed || [];
         
@@ -1443,59 +1444,79 @@ onAuthStateChanged(auth, async function(user) {
         localStorage.setItem('favorites_backup', JSON.stringify(userFavorites));
         localStorage.setItem(COMPLETED_KEY, JSON.stringify(userCompleted));
       } else {
-        // Документ не существует - создаем с пустыми данными
-        userFavorites = [];
-        userCompleted = [];
+        // Используем локальные данные
+        userFavorites = JSON.parse(localStorage.getItem('favorites_backup') || '[]');
+        userCompleted = JSON.parse(localStorage.getItem(COMPLETED_KEY) || '[]');
+        arcData = JSON.parse(localStorage.getItem(STORAGE_KEY) || '{}');
       }
     } catch (e) {
       console.error('Error loading user data:', e);
-      // Используем данные из localStorage как резерв
+      // Fallback к локальным данным
       userFavorites = JSON.parse(localStorage.getItem('favorites_backup') || '[]');
       userCompleted = JSON.parse(localStorage.getItem(COMPLETED_KEY) || '[]');
       arcData = JSON.parse(localStorage.getItem(STORAGE_KEY) || '{}');
     }
     
+    // Настраиваем UI и сервисы (без блокировки)
     document.getElementById('generalFeedbackPanel').classList.remove('hidden');
     initFeedbacksListener(user.uid);
     
-    if (user.uid === "SAkz4mdW9reDaIsvqigCNZhEKJR2") activateAdminMode();
+    if (user.uid === "SAkz4mdW9reDaIsvqigCNZhEKJR2") {
+      activateAdminMode();
+    }
     
-    // Инициализируем синхронизацию
+    // Настраиваем синхронизацию
     initUserSync(user.uid);
     initNotificationsListener(user.uid);
     
-    // Обновляем UI
+    updateLoginUI(user);
+    
+  } else {
+    // Пользователь вышел
+    currentUser = null;
+    userFavorites = [];
+    userCompleted = [];
+    arcData = JSON.parse(localStorage.getItem(STORAGE_KEY) || '{}');
+    
+    // Очищаем подписки
+    if (notificationsUnsubscribe) {
+      notificationsUnsubscribe();
+      notificationsUnsubscribe = null;
+    }
+    if (adminFeedbacksUnsubscribe) {
+      adminFeedbacksUnsubscribe();
+      adminFeedbacksUnsubscribe = null;
+    }
+    
+    notifications = [];
+    unreadNotificationsCount = 0;
+    updateNotificationBadge();
+    
+    updateLoginUI(null);
+  }
+  
+  // Загружаем данные проектов
+  if (!firstDataLoadComplete) {
+    await loadData();
+    firstDataLoadComplete = true;
+  } else {
+    applyFilters();
+  }
+});
+
+function updateLoginUI(user) {
+  if (user) {
     document.getElementById('loggedOutView').classList.add('hidden');
     document.getElementById('loggedInView').classList.remove('hidden');
     document.getElementById('guestWarning').classList.add('hidden');
     document.getElementById('userAvatar').src = user.photoURL || 'https://ui-avatars.com/api/?name=' + (user.email || 'User') + '&background=random';
     document.getElementById('userName').textContent = user.displayName || user.email.split('@')[0];
-    
-    applyFilters();
-    
   } else {
-    // Пользователь вышел
-    currentUser = null; 
-    userFavorites = []; 
-    userCompleted = [];
-    arcData = JSON.parse(localStorage.getItem(STORAGE_KEY)) || {};
-    
-    document.getElementById('generalFeedbackPanel').classList.add('hidden');
-    
-    if (notificationsUnsubscribe) { notificationsUnsubscribe(); notificationsUnsubscribe = null; }
-    if (adminFeedbacksUnsubscribe) { adminFeedbacksUnsubscribe(); adminFeedbacksUnsubscribe = null; }
-    
-    notifications = []; 
-    unreadNotificationsCount = 0; 
-    updateNotificationBadge();
-    
     document.getElementById('loggedOutView').classList.remove('hidden');
     document.getElementById('loggedInView').classList.add('hidden');
     document.getElementById('guestWarning').classList.remove('hidden');
-    
-    applyFilters();
   }
-});
+}
     function initUserSync(uid) {
   const userRef = doc(db, "users", uid);
   
@@ -1645,22 +1666,38 @@ setTimeout(() => {
   if (projects.length > 0) {
     applyFilters();
   }
-}, 1500);
+}, 1500);document.addEventListener('DOMContentLoaded', function() {
 
+  // Авто-завершение активностей
+  checkAndAutoEndActivities();
+  setInterval(checkAndAutoEndActivities, 60 * 60 * 1000);
+
+  // Настраиваем поиск (твоя логика)
   const searchDeletedInput = document.getElementById('searchDeletedInput');
   if (searchDeletedInput) {
     let searchTimeout;
-    searchDeletedInput.addEventListener('input', function() { clearTimeout(searchTimeout); searchTimeout = setTimeout(() => loadDeletedProjects(this.value), 300); });
-  }
-  
-  const select = document.getElementById('itemsPerPageSelect');
-  if(select) select.value = itemsPerPage;
-  
-  const promptInput = document.getElementById('promptInput');
-  if(promptInput) {
-    promptInput.addEventListener('keydown', function(e) { if (e.key === 'Enter') { e.preventDefault(); window.confirmLinkInsert(); } });
+    searchDeletedInput.addEventListener('input', function() {
+      clearTimeout(searchTimeout);
+      searchTimeout = setTimeout(() => loadDeletedProjects(this.value), 300);
+    });
   }
 
+  // Устанавливаем itemsPerPage
+  const select = document.getElementById('itemsPerPageSelect');
+  if (select) select.value = itemsPerPage;
+
+  // Enter в promptInput
+  const promptInput = document.getElementById('promptInput');
+  if (promptInput) {
+    promptInput.addEventListener('keydown', function(e) {
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        window.confirmLinkInsert();
+      }
+    });
+  }
+
+  // Конфигурации модалок
   const modalConfigs = [
     { id: 'detailModal', closeFn: window.closeDetailModal },
     { id: 'loginModal', closeFn: window.closeLoginModal },
@@ -1673,6 +1710,25 @@ setTimeout(() => {
     { id: 'deletedProjectsModal', closeFn: window.closeDeletedProjectsModal },
     { id: 'imageModal', closeFn: window.closeImageModal }
   ];
+
+  // Проверка готовности auth → loadData()
+  let initAttempts = 0;
+  const initCheck = setInterval(() => {
+    initAttempts++;
+
+    if (isAuthReady || initAttempts > 30) { // максимум 15 секунд
+      clearInterval(initCheck);
+
+      if (!firstDataLoadComplete) {
+        loadData().then(() => {
+          firstDataLoadComplete = true;
+        });
+      }
+    }
+  }, 500);
+
+});
+
 
   modalConfigs.forEach(config => {
     const modalElement = document.getElementById(config.id);
@@ -1708,60 +1764,129 @@ let firstDataLoadComplete = false;
 
 // В функции loadData заменить порядок загрузки
 window.loadData = async function() {
+  console.log('Loading data...');
+  
   if (useEnglishData) {
-    console.log('Using English data, skipping default load');
+    console.log('Using English data, skipping Firebase load');
     return;
   }
   
-  // Сначала пытаемся загрузить из Firestore
-  let firebaseDataLoaded = false;
+  let dataLoaded = false;
   
+  // 1. Сначала пробуем загрузить локальный JSON как быстрый запасной вариант
   try {
-    const q = query(collection(db, "projects"), where("deleted", "==", false));
-    const snapshot = await getDocs(q);
-    
-    if (!snapshot.empty) {
-      const fireProjects = [];
-      snapshot.forEach(docSnap => {
-        fireProjects.push(normalizeData({ id: docSnap.id, ...docSnap.data() }));
-      });
-      
-      if (fireProjects.length > 0) {
-        projects = fireProjects;
-        firebaseDataLoaded = true;
-        console.log('Loaded from Firebase:', projects.length, 'projects');
+    const response = await fetch(EXTERNAL_DATA_URL);
+    if (response.ok) {
+      const data = await response.json();
+      if (data.projects && data.projects.length > 0) {
+        projects = data.projects.map(normalizeData);
+        console.log('Loaded from local JSON:', projects.length, 'projects');
+        dataLoaded = true;
+        
+        // Сразу показываем данные пользователю
+        sortProjects('latest');
+        applyFilters();
+        
+        if (data.categories) categories = data.categories;
       }
     }
   } catch (e) {
-    console.log('Firebase load error, using local data:', e.message);
+    console.log('JSON load error:', e);
   }
   
-  // Если Firebase пустой или недоступен - используем локальный JSON как резерв
-  if (!firebaseDataLoaded || projects.length === 0) {
-    try {
-      const response = await fetch(EXTERNAL_DATA_URL);
-      if (response.ok) {
-        const data = await response.json();
-        if (data.projects) {
-          projects = data.projects.map(normalizeData);
-          console.log('Loaded from local JSON:', projects.length, 'projects');
+  // 2. Теперь пробуем Firebase с таймаутом
+  let firebaseTimeout;
+  let firebaseCompleted = false;
+  
+  try {
+    // Устанавливаем таймаут 5 секунд для Firebase
+    const firebasePromise = new Promise((resolve, reject) => {
+      const q = query(collection(db, "projects"), where("deleted", "==", false));
+      
+      getDocs(q).then(snapshot => {
+        if (!firebaseCompleted) {
+          firebaseCompleted = true;
+          clearTimeout(firebaseTimeout);
+          
+          if (!snapshot.empty) {
+            const fireProjects = [];
+            snapshot.forEach(docSnap => {
+              fireProjects.push(normalizeData({ id: docSnap.id, ...docSnap.data() }));
+            });
+            
+            if (fireProjects.length > 0) {
+              projects = fireProjects;
+              console.log('Loaded from Firebase:', projects.length, 'projects');
+              
+              sortProjects('latest');
+              applyFilters();
+            }
+          }
+          resolve();
         }
-        if (data.categories) categories = data.categories;
+      }).catch(error => {
+        if (!firebaseCompleted) {
+          firebaseCompleted = true;
+          clearTimeout(firebaseTimeout);
+          reject(error);
+        }
+      });
+    });
+    
+    // Таймаут 5 секунд
+    firebaseTimeout = setTimeout(() => {
+      if (!firebaseCompleted) {
+        firebaseCompleted = true;
+        console.log('Firebase timeout - using local data');
       }
-    } catch (e) {
-      console.log('JSON load error', e);
+    }, 5000);
+    
+    await firebasePromise;
+    
+  } catch (error) {
+    console.log('Firebase load error:', error.message);
+    
+    // Если Firebase недоступен, используем данные из localStorage как последний резерв
+    if (!dataLoaded) {
+      const localProjects = localStorage.getItem('projects_backup');
+      if (localProjects) {
+        try {
+          projects = JSON.parse(localProjects).map(normalizeData);
+          console.log('Loaded from localStorage backup:', projects.length, 'projects');
+          dataLoaded = true;
+        } catch (e) {
+          console.error('localStorage parse error:', e);
+        }
+      }
     }
   }
   
-  if (projects.length > 0) {
-    sortProjects('latest');
+  // Если все источники данных недоступны
+  if (!dataLoaded && projects.length === 0) {
+    console.error('No data sources available');
+    showToast('Данные недоступны. Проверьте подключение.');
+    document.getElementById('loadingProjects').innerHTML = 
+      '<div class="text-center py-20">' +
+      '<div class="text-6xl mb-4">📡</div>' +
+      '<h3 class="text-xl font-semibold text-slate-300 mb-2">Данные недоступны</h3>' +
+      '<p class="text-slate-500 mb-4">Проверьте подключение к интернету</p>' +
+      '<button onclick="loadData()" class="bg-blue-600 hover:bg-blue-500 px-4 py-2 rounded-lg">Повторить</button>' +
+      '</div>';
+    return;
   }
   
-  // Подписка на обновления Firestore
+  // Сохраняем данные в localStorage как резерв
+  if (projects.length > 0) {
+    localStorage.setItem('projects_backup', JSON.stringify(projects));
+  }
+  
+  // 3. Настраиваем подписку на обновления Firebase (без блокировки UI)
   subscribeToFirestoreUpdates();
   
   detectNewActivities();
   applyFilters();
+  
+  console.log('Data loading completed');
 };
 
 function normalizeData(project) {
@@ -2841,6 +2966,39 @@ function detectNewActivities() {
 setTimeout(() => {
   detectNewActivities();
 }, 1000);
+    function subscribeToFirestoreUpdates() {
+  try {
+    const q = query(collection(db, "projects"), where("deleted", "==", false));
+    
+    const unsubscribe = onSnapshot(q, 
+      (snapshot) => {
+        if (!snapshot.empty) {
+          const fireProjects = [];
+          snapshot.forEach(docSnap => {
+            fireProjects.push(normalizeData({ id: docSnap.id, ...docSnap.data() }));
+          });
+          
+          if (fireProjects.length > 0) {
+            projects = fireProjects;
+            console.log('Updated from Firebase realtime:', projects.length, 'projects');
+            sortProjects(currentSortType);
+            applyFilters();
+          }
+        }
+      },
+      (error) => {
+        console.error('Firebase subscription error:', error);
+        // Продолжаем работать с локальными данными
+      }
+    );
+    
+    // Сохраняем unsubscribe для очистки позже
+    window.firestoreUnsubscribe = unsubscribe;
+    
+  } catch (error) {
+    console.error('Firebase subscription setup error:', error);
+  }
+}
 </script>
 </body>
 </html>
