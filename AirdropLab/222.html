@@ -1496,41 +1496,86 @@ onAuthStateChanged(auth, async function(user) {
     applyFilters();
   }
 });
-    // При успешном входе - сохраняем ВСЁ в localStorage
-auth.onAuthStateChanged(async (user) => {
-  if (user) {
-    console.log('User logged in:', user.uid);
+   function initAuth() {
+  console.log('🔐 Checking auth...');
+  
+  auth.onAuthStateChanged(async (user) => {
+    console.log('Auth state changed:', user ? user.uid : 'logged out');
     
-    // Сохраняем данные пользователя
-    localStorage.setItem('userUid', user.uid);
-    localStorage.setItem('userEmail', user.email);
-    localStorage.setItem('userDisplayName', user.displayName || user.email);
-    localStorage.setItem('isLoggedIn', 'true');
-    
-    // Пытаемся получить и сохранить данные из Firestore
-    try {
-      const userDoc = await getDoc(doc(db, "users", user.uid));
-      if (userDoc.exists()) {
-        localStorage.setItem('userData', JSON.stringify(userDoc.data()));
+    if (user) {
+      // Пользователь вошёл
+      currentUser = user;
+      localStorage.setItem('userUid', user.uid);
+      localStorage.setItem('userEmail', user.email);
+      localStorage.setItem('userDisplayName', user.displayName || user.email);
+      localStorage.setItem('isLoggedIn', 'true');
+      
+      // Сохраняем данные пользователя
+      await saveUserData(user);
+      await syncLocalStorageToFirestore(user.uid);
+      
+      // Загружаем данные
+      try {
+        const userRef = doc(db, "users", user.uid);
+        const userDoc = await getDoc(userRef);
+        if (userDoc.exists()) {
+          const data = userDoc.data();
+          userFavorites = data.favorites || [];
+          userCompleted = data.completed || [];
+          if (data.arcGuideStats) {
+            arcData = { ...arcData, ...data.arcGuideStats };
+            localStorage.setItem(STORAGE_KEY, JSON.stringify(arcData));
+          }
+          localStorage.setItem('favorites_backup', JSON.stringify(userFavorites));
+          localStorage.setItem(COMPLETED_KEY, JSON.stringify(userCompleted));
+        }
+      } catch (e) {
+        console.log('Error loading user data:', e.message);
+        // Используем локальные данные
+        userFavorites = JSON.parse(localStorage.getItem('favorites_backup') || '[]');
+        userCompleted = JSON.parse(localStorage.getItem(COMPLETED_KEY) || '[]');
+        arcData = JSON.parse(localStorage.getItem(STORAGE_KEY) || '{}');
       }
-    } catch(e) {
-      console.log('Cannot get user data:', e.message);
+      
+      document.getElementById('generalFeedbackPanel').classList.remove('hidden');
+      initFeedbacksListener(user.uid);
+      
+      if (user.uid === "SAkz4mdW9reDaIsvqigCNZhEKJR2") {
+        activateAdminMode();
+      }
+      
+      // Запускаем синхронизацию
+      initUserSync(user.uid);
+      initNotificationsListener(user.uid);
+      
+      // Подписываемся на обновления
+      subscribeToFirestoreUpdates();
+      
+    } else {
+      // Пользователь вышел
+      currentUser = null;
+      userFavorites = [];
+      userCompleted = [];
+      arcData = JSON.parse(localStorage.getItem(STORAGE_KEY)) || {};
+      
+      document.getElementById('generalFeedbackPanel').classList.add('hidden');
+      
+      if (notificationsUnsubscribe) { notificationsUnsubscribe(); notificationsUnsubscribe = null; }
+      if (adminFeedbacksUnsubscribe) { adminFeedbacksUnsubscribe(); adminFeedbacksUnsubscribe = null; }
+      
+      notifications = [];
+      unreadNotificationsCount = 0;
+      updateNotificationBadge();
     }
     
-    // Запускаем синхронизацию В ФОНЕ, не ждём
-    startBackgroundSync();
+    // Вызываем initUI после изменения состояния
+    if (typeof initUI === 'function') {
+      initUI();
+    }
     
-  } else {
-    // Пользователь вышел
-    localStorage.removeItem('userUid');
-    localStorage.removeItem('userEmail');
-    localStorage.removeItem('userDisplayName');
-    localStorage.removeItem('userData');
-    localStorage.setItem('isLoggedIn', 'false');
-  }
-  
-  initUI();
-});
+    applyFilters();
+  });
+}
     // Эта функция вызывается сразу при загрузке
 function initApp() {
   console.log('Initializing app...');
@@ -1658,18 +1703,25 @@ function mergeProjects(remoteProjects) {
   localStorage.setItem('projects', JSON.stringify(projects));
   console.log('Merged projects:', projects.length);
 }
-function initAuth() {
-  auth.onAuthStateChanged((user) => {
-    if (user) {
-      console.log('Auth ready, user:', user.email);
-      // Данные уже показаны из localStorage
-      // Синхронизация запущена в initApp
-    } else {
-      console.log('User not logged in');
-    }
-    initUI();
-  });
+// ============ UI ИНИЦИАЛИЗАЦИЯ ============
+function initUI() {
+  console.log('🎨 Initializing UI...');
+  
+  // Обновляем UI в зависимости от состояния авторизации
+  if (currentUser) {
+    document.getElementById('loggedOutView').classList.add('hidden');
+    document.getElementById('loggedInView').classList.remove('hidden');
+    document.getElementById('userAvatar').src = currentUser.photoURL || 'https://ui-avatars.com/api/?name=' + (currentUser.email || 'User') + '&background=random';
+    document.getElementById('userName').textContent = currentUser.displayName || currentUser.email.split('@')[0];
+  } else {
+    document.getElementById('loggedOutView').classList.remove('hidden');
+    document.getElementById('loggedInView').classList.add('hidden');
+  }
+  
+  // Обновляем счетчики
+  applyFilters();
 }
+    
     function initUserSync(uid) {
   const userRef = doc(db, "users", uid);
   
@@ -1954,41 +2006,54 @@ window.loadData = async function() {
   applyFilters();
 };
 function subscribeToFirestoreUpdates() {
-  if (!db) return;
+  // Не подписываемся если нет интернета или пользователя
+  if (!db) {
+    console.log('⏭️ No db, skipping subscription');
+    return;
+  }
   
   const userUid = localStorage.getItem('userUid');
-  if (!userUid) return;
+  if (!userUid) {
+    console.log('⏭️ No user, skipping subscription');
+    return;
+  }
   
-  const q = query(
-    collection(db, "projects"),
-    where("deleted", "==", false)
-  );
+  // Проверяем интернет
+  if (!navigator.onLine) {
+    console.log('⏭️ Offline, skipping subscription');
+    return;
+  }
   
-  // onSnapshot - работает в реальном времени, но не при загрузке страницы!
-  const unsubscribe = onSnapshot(q, 
-    (snapshot) => {
-      // Это вызовется только когда ЕСТЬ изменения на сервере
-      console.log('Firestore real-time update received');
-      
-      const updatedProjects = [];
-      snapshot.forEach(doc => {
-        updatedProjects.push(normalizeData({ id: doc.id, ...doc.data() }));
-      });
-      
-      if (updatedProjects.length > 0) {
-        mergeProjects(updatedProjects);
-        applyFilters();
+  try {
+    const q = query(
+      collection(db, "projects"),
+      where("deleted", "==", false)
+    );
+    
+    const unsubscribe = onSnapshot(q, 
+      (snapshot) => {
+        console.log('📡 Firestore real-time update received');
+        
+        const updatedProjects = [];
+        snapshot.forEach(doc => {
+          updatedProjects.push(normalizeData({ id: doc.id, ...doc.data() }));
+        });
+        
+        if (updatedProjects.length > 0) {
+          mergeProjects(updatedProjects);
+          applyFilters();
+        }
+      },
+      (error) => {
+        console.log('Subscription error (offline is OK):', error.message);
       }
-    },
-    (error) => {
-      // Игнорируем ошибки сети
-      if (error.code === 'unavailable') {
-        console.log('Offline mode');
-      }
-    }
-  );
-  
-  console.log('Subscribed to real-time updates');
+    );
+    
+    console.log('✅ Subscribed to real-time updates');
+    
+  } catch(e) {
+    console.log('Cannot subscribe:', e.message);
+  }
 }
     window.saveData = async function() {
   // СРАЗУ сохраняем в localStorage
@@ -3058,6 +3123,41 @@ window.toggleLang = function() {
 };
 
 console.log('App initialized');
+    // Запускаем приложение
+document.addEventListener('DOMContentLoaded', function() {
+  console.log('🚀 Starting app...');
+  
+  // 1. Сначала показываем данные из localStorage
+  const savedProjects = localStorage.getItem('projects');
+  const savedCategories = localStorage.getItem('categories');
+  
+  if (savedProjects) {
+    try {
+      projects = JSON.parse(savedProjects);
+      console.log('📦 Loaded from localStorage:', projects.length, 'projects');
+    } catch(e) {
+      console.log('Error parsing projects:', e);
+    }
+  }
+  
+  if (savedCategories) {
+    try {
+      categories = JSON.parse(savedCategories);
+    } catch(e) {}
+  }
+  
+  // 2. Если есть данные - показываем сразу
+  if (projects.length > 0) {
+    sortProjects('latest');
+    detectNewActivities();
+    applyFilters();
+  }
+  
+  // 3. Запускаем проверку auth (асинхронно)
+  initAuth();
+  
+  console.log('✅ App ready');
+});
     // Добавь эту функцию для определения новых активностей по датам
 function detectNewActivities() {
   const now = new Date();
