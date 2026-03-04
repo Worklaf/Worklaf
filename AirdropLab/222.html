@@ -1496,6 +1496,180 @@ onAuthStateChanged(auth, async function(user) {
     applyFilters();
   }
 });
+    // При успешном входе - сохраняем ВСЁ в localStorage
+auth.onAuthStateChanged(async (user) => {
+  if (user) {
+    console.log('User logged in:', user.uid);
+    
+    // Сохраняем данные пользователя
+    localStorage.setItem('userUid', user.uid);
+    localStorage.setItem('userEmail', user.email);
+    localStorage.setItem('userDisplayName', user.displayName || user.email);
+    localStorage.setItem('isLoggedIn', 'true');
+    
+    // Пытаемся получить и сохранить данные из Firestore
+    try {
+      const userDoc = await getDoc(doc(db, "users", user.uid));
+      if (userDoc.exists()) {
+        localStorage.setItem('userData', JSON.stringify(userDoc.data()));
+      }
+    } catch(e) {
+      console.log('Cannot get user data:', e.message);
+    }
+    
+    // Запускаем синхронизацию В ФОНЕ, не ждём
+    startBackgroundSync();
+    
+  } else {
+    // Пользователь вышел
+    localStorage.removeItem('userUid');
+    localStorage.removeItem('userEmail');
+    localStorage.removeItem('userDisplayName');
+    localStorage.removeItem('userData');
+    localStorage.setItem('isLoggedIn', 'false');
+  }
+  
+  initUI();
+});
+    // Эта функция вызывается сразу при загрузке
+function initApp() {
+  console.log('Initializing app...');
+  
+  // 1. Проверяем localStorage - данные есть всегда
+  const isLoggedIn = localStorage.getItem('isLoggedIn') === 'true';
+  const savedProjects = localStorage.getItem('projects');
+  const savedCategories = localStorage.getItem('categories');
+  
+  // 2. Загружаем локальные данные СРАЗУ
+  if (savedProjects) {
+    try {
+      projects = JSON.parse(savedProjects);
+      console.log('Loaded from localStorage:', projects.length, 'projects');
+    } catch(e) {
+      console.log('Error parsing projects:', e);
+    }
+  }
+  
+  if (savedCategories) {
+    try {
+      categories = JSON.parse(savedCategories);
+    } catch(e) {}
+  }
+  
+  // 3. Если есть данные - показываем сразу
+  if (projects.length > 0) {
+    sortProjects('latest');
+    detectNewActivities();
+    applyFilters();
+  }
+  
+  // 4. Запускаем проверку auth (асинхронно, не блокируем)
+  initAuth();
+  
+  // 5. Только если вошёл - запускаем синхронизацию в фоне
+  if (isLoggedIn) {
+    console.log('User was logged in, starting background sync...');
+    setTimeout(() => {
+      startBackgroundSync();
+    }, 3000);
+  }
+}
+// Глобальная переменная для отслеживания
+let isSyncing = false;
+let lastSyncTime = 0;
+const SYNC_INTERVAL = 60000; // 1 минута - НЕ при каждой загрузке!
+
+function startBackgroundSync() {
+  if (isSyncing) return;
+  
+  console.log('Starting background sync...');
+  isSyncing = true;
+  
+  // Подписка на реальные изменения (onSnapshot)
+  try {
+    subscribeToFirestoreUpdates();
+  } catch(e) {
+    console.log('Cannot subscribe:', e.message);
+  }
+  
+  // Периодическая проверка (раз в минуту, а не при каждой загрузке!)
+  setInterval(() => {
+    if (localStorage.getItem('isLoggedIn') === 'true') {
+      console.log('Periodic sync check...');
+      checkForChanges();
+    }
+  }, SYNC_INTERVAL);
+}
+
+async function checkForChanges() {
+  // Только проверяем, есть ли изменения - НЕ загружаем всё
+  try {
+    const lastUpdate = localStorage.getItem('lastFirestoreUpdate') || '0';
+    
+    const snapshot = await getDocs(
+      query(
+        collection(db, "projects"),
+        where("updatedAt", ">", parseInt(lastUpdate)),
+        where("deleted", "==", false)
+      )
+    );
+    
+    if (!snapshot.empty) {
+      console.log('Found', snapshot.size, 'new/updated projects');
+      
+      // Обновляем локальные данные
+      const updatedProjects = [];
+      let latestUpdate = parseInt(lastUpdate);
+      
+      snapshot.forEach(doc => {
+        const data = doc.data();
+        updatedProjects.push(normalizeData({ id: doc.id, ...data }));
+        if (data.updatedAt > latestUpdate) {
+          latestUpdate = data.updatedAt;
+        }
+      });
+      
+      // Мержим с локальными
+      mergeProjects(updatedProjects);
+      localStorage.setItem('lastFirestoreUpdate', latestUpdate.toString());
+      
+      applyFilters();
+    }
+  } catch(e) {
+    // Ошибка = не страшно, данные уже показаны
+    console.log('Sync check skipped:', e.message);
+  }
+}
+
+function mergeProjects(remoteProjects) {
+  const localIds = new Set(projects.map(p => p.id));
+  
+  remoteProjects.forEach(remote => {
+    const index = projects.findIndex(p => p.id === remote.id);
+    if (index >= 0) {
+      // Обновляем существующий
+      projects[index] = remote;
+    } else {
+      // Добавляем новый
+      projects.push(remote);
+    }
+  });
+  
+  localStorage.setItem('projects', JSON.stringify(projects));
+  console.log('Merged projects:', projects.length);
+}
+function initAuth() {
+  auth.onAuthStateChanged((user) => {
+    if (user) {
+      console.log('Auth ready, user:', user.email);
+      // Данные уже показаны из localStorage
+      // Синхронизация запущена в initApp
+    } else {
+      console.log('User not logged in');
+    }
+    initUI();
+  });
+}
     function initUserSync(uid) {
   const userRef = doc(db, "users", uid);
   
@@ -1779,37 +1953,80 @@ window.loadData = async function() {
   detectNewActivities();
   applyFilters();
 };
-// Добавь эту функцию после функции loadData
 function subscribeToFirestoreUpdates() {
   if (!db) return;
   
-  try {
-    const projectsRef = collection(db, "projects");
-    const q = query(projectsRef, where("deleted", "==", false));
-    
-    // Подписка на изменения в реальном времени
-    const unsubscribe = onSnapshot(q, 
-      (snapshot) => {
-        const fireProjects = [];
-        snapshot.forEach(docSnap => {
-          fireProjects.push(normalizeData({ id: docSnap.id, ...docSnap.data() }));
-        });
-        
-        if (fireProjects.length > 0) {
-          projects = fireProjects;
-          console.log('Real-time update from Firebase:', projects.length, 'projects');
-          localStorage.setItem('projects', JSON.stringify(projects));
-          applyFilters();
-        }
-      },
-      (error) => {
-        console.log('Firestore subscription error (offline mode):', error.message);
+  const userUid = localStorage.getItem('userUid');
+  if (!userUid) return;
+  
+  const q = query(
+    collection(db, "projects"),
+    where("deleted", "==", false)
+  );
+  
+  // onSnapshot - работает в реальном времени, но не при загрузке страницы!
+  const unsubscribe = onSnapshot(q, 
+    (snapshot) => {
+      // Это вызовется только когда ЕСТЬ изменения на сервере
+      console.log('Firestore real-time update received');
+      
+      const updatedProjects = [];
+      snapshot.forEach(doc => {
+        updatedProjects.push(normalizeData({ id: doc.id, ...doc.data() }));
+      });
+      
+      if (updatedProjects.length > 0) {
+        mergeProjects(updatedProjects);
+        applyFilters();
       }
-    );
+    },
+    (error) => {
+      // Игнорируем ошибки сети
+      if (error.code === 'unavailable') {
+        console.log('Offline mode');
+      }
+    }
+  );
+  
+  console.log('Subscribed to real-time updates');
+}
+    window.saveData = async function() {
+  // СРАЗУ сохраняем в localStorage
+  localStorage.setItem('projects', JSON.stringify(projects));
+  localStorage.setItem('categories', JSON.stringify(categories));
+  console.log('Saved to localStorage');
+  
+  // Обновляем timestamp
+  const now = Date.now();
+  localStorage.setItem('lastFirestoreUpdate', now.toString());
+  
+  // Пытаемся синхронизировать в фоне (не ждём!)
+  if (localStorage.getItem('isLoggedIn') === 'true') {
+    syncToFirestoreInBackground(now);
+  }
+  
+  showNotification('Сохранено локально');
+};
+
+async function syncToFirestoreInBackground(timestamp) {
+  try {
+    // Пакетная запись - быстрее чем по одному
+    const batch = writeBatch(db);
     
-    console.log('Subscribed to Firestore updates');
-  } catch (e) {
-    console.log('Cannot subscribe to Firestore:', e.message);
+    projects.forEach(project => {
+      const docRef = doc(db, "projects", project.id);
+      batch.set(docRef, {
+        ...project,
+        updatedAt: timestamp,
+        deleted: false
+      }, { merge: true });
+    });
+    
+    await batch.commit();
+    console.log('Synced to Firestore');
+  } catch(e) {
+    console.log('Sync failed, will retry later:', e.message);
+    // Данные уже сохранены локально, синхронизируем позже
   }
 }
 function normalizeData(project) {
