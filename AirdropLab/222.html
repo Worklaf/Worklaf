@@ -675,30 +675,26 @@ let currentImageIndex = 0;
 document.addEventListener('DOMContentLoaded', function() {
   console.log('🚀 Быстрый старт...');
   
-  // 1. МГНОВЕННО загружаем из localStorage
-  loadProjectsFromCache();
-  
-  // 2. Показываем UI
-  const loadingScreen = document.getElementById('loading-screen');
-  setTimeout(() => {
-    if (loadingScreen) {
-      loadingScreen.style.opacity = '0';
-      setTimeout(() => loadingScreen.style.display = 'none', 300);
-    }
-  }, 800);
-  
-  // 3. Запускаем фоновую загрузку
-  initBackgroundData();
-  
-  // 4. Проверяем auth (быстро)
-  checkAuthState();
-  
-  // 5. Инициализируем UI элементы
-  initUI();
-  
-  // 6. Проверяем автозавершение активностей
-  checkAndAutoEndActivities();
-  setInterval(checkAndAutoEndActivities, 60 * 60 * 1000);
+  // 1. Проверяем auth (первое, что нужно сделать)
+  checkAuthState().then(() => {
+    // 2. Загружаем из localStorage только после проверки auth
+    loadProjectsFromCache();
+    
+    // 3. Показываем UI только когда все готово
+    const loadingScreen = document.getElementById('loading-screen');
+    setTimeout(() => {
+      if (loadingScreen) {
+        loadingScreen.style.opacity = '0';
+        setTimeout(() => loadingScreen.style.display = 'none', 300);
+      }
+    }, 800);
+    
+    // 4. Запускаем фоновую загрузку
+    initBackgroundData();
+    
+    // 5. Инициализируем UI элементы
+    initUI();
+  });
 });
 
 function initUI() {
@@ -804,20 +800,28 @@ function saveProjectsToCache() {
 
 // ============ ФОНОВАЯ ЗАГРУЗКА ============
 async function initBackgroundData() {
-  if (!navigator.onLine) {
-    console.log('⏭️ Офлайн режим');
-    return;
+  try {
+    await loadProjectsFromFirebase();
+  } catch(e) {
+    console.log('Firebase недоступен:', e.message);
+    try {
+      await loadProjectsFromJSON();
+    } catch(e2) {
+      console.log('JSON недоступен:', e2.message);
+    }
   }
-  
-  await loadProjectsFromFirebase();
   
   if (projects.length === 0) {
-    await loadProjectsFromJSON();
+    showToast('Используем локальные данные', 'info');
   }
-  
-  subscribeToFirebaseUpdates();
 }
-
+function hideLoadingScreen() {
+  const loadingScreen = document.getElementById('loading-screen');
+  if (loadingScreen) {
+    loadingScreen.style.opacity = '0';
+    setTimeout(() => loadingScreen.style.display = 'none', 300);
+  }
+}
 // ============ FIREBASE ============
 async function loadProjectsFromFirebase() {
   try {
