@@ -1409,69 +1409,172 @@ async function syncLocalStorageToFirestore(userId) {
   } catch (e) { console.error('Error sync:', e); }
 }
 
+// Новая переменная для отслеживания состояния
+let isAuthReady = false;
+
 onAuthStateChanged(auth, async function(user) {
+  isAuthReady = true;
+  
   if (user) {
     currentUser = user;
+    
+    // Сохраняем данные пользователя
     await saveUserData(user);
     await syncLocalStorageToFirestore(user.uid);
-    document.getElementById('generalFeedbackPanel').classList.remove('hidden');
-    initFeedbacksListener(user.uid);
-    if (user.uid === "SAkz4mdW9reDaIsvqigCNZhEKJR2") activateAdminMode();
+    
+    // Загружаем данные из Firestore
     try {
       const userRef = doc(db, "users", user.uid);
       const userDoc = await getDoc(userRef);
+      
       if (userDoc.exists()) {
         const data = userDoc.data();
+        
+        // Восстанавливаем из Firestore
         userFavorites = data.favorites || [];
         userCompleted = data.completed || [];
-        if (data.arcGuideStats) { arcData = { ...arcData, ...data.arcGuideStats }; localStorage.setItem(STORAGE_KEY, JSON.stringify(arcData)); }
-      } else { await setDoc(userRef, { favorites: [], completed: [], arcGuideStats: {} }); }
-    } catch (e) { console.error('Error:', e); }
+        
+        if (data.arcGuideStats) {
+          arcData = { ...arcData, ...data.arcGuideStats };
+          localStorage.setItem(STORAGE_KEY, JSON.stringify(arcData));
+        }
+        
+        // Сохраняем в localStorage как резерв
+        localStorage.setItem('favorites_backup', JSON.stringify(userFavorites));
+        localStorage.setItem(COMPLETED_KEY, JSON.stringify(userCompleted));
+      } else {
+        // Документ не существует - создаем с пустыми данными
+        userFavorites = [];
+        userCompleted = [];
+      }
+    } catch (e) {
+      console.error('Error loading user data:', e);
+      // Используем данные из localStorage как резерв
+      userFavorites = JSON.parse(localStorage.getItem('favorites_backup') || '[]');
+      userCompleted = JSON.parse(localStorage.getItem(COMPLETED_KEY) || '[]');
+      arcData = JSON.parse(localStorage.getItem(STORAGE_KEY) || '{}');
+    }
+    
+    document.getElementById('generalFeedbackPanel').classList.remove('hidden');
+    initFeedbacksListener(user.uid);
+    
+    if (user.uid === "SAkz4mdW9reDaIsvqigCNZhEKJR2") activateAdminMode();
+    
+    // Инициализируем синхронизацию
+    initUserSync(user.uid);
+    initNotificationsListener(user.uid);
+    
+    // Обновляем UI
     document.getElementById('loggedOutView').classList.add('hidden');
     document.getElementById('loggedInView').classList.remove('hidden');
     document.getElementById('guestWarning').classList.add('hidden');
     document.getElementById('userAvatar').src = user.photoURL || 'https://ui-avatars.com/api/?name=' + (user.email || 'User') + '&background=random';
     document.getElementById('userName').textContent = user.displayName || user.email.split('@')[0];
-    initUserSync(user.uid);
-    initNotificationsListener(user.uid);
+    
     applyFilters();
+    
   } else {
-    currentUser = null; userFavorites = []; userCompleted = [];
+    // Пользователь вышел
+    currentUser = null; 
+    userFavorites = []; 
+    userCompleted = [];
+    arcData = JSON.parse(localStorage.getItem(STORAGE_KEY)) || {};
+    
     document.getElementById('generalFeedbackPanel').classList.add('hidden');
+    
     if (notificationsUnsubscribe) { notificationsUnsubscribe(); notificationsUnsubscribe = null; }
     if (adminFeedbacksUnsubscribe) { adminFeedbacksUnsubscribe(); adminFeedbacksUnsubscribe = null; }
-    notifications = []; unreadNotificationsCount = 0; updateNotificationBadge();
+    
+    notifications = []; 
+    unreadNotificationsCount = 0; 
+    updateNotificationBadge();
+    
     document.getElementById('loggedOutView').classList.remove('hidden');
     document.getElementById('loggedInView').classList.add('hidden');
     document.getElementById('guestWarning').classList.remove('hidden');
-    arcData = JSON.parse(localStorage.getItem(STORAGE_KEY)) || [];
-    userCompleted = JSON.parse(localStorage.getItem(COMPLETED_KEY) || []);
+    
     applyFilters();
   }
 });
-
-function initUserSync(uid) {
+    function initUserSync(uid) {
   const userRef = doc(db, "users", uid);
-  onSnapshot(userRef, function(docSnap) {
+  
+  // Используем getDoc вместо onSnapshot для более надежной загрузки
+  getDoc(userRef).then(docSnap => {
     if (docSnap.exists()) {
       const data = docSnap.data();
-      let cloudFavorites = data.favorites || [];
-      let localStorageFavorites = JSON.parse(localStorage.getItem('favorites_backup')) || [];
-      let mergedFavorites = [...new Set([...cloudFavorites, ...localStorageFavorites])];
-      if (JSON.stringify(cloudFavorites) !== JSON.stringify(mergedFavorites)) localStorage.setItem('favorites_backup', JSON.stringify(mergedFavorites));
+      
+      // Объединяем облачные и локальные данные
+      const cloudFavorites = data.favorites || [];
+      const localFavorites = JSON.parse(localStorage.getItem('favorites_backup') || '[]');
+      const mergedFavorites = [...new Set([...cloudFavorites, ...localFavorites])];
+      
+      if (JSON.stringify(cloudFavorites) !== JSON.stringify(mergedFavorites)) {
+        localStorage.setItem('favorites_backup', JSON.stringify(mergedFavorites));
+      }
       userFavorites = mergedFavorites;
-      let cloudCompleted = data.completed || [];
-      let localStorageCompleted = JSON.parse(localStorage.getItem(COMPLETED_KEY)) || [];
-      let mergedCompleted = [...new Set([...cloudCompleted, ...localStorageCompleted])];
-      if (JSON.stringify(cloudCompleted) !== JSON.stringify(mergedCompleted)) localStorage.setItem(COMPLETED_KEY, JSON.stringify(mergedCompleted));
+      
+      // То же для completed
+      const cloudCompleted = data.completed || [];
+      const localCompleted = JSON.parse(localStorage.getItem(COMPLETED_KEY) || '[]');
+      const mergedCompleted = [...new Set([...cloudCompleted, ...localCompleted])];
+      
+      if (JSON.stringify(cloudCompleted) !== JSON.stringify(mergedCompleted)) {
+        localStorage.setItem(COMPLETED_KEY, JSON.stringify(mergedCompleted));
+      }
       userCompleted = mergedCompleted;
+      
+      // Arc data
       if (data.arcGuideStats) {
-        let cloudArcData = data.arcGuideStats;
-        let localArcData = JSON.parse(localStorage.getItem(STORAGE_KEY)) || {};
-        let mergedArcData = { ...localArcData, ...cloudArcData };
+        const cloudArcData = data.arcGuideStats;
+        const localArcData = JSON.parse(localStorage.getItem(STORAGE_KEY) || '{}');
+        const mergedArcData = { ...localArcData, ...cloudArcData };
+        
         localStorage.setItem(STORAGE_KEY, JSON.stringify(mergedArcData));
         arcData = mergedArcData;
       }
+      
+      applyFilters();
+    }
+  }).catch(err => {
+    console.log('initUserSync error:', err);
+  });
+  
+  // Также подписываемся на изменения в реальном времени
+  onSnapshot(userRef, function(docSnap) {
+    if (docSnap.exists()) {
+      const data = docSnap.data();
+      
+      // Объединяем данные (локальные имеют приоритет)
+      const cloudFavorites = data.favorites || [];
+      const localFavorites = JSON.parse(localStorage.getItem('favorites_backup') || '[]');
+      const mergedFavorites = [...new Set([...cloudFavorites, ...localFavorites])];
+      
+      if (JSON.stringify(userFavorites) !== JSON.stringify(mergedFavorites)) {
+        userFavorites = mergedFavorites;
+        localStorage.setItem('favorites_backup', JSON.stringify(mergedFavorites));
+      }
+      
+      // Completed
+      const cloudCompleted = data.completed || [];
+      const localCompleted = JSON.parse(localStorage.getItem(COMPLETED_KEY) || '[]');
+      const mergedCompleted = [...new Set([...cloudCompleted, ...localCompleted])];
+      
+      if (JSON.stringify(userCompleted) !== JSON.stringify(mergedCompleted)) {
+        userCompleted = mergedCompleted;
+        localStorage.setItem(COMPLETED_KEY, JSON.stringify(mergedCompleted));
+      }
+      
+      // Arc data
+      if (data.arcGuideStats) {
+        const cloudArcData = data.arcGuideStats;
+        const localArcData = JSON.parse(localStorage.getItem(STORAGE_KEY) || '{}');
+        const mergedArcData = { ...cloudArcData, ...localArcData }; // локальные поверх облачных
+        
+        arcData = mergedArcData;
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(mergedArcData));
+      }
+      
       applyFilters();
     }
   });
@@ -1603,64 +1706,62 @@ setTimeout(() => {
 
 let firstDataLoadComplete = false;
 
+// В функции loadData заменить порядок загрузки
 window.loadData = async function() {
-  // Skip if using English data
   if (useEnglishData) {
     console.log('Using English data, skipping default load');
     return;
   }
   
+  // Сначала пытаемся загрузить из Firestore
+  let firebaseDataLoaded = false;
+  
   try {
-    const response = await fetch(EXTERNAL_DATA_URL);
-    if (response.ok) {
-      const data = await response.json();
-      if(data.projects) projects = data.projects.map(normalizeData);
-      if(data.categories) categories = data.categories;
+    const q = query(collection(db, "projects"), where("deleted", "==", false));
+    const snapshot = await getDocs(q);
+    
+    if (!snapshot.empty) {
+      const fireProjects = [];
+      snapshot.forEach(docSnap => {
+        fireProjects.push(normalizeData({ id: docSnap.id, ...docSnap.data() }));
+      });
+      
+      if (fireProjects.length > 0) {
+        projects = fireProjects;
+        firebaseDataLoaded = true;
+        console.log('Loaded from Firebase:', projects.length, 'projects');
+      }
     }
-  } catch (e) { 
-    console.log('JSON load error', e); 
+  } catch (e) {
+    console.log('Firebase load error, using local data:', e.message);
+  }
+  
+  // Если Firebase пустой или недоступен - используем локальный JSON как резерв
+  if (!firebaseDataLoaded || projects.length === 0) {
+    try {
+      const response = await fetch(EXTERNAL_DATA_URL);
+      if (response.ok) {
+        const data = await response.json();
+        if (data.projects) {
+          projects = data.projects.map(normalizeData);
+          console.log('Loaded from local JSON:', projects.length, 'projects');
+        }
+        if (data.categories) categories = data.categories;
+      }
+    } catch (e) {
+      console.log('JSON load error', e);
+    }
   }
   
   if (projects.length > 0) {
     sortProjects('latest');
   }
   
-  // Подписываемся на обновления Firestore
-  const unsubscribe = onSnapshot(query(collection(db, "projects"), where("deleted", "==", false)), function(snapshot) {
-    if (useEnglishData) return; // Skip if using English data
-    
-    snapshot.forEach(function(docSnap) {
-      const fireProject = docSnap.data();
-      const idx = projects.findIndex(function(p) { return p.id === fireProject.id; });
-      if (idx !== -1) {
-        projects[idx] = { ...projects[idx], ...fireProject };
-      } else if (!fireProject.deleted) {
-        projects.push(normalizeData(fireProject));
-      }
-    });
-    sortProjects(currentSortType);
-    applyFilters();
-  });
+  // Подписка на обновления Firestore
+  subscribeToFirestoreUpdates();
   
-  if (isAdminMode) {
-    onSnapshot(query(collection(db, "projects"), where("deleted", "==", true)), function(snapshot) {
-      if (useEnglishData) return;
-      
-      snapshot.forEach(function(docSnap) {
-        const fireProject = docSnap.data();
-        const idx = projects.findIndex(function(p) { return p.id === fireProject.id; });
-        if (idx !== -1) {
-          projects[idx] = { ...projects[idx], ...fireProject };
-        } else {
-          projects.push(normalizeData(fireProject));
-        }
-      });
-      applyFilters();
-    });
-  }
-  
-  firstDataLoadComplete = true;
-    detectNewActivities();
+  detectNewActivities();
+  applyFilters();
 };
 
 function normalizeData(project) {
