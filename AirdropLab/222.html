@@ -859,13 +859,14 @@ let currentEditingActivities = [];
 let editingActivityId = null;
 let mainProjectCategories = [];
 let currentSortType = 'latest';
-
-// English data source flag
 let useEnglishData = false;
-
-// Modal click tracking
 let modalClickStartTarget = null;
 
+// Firebase - НЕ инициализируем сразу
+let db = null;
+let auth = null;
+let firebaseReady = false;
+let authCheckComplete = false;
 // ============ LANGUAGE SYSTEM FUNCTIONS ============
 
 // Function to set English projects data
@@ -985,7 +986,217 @@ function checkAndAutoEndActivities() {
   });
   if (hasChanges) applyFilters();
 }
+async function initFirebaseFast(savedUid) {
+  if (firebaseReady) return;
+  
+  console.log('🔥 Initializing Firebase (fast mode)...');
+  
+  // Динамический импорт с таймаутом
+  const timeout = new Promise((_, reject) => 
+    setTimeout(() => reject(new Error('timeout')), 1000)
+  );
+  
+  const importModules = Promise.all([
+    import("https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js"),
+    import("https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js"),
+    import("https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js")
+  ]);
+  
+  try {
+    const [firebaseApp, firebaseAuth, firebaseFirestore] = await Promise.race([importModules, timeout]);
+    
+    const { initializeApp } = firebaseApp;
+    const { getAuth, signInWithPopup, GoogleAuthProvider, TwitterAuthProvider, signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut, onAuthStateChanged } = firebaseAuth;
+    const { getFirestore, collection, doc, setDoc, getDoc, getDocs, updateDoc, deleteDoc, onSnapshot, query, where, orderBy, addDoc, serverTimestamp, arrayUnion, writeBatch } = firebaseFirestore;
+    
+    const firebaseConfig = {
+      apiKey: "AIzaSyBdXGYg2t8DJBrQHCC80-pFerZU9PWmSCk",
+      authDomain: "testnet-hub.firebaseapp.com",
+      projectId: "testnet-hub",
+      storageBucket: "testnet-hub.firebasestorage.app",
+      messagingSenderId: "497813176653",
+      appId: "1:497813176653:web:089188fdd1555d76cd7704"
+    };
+    
+    const app = initializeApp(firebaseConfig);
+    auth = getAuth(app);
+    db = getFirestore(app);
+    firebaseReady = true;
+    
+    console.log('✅ Firebase ready (fast)');
+    
+    // Проверяем текущего пользователя
+    if (auth.currentUser) {
+      currentUser = auth.currentUser;
+      handleUserLogin(currentUser);
+    } else {
+      // Слушаем изменения auth
+      onAuthStateChanged(auth, (user) => {
+        if (user) {
+          currentUser = user;
+          handleUserLogin(user);
+        } else {
+          handleUserLogout();
+        }
+      });
+    }
+    
+  } catch(e) {
+    console.log('Firebase init timeout or error:', e.message);
+    // Используем localStorage данные
+    userFavorites = JSON.parse(localStorage.getItem('favorites_backup') || '[]');
+    userCompleted = JSON.parse(localStorage.getItem(COMPLETED_KEY) || '[]');
+    arcData = JSON.parse(localStorage.getItem(STORAGE_KEY) || '{}');
+    applyFilters();
+  }
+}
+async function quickAuthCheck() {
+  const savedUid = localStorage.getItem('userUid');
+  const isLoggedIn = localStorage.getItem('isLoggedIn') === 'true';
+  
+  if (isLoggedIn && savedUid && navigator.onLine) {
+    console.log('👤 Quick auth check: user logged in, initializing Firebase...');
+    
+    // Пытаемся инициализировать Firebase быстро
+    try {
+      await initFirebaseFast(savedUid);
+    } catch(e) {
+      console.log('Firebase fast init failed:', e);
+      // Используем данные из localStorage как резерв
+      userFavorites = JSON.parse(localStorage.getItem('favorites_backup') || '[]');
+      userCompleted = JSON.parse(localStorage.getItem(COMPLETED_KEY) || '[]');
+      arcData = JSON.parse(localStorage.getItem(STORAGE_KEY) || '{}');
+      applyFilters();
+    }
+  } else {
+    console.log('👤 Quick auth check: not logged in');
+    // Не залогинен - показываем только публичные данные
+    authCheckComplete = true;
+    applyFilters();
+  }
+  
+  // Запускаем фоновую загрузку проектов из Firebase (публично)
+  if (navigator.onLine) {
+    setTimeout(() => loadPublicProjectsFromFirebase(), 2000);
+  }
+}
 
+// Быстрая инициализация Firebase (1 секунда max)
+async function initFirebaseFast(savedUid) {
+  if (firebaseReady) return;
+  
+  console.log('🔥 Initializing Firebase (fast mode)...');
+  
+  // Динамический импорт с таймаутом
+  const timeout = new Promise((_, reject) => 
+    setTimeout(() => reject(new Error('timeout')), 1000)
+  );
+  
+  const importModules = Promise.all([
+    import("https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js"),
+    import("https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js"),
+    import("https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js")
+  ]);
+  
+  try {
+    const [firebaseApp, firebaseAuth, firebaseFirestore] = await Promise.race([importModules, timeout]);
+    
+    const { initializeApp } = firebaseApp;
+    const { getAuth, signInWithPopup, GoogleAuthProvider, TwitterAuthProvider, signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut, onAuthStateChanged } = firebaseAuth;
+    const { getFirestore, collection, doc, setDoc, getDoc, getDocs, updateDoc, deleteDoc, onSnapshot, query, where, orderBy, addDoc, serverTimestamp, arrayUnion, writeBatch } = firebaseFirestore;
+    
+    const firebaseConfig = {
+      apiKey: "AIzaSyBdXGYg2t8DJBrQHCC80-pFerZU9PWmSCk",
+      authDomain: "testnet-hub.firebaseapp.com",
+      projectId: "testnet-hub",
+      storageBucket: "testnet-hub.firebasestorage.app",
+      messagingSenderId: "497813176653",
+      appId: "1:497813176653:web:089188fdd1555d76cd7704"
+    };
+    
+    const app = initializeApp(firebaseConfig);
+    auth = getAuth(app);
+    db = getFirestore(app);
+    firebaseReady = true;
+    
+    console.log('✅ Firebase ready (fast)');
+    
+    // Проверяем текущего пользователя
+    if (auth.currentUser) {
+      currentUser = auth.currentUser;
+      handleUserLogin(currentUser);
+    } else {
+      // Слушаем изменения auth
+      onAuthStateChanged(auth, (user) => {
+        if (user) {
+          currentUser = user;
+          handleUserLogin(user);
+        } else {
+          handleUserLogout();
+        }
+      });
+    }
+    
+  } catch(e) {
+    console.log('Firebase init timeout or error:', e.message);
+    // Используем localStorage данные
+    userFavorites = JSON.parse(localStorage.getItem('favorites_backup') || '[]');
+    userCompleted = JSON.parse(localStorage.getItem(COMPLETED_KEY) || '[]');
+    arcData = JSON.parse(localStorage.getItem(STORAGE_KEY) || '{}');
+    applyFilters();
+  }
+}
+    function loadDataFromLocalStorage() {
+  const localProjects = localStorage.getItem('projects');
+  const localCategories = localStorage.getItem('categories');
+  
+  if (localProjects) {
+    try {
+      projects = JSON.parse(localProjects);
+      console.log('✅ Loaded from localStorage:', projects.length, 'projects');
+    } catch(e) {
+      console.log('❌ Error parsing localStorage:', e);
+    }
+  }
+  
+  if (localCategories) {
+    try {
+      categories = JSON.parse(localCategories);
+    } catch(e) {}
+  }
+  
+  if (projects.length > 0) {
+    sortProjects('latest');
+    detectNewActivities();
+    applyFilters();
+  }
+}
+function handleUserLogin(user) {
+  console.log('✅ User logged in:', user.email);
+  
+  // Сохраняем в localStorage
+  localStorage.setItem('userUid', user.uid);
+  localStorage.setItem('userEmail', user.email);
+  localStorage.setItem('userDisplayName', user.displayName || user.email);
+  localStorage.setItem('isLoggedIn', 'true');
+  
+  // Показываем UI
+  document.getElementById('generalFeedbackPanel').classList.remove('hidden');
+  document.getElementById('loggedOutView').classList.add('hidden');
+  document.getElementById('loggedInView').classList.remove('hidden');
+  document.getElementById('userAvatar').src = user.photoURL || 'https://ui-avatars.com/api/?name=' + (user.email || 'U') + '&background=0D8ABC&color=fff';
+  document.getElementById('userName').textContent = user.displayName || user.email.split('@')[0];
+  
+  // Загружаем приватные данные
+  loadUserPrivateData(user.uid);
+  
+  applyFilters();
+  
+  // Админ режим
+  if (user.uid === "SAkz4mdW9reDaIsvqigCNZhEKJR2") {
+    activateAdminMode();
+  }
+}
 function isProjectUnvisited(project) {
   // Если есть новая активность - считаем непосещенным
   if (hasNewActivities(project.id)) return true;
@@ -1027,12 +1238,71 @@ window.handleModalMouseUp = function(e) {
 // === AUTH ===
 window.openLoginModal = function() { document.getElementById('loginModal').classList.add('active'); };
 window.closeLoginModal = function() { document.getElementById('loginModal').classList.remove('active'); };
-window.loginGoogle = async function() { try { await signInWithPopup(auth, new GoogleAuthProvider()); closeLoginModal(); showToast('Вход: Google'); } catch(e) { showToast(e.message); } };
-window.loginTwitter = async function() { try { await signInWithPopup(auth, new TwitterAuthProvider()); closeLoginModal(); showToast('Вход: Twitter'); } catch(e) { showToast(e.message); } };
-window.handleEmailAuth = async function(e) { e.preventDefault(); const email = document.getElementById('emailInput').value; const pass = document.getElementById('passInput').value; try { await signInWithEmailAndPassword(auth, email, pass); closeLoginModal(); showToast('Вход выполнен'); } catch(e) { showToast(e.message); } };
-window.handleRegister = async function() { const email = document.getElementById('emailInput').value; const pass = document.getElementById('passInput').value; try { await createUserWithEmailAndPassword(auth, email, pass); closeLoginModal(); showToast('Аккаунт создан!'); } catch(e) { showToast(e.message); } };
-window.logout = function() { signOut(auth).then(() => { showToast('Выход'); localStorage.removeItem('favorites_backup'); localStorage.removeItem(STORAGE_KEY); userFavorites = []; userCompleted = []; arcData = {}; }); };
+window.loginGoogle = async function() {
+  if (!firebaseReady) {
+    await initFirebaseFast();
+  }
+  
+  const provider = new GoogleAuthProvider();
+  await signInWithPopup(auth, provider);
+  closeLoginModal();
+  showToast('Вход: Google');
+};
+    window.loginTwitter = async function() {
+  if (!firebaseReady) {
+    await initFirebaseFast();
+  }
+  
+  const provider = new TwitterAuthProvider();
+  await signInWithPopup(auth, provider);
+  closeLoginModal();
+  showToast('Вход: Twitter');
+};
+    window.handleEmailAuth = async function(e) {
+  e.preventDefault();
+  
+  if (!firebaseReady) {
+    await initFirebaseFast();
+  }
+  
+  const email = document.getElementById('emailInput').value;
+  const pass = document.getElementById('passInput').value;
+  
+  await signInWithEmailAndPassword(auth, email, pass);
+  closeLoginModal();
+  showToast('Вход выполнен');
+};
+    window.handleRegister = async function() {
+  if (!firebaseReady) {
+    await initFirebaseFast();
+  }
+  
+  const email = document.getElementById('emailInput').value;
+  const pass = document.getElementById('passInput').value;
+  
+  await createUserWithEmailAndPassword(auth, email, pass);
+  closeLoginModal();
+  showToast('Аккаунт создан!');
+};
 
+window.logout = async function() {
+  if (auth) {
+    await signOut(auth);
+  }
+  
+  // Очищаем localStorage но сохраняем проекты
+  localStorage.removeItem('userUid');
+  localStorage.removeItem('userEmail');
+  localStorage.removeItem('userDisplayName');
+  localStorage.removeItem('isLoggedIn');
+  
+  userFavorites = [];
+  userCompleted = [];
+  arcData = JSON.parse(localStorage.getItem(STORAGE_KEY)) || {};
+  
+  showToast('Выход');
+  applyFilters();
+};
 let adminFeedbacks = [];
 let adminFeedbacksUnsubscribe = null;
 
@@ -1609,22 +1879,20 @@ async function syncWithFirestore(uid) {
 document.addEventListener('DOMContentLoaded', function() {
   console.log('🚀 Starting app...');
   
-  // 1. Показываем экран загрузки
+  // 1. СРАЗУ показываем UI (данные из localStorage)
   const loadingScreen = document.getElementById('loading-screen');
   
-  // 2. Загружаем данные (localStorage - мгновенно)
-  loadData();
+  // 2. Загружаем проекты из localStorage мгновенно
+  loadDataFromLocalStorage();
   
-  // 3. Проверяем auth
-  initAuth();
+  // 3. БЫСТРАЯ проверка auth (1 секунда)
+  quickAuthCheck();
   
-  // 4. Через 3 секунды скрываем загрузку
+  // 4. Через 1.5 сек скрываем загрузку
   setTimeout(() => {
     if (loadingScreen) {
       loadingScreen.style.opacity = '0';
-      setTimeout(() => {
-        loadingScreen.style.display = 'none';
-      }, 500);
+      setTimeout(() => loadingScreen.style.display = 'none', 500);
     }
   }, 1500);
   
@@ -1656,7 +1924,86 @@ function startBackgroundSync() {
     }
   }, SYNC_INTERVAL);
 }
+    function handleUserLogin(user) {
+  console.log('✅ User logged in:', user.email);
+  
+  // Сохраняем в localStorage
+  localStorage.setItem('userUid', user.uid);
+  localStorage.setItem('userEmail', user.email);
+  localStorage.setItem('userDisplayName', user.displayName || user.email);
+  localStorage.setItem('isLoggedIn', 'true');
+  
+  // Показываем UI
+  document.getElementById('generalFeedbackPanel').classList.remove('hidden');
+  document.getElementById('loggedOutView').classList.add('hidden');
+  document.getElementById('loggedInView').classList.remove('hidden');
+  document.getElementById('userAvatar').src = user.photoURL || 'https://ui-avatars.com/api/?name=' + (user.email || 'U') + '&background=0D8ABC&color=fff';
+  document.getElementById('userName').textContent = user.displayName || user.email.split('@')[0];
+  
+  // Загружаем приватные данные
+  loadUserPrivateData(user.uid);
+  
+  applyFilters();
+  
+  // Админ режим
+  if (user.uid === "SAkz4mdW9reDaIsvqigCNZhEKJR2") {
+    activateAdminMode();
+  }
+}
 
+function handleUserLogout() {
+  console.log('👤 User logged out');
+  
+  currentUser = null;
+  userFavorites = [];
+  userCompleted = [];
+  
+  document.getElementById('generalFeedbackPanel').classList.add('hidden');
+  document.getElementById('loggedOutView').classList.remove('hidden');
+  document.getElementById('loggedInView').classList.add('hidden');
+  
+  applyFilters();
+}
+async function loadUserPrivateData(uid) {
+  if (!db) return;
+  
+  try {
+    const userRef = doc(db, "users", uid);
+    const userDoc = await getDoc(userRef);
+    
+    if (userDoc.exists()) {
+      const data = userDoc.data();
+      
+      // Объединяем облачные и локальные данные
+      const cloudFavorites = data.favorites || [];
+      const localFavorites = JSON.parse(localStorage.getItem('favorites_backup') || '[]');
+      userFavorites = [...new Set([...cloudFavorites, ...localFavorites])];
+      
+      const cloudCompleted = data.completed || [];
+      const localCompleted = JSON.parse(localStorage.getItem(COMPLETED_KEY) || '[]');
+      userCompleted = [...new Set([...cloudCompleted, ...localCompleted])];
+      
+      if (data.arcGuideStats) {
+        const cloudArc = data.arcGuideStats;
+        const localArc = JSON.parse(localStorage.getItem(STORAGE_KEY) || '{}');
+        arcData = { ...cloudArc, ...localArc };
+      }
+      
+      // Сохраняем в localStorage
+      localStorage.setItem('favorites_backup', JSON.stringify(userFavorites));
+      localStorage.setItem(COMPLETED_KEY, JSON.stringify(userCompleted));
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(arcData));
+      
+      applyFilters();
+    }
+  } catch(e) {
+    console.log('Error loading user data:', e);
+    // Используем localStorage как резерв
+    userFavorites = JSON.parse(localStorage.getItem('favorites_backup') || '[]');
+    userCompleted = JSON.parse(localStorage.getItem(COMPLETED_KEY) || '[]');
+    applyFilters();
+  }
+}
 async function checkForChanges() {
   // Только проверяем, есть ли изменения - НЕ загружаем всё
   try {
@@ -1696,23 +2043,81 @@ async function checkForChanges() {
     console.log('Sync check skipped:', e.message);
   }
 }
-
-function mergeProjects(remoteProjects) {
-  const localIds = new Set(projects.map(p => p.id));
+async function loadPublicProjectsFromFirebase() {
+  if (!navigator.onLine) {
+    console.log('⏭️ Offline, skipping Firebase');
+    return;
+  }
   
-  remoteProjects.forEach(remote => {
-    const index = projects.findIndex(p => p.id === remote.id);
-    if (index >= 0) {
-      // Обновляем существующий
-      projects[index] = remote;
+  try {
+    // Динамический импорт
+    const [{ initializeApp }, { getFirestore, collection, getDocs, query, where, onSnapshot }] = await Promise.all([
+      import("https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js"),
+      import("https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js")
+    ]);
+    
+    const firebaseConfig = {
+      apiKey: "AIzaSyBdXGYg2t8DJBrQHCC80-pFerZU9PWmSCk",
+      authDomain: "testnet-hub.firebaseapp.com",
+      projectId: "testnet-hub",
+      storageBucket: "testnet-hub.firebasestorage.app",
+      messagingSenderId: "497813176653",
+      appId: "1:497813176653:web:089188fdd1555d76cd7704"
+    };
+    
+    const app = initializeApp(firebaseConfig);
+    const firestore = getFirestore(app);
+    
+    // Публичный запрос - без авторизации!
+    const q = query(
+      collection(firestore, "projects"),
+      where("deleted", "==", false)
+    );
+    
+    const timeoutPromise = new Promise((_, reject) => 
+      setTimeout(() => reject(new Error('timeout')), 5000)
+    );
+    
+    const snapshot = await Promise.race([getDocs(q), timeoutPromise]);
+    
+    if (!snapshot.empty) {
+      const fireProjects = [];
+      snapshot.forEach(docSnap => {
+        fireProjects.push(normalizeData({ id: docSnap.id, ...docSnap.data() }));
+      });
+      
+      if (fireProjects.length > 0) {
+        // Мержим с локальными
+        projects = mergeProjects(projects, fireProjects);
+        localStorage.setItem('projects', JSON.stringify(projects));
+        sortProjects('latest');
+        applyFilters();
+        console.log('🔥 Loaded public projects from Firebase:', projects.length);
+      }
+    }
+  } catch(e) {
+    console.log('Firebase public load skipped:', e.message);
+  }
+}
+function mergeProjects(local, remote) {
+  const merged = [...local];
+  const localIds = new Set(local.map(p => p.id));
+  
+  remote.forEach(r => {
+    if (!localIds.has(r.id)) {
+      merged.push(r);
     } else {
-      // Добавляем новый
-      projects.push(remote);
+      // Обновляем если удаленный новее
+      const idx = merged.findIndex(p => p.id === r.id);
+      const localUpdated = merged[idx].lastUpdated ? new Date(merged[idx].lastUpdated).getTime() : 0;
+      const remoteUpdated = r.lastUpdated ? new Date(r.lastUpdated).getTime() : 0;
+      if (remoteUpdated > localUpdated) {
+        merged[idx] = r;
+      }
     }
   });
   
-  localStorage.setItem('projects', JSON.stringify(projects));
-  console.log('Merged projects:', projects.length);
+  return merged;
 }
 // ============ UI ИНИЦИАЛИЗАЦИЯ ============
 function initUI() {
