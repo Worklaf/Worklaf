@@ -2607,27 +2607,62 @@ document.addEventListener('keydown', function(e) { const imageModal = document.g
 window.exportAllData = async function() {
   if (!currentUser || currentUser.uid !== "SAkz4mdW9reDaIsvqigCNZhEKJR2") { showToast('Только админ'); return; }
   if (!confirm('Экспортировать все проекты?')) return;
+  
   const btn = event.target.closest('button');
   const originalHtml = btn ? btn.innerHTML : '';
   if(btn) { btn.disabled = true; btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>'; }
+  
   try {
     showToast('Экспорт...');
     let allProjects = [];
+    
+    // Пытаемся получить данные из Firebase
     const snapshot = await getDocs(query(collection(db, "projects")));
-    if (snapshot.size > 0) { snapshot.forEach((doc) => { allProjects.push({ id: doc.id, ...doc.data() }); }); }
-    if (allProjects.length === 0 && projects.length > 0) allProjects = projects.map(p => ({ id: p.id, ...p }));
-    if (allProjects.length === 0) { showToast('Нет данных'); }
-    else {
-      const exportData = { exportDate: new Date().toISOString(), exportVersion: '1.0', totalProjects: allProjects.length, projects: allProjects, metadata: { exportedBy: currentUser.email, exportedByUid: currentUser.uid, generatedAt: new Date().toISOString() } };
+    if (snapshot.size > 0) { 
+      snapshot.forEach((doc) => { allProjects.push({ id: doc.id, ...doc.data() }); }); 
+    }
+    
+    // Если Firebase пуст, берем из локальной переменной
+    if (allProjects.length === 0 && projects.length > 0) {
+      allProjects = projects.map(p => ({ id: p.id, ...p }));
+    }
+    
+    if (allProjects.length === 0) { 
+      showToast('Нет данных'); 
+    } else {
+      // Формируем чистый JSON
+      const exportData = { 
+        projects: allProjects 
+      };
+      
       const jsonData = JSON.stringify(exportData, null, 2);
       const blob = new Blob([jsonData], { type: 'application/json' });
       const url = URL.createObjectURL(blob);
-      const date = new Date(); const dateStr = date.toISOString().slice(0,19).replace(/:/g,'-');
-      const a = document.createElement('a'); a.href = url; a.download = 'testnet-hub-backup-' + dateStr + '.json'; document.body.appendChild(a); a.click(); document.body.removeChild(a); URL.revokeObjectURL(url);
-      showToast('Экспортировано ' + allProjects.length);
+      
+      const a = document.createElement('a'); 
+      a.href = url; 
+      
+      // === ИЗМЕНЕНИЕ ЗДЕСЬ ===
+      // Установлено фиксированное имя файла без даты
+      a.download = 'projects.json'; 
+      // =======================
+      
+      document.body.appendChild(a); 
+      a.click(); 
+      document.body.removeChild(a); 
+      URL.revokeObjectURL(url);
+      
+      showToast('Экспортировано ' + allProjects.length + ' проектов');
     }
-  } catch (error) { console.error(error); showToast('Ошибка: ' + error.message); }
-  finally { if(btn) { btn.disabled = false; btn.innerHTML = originalHtml || '<i class="fas fa-download"></i>'; } }
+  } catch (error) { 
+    console.error(error); 
+    showToast('Ошибка: ' + error.message); 
+  } finally { 
+    if(btn) { 
+      btn.disabled = false; 
+      btn.innerHTML = originalHtml || '<i class="fas fa-file-export"></i>'; 
+    } 
+  }
 };
 
 async function createLocalBackup() {
