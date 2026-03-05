@@ -384,7 +384,7 @@ function setLanguage(lang) {
 async function loadEnglishProjects() {
   console.log('Loading English projects...');
   try {
-    const response = await fetch('./english_projects.json');
+    const response = await fetch('./data/english_projects.json');
     if (response.ok) {
       const data = await response.json();
       if (data.projects && window.setEnglishProjectsData) {
