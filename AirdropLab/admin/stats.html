@@ -11,6 +11,7 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+	
 
         :root {
             --bg-primary: #0b0f19;
@@ -400,8 +401,7 @@
         let notificationStats = { total: 0, viewed: 0 };
         let allProjectsMap = new Map();
 
-        // Проверка доступа
-        // Проверка доступа
+        // СТАЛО:
 onAuthStateChanged(auth, async (user) => {
     document.getElementById('loading').classList.add('hidden');
 
@@ -417,20 +417,29 @@ onAuthStateChanged(auth, async (user) => {
 
     document.getElementById('adminContent').classList.remove('hidden');
     
-    // === НОВОЕ: Сохраняем firstLogin и provider для всех пользователей ===
-    await ensureUserData(user);
+    // ensureUserData вызываем без await и с обработкой ошибки — 
+    // не блокируем загрузку если Firestore недоступен
+    ensureUserData(user).catch(e => console.warn('ensureUserData skipped:', e));
     
     await loadAllData();
 });
 
-// === НОВАЯ ФУНКЦИЯ: Сохраняет firstLogin и provider если их нет ===
+// СТАЛО:
 async function ensureUserData(user) {
+    // Ждём максимум 5 секунд — если Firestore недоступен, пропускаем
+    const timeout = new Promise((_, reject) => 
+        setTimeout(() => reject(new Error('Timeout')), 5000)
+    );
+    
     try {
         const userRef = doc(db, "users", user.uid);
-        const userSnap = await getDoc(userRef);
+        
+        const userSnap = await Promise.race([
+            getDoc(userRef),
+            timeout
+        ]);
         
         if (!userSnap.exists()) {
-            // Новый пользователь - создаем запись с firstLogin и provider
             await setDoc(userRef, {
                 email: user.email,
                 displayName: user.displayName,
@@ -440,24 +449,22 @@ async function ensureUserData(user) {
                 lastLogin: serverTimestamp()
             });
         } else {
-            // Существующий пользователь - проверяем firstLogin и provider
             const userData = userSnap.data();
             const updates = {};
             
             if (!userData.firstLogin) {
                 updates.firstLogin = serverTimestamp();
             }
-            
             if (!userData.provider && user.providerData[0]) {
                 updates.provider = user.providerData[0].providerId;
             }
-            
             if (Object.keys(updates).length > 0) {
                 await updateDoc(userRef, updates);
             }
         }
     } catch (e) {
-        console.error('Ошибка при сохранении данных пользователя:', e);
+        // Не блокируем работу панели если сеть недоступна
+        console.warn('ensureUserData: пропущено -', e.message);
     }
 }
 
@@ -494,19 +501,38 @@ async function ensureUserData(user) {
             }
         }
 
-        async function loadAllData() {
-            await loadProjectsData();
-            await Promise.all([
-                loadUsers(),
-                loadProjectStats(),
-                loadNotificationStats(),
-                loadBroadcastHistory()
-            ]);
-            updateSelectedCount();
-        }
+        // СТАЛО:
+async function loadAllData() {
+    try {
+        await loadProjectsData();
+        await Promise.all([
+            loadUsers(),
+            loadProjectStats(),
+            loadNotificationStats(),
+            loadBroadcastHistory()
+        ]);
+        updateSelectedCount();
+    } catch (e) {
+        console.error('Ошибка загрузки данных:', e);
+        // Показываем сообщение об ошибке пользователю
+        const content = document.getElementById('adminContent');
+        const errorBanner = document.createElement('div');
+        errorBanner.className = 'mb-4 p-4 bg-red-900/30 border border-red-700/50 rounded-xl text-red-300 text-sm flex items-center gap-3';
+        errorBanner.innerHTML = `
+            <i class="fas fa-exclamation-circle text-red-400"></i>
+            <span>Ошибка подключения к Firebase: ${e.message}. 
+            <button onclick="loadAllData()" class="underline hover:text-white ml-2">Попробовать снова</button></span>
+        `;
+        content.insertBefore(errorBanner, content.firstChild);
+    }
+}
 
         async function loadUsers() {
             try {
+				document.getElementById('usersTableBody').innerHTML = 
+            '<tr><td colspan="9" class="py-8 text-center text-slate-400">' +
+            '<i class="fas fa-spinner fa-spin mr-2"></i>Загрузка...</td></tr>';
+        
                 const usersSnapshot = await getDocs(collection(db, "users"));
                 allUsers = [];
                 const now = new Date();
