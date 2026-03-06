@@ -600,19 +600,18 @@
     for (const docSnap of usersSnapshot.docs) {
         const userData = docSnap.data();
         if (userData.arcGuideStats) {
-            // ВОТ ЭТО ДОБАВЬТЕ ВРЕМЕННО:
-            console.log("arcGuideStats ключи:", Object.keys(userData.arcGuideStats));
             Object.entries(userData.arcGuideStats).forEach(([projectId, stats]) => {
-                if (!projectStats[projectId]) projectStats[projectId] = { clicks: 0, users: new Set() };
+                // ✅ Только те проекты, которые есть в allProjectsMap (наши 42 штуки)
+                if (!allProjectsMap.has(projectId)) return;
+                
+                if (!projectStats[projectId]) {
+                    projectStats[projectId] = { clicks: 0, users: new Set() };
+                }
                 projectStats[projectId].clicks += stats.totalClicks || 0;
                 projectStats[projectId].users.add(docSnap.id);
             });
         }
     }
-
-    // И ЭТО:
-    console.log("allProjectsMap ключи:", [...allProjectsMap.keys()]);
-    console.log("projectStats ключи:", Object.keys(projectStats));
 
     renderTopProjects();
 }
