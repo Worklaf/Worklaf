@@ -379,6 +379,8 @@
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
         import { getAuth, signInWithPopup, GoogleAuthProvider, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
 		import { getFirestore, collection, doc, getDocs, query, orderBy, limit, getDoc, addDoc, setDoc, where, writeBatch, serverTimestamp, increment, deleteDoc, updateDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+		// Добавьте в импорты:
+import { getFirestore, enableNetwork, collection, doc, getDocs, query, orderBy, limit, getDoc, addDoc, setDoc, where, writeBatch, serverTimestamp, increment, deleteDoc, updateDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
         const firebaseConfig = {
             apiKey: "AIzaSyBdXGYg2t8DJBrQHCC80-pFerZU9PWmSCk",
             authDomain: "testnet-hub.firebaseapp.com",
@@ -392,8 +394,30 @@
 
         const app = initializeApp(firebaseConfig);
         const auth = getAuth(app);
-        const db = getFirestore(app);
+        const db = getFirestore(app, "(default)");
+		function showConnectionStatus(isOnline) {
+    const existing = document.getElementById('connectionStatus');
+    if (existing) existing.remove();
+    
+    if (!isOnline) {
+        const banner = document.createElement('div');
+        banner.id = 'connectionStatus';
+        banner.className = 'fixed top-4 left-1/2 -translate-x-1/2 z-50 px-4 py-2 bg-red-900/90 border border-red-700 rounded-lg text-red-300 text-sm flex items-center gap-2';
+        banner.innerHTML = '<i class="fas fa-wifi text-red-400"></i> Нет соединения с Firebase';
+        document.body.appendChild(banner);
+    }
+}
 
+window.addEventListener('online', () => {
+    showConnectionStatus(true);
+    loadAllData(); // Перезагружаем при восстановлении сети
+});
+
+window.addEventListener('offline', () => {
+    showConnectionStatus(false);
+});
+enableNetwork(db).catch(e => console.warn('enableNetwork:', e));
+	
         let allUsers = [];
         let filteredUsers = [];
         let selectedUserIds = new Set();
@@ -503,30 +527,67 @@ async function ensureUserData(user) {
 
         // СТАЛО:
 async function loadAllData() {
-    try {
-        await loadProjectsData();
-        await Promise.all([
-            loadUsers(),
-            loadProjectStats(),
-            loadNotificationStats(),
-            loadBroadcastHistory()
-        ]);
-        updateSelectedCount();
-    } catch (e) {
-        console.error('Ошибка загрузки данных:', e);
-        // Показываем сообщение об ошибке пользователю
-        const content = document.getElementById('adminContent');
-        const errorBanner = document.createElement('div');
-        errorBanner.className = 'mb-4 p-4 bg-red-900/30 border border-red-700/50 rounded-xl text-red-300 text-sm flex items-center gap-3';
-        errorBanner.innerHTML = `
-            <i class="fas fa-exclamation-circle text-red-400"></i>
-            <span>Ошибка подключения к Firebase: ${e.message}. 
-            <button onclick="loadAllData()" class="underline hover:text-white ml-2">Попробовать снова</button></span>
-        `;
-        content.insertBefore(errorBanner, content.firstChild);
+    // Показываем индикатор загрузки
+    const tbody = document.getElementById('usersTableBody');
+    if (tbody) {
+        tbody.innerHTML = '<tr><td colspan="9" class="py-8 text-center text-slate-400">' +
+            '<i class="fas fa-spinner fa-spin mr-2 text-blue-400"></i>Подключение к Firebase...</td></tr>';
+    }
+
+    // Ждём подключения максимум 15 секунд
+    let retries = 0;
+    const maxRetries = 3;
+    
+    while (retries < maxRetries) {
+        try {
+            await loadProjectsData();
+            await Promise.all([
+                loadUsers(),
+                loadProjectStats(),
+                loadNotificationStats(),
+                loadBroadcastHistory()
+            ]);
+            updateSelectedCount();
+            return; // Успех — выходим
+            
+        } catch (e) {
+            retries++;
+            console.error(`Попытка ${retries}/${maxRetries} не удалась:`, e);
+            
+            if (retries >= maxRetries) {
+                // Показываем ошибку только после всех попыток
+                const content = document.getElementById('adminContent');
+                
+                // Убираем старый баннер если есть
+                const oldBanner = content.querySelector('.error-banner');
+                if (oldBanner) oldBanner.remove();
+                
+                const errorBanner = document.createElement('div');
+                errorBanner.className = 'error-banner mb-4 p-4 bg-red-900/30 border border-red-700/50 rounded-xl text-red-300 text-sm flex items-center gap-3';
+                errorBanner.innerHTML = `
+                    <i class="fas fa-exclamation-circle text-red-400 text-lg flex-shrink-0"></i>
+                    <div class="flex-1">
+                        <div class="font-medium mb-1">Ошибка подключения к Firebase</div>
+                        <div class="text-xs text-red-400">${e.message}</div>
+                    </div>
+                    <button onclick="window.loadStats()" 
+                            class="bg-red-700/50 hover:bg-red-600/50 px-3 py-1.5 rounded-lg text-white text-xs font-medium whitespace-nowrap">
+                        <i class="fas fa-sync-alt mr-1"></i>Повторить
+                    </button>
+                `;
+                content.insertBefore(errorBanner, content.firstChild);
+                
+                if (tbody) {
+                    tbody.innerHTML = '<tr><td colspan="9" class="py-8 text-center text-red-400">' +
+                        '<i class="fas fa-exclamation-circle mr-2"></i>Ошибка загрузки данных</td></tr>';
+                }
+            } else {
+                // Ждём перед следующей попыткой
+                await new Promise(resolve => setTimeout(resolve, 2000 * retries));
+            }
+        }
     }
 }
-
         async function loadUsers() {
             try {
 				document.getElementById('usersTableBody').innerHTML = 
