@@ -12,6 +12,45 @@
     <!-- languages.js ДОЛЖЕН загружаться ПЕРЕД основным скриптом -->
     <script src="languages.js"></script>
    <style>
+       /* Username Modal */
+#usernameModal .modal-content {
+  border: 1px solid rgba(34, 211, 238, 0.2);
+  background: linear-gradient(145deg, #1e2538 0%, #151b2b 100%);
+}
+
+#usernameInput {
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+#usernameInput:focus {
+  border-color: rgba(34, 211, 238, 0.6);
+  box-shadow: 0 0 0 3px rgba(34, 211, 238, 0.1);
+}
+
+#usernameInput.valid {
+  border-color: rgba(52, 211, 153, 0.6);
+}
+
+#usernameInput.invalid {
+  border-color: rgba(239, 68, 68, 0.6);
+}
+
+/* Twitter handle в хедере */
+#userTwitterHandle {
+  font-weight: 600;
+  letter-spacing: 0.3px;
+}
+
+/* Имя пользователя кликабельное */
+#userName {
+  cursor: pointer;
+}
+
+#userName:hover #userNameText {
+  text-decoration: underline;
+  text-decoration-style: dotted;
+  text-underline-offset: 3px;
+}
        #langBtn {
   display: flex;
   align-items: center;
@@ -347,14 +386,36 @@
             <button onclick="openLoginModal()" class="px-4 py-2 bg-gradient-to-r from-cyan-600 to-blue-600 hover:from-cyan-500 hover:to-blue-500 rounded-xl text-sm font-bold flex items-center gap-2"><i class="fas fa-sign-in-alt"></i><span data-translate="login">Вход</span></button>
           </div>
           <div id="loggedInView" class="hidden flex items-center gap-3">
-            <div class="text-right hidden sm:block">
-              <div id="userName" class="text-xs font-bold text-white">Researcher</div>
-              <div class="text-[10px] text-emerald-400 flex items-center justify-end gap-1.5" data-translate="in_system">
-                <span class="relative flex h-1.5 w-1.5"><span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span><span class="relative inline-flex rounded-full h-1.5 w-1.5 bg-emerald-400"></span></span>В системе</div>
-            </div>
-            <div class="relative group"><div class="absolute -inset-1 bg-gradient-to-r from-cyan-500 to-blue-500 rounded-full blur opacity-50 group-hover:opacity-75"></div><img id="userAvatar" src="" class="relative w-10 h-10 rounded-full object-cover border-2 border-cyan-500/50"></div>
-            <button onclick="logout()" class="p-2 text-slate-400 hover:text-red-400 rounded-lg hover:bg-red-500/10"><i class="fas fa-sign-out-alt"></i></button>
-          </div>
+  <div class="text-right hidden sm:block">
+    <div 
+      id="userName" 
+      class="text-xs font-bold text-white cursor-pointer hover:text-cyan-400 transition-colors flex items-center justify-end gap-1 group" 
+      onclick="openEditUsername()" 
+      title="Изменить никнейм"
+    >
+      <span id="userNameText">Researcher</span>
+      <i class="fas fa-pen text-[9px] text-slate-600 group-hover:text-cyan-400 transition-colors"></i>
+    </div>
+    <div id="userTwitterHandle" class="hidden text-[10px] text-sky-400 flex items-center justify-end gap-1 mt-0.5">
+      <i class="fab fa-twitter text-[9px]"></i>
+      <span id="userTwitterHandleText"></span>
+    </div>
+    <div class="text-[10px] text-emerald-400 flex items-center justify-end gap-1.5 mt-0.5" data-translate="in_system">
+      <span class="relative flex h-1.5 w-1.5">
+        <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+        <span class="relative inline-flex rounded-full h-1.5 w-1.5 bg-emerald-400"></span>
+      </span>
+      В системе
+    </div>
+  </div>
+  <div class="relative group">
+    <div class="absolute -inset-1 bg-gradient-to-r from-cyan-500 to-blue-500 rounded-full blur opacity-50 group-hover:opacity-75"></div>
+    <img id="userAvatar" src="" class="relative w-10 h-10 rounded-full object-cover border-2 border-cyan-500/50">
+  </div>
+  <button onclick="logout()" class="p-2 text-slate-400 hover:text-red-400 rounded-lg hover:bg-red-500/10">
+    <i class="fas fa-sign-out-alt"></i>
+  </button>
+</div>
         </div>
       </div>
     </div>
@@ -1377,21 +1438,215 @@ function formatTimeAgo(date) {
   return date.toLocaleDateString('ru-RU', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' });
 }
 
+// ============ USERNAME SYSTEM ============
+
+function getTwitterHandle(user) {
+  // Пытаемся извлечь Twitter handle из данных провайдера
+  const twitterProvider = user.providerData?.find(p => p.providerId === 'twitter.com');
+  if (twitterProvider) {
+    // screenName доступен в некоторых версиях SDK
+    return twitterProvider.screenName || twitterProvider.username || null;
+  }
+  return null;
+}
+
 async function saveUserData(user) {
   try {
     const userRef = doc(db, "users", user.uid);
     const userSnap = await getDoc(userRef);
+    
+    const provider = user.providerData[0]?.providerId || 'unknown';
+    const twitterHandle = getTwitterHandle(user);
+    
     if (!userSnap.exists()) {
-      await setDoc(userRef, { email: user.email, displayName: user.displayName || 'Аноним', photoURL: user.photoURL || null, firstLogin: serverTimestamp(), provider: user.providerData[0]?.providerId || 'unknown', lastLogin: serverTimestamp(), favorites: [], completed: [], arcGuideStats: {} });
+      // Новый пользователь
+      const newUserData = {
+        email: user.email || '',
+        displayName: user.displayName || '',
+        photoURL: user.photoURL || null,
+        firstLogin: serverTimestamp(),
+        provider: provider,
+        lastLogin: serverTimestamp(),
+        favorites: [],
+        completed: [],
+        arcGuideStats: {},
+        username: '', // никнейм пустой — покажем модалку
+        twitterHandle: twitterHandle || '',
+        profileSetup: false
+      };
+      await setDoc(userRef, newUserData);
+      
+      // Показываем модалку выбора никнейма
+      setTimeout(() => showUsernameModal(user, twitterHandle, true), 500);
+      
     } else {
+      // Существующий пользователь
       const userData = userSnap.data();
       const updates = { lastLogin: serverTimestamp() };
+      
       if (!userData.firstLogin) updates.firstLogin = serverTimestamp();
-      if (!userData.provider && user.providerData[0]) updates.provider = user.providerData[0].providerId;
+      if (!userData.provider && user.providerData[0]) updates.provider = provider;
+      
+      // Обновляем Twitter handle если вошёл через Twitter
+      if (twitterHandle && twitterHandle !== userData.twitterHandle) {
+        updates.twitterHandle = twitterHandle;
+      }
+      
+      // Если displayName изменился (например обновил в Google)
+      if (user.displayName && user.displayName !== userData.displayName && userData.provider !== 'password') {
+        updates.displayName = user.displayName;
+      }
+      
       await updateDoc(userRef, updates);
+      
+      // Если никнейм не установлен — показываем модалку
+      if (!userData.username && !userData.profileSetup) {
+        setTimeout(() => showUsernameModal(user, twitterHandle || userData.twitterHandle, false), 800);
+      }
     }
-  } catch (e) { console.error('Error saving user:', e); }
+  } catch (e) {
+    console.error('Error saving user:', e);
+  }
 }
+
+function showUsernameModal(user, twitterHandle = null, isNew = false) {
+  const modal = document.getElementById('usernameModal');
+  const title = document.getElementById('usernameModalTitle');
+  const subtitle = document.getElementById('usernameModalSubtitle');
+  const twitterBlock = document.getElementById('twitterHandleBlock');
+  const twitterDisplay = document.getElementById('twitterHandleDisplay');
+  const input = document.getElementById('usernameInput');
+  
+  title.textContent = isNew ? 'Добро пожаловать! 👋' : 'Настройте профиль';
+  subtitle.textContent = isNew 
+    ? 'Придумайте никнейм для вашего аккаунта' 
+    : 'Добавьте никнейм чтобы вас узнавали';
+  
+  // Предзаполняем из displayName если есть
+  if (user.displayName) {
+    const suggested = user.displayName
+      .toLowerCase()
+      .replace(/\s+/g, '_')
+      .replace(/[^a-z0-9_]/g, '')
+      .substring(0, 25);
+    input.value = suggested;
+    validateUsername(input);
+  }
+  
+  // Показываем Twitter handle если есть
+  if (twitterHandle) {
+    twitterBlock.classList.remove('hidden');
+    twitterDisplay.textContent = '@' + twitterHandle;
+  } else {
+    twitterBlock.classList.add('hidden');
+  }
+  
+  modal.classList.add('active');
+  setTimeout(() => input.focus(), 100);
+}
+
+window.validateUsername = function(input) {
+  const val = input.value;
+  const error = document.getElementById('usernameError');
+  const btn = document.getElementById('saveUsernameBtn');
+  
+  // Очищаем спецсимволы на лету
+  input.value = val.replace(/[^a-zA-Z0-9_]/g, '').toLowerCase();
+  
+  if (input.value.length < 3) {
+    error.textContent = 'Минимум 3 символа';
+    error.classList.remove('hidden');
+    btn.disabled = true;
+    btn.classList.add('opacity-50');
+  } else if (input.value.length > 30) {
+    error.textContent = 'Максимум 30 символов';
+    error.classList.remove('hidden');
+    btn.disabled = true;
+    btn.classList.add('opacity-50');
+  } else {
+    error.classList.add('hidden');
+    btn.disabled = false;
+    btn.classList.remove('opacity-50');
+  }
+};
+
+window.saveUsername = async function() {
+  const input = document.getElementById('usernameInput');
+  const username = input.value.trim().toLowerCase();
+  
+  if (username.length < 3) {
+    document.getElementById('usernameError').textContent = 'Минимум 3 символа';
+    document.getElementById('usernameError').classList.remove('hidden');
+    return;
+  }
+  
+  const btn = document.getElementById('saveUsernameBtn');
+  btn.disabled = true;
+  btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Сохранение...';
+  
+  try {
+    // Проверяем уникальность никнейма
+    const usersSnap = await getDocs(
+      query(collection(db, "users"), where("username", "==", username))
+    );
+    
+    const isOwnUsername = usersSnap.docs.some(d => d.id === currentUser.uid);
+    
+    if (!usersSnap.empty && !isOwnUsername) {
+      document.getElementById('usernameError').textContent = 'Этот никнейм уже занят 😢';
+      document.getElementById('usernameError').classList.remove('hidden');
+      btn.disabled = false;
+      btn.innerHTML = '<i class="fas fa-rocket"></i> Начать исследование';
+      return;
+    }
+    
+    const userRef = doc(db, "users", currentUser.uid);
+    await updateDoc(userRef, {
+      username: username,
+      profileSetup: true,
+      // Если у юзера нет имени — используем никнейм как displayName
+      displayName: currentUser.displayName || username
+    });
+    
+    // Обновляем отображение в хедере
+    // Обновляем хедер сразу без перезагрузки
+const nameEl = document.getElementById('userNameText');
+if (nameEl) nameEl.textContent = '@' + username;
+    
+    showToast('Никнейм @' + username + ' сохранён! 🎉');
+    document.getElementById('usernameModal').classList.remove('active');
+    
+  } catch (e) {
+    console.error(e);
+    showToast('Ошибка: ' + e.message);
+    btn.disabled = false;
+    btn.innerHTML = '<i class="fas fa-rocket"></i> Начать исследование';
+  }
+};
+
+window.skipUsername = function() {
+  // Помечаем что пропустил, но можно вернуться
+  if (currentUser) {
+    updateDoc(doc(db, "users", currentUser.uid), { 
+      profileSetup: true 
+    }).catch(e => console.error(e));
+  }
+  document.getElementById('usernameModal').classList.remove('active');
+};
+
+// Открыть модалку изменения никнейма (кнопка в профиле)
+window.openEditUsername = function() {
+  if (!currentUser) return;
+  const modal = document.getElementById('usernameModal');
+  document.getElementById('usernameModalTitle').textContent = 'Изменить никнейм';
+  document.getElementById('usernameModalSubtitle').textContent = 'Введите новый никнейм';
+  document.getElementById('saveUsernameBtn').innerHTML = '<i class="fas fa-save"></i> Сохранить';
+  document.getElementById('skipUsernameBtn').textContent = 'Отмена';
+  document.getElementById('skipUsernameBtn').onclick = () => modal.classList.remove('active');
+  modal.classList.add('active');
+};
+
+// ============ END USERNAME SYSTEM ============
 
 async function syncLocalStorageToFirestore(userId) {
   try {
@@ -1430,8 +1685,42 @@ onAuthStateChanged(auth, async function(user) {
     document.getElementById('loggedOutView').classList.add('hidden');
     document.getElementById('loggedInView').classList.remove('hidden');
     document.getElementById('guestWarning').classList.add('hidden');
-    document.getElementById('userAvatar').src = user.photoURL || 'https://ui-avatars.com/api/?name=' + (user.email || 'User') + '&background=random';
-    document.getElementById('userName').textContent = user.displayName || user.email.split('@')[0];
+    document.getElementById('userAvatar').src = user.photoURL || 
+  'https://ui-avatars.com/api/?name=' + (user.email || 'User') + '&background=random';
+
+// Загружаем данные профиля из Firestore
+try {
+  const userDocSnap = await getDoc(doc(db, "users", user.uid));
+  if (userDocSnap.exists()) {
+    updateHeaderProfile(userDocSnap.data(), user);
+  }
+} catch (e) {
+  // Фоллбэк если Firestore недоступен
+  const nameEl = document.getElementById('userNameText');
+  if (nameEl) nameEl.textContent = user.displayName || user.email.split('@')[0];
+}
+    // Загружаем никнейм из Firestore для правильного отображения
+try {
+  const userDocForName = await getDoc(doc(db, "users", user.uid));
+  if (userDocForName.exists()) {
+    const userData = userDocForName.data();
+    const provider = user.providerData[0]?.providerId;
+    
+    if (userData.username) {
+      // Есть никнейм — показываем @nickname
+      document.getElementById('userName').textContent = '@' + userData.username;
+    } else if (provider === 'twitter.com' && userData.twitterHandle) {
+      // Twitter без никнейма — показываем Twitter handle
+      document.getElementById('userName').textContent = '@' + userData.twitterHandle;
+    } else if (user.displayName) {
+      document.getElementById('userName').textContent = user.displayName;
+    } else {
+      document.getElementById('userName').textContent = user.email.split('@')[0];
+    }
+  }
+} catch (e) {
+  document.getElementById('userName').textContent = user.displayName || user.email.split('@')[0];
+}
     initUserSync(user.uid);
     initNotificationsListener(user.uid);
     applyFilters();
@@ -1449,7 +1738,38 @@ onAuthStateChanged(auth, async function(user) {
     applyFilters();
   }
 });
+// Обновляет шапку сайта: никнейм, Twitter handle
+function updateHeaderProfile(userData, firebaseUser) {
+  const nameEl = document.getElementById('userNameText');
+  const twitterBlock = document.getElementById('userTwitterHandle');
+  const twitterText = document.getElementById('userTwitterHandleText');
+  
+  if (!nameEl) return;
 
+  const provider = firebaseUser?.providerData?.[0]?.providerId;
+
+  // Определяем что показывать как основное имя
+  if (userData.username) {
+    nameEl.textContent = '@' + userData.username;
+  } else if (provider === 'twitter.com' && userData.twitterHandle) {
+    nameEl.textContent = '@' + userData.twitterHandle;
+  } else if (firebaseUser?.displayName) {
+    nameEl.textContent = firebaseUser.displayName;
+  } else if (firebaseUser?.email) {
+    nameEl.textContent = firebaseUser.email.split('@')[0];
+  } else {
+    nameEl.textContent = 'Researcher';
+  }
+
+  // Показываем Twitter handle отдельной строкой
+  // если это не Twitter провайдер, но handle был сохранён
+  if (userData.twitterHandle) {
+    if (twitterBlock) twitterBlock.classList.remove('hidden');
+    if (twitterText) twitterText.textContent = '@' + userData.twitterHandle;
+  } else {
+    if (twitterBlock) twitterBlock.classList.add('hidden');
+  }
+}
 function initUserSync(uid) {
   const userRef = doc(db, "users", uid);
   onSnapshot(userRef, function(docSnap) {
@@ -1473,6 +1793,7 @@ function initUserSync(uid) {
         arcData = mergedArcData;
       }
       applyFilters();
+        updateHeaderProfile(data, currentUser);
     }
   });
 }
@@ -2776,5 +3097,71 @@ setTimeout(() => {
   detectNewActivities();
 }, 1000);
 </script>
+    <!-- Username Setup Modal -->
+<div id="usernameModal" class="modal">
+  <div class="modal-content modal-sm p-6 relative">
+    <div class="text-center mb-6">
+      <div class="w-16 h-16 bg-gradient-to-r from-cyan-500 to-blue-600 rounded-2xl flex items-center justify-center mx-auto mb-3">
+        <i class="fas fa-user-astronaut text-2xl text-white"></i>
+      </div>
+      <h2 class="text-2xl font-bold text-white" id="usernameModalTitle">Добро пожаловать!</h2>
+      <p class="text-slate-400 text-sm mt-2" id="usernameModalSubtitle">Придумайте никнейм для вашего аккаунта</p>
+    </div>
+    
+    <div class="space-y-4">
+      <div>
+        <label class="block text-sm font-medium text-slate-300 mb-2">
+          <i class="fas fa-at text-cyan-400 mr-1"></i>Никнейм
+        </label>
+        <div class="relative">
+          <span class="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500 text-sm">@</span>
+          <input 
+            type="text" 
+            id="usernameInput" 
+            placeholder="your_nickname"
+            maxlength="30"
+            class="w-full bg-slate-800 border border-slate-700 rounded-lg pl-8 pr-4 py-3 text-sm focus:border-cyan-500 outline-none text-white"
+            oninput="validateUsername(this)"
+          >
+        </div>
+        <div id="usernameHint" class="text-xs text-slate-500 mt-1">
+          Латиница, цифры, нижнее подчёркивание. 3–30 символов.
+        </div>
+        <div id="usernameError" class="text-xs text-red-400 mt-1 hidden"></div>
+      </div>
+      
+      <!-- Twitter handle (показывается если вход через Twitter) -->
+      <div id="twitterHandleBlock" class="hidden">
+        <label class="block text-sm font-medium text-slate-300 mb-2">
+          <i class="fab fa-twitter text-sky-400 mr-1"></i>Twitter аккаунт
+        </label>
+        <div class="bg-slate-800/50 border border-sky-500/30 rounded-lg px-4 py-3 flex items-center gap-3">
+          <i class="fab fa-twitter text-sky-400"></i>
+          <span id="twitterHandleDisplay" class="text-sky-300 font-medium text-sm"></span>
+          <span class="ml-auto text-xs text-emerald-400 flex items-center gap-1">
+            <i class="fas fa-check-circle"></i> Подтверждён
+          </span>
+        </div>
+      </div>
+      
+      <button 
+        onclick="saveUsername()" 
+        id="saveUsernameBtn"
+        class="w-full bg-gradient-to-r from-cyan-600 to-blue-600 hover:from-cyan-500 hover:to-blue-500 py-3 rounded-xl text-sm font-bold transition-all flex items-center justify-center gap-2"
+      >
+        <i class="fas fa-rocket"></i>
+        Начать исследование
+      </button>
+      
+      <button 
+        onclick="skipUsername()" 
+        class="w-full text-slate-500 hover:text-slate-300 text-xs py-1 transition-colors"
+        id="skipUsernameBtn"
+      >
+        Пропустить (можно изменить позже)
+      </button>
+    </div>
+  </div>
+</div>
 </body>
 </html>
