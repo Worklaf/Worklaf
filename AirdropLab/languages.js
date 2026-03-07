@@ -532,3 +532,25 @@ document.addEventListener('DOMContentLoaded', function() {
 // Экспорт глобальных переменных
 window.currentLang = currentLang;
 window.translations = translations;
+
+
+// Функция для обновления всех переводов
+window.updateAllTranslations = function() {
+  const lang = window.currentLang || 'ru';
+  const t = lang === 'en' ? TRANSLATIONS_EN : TRANSLATIONS_RU;
+  
+  document.querySelectorAll('[data-translate]').forEach(el => {
+    const key = el.getAttribute('data-translate');
+    if (t[key]) el.textContent = t[key];
+  });
+  
+  document.querySelectorAll('[data-translate-title]').forEach(el => {
+    const key = el.getAttribute('data-translate-title');
+    if (t[key]) el.title = t[key];
+  });
+  
+  document.querySelectorAll('[data-translate-placeholder]').forEach(el => {
+    const key = el.getAttribute('data-translate-placeholder');
+    if (t[key]) el.placeholder = t[key];
+  });
+};
