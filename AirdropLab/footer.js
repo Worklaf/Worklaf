@@ -2,8 +2,8 @@
 (function() {
     // Инициализация футера при загрузке страницы
     document.addEventListener('DOMContentLoaded', function() {
-        createFooter();
-        initializeFooterFunctions();
+        // Ждем небольшой задержку, чтобы убедиться, что основные скрипты загружены
+        setTimeout(createFooter, 100);
     });
 
     // Функция создания футера
@@ -100,19 +100,19 @@
                             <i class="fas fa-link text-cyan-400"></i> Быстрые ссылки
                         </h4>
                         <div class="space-y-2">
-                            <a href="#heroSection" onclick="scrollToSection('heroSection')" class="footer-link group flex items-center gap-2 text-slate-400 hover:text-white transition-colors">
+                            <a href="#heroSection" class="footer-link group flex items-center gap-2 text-slate-400 hover:text-white transition-colors">
                                 <i class="fas fa-home text-xs"></i>
                                 <span class="text-sm">Главная</span>
                             </a>
-                            <a href="#projects" onclick="scrollToSection('projects')" class="footer-link group flex items-center gap-2 text-slate-400 hover:text-white transition-colors">
+                            <a href="#projects" class="footer-link group flex items-center gap-2 text-slate-400 hover:text-white transition-colors">
                                 <i class="fas fa-layer-group text-xs"></i>
                                 <span class="text-sm" data-translate="footer_projects">Проекты</span>
                             </a>
-                            <a href="#" onclick="openGuideFromDetail()" class="footer-link group flex items-center gap-2 text-slate-400 hover:text-white transition-colors">
+                            <a href="#" class="footer-link group flex items-center gap-2 text-slate-400 hover:text-white transition-colors" onclick="showComingSoon('guides')">
                                 <i class="fas fa-book-open text-xs"></i>
                                 <span class="text-sm" data-translate="footer_guides">Гайды</span>
                             </a>
-                            <a href="#" onclick="openFeedbackModal(null, 'General')" class="footer-link group flex items-center gap-2 text-slate-400 hover:text-white transition-colors">
+                            <a href="#" class="footer-link group flex items-center gap-2 text-slate-400 hover:text-white transition-colors" onclick="showComingSoon('support')">
                                 <i class="fas fa-comment-dots text-xs"></i>
                                 <span class="text-sm" data-translate="footer_support">Поддержка</span>
                             </a>
@@ -120,7 +120,7 @@
                                 <i class="fas fa-chart-line text-xs"></i>
                                 <span class="text-sm">CryptoRank</span>
                             </a>
-                            <a href="#" onclick="openStats()" class="footer-link group flex items-center gap-2 text-slate-400 hover:text-white transition-colors hidden admin-only">
+                            <a href="#" class="footer-link group flex items-center gap-2 text-slate-400 hover:text-white transition-colors admin-only" onclick="showComingSoon('stats')">
                                 <i class="fas fa-chart-pie text-xs"></i>
                                 <span class="text-sm" data-translate="footer_stats">Статистика</span>
                             </a>
@@ -133,23 +133,23 @@
                             <i class="fas fa-life-ring text-emerald-400"></i> Поддержка
                         </h4>
                         <div class="space-y-2">
-                            <a href="#" onclick="openFeedbackModal(null, 'FAQ')" class="footer-link group flex items-center gap-2 text-slate-400 hover:text-white transition-colors">
+                            <a href="#" class="footer-link group flex items-center gap-2 text-slate-400 hover:text-white transition-colors" onclick="showComingSoon('faq')">
                                 <i class="fas fa-question-circle text-xs"></i>
                                 <span class="text-sm" data-translate="footer_faq">FAQ</span>
                             </a>
-                            <a href="#" onclick="openFeedbackModal(null, 'HowTo')" class="footer-link group flex items-center gap-2 text-slate-400 hover:text-white transition-colors">
+                            <a href="#" class="footer-link group flex items-center gap-2 text-slate-400 hover:text-white transition-colors" onclick="showComingSoon('tutorials')">
                                 <i class="fas fa-play-circle text-xs"></i>
                                 <span class="text-sm" data-translate="footer_tutorials">Туториалы</span>
                             </a>
-                            <a href="#" onclick="openLoginModal()" class="footer-link group flex items-center gap-2 text-slate-400 hover:text-white transition-colors">
+                            <a href="#" class="footer-link group flex items-center gap-2 text-slate-400 hover:text-white transition-colors" onclick="showComingSoon('account')">
                                 <i class="fas fa-user text-xs"></i>
                                 <span class="text-sm" data-translate="footer_account">Аккаунт</span>
                             </a>
-                            <a href="#" onclick="showNotifications()" class="footer-link group flex items-center gap-2 text-slate-400 hover:text-white transition-colors">
+                            <a href="#" class="footer-link group flex items-center gap-2 text-slate-400 hover:text-white transition-colors" onclick="showComingSoon('notifications')">
                                 <i class="fas fa-bell text-xs"></i>
                                 <span class="text-sm" data-translate="footer_notifications">Уведомления</span>
                             </a>
-                            <a href="#" onclick="toggleLang()" class="footer-link group flex items-center gap-2 text-slate-400 hover:text-white transition-colors">
+                            <a href="#" class="footer-link group flex items-center gap-2 text-slate-400 hover:text-white transition-colors" onclick="toggleLang()">
                                 <i class="fas fa-globe text-xs"></i>
                                 <span class="text-sm" data-translate="footer_language">Язык</span>
                             </a>
@@ -175,10 +175,10 @@
                             <div>
                                 <h5 class="text-xs font-semibold text-slate-300 mb-2 uppercase tracking-wider">Документы</h5>
                                 <div class="space-y-1 text-sm">
-                                    <a href="#" onclick="showComingSoon('terms')" class="footer-link text-slate-400 hover:text-purple-400 transition-colors block" data-translate="footer_terms">Условия использования</a>
-                                    <a href="#" onclick="showComingSoon('privacy')" class="footer-link text-slate-400 hover:text-purple-400 transition-colors block" data-translate="footer_privacy">Политика конфиденциальности</a>
-                                    <a href="#" onclick="showComingSoon('cookie')" class="footer-link text-slate-400 hover:text-purple-400 transition-colors block" data-translate="footer_cookie">Политика cookies</a>
-                                    <a href="#" onclick="showComingSoon('disclaimer')" class="footer-link text-slate-400 hover:text-purple-400 transition-colors block" data-translate="footer_disclaimer">Отказ от ответственности</a>
+                                    <a href="#" class="footer-link text-slate-400 hover:text-purple-400 transition-colors block" onclick="showComingSoon('terms')" data-translate="footer_terms">Условия использования</a>
+                                    <a href="#" class="footer-link text-slate-400 hover:text-purple-400 transition-colors block" onclick="showComingSoon('privacy')" data-translate="footer_privacy">Политика конфиденциальности</a>
+                                    <a href="#" class="footer-link text-slate-400 hover:text-purple-400 transition-colors block" onclick="showComingSoon('cookie')" data-translate="footer_cookie">Политика cookies</a>
+                                    <a href="#" class="footer-link text-slate-400 hover:text-purple-400 transition-colors block" onclick="showComingSoon('disclaimer')" data-translate="footer_disclaimer">Отказ от ответственности</a>
                                 </div>
                             </div>
                             <div>
@@ -210,7 +210,7 @@
                             </p>
                             <div class="flex gap-2">
                                 <input type="email" id="footerEmailInput" placeholder="Ваш email" class="flex-1 bg-slate-800/50 border border-slate-700 rounded-lg px-3 py-2 text-sm text-slate-300 placeholder-slate-500 focus:border-cyan-500 focus:outline-none transition-colors" data-translate-placeholder="footer_email_placeholder">
-                                <button onclick="subscribeNewsletter()" class="px-4 py-2 bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 rounded-lg text-sm font-bold text-white transition-all hover:scale-105 shadow-lg shadow-cyan-500/20 whitespace-nowrap">
+                                <button id="subscribeBtn" class="px-4 py-2 bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 rounded-lg text-sm font-bold text-white transition-all hover:scale-105 shadow-lg shadow-cyan-500/20 whitespace-nowrap">
                                     <span data-translate="footer_subscribe">Подписаться</span>
                                 </button>
                             </div>
@@ -274,7 +274,7 @@
                         <div class="flex flex-wrap justify-center gap-4 text-xs text-slate-400">
                             <a href="#" onclick="showComingSoon('terms')" class="hover:text-white transition-colors" data-translate="footer_terms_mobile">Условия</a>
                             <a href="#" onclick="showComingSoon('privacy')" class="hover:text-white transition-colors" data-translate="footer_privacy_mobile">Приватность</a>
-                            <a href="#" onclick="openFeedbackModal(null, 'General')" class="hover:text-white transition-colors" data-translate="footer_support_mobile">Поддержка</a>
+                            <a href="#" onclick="showComingSoon('support')" class="hover:text-white transition-colors" data-translate="footer_support_mobile">Поддержка</a>
                             <span class="text-slate-600">•</span>
                             <a href="https://cryptorank.io" target="_blank" class="hover:text-cyan-400 transition-colors">CryptoRank</a>
                         </div>
@@ -304,7 +304,7 @@
                     </p>
                     <div class="flex gap-3">
                         <button onclick="closeNewsletterModal()" class="flex-1 bg-slate-700 hover:bg-slate-600 py-2 rounded-lg text-sm" data-translate="newsletter_close">Закрыть</button>
-                        <button onclick="openFeedbackModal(null, 'Newsletter')" class="flex-1 bg-emerald-600 hover:bg-emerald-500 py-2 rounded-lg text-sm font-bold" data-translate="newsletter_manage">Управление</button>
+                        <button onclick="showComingSoon('newsletter')" class="flex-1 bg-emerald-600 hover:bg-emerald-500 py-2 rounded-lg text-sm font-bold" data-translate="newsletter_manage">Управление</button>
                     </div>
                 </div>
             </div>
@@ -320,6 +320,7 @@
             .footer-link {
                 display: block;
                 transition: all 0.2s ease-in-out;
+                cursor: pointer;
             }
 
             .footer-link:hover {
@@ -425,11 +426,12 @@
                 50% { opacity: 0.6; }
             }
         </style>
-        
-        <!-- Добавляем футер в конец body -->
         `;
         
         document.body.appendChild(footer);
+        
+        // Инициализируем функции футера после добавления в DOM
+        initializeFooterFunctions();
     }
 
     // Инициализация функций футера
@@ -442,6 +444,25 @@
                     backToTopBtn.classList.remove('hidden');
                 } else {
                     backToTopBtn.classList.add('hidden');
+                }
+            });
+        }
+
+        // Обработка поля ввода email
+        const emailInput = document.getElementById('footerEmailInput');
+        const subscribeBtn = document.getElementById('subscribeBtn');
+        
+        if (emailInput && subscribeBtn) {
+            // Добавляем обработчик на кнопку
+            subscribeBtn.addEventListener('click', function() {
+                subscribeNewsletter();
+            });
+            
+            // Добавляем обработчик на Enter в поле ввода
+            emailInput.addEventListener('keypress', function(e) {
+                if (e.key === 'Enter') {
+                    e.preventDefault();
+                    subscribeNewsletter();
                 }
             });
         }
@@ -543,8 +564,8 @@
 
     // Обновление статистики в футере
     function updateFooterStats() {
-        const userCount = window.currentUser ? 1 : 0;
-        const projectCount = window.projects ? window.projects.length : 0;
+        const userCount = (typeof window.currentUser !== 'undefined' && window.currentUser) ? 1 : 0;
+        const projectCount = (typeof window.projects !== 'undefined' && window.projects) ? window.projects.length : 0;
         
         const userEl = document.getElementById('footerUserCount');
         const projectEl = document.getElementById('footerProjectCount');
@@ -568,7 +589,7 @@
         const langFlag = document.querySelector('.lang-flag-footer');
         const langText = document.querySelector('.lang-text-footer');
         
-        if (footerLangBtn && langFlag && langText && window.currentLang) {
+        if (footerLangBtn && langFlag && langText && typeof window.currentLang !== 'undefined') {
             const langConfig = window.currentLang === 'en' ? 
                 { flag: '🇺🇸', text: 'ENG' } : 
                 { flag: '🇷🇺', text: 'РУС' };
@@ -587,11 +608,40 @@
             'privacy': 'Политика конфиденциальности',
             'cookie': 'Политика cookies',
             'disclaimer': 'Отказ от ответственности',
-            'guides': 'Гайды'
+            'guides': 'Гайды',
+            'support': 'Поддержка',
+            'faq': 'FAQ',
+            'tutorials': 'Туториалы',
+            'account': 'Аккаунт',
+            'notifications': 'Уведомления',
+            'stats': 'Статистика',
+            'newsletter': 'Управление подпиской'
         };
         const pageName = pageNames[page] || page;
-        showToast('Страница "' + pageName + '" в разработке');
+        
+        // Проверяем наличие функции showToast
+        if (typeof window.showToast === 'function') {
+            window.showToast('Страница "' + pageName + '" в разработке');
+        } else {
+            // Альтернативное уведомление, если showToast не определен
+            alert('Страница "' + pageName + '" в разработке');
+        }
     };
+
+    // Проверяем наличие функции toggleLang
+    if (typeof window.toggleLang !== 'function') {
+        window.toggleLang = function() {
+            if (typeof window.setLanguage === 'function') {
+                if (window.currentLang === 'ru') {
+                    window.setLanguage('en');
+                } else {
+                    window.setLanguage('ru');
+                }
+            } else {
+                showComingSoon('language');
+            }
+        };
+    }
 
     // Обновляем статистику при изменении данных
     if (window.updateAllTranslations) {
