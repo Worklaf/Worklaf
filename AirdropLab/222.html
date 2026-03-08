@@ -835,40 +835,35 @@ const COMPLETED_KEY = 'arc_completed_v1';
 const NEW_ACTIVITIES_KEY = 'arc_new_activities_v1';
 const VIEWED_ACTIVITIES_KEY = 'arc_viewed_activities_v1';
 
-let projects = [];
-let categories = ['DeFi', 'Gaming', 'Infra', 'L1/L2', 'NFT', 'Social', 'Other'];
-let currentFilters = { statuses: [], categories: [] };
-let editingId = null;
-let isEditModalOpen = false;
-let currentDetailId = null;
-let isAdminMode = false;
-let currentUser = null;
-let userFavorites = [];
-let userCompleted = [];
-let arcData = JSON.parse(localStorage.getItem(STORAGE_KEY)) || {};
-let tempCustomCategories = [];
-let newActivitiesData = JSON.parse(localStorage.getItem(NEW_ACTIVITIES_KEY)) || {};
-let viewedActivitiesData = JSON.parse(localStorage.getItem(VIEWED_ACTIVITIES_KEY)) || {};
-
-let notifications = [];
-let unreadNotificationsCount = 0;
-let notificationsUnsubscribe = null;
-let currentImageIndex = 0;
-let currentImages = [];
-let itemsPerPage = parseInt(localStorage.getItem('itemsPerPage')) || 10;
-let currentPage = parseInt(localStorage.getItem('currentPage'), 10) || 1;
-let currentFilteredList = [];
-let pendingLinkInsert = null;
-let currentEditingActivities = [];
-let editingActivityId = null;
-let mainProjectCategories = [];
-let currentSortType = 'latest';
-
-// English data source flag
-let useEnglishData = false;
-
-// Modal click tracking
-let modalClickStartTarget = null;
+var projects = [];
+var categories = ['DeFi', 'Gaming', 'Infra', 'L1/L2', 'NFT', 'Social', 'Other'];
+var currentFilters = { statuses: [], categories: [] };
+var editingId = null;
+var isEditModalOpen = false;
+var currentDetailId = null;
+var isAdminMode = false;
+var currentUser = null;
+var userFavorites = [];
+var userCompleted = [];
+var arcData = JSON.parse(localStorage.getItem(STORAGE_KEY)) || [];
+var tempCustomCategories = [];
+var newActivitiesData = JSON.parse(localStorage.getItem(NEW_ACTIVITIES_KEY)) || {};
+var viewedActivitiesData = JSON.parse(localStorage.getItem(VIEWED_ACTIVITIES_KEY)) || {};
+var notifications = [];
+var unreadNotificationsCount = 0;
+var notificationsUnsubscribe = null;
+var currentImageIndex = 0;
+var currentImages = [];
+var itemsPerPage = parseInt(localStorage.getItem('itemsPerPage')) || 10;
+var currentPage = parseInt(localStorage.getItem('currentPage'), 10) || 1;
+var currentFilteredList = [];
+var pendingLinkInsert = null;
+var currentEditingActivities = [];
+var editingActivityId = null;
+var mainProjectCategories = [];
+var currentSortType = 'latest';
+var useEnglishData = false;
+var modalClickStartTarget = null;
 
 // ============ LANGUAGE SYSTEM FUNCTIONS ============
 
@@ -1441,47 +1436,110 @@ async function loadUserProfileData(user) {
 
 
 onAuthStateChanged(auth, async function(user) {
+
+  // 🔥 Всегда обновляем глобальные переменные
+  window.currentUser = user;
+  currentUser = user;
+
   if (user) {
-    currentUser = user;
+    // ============================
+    //   ПОЛЬЗОВАТЕЛЬ АВТОРИЗОВАН
+    // ============================
+
     await saveUserData(user);
     await syncLocalStorageToFirestore(user.uid);
+
     document.getElementById('generalFeedbackPanel').classList.remove('hidden');
     initFeedbacksListener(user.uid);
-    if (user.uid === "SAkz4mdW9reDaIsvqigCNZhEKJR2") activateAdminMode();
+
+    if (user.uid === "SAkz4mdW9reDaIsvqigCNZhEKJR2") {
+      activateAdminMode();
+    }
+
     try {
       const userRef = doc(db, "users", user.uid);
       const userDoc = await getDoc(userRef);
+
       if (userDoc.exists()) {
         const data = userDoc.data();
         userFavorites = data.favorites || [];
         userCompleted = data.completed || [];
-        if (data.arcGuideStats) { arcData = { ...arcData, ...data.arcGuideStats }; localStorage.setItem(STORAGE_KEY, JSON.stringify(arcData)); }
-      } else { await setDoc(userRef, { favorites: [], completed: [], arcGuideStats: {} }); }
-    } catch (e) { console.error('Error:', e); }
+
+        if (data.arcGuideStats) {
+          arcData = { ...arcData, ...data.arcGuideStats };
+          localStorage.setItem(STORAGE_KEY, JSON.stringify(arcData));
+        }
+
+      } else {
+        await setDoc(userRef, {
+          favorites: [],
+          completed: [],
+          arcGuideStats: {}
+        });
+      }
+
+    } catch (e) {
+      console.error('Error:', e);
+    }
+
     document.getElementById('loggedOutView').classList.add('hidden');
     document.getElementById('loggedInView').classList.remove('hidden');
     document.getElementById('guestWarning').classList.add('hidden');
-    document.getElementById('userAvatar').src = user.photoURL || 'https://ui-avatars.com/api/?name=' + (user.email || 'User') + '&background=random';
-    document.getElementById('userName').textContent = user.displayName || user.email.split('@')[0];
+
+    document.getElementById('userAvatar').src =
+      user.photoURL ||
+      'https://ui-avatars.com/api/?name=' +
+      (user.email || 'User') +
+      '&background=random';
+
+    document.getElementById('userName').textContent =
+      user.displayName || user.email.split('@')[0];
+
     initUserSync(user.uid);
     initNotificationsListener(user.uid);
     applyFilters();
+
   } else {
-    currentUser = null; userFavorites = []; userCompleted = [];
+
+    // ============================
+    //   ПОЛЬЗОВАТЕЛЬ ВЫШЕЛ
+    // ============================
+
+    currentUser = null;
+    window.currentUser = null;
+
+    userFavorites = [];
+    userCompleted = [];
+
     document.getElementById('generalFeedbackPanel').classList.add('hidden');
-    if (notificationsUnsubscribe) { notificationsUnsubscribe(); notificationsUnsubscribe = null; }
-    if (adminFeedbacksUnsubscribe) { adminFeedbacksUnsubscribe(); adminFeedbacksUnsubscribe = null; }
-    notifications = []; unreadNotificationsCount = 0; updateNotificationBadge();
+
+    if (notificationsUnsubscribe) {
+      notificationsUnsubscribe();
+      notificationsUnsubscribe = null;
+    }
+
+    if (adminFeedbacksUnsubscribe) {
+      adminFeedbacksUnsubscribe();
+      adminFeedbacksUnsubscribe = null;
+    }
+
+    notifications = [];
+    unreadNotificationsCount = 0;
+    updateNotificationBadge();
+
     document.getElementById('loggedOutView').classList.remove('hidden');
     document.getElementById('loggedInView').classList.add('hidden');
     document.getElementById('guestWarning').classList.remove('hidden');
+
     arcData = JSON.parse(localStorage.getItem(STORAGE_KEY)) || [];
     userCompleted = JSON.parse(localStorage.getItem(COMPLETED_KEY) || []);
+
     applyFilters();
-      loadUserProfileData(user);
-      window.currentUser = user;
-    }
+
+    loadUserProfileData(user);
+  }
 });
+
 
 function initUserSync(uid) {
   const userRef = doc(db, "users", uid);
