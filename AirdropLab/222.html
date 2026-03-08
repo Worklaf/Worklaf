@@ -328,6 +328,12 @@
             <span id="feedbackBadge" class="absolute -top-1 -right-1 w-5 h-5 bg-gradient-to-r from-purple-500 to-pink-500 rounded-full text-xs flex items-center justify-center hidden font-bold shadow-lg shadow-purple-500/50">0</span>
           </button>
         </div>
+          <div id="supportPanel" class="relative">
+  <button onclick="openSupportMessagesModal()" class="relative p-2.5 text-slate-400 hover:text-purple-400 transition-all rounded-xl hover:bg-purple-500/10 group border border-transparent hover:border-purple-500/30">
+    <i class="fas fa-headset text-lg group-hover:animate-bounce"></i>
+    <span id="supportBadge" class="absolute -top-1 -right-1 w-5 h-5 bg-gradient-to-r from-purple-500 to-pink-500 rounded-full text-xs flex items-center justify-center hidden font-bold shadow-lg shadow-purple-500/50">0</span>
+  </button>
+</div>
         
         <!-- Language Toggle Button -->
         <button onclick="toggleLang()" id="langBtn" class="flex items-center gap-2 px-3 py-2 rounded-lg border transition-all">
@@ -1493,8 +1499,29 @@ onAuthStateChanged(auth, async function(user) {
     userCompleted = JSON.parse(localStorage.getItem(COMPLETED_KEY) || []);
     applyFilters();
   }
+    window.projects = projects; window.currentUser = currentUser; window.adminFeedbacks = adminFeedbacks;
 });
+// Функция для обновления badge поддержки
+function updateSupportBadge() {
+    const badge = document.getElementById('supportBadge');
+    if (!badge || !currentUser) {
+        if (badge) badge.classList.add('hidden');
+        return;
+    }
+    
+    const myFeedbacks = adminFeedbacks.filter(fb => 
+        fb && fb.userId === currentUser.uid && !fb.userRead
+    );
+    
+    if (myFeedbacks.length > 0) {
+        badge.textContent = myFeedbacks.length > 9 ? '9+' : myFeedbacks.length;
+        badge.classList.remove('hidden');
+    } else {
+        badge.classList.add('hidden');
+    }
+}
 
+// Вызывайте updateSupportBadge() после изменений в adminFeedbacks
 function initUserSync(uid) {
   const userRef = doc(db, "users", uid);
   onSnapshot(userRef, function(docSnap) {
@@ -2820,6 +2847,21 @@ function detectNewActivities() {
 setTimeout(() => {
   detectNewActivities();
 }, 1000);
+
+    // Экспорт переменных для footer.js
+window.projects = projects;
+window.currentUser = currentUser;
+window.db = db;
+window.auth = auth;
+
+// Обновление переменных при изменении
+function syncVarsToWindow() {
+    window.projects = projects;
+    window.currentUser = currentUser;
+    window.adminFeedbacks = adminFeedbacks;
+}
+
+// Добавьте вызов syncVarsToWindow() после изменений переменных
 </script>
 </body>
 </html>
