@@ -1070,52 +1070,8 @@ function initFeedbacksListener(uid) {
 
     // Добавь этот код после функции initFeedbacksListener
 
-function initSupportTicketsListener(uid) {
-    // Только для админа
-    if (uid !== "SAkz4mdW9reDaIsvqigCNZhEKJR2") return;
-    
-    // Слушаем обращения поддержки
-    const supportQuery = query(collection(db, "supportTickets"), orderBy("createdAt", "desc"));
-    onSnapshot(supportQuery, (snapshot) => {
-        const supportTickets = [];
-        snapshot.forEach((doc) => {
-            const data = doc.data();
-            data.id = doc.id;
-            // Добавляем пометку что это поддержка
-            data.isSupport = true;
-            data.displayType = 'support'; // Отображаем как поддержку
-            supportTickets.push(data);
-        });
-        
-        // Добавляем в общий массив обращений
-        if (typeof window.adminFeedbacks !== 'undefined') {
-            window.adminFeedbacks = [...supportTickets, ...window.adminFeedbacks];
-        }
-        
-        // Обновляем badge если есть новые
-        const unreadSupport = supportTickets.filter(t => t.status === 'new').length;
-        if (unreadSupport > 0) {
-            const badge = document.getElementById('feedbackBadge');
-            if (badge) {
-                const current = parseInt(badge.textContent) || 0;
-                badge.textContent = current + unreadSupport;
-                badge.classList.remove('hidden');
-            }
-        }
-        
-        // Перерисовываем список если открыт
-        const listModal = document.getElementById('feedbackListModal');
-        if (listModal && listModal.classList.contains('active')) {
-            renderFeedbackList();
-        }
-    });
-}
 
-// Вызови эту функцию в onAuthStateChanged для админа
-// Добавь после initFeedbacksListener(user.uid):
-if (user.uid === "SAkz4mdW9reDaIsvqigCNZhEKJR2") {
-    initSupportTicketsListener(user.uid);
-}
+
 function updateFeedbackBadgeUI(unreadCount) {
   const badge = document.getElementById('feedbackBadge');
   if (!badge) return;
