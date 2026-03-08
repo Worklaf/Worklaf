@@ -11,68 +11,8 @@
     <link rel="stylesheet" href="styles.css">
     <!-- languages.js ДОЛЖЕН загружаться ПЕРЕД основным скриптом -->
     <script src="languages.js"></script>
-    <script src="footer.js"></script>
+     <script src="footer.js"></script>
    <style>
-       /* Добавьте эти стили в ваш CSS */
-.chat-bubble {
-  display: flex;
-  align-items: flex-start;
-  gap: 12px;
-  margin-bottom: 16px;
-}
-
-.chat-bubble.user {
-  flex-direction: row-reverse;
-}
-
-.chat-avatar {
-  width: 36px;
-  height: 36px;
-  border-radius: 50%;
-  background: #3b82f6;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  color: white;
-  font-size: 14px;
-  flex-shrink: 0;
-}
-
-.chat-bubble-wrapper {
-  max-width: 70%;
-  background: #1e293b;
-  border-radius: 12px;
-  padding: 12px;
-  position: relative;
-}
-
-.chat-bubble.user .chat-bubble-wrapper {
-  background: #3b82f6;
-}
-
-.chat-sender {
-  font-size: 12px;
-  color: #94a3b8;
-  margin-bottom: 4px;
-  display: block;
-}
-
-.chat-content {
-  color: white;
-  word-break: break-word;
-}
-
-.chat-time {
-  font-size: 11px;
-  color: #64748b;
-  margin-top: 4px;
-  display: block;
-  text-align: right;
-}
-
-
-
-       
        #langBtn {
   display: flex;
   align-items: center;
@@ -1130,37 +1070,28 @@ function updateFeedbackBadgeUI(unreadCount) {
   else { badge.classList.add('hidden'); badge.textContent = '0'; }
 }
 
-// Найдите эту функцию и замените её содержимое на:
 window.openFeedbackModal = function(projId, projName) {
-  if (!currentUser) {
-    showToast('Войдите');
-    openLoginModal();
-    return;
-  }
-
+  if (!currentUser) { showToast('Войдите'); openLoginModal(); return; }
   const modal = document.getElementById('feedbackModal');
   document.getElementById('adminChatDeleteBtn').classList.add('hidden');
   document.getElementById('feedbackProjectId').value = projId;
   document.getElementById('feedbackProjectName').textContent = projName || 'Unknown';
   document.getElementById('feedbackChatHistory').innerHTML = '<div class="text-center py-8"><i class="fas fa-spinner fa-spin text-blue-400"></i></div>';
-
-  // Ищем существующую обратную связь
-  const userFeedback = adminFeedbacks.find(fb =>
-    fb.userId === currentUser.uid && fb.projectId === projId
-  );
-
-  if (userFeedback) {
-    document.getElementById('feedbackDocId').value = userFeedback.id;
-    loadFeedbackChat(userFeedback.id, projId);
-  } else {
-    document.getElementById('feedbackDocId').value = '';
-    showNewFeedbackForm();
-  }
-
+  const userFeedback = adminFeedbacks.find(fb => fb.userId === currentUser.uid && fb.projectId === projId);
+  if (userFeedback) { document.getElementById('feedbackDocId').value = userFeedback.id; loadFeedbackChat(userFeedback.id, projId); }
+  else { document.getElementById('feedbackDocId').value = ''; showNewFeedbackForm(); }
   modal.classList.add('active');
 };
 
-
+function showNewFeedbackForm() {
+  document.getElementById('feedbackChatHistory').innerHTML = '<div class="flex flex-col items-center justify-center h-full text-slate-500"><i class="fas fa-inbox text-4xl mb-3 opacity-50"></i><p class="text-sm">' + t('start_new_feedback') + '</p></div>';
+  document.getElementById('feedbackFormNew').classList.remove('hidden');
+  document.getElementById('feedbackFormReply').classList.add('hidden');
+  document.getElementById('feedbackSendBtn').classList.remove('hidden');
+  document.getElementById('feedbackSendBtn').textContent = t('send');
+  document.getElementById('feedbackSendBtn').onclick = window.sendUserFeedback;
+  document.getElementById('feedbackText').value = '';
+}
 
 function loadFeedbackChat(docId, projId) {
   const unsub = onSnapshot(doc(db, "feedbacks", docId), (snap) => {
@@ -1436,37 +1367,15 @@ window.markNotificationAsRead = async function(notifId) {
   try { await updateDoc(doc(db, "notifications", notifId), { read: true }); const notif = notifications.find(function(n) { return n.id === notifId; }); if (notif) { notif.read = true; unreadNotificationsCount = Math.max(0, unreadNotificationsCount - 1); updateNotificationBadge(); const item = document.querySelector('[data-id="' + notifId + '"]'); if (item) { item.classList.remove('unread'); const btn = item.querySelector('button'); if (btn) btn.remove(); } } } catch (e) { console.error(e); }
 };
 
-// Добавьте эту функцию, если её нет
 function formatTimeAgo(date) {
+  if (!date) return '';
   const now = new Date();
-  const seconds = Math.floor((now - date) / 1000);
-
-  let interval = Math.floor(seconds / 31536000);
-  if (interval >= 1) {
-    return interval === 1 ? t('year_ago') : t('years_ago', { count: interval });
-  }
-
-  interval = Math.floor(seconds / 2592000);
-  if (interval >= 1) {
-    return interval === 1 ? t('month_ago') : t('months_ago', { count: interval });
-  }
-
-  interval = Math.floor(seconds / 86400);
-  if (interval >= 1) {
-    return interval === 1 ? t('day_ago') : t('days_ago', { count: interval });
-  }
-
-  interval = Math.floor(seconds / 3600);
-  if (interval >= 1) {
-    return interval === 1 ? t('hour_ago') : t('hours_ago', { count: interval });
-  }
-
-  interval = Math.floor(seconds / 60);
-  if (interval >= 1) {
-    return interval === 1 ? t('minute_ago') : t('minutes_ago', { count: interval });
-  }
-
-  return t('just_now');
+  const diff = now - date;
+  if (diff < 60000) return 'только что';
+  if (diff < 3600000) return Math.floor(diff/60000) + ' мин';
+  if (diff < 86400000) return Math.floor(diff/3600000) + ' ч';
+  if (diff < 604800000) return Math.floor(diff/86400000) + ' дн';
+  return date.toLocaleDateString('ru-RU', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' });
 }
 
 async function saveUserData(user) {
@@ -2867,93 +2776,6 @@ function detectNewActivities() {
 setTimeout(() => {
   detectNewActivities();
 }, 1000);
-window.loadFeedbackChat = function(docId, projId) {
-  const chatHistory = document.getElementById("feedbackChatHistory");
-  chatHistory.innerHTML = '<div class="text-center py-8"><i class="fas fa-spinner fa-spin text-blue-400"></i><p class="text-sm mt-2">Загрузка переписки...</p></div>';
-
-  const unsub = onSnapshot(doc(db, "feedbacks", docId), (snap) => {
-    if (!snap.exists()) {
-      console.log("Документ обратной связи не найден:", docId);
-      showNewFeedbackForm();
-      return;
-    }
-
-    const d = snap.data();
-    console.log("Документ обратной связи:", d);
-
-    // Проверяем наличие сообщений
-    if (!d.messages || !Array.isArray(d.messages) || d.messages.length === 0) {
-      chatHistory.innerHTML = '<div class="flex flex-col items-center justify-center h-full text-slate-500"><i class="fas fa-inbox text-4xl mb-3 opacity-50"></i><p class="text-sm">Нет сообщений</p></div>';
-      document.getElementById('feedbackFormNew').classList.remove('hidden');
-      document.getElementById('feedbackFormReply').classList.add('hidden');
-      document.getElementById('feedbackSendBtn').classList.remove('hidden');
-      return;
-    }
-
-    // Сортируем сообщения по времени
-    const messages = [...d.messages].sort((a, b) => {
-      const timeA = a.timestamp ? (a.timestamp.toDate ? a.timestamp.toDate() : new Date(a.timestamp)) : new Date(0);
-      const timeB = b.timestamp ? (b.timestamp.toDate ? b.timestamp.toDate() : new Date(b.timestamp)) : new Date(0);
-      return timeA - timeB;
-    });
-
-    // Формируем HTML для сообщений
-    const html = messages.map((msg) => {
-      const bubbleSide = msg.sender === 'user' ? 'user' : 'admin';
-      const senderName = msg.sender === 'user' ? t('you') : t('support');
-      const avatar = msg.sender === 'user'
-        ? `<img src="${currentUser?.photoURL || 'https://ui-avatars.com/api/?name=U'}" class="chat-avatar" alt="">`
-        : `<div class="chat-avatar"><i class="fas fa-user-shield"></i></div>`;
-
-      const time = msg.timestamp ? formatTimeAgo(msg.timestamp.toDate ? msg.timestamp.toDate() : new Date(msg.timestamp)) : '';
-
-      return `
-        <div class="chat-bubble ${bubbleSide}">
-          ${avatar}
-          <div class="chat-bubble-wrapper">
-            <span class="chat-sender">${senderName}</span>
-            <div class="chat-content">${msg.text}</div>
-            <span class="chat-time">${time}</span>
-          </div>
-        </div>
-      `;
-    }).join('');
-
-    chatHistory.innerHTML = html || '<p class="text-center text-slate-500 py-4">Нет сообщений</p>';
-
-    // Показываем форму для ответа
-    document.getElementById('feedbackFormNew').classList.add('hidden');
-    document.getElementById('feedbackFormReply').classList.remove('hidden');
-    document.getElementById('feedbackSendBtn').classList.add('hidden');
-
-    // Прокручиваем вниз
-    chatHistory.scrollTop = chatHistory.scrollHeight;
-
-    // Помечаем как прочитанное
-    if (!d.userRead) {
-      updateDoc(doc(db, "feedbacks", docId), { userRead: true }).catch(error => {
-        console.error("Ошибка обновления статуса прочтения:", error);
-      });
-    }
-  }, (error) => {
-    console.error("Ошибка загрузки переписки:", error);
-    chatHistory.innerHTML = '<div class="text-center py-8 text-red-400"><i class="fas fa-exclamation-circle"></i><p>Ошибка загрузки сообщений</p></div>';
-  });
-
-  // Сохраняем функцию отписки
-  window.currentFeedbackUnsub = unsub;
-};
-
-// Добавьте эту функцию для отображения формы нового сообщения
-function showNewFeedbackForm() {
-  document.getElementById('feedbackChatHistory').innerHTML = '<div class="flex flex-col items-center justify-center h-full text-slate-500"><i class="fas fa-inbox text-4xl mb-3 opacity-50"></i><p class="text-sm">Нет сообщений</p></div>';
-  document.getElementById('feedbackFormNew').classList.remove('hidden');
-  document.getElementById('feedbackFormReply').classList.add('hidden');
-  document.getElementById('feedbackSendBtn').classList.remove('hidden');
-  document.getElementById('feedbackSendBtn').textContent = t('send');
-  document.getElementById('feedbackSendBtn').onclick = window.sendUserFeedback;
-  document.getElementById('feedbackText').value = '';
-}
 </script>
 </body>
 </html>
