@@ -412,14 +412,9 @@
                                 <span class="text-sm">Гайды</span>
                             </a>
                             <a href="#" onclick="openSupportModal(); return false;" class="footer-link group flex items-center gap-2 text-slate-400 hover:text-white transition-colors">
-    <i class="fas fa-headset text-xs w-4"></i>
-    <span class="text-sm">Поддержка</span>
-</a>
-<a href="#" onclick="openSupportListModal(); return false;" class="footer-link group flex items-center gap-2 text-slate-400 hover:text-white transition-colors">
-    <i class="fas fa-inbox text-xs w-4"></i>
-    <span class="text-sm">Мои обращения</span>
-    <span id="supportListBadge" class="hidden ml-auto bg-purple-500 text-white text-[10px] px-1.5 py-0.5 rounded-full font-bold min-w-[18px] text-center">0</span>
-</a>
+                                <i class="fas fa-headset text-xs w-4"></i>
+                                <span class="text-sm">Поддержка</span>
+                            </a>
                             <a href="https://cryptorank.io" target="_blank" rel="noopener noreferrer" class="footer-link group flex items-center gap-2 text-slate-400 hover:text-white transition-colors">
                                 <i class="fas fa-chart-line text-xs w-4"></i>
                                 <span class="text-sm">CryptoRank</span>
@@ -444,10 +439,6 @@
                                 <span class="text-sm">Уведомления</span>
                                 <span id="footerNotificationBadge" class="hidden ml-auto bg-red-500 text-white text-[10px] px-1.5 py-0.5 rounded-full font-bold min-w-[18px] text-center">0</span>
                             </a>
-                            <a href="#" onclick="openSupportListModal(); return false;" class="footer-link group flex items-center gap-2 text-slate-400 hover:text-white transition-colors">
-    <i class="fas fa-life-ring text-xs w-4"></i>
-    <span class="text-sm">Мои обращения</span>
-</a>
                             <a href="#" onclick="openPageModal('faq'); return false;" class="footer-link group flex items-center gap-2 text-slate-400 hover:text-white transition-colors">
                                 <i class="fas fa-question-circle text-xs w-4"></i>
                                 <span class="text-sm">FAQ</span>
@@ -1036,113 +1027,69 @@
     // ============ SUPPORT MODAL ============
 
     window.openSupportModal = function() {
-    // Проверяем авторизацию
-    if (typeof currentUser === 'undefined' || !currentUser) {
-        // Не авторизован - показываем простую форму
         const modal = document.getElementById('supportModal');
         if (modal) {
-            modal.classList.add('active');
-        }
-        return;
-    }
-    
-    // Авторизован - используем систему feedbacks с projectId = '__support__'
-    if (typeof openFeedbackModal === 'function') {
-        openFeedbackModal('__support__', 'Поддержка AirdropLab');
-    } else {
-        // Fallback если функция ещё не загружена
-        const modal = document.getElementById('supportModal');
-        if (modal) {
-            if (currentUser) {
-                const nameEl = document.getElementById('supportName');
-                const emailEl = document.getElementById('supportEmail');
-                if (nameEl) nameEl.value = currentUser.displayName || '';
-                if (emailEl) emailEl.value = currentUser.email || '';
+            // Предзаполняем данные если авторизованы
+            if (typeof currentUser !== 'undefined' && currentUser) {
+                document.getElementById('supportName').value = currentUser.displayName || '';
+                document.getElementById('supportEmail').value = currentUser.email || '';
             }
             modal.classList.add('active');
         }
-    }
-};
-    window.openSupportListModal = function() {
-    // Берём currentUser из основного скрипта через window
-    const user = window._currentUser || (typeof currentUser !== 'undefined' ? currentUser : null);
-    
-    if (!user) {
-        footerShowToast('Войдите в аккаунт для просмотра обращений');
-        if (typeof openLoginModal === 'function') openLoginModal();
-        return;
-    }
-    
-    if (typeof openFeedbackListModal === 'function') {
-        openFeedbackListModal('support');
-    }
-};
-    window.submitSupportTicket = async function(e) {
-    e.preventDefault();
-    
-    // Если пользователь авторизован - используем систему feedbacks
-    if (typeof currentUser !== 'undefined' && currentUser && typeof openFeedbackModal === 'function') {
-        closeSupportModal();
-        openFeedbackModal('__support__', 'Поддержка AirdropLab');
-        return;
-    }
-    
-    const btn = document.getElementById('supportSubmitBtn');
-    const originalText = btn.innerHTML;
-    btn.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i>Отправка...';
-    btn.disabled = true;
-    
-    const ticketData = {
-        type: 'support',
-        projectId: '__support__',
-        projectName: 'Поддержка AirdropLab',
-        category: document.getElementById('supportCategory').value,
-        name: document.getElementById('supportName').value,
-        email: document.getElementById('supportEmail').value,
-        subject: document.getElementById('supportSubject').value,
-        message: document.getElementById('supportMessage').value,
-        notify: document.getElementById('supportNotify').checked,
-        userId: 'guest_' + Date.now(),
-        userName: document.getElementById('supportName').value || 'Гость',
-        userPhoto: '',
-        status: 'open',
-        read: false,
-        userRead: true,
-        deleted: false,
-        userDeleted: false,
-        createdAt: new Date().toISOString(),
-        messages: [{
-            sender: 'user',
-            text: '[' + document.getElementById('supportCategory').value + '] ' + 
-                  document.getElementById('supportSubject').value + '\n\n' + 
-                  document.getElementById('supportMessage').value,
-            timestamp: new Date()
-        }]
     };
-    
-    // Сохраняем в localStorage
-    const supportTickets = JSON.parse(localStorage.getItem('supportTickets') || '[]');
-    supportTickets.push(ticketData);
-    localStorage.setItem('supportTickets', JSON.stringify(supportTickets));
-    
-    // Если Firebase доступен - сохраняем в feedbacks
-    if (typeof db !== 'undefined' && typeof addDoc !== 'undefined' && typeof collection !== 'undefined') {
-        try {
-            await addDoc(collection(db, "feedbacks"), ticketData);
+
+    window.closeSupportModal = function() {
+        const modal = document.getElementById('supportModal');
+        if (modal) modal.classList.remove('active');
+    };
+
+    window.submitSupportTicket = async function(e) {
+        e.preventDefault();
+        
+        const btn = document.getElementById('supportSubmitBtn');
+        const originalText = btn.innerHTML;
+        btn.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i>Отправка...';
+        btn.disabled = true;
+        
+        const ticketData = {
+            type: 'support', // Пометка что это поддержка, а не отзыв
+            category: document.getElementById('supportCategory').value,
+            name: document.getElementById('supportName').value,
+            email: document.getElementById('supportEmail').value,
+            subject: document.getElementById('supportSubject').value,
+            message: document.getElementById('supportMessage').value,
+            notify: document.getElementById('supportNotify').checked,
+            userId: (typeof currentUser !== 'undefined' && currentUser) ? currentUser.uid : 'guest',
+            status: 'new',
+            priority: 'normal',
+            createdAt: new Date().toISOString()
+        };
+        
+        // Сохраняем в localStorage как резерв
+        const supportTickets = JSON.parse(localStorage.getItem('supportTickets') || '[]');
+        supportTickets.push(ticketData);
+        localStorage.setItem('supportTickets', JSON.stringify(supportTickets));
+        
+        // Если Firebase доступен, сохраняем там
+        if (typeof db !== 'undefined') {
+            try {
+                await addDoc(collection(db, "supportTickets"), ticketData);
+                footerShowToast('Обращение отправлено! Мы ответим в течение 24 часов.');
+            } catch(err) {
+                console.error('Error submitting ticket:', err);
+                footerShowToast('Обращение сохранено. Мы свяжемся с вами!');
+            }
+        } else {
             footerShowToast('Обращение отправлено! Мы ответим в течение 24 часов.');
-        } catch(err) {
-            console.error('Error submitting ticket:', err);
-            footerShowToast('Обращение сохранено локально.');
         }
-    } else {
-        footerShowToast('Обращение отправлено!');
-    }
-    
-    btn.innerHTML = originalText;
-    btn.disabled = false;
-    document.getElementById('supportForm').reset();
-    closeSupportModal();
-};
+        
+        btn.innerHTML = originalText;
+        btn.disabled = false;
+        
+        // Очищаем форму
+        document.getElementById('supportForm').reset();
+        closeSupportModal();
+    };
 
     // ============ NOTIFICATIONS MODAL ============
 
@@ -1526,23 +1473,7 @@
             }
         }
 
-        // Обновляем бейдж обращений в поддержку
-if (typeof window.adminFeedbacks !== 'undefined') {
-    const supportFeedbacks = window.adminFeedbacks.filter(fb => 
-        fb.projectId === '__support__' && !fb.userRead
-    );
-    const badge = document.getElementById('supportListBadge');
-    if (badge) {
-        if (supportFeedbacks.length > 0) {
-            badge.textContent = supportFeedbacks.length;
-            badge.classList.remove('hidden');
-        } else {
-            badge.classList.add('hidden');
-        }
-    }
-}
-
-setTimeout(updateFooterStats, 30000);
+        setTimeout(updateFooterStats, 30000);
     }
 
     function updateFooterLanguageButton() {
