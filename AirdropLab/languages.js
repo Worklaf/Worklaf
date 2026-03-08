@@ -170,7 +170,16 @@ const translations = {
     all_feedbacks: 'Все обращения',
     no_deleted_projects: 'Нет удаленных проектов',
     new_category: 'Новая категория...',
-    project: 'Проект'
+    project: 'Проект',
+        // Поддержка
+    support_title: 'Служба поддержки',
+    my_support_requests: 'Мои обращения',
+    all_support_requests: 'Все обращения в поддержку',
+    no_support_requests: 'Нет обращений в поддержку',
+    start_support_request: 'Опишите вашу проблему — мы ответим в течение 24 часов',
+    support_message_placeholder: 'Опишите вашу проблему подробно...',
+    cat_technical: 'Техническая проблема',
+    cat_account: 'Проблема с аккаунтом'
   },
   
   en: {
@@ -343,7 +352,16 @@ const translations = {
     all_feedbacks: 'All Requests',
     no_deleted_projects: 'No deleted projects',
     new_category: 'New category...',
-    project: 'Project'
+    project: 'Project',
+        // Support
+    support_title: 'Support Center',
+    my_support_requests: 'My Requests',
+    all_support_requests: 'All Support Requests',
+    no_support_requests: 'No support requests',
+    start_support_request: 'Describe your issue — we will respond within 24 hours',
+    support_message_placeholder: 'Describe your issue in detail...',
+    cat_technical: 'Technical Issue',
+    cat_account: 'Account Problem',
   }
 };
 
