@@ -827,7 +827,7 @@ const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const db = getFirestore(app);
 window.db = db;
-window.__firestoreExports = { collection, getCountFromServer };
+window.__firestoreExports = { collection, getCountFromServer, addDoc, getDocs, query, where };
 
 const STORAGE_KEY = 'arc_tracker_v3';
 const COMPLETED_KEY = 'arc_completed_v1';
@@ -1887,9 +1887,15 @@ onAuthStateChanged(auth, async function(user) {
     document.getElementById('guestWarning').classList.add('hidden');
     document.getElementById('userAvatar').src = user.photoURL || 'https://ui-avatars.com/api/?name=' + (user.email || 'User') + '&background=random';
     document.getElementById('userName').textContent = user.displayName || user.email.split('@')[0];
-    initUserSync(user.uid);
+        initUserSync(user.uid);
     initNotificationsListener(user.uid);
     applyFilters();
+    
+    // Уведомляем футер что авторизация изменилась
+    window.currentUser = user;
+    setTimeout(function() {
+      document.dispatchEvent(new CustomEvent('userAuthChanged'));
+    }, 500);
   } else {
     currentUser = null; userFavorites = []; userCompleted = [];
     document.getElementById('generalFeedbackPanel').classList.add('hidden');
@@ -1899,9 +1905,13 @@ onAuthStateChanged(auth, async function(user) {
     document.getElementById('loggedOutView').classList.remove('hidden');
     document.getElementById('loggedInView').classList.add('hidden');
     document.getElementById('guestWarning').classList.remove('hidden');
-    arcData = JSON.parse(localStorage.getItem(STORAGE_KEY)) || [];
+        arcData = JSON.parse(localStorage.getItem(STORAGE_KEY)) || [];
     userCompleted = JSON.parse(localStorage.getItem(COMPLETED_KEY) || []);
     applyFilters();
+    
+    // Уведомляем футер о разлогине
+    window.currentUser = null;
+    document.dispatchEvent(new CustomEvent('userAuthChanged'));
   }
 });
 
@@ -2065,7 +2075,7 @@ window.loadData = async function() {
     return;
   }
   
-  try {
+    try {
     const response = await fetch(EXTERNAL_DATA_URL);
     if (response.ok) {
       const data = await response.json();
@@ -2077,11 +2087,15 @@ window.loadData = async function() {
   }
   
   if (projects.length > 0) {
+    // Экспортируем для футера
+    window.projects = projects;
     sortProjects('latest');
+    // Сообщаем футеру
+    document.dispatchEvent(new CustomEvent('projectsLoaded'));
   }
   
   // Подписываемся на обновления Firestore
-  const unsubscribe = onSnapshot(query(collection(db, "projects"), where("deleted", "==", false)), function(snapshot) {
+    const unsubscribe = onSnapshot(query(collection(db, "projects"), where("deleted", "==", false)), function(snapshot) {
     if (useEnglishData) return; // Skip if using English data
     
     snapshot.forEach(function(docSnap) {
@@ -2093,8 +2107,15 @@ window.loadData = async function() {
         projects.push(normalizeData(fireProject));
       }
     });
+    
+    // Экспортируем проекты глобально для футера
+    window.projects = projects;
+    
     sortProjects(currentSortType);
     applyFilters();
+    
+    // Уведомляем футер что проекты загружены
+    document.dispatchEvent(new CustomEvent('projectsLoaded'));
   });
   
   if (isAdminMode) {
