@@ -698,50 +698,60 @@
         reader.readAsDataURL(file);
     };
 
-    window.submitSupportTicket = async function(e) {
-        e.preventDefault();
-        
-        const btn = document.getElementById('supportSubmitBtn');
-        const originalText = btn.innerHTML;
-        btn.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i>Отправка...';
-        btn.disabled = true;
-        
-        const ticketData = {
-            type: 'support',
-            category: document.getElementById('supportCategory').value,
-            name: document.getElementById('supportName').value,
-            email: document.getElementById('supportEmail').value,
-            subject: document.getElementById('supportSubject').value,
-            message: document.getElementById('supportMessage').value,
-            image: document.getElementById('supportImageData').value,
-            userId: (typeof currentUser !== 'undefined' && currentUser) ? currentUser.uid : 'guest',
-            userEmail: (typeof currentUser !== 'undefined' && currentUser) ? currentUser.email : document.getElementById('supportEmail').value,
-            status: 'new',
-            createdAt: new Date().toISOString()
-        };
-        
-        // Сохраняем локально
-        const supportTickets = JSON.parse(localStorage.getItem('supportTickets') || '[]');
-        supportTickets.push(ticketData);
-        localStorage.setItem('supportTickets', JSON.stringify(supportTickets));
-        
-        // Пробуем Firebase
-        try {
-            const { addDoc, collection } = window;
-            if (typeof db !== 'undefined' && addDoc && collection) {
-                await addDoc(collection(db, "supportTickets"), ticketData);
-            }
-        } catch(err) {
-            console.log('Firebase not available');
-        }
-        
-        footerShowToast('Обращение отправлено!');
-        
-        btn.innerHTML = originalText;
-        btn.disabled = false;
-        document.getElementById('supportForm').reset();
-        closeSupportModal();
+    // В функции submitSupportTicket замени код на:
+
+window.submitSupportTicket = async function(e) {
+    e.preventDefault();
+    
+    const btn = document.getElementById('supportSubmitBtn');
+    const originalText = btn.innerHTML;
+    btn.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i>Отправка...';
+    btn.disabled = true;
+    
+    const ticketData = {
+        type: 'support',  // Тип: support - обращение в поддержку
+        category: document.getElementById('supportCategory').value,
+        name: document.getElementById('supportName').value,
+        email: document.getElementById('supportEmail').value,
+        subject: document.getElementById('supportSubject').value,
+        message: document.getElementById('supportMessage').value,
+        image: document.getElementById('supportImageData').value,
+        userId: (typeof currentUser !== 'undefined' && currentUser) ? currentUser.uid : 'guest',
+        userEmail: (typeof currentUser !== 'undefined' && currentUser) ? currentUser.email : document.getElementById('supportEmail').value,
+        status: 'open',
+        read: false,
+        userRead: false,
+        deleted: false,
+        userDeleted: false,
+        createdAt: new Date().toISOString(),
+        messages: [{
+            sender: 'user',
+            text: document.getElementById('supportMessage').value,
+            timestamp: new Date().toISOString()
+        }]
     };
+    
+    // Пробуем Firebase
+    try {
+        if (typeof db !== 'undefined') {
+            await addDoc(collection(db, "feedbacks"), ticketData);
+        }
+    } catch(err) {
+        console.log('Firebase error, saving locally');
+    }
+    
+    // Всегда сохраняем локально
+    const supportTickets = JSON.parse(localStorage.getItem('supportTickets') || '[]');
+    supportTickets.push(ticketData);
+    localStorage.setItem('supportTickets', JSON.stringify(supportTickets));
+    
+    footerShowToast('Обращение отправлено!');
+    
+    btn.innerHTML = originalText;
+    btn.disabled = false;
+    document.getElementById('supportForm').reset();
+    closeSupportModal();
+};
 
     // ============ NOTIFICATIONS ============
 
