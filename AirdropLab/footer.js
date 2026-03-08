@@ -423,7 +423,8 @@ function updateFooterSupportBadge() {
         if (modal) modal.classList.remove('active');
     };
 
-    window.submitSupportTicket = async function(e) {
+    // В функции submitSupportTicket в footer.js
+window.submitSupportTicket = async function(e) {
     e.preventDefault();
     
     const refs = getFirebaseRefs();
@@ -440,12 +441,15 @@ function updateFooterSupportBadge() {
     
     const categoryText = document.getElementById('supportCategory').options[document.getElementById('supportCategory').selectedIndex].text;
     
+    // ВАЖНО: Создаем в той же коллекции feedbacks, но с type: 'support'
     const ticketData = {
-        type: 'support',  // Явно указываем тип
+        type: 'support',  // <-- Тип обращения
         supportCategory: document.getElementById('supportCategory').value,
         supportCategoryText: categoryText,
+        supportSubject: document.getElementById('supportSubject').value,
+        projectId: 'support', // Для совместимости
+        projectName: 'Служба поддержки',
         subject: document.getElementById('supportSubject').value,
-        message: document.getElementById('supportMessage').value,
         userId: refs.currentUser.uid,
         userName: refs.currentUser.displayName || refs.currentUser.email,
         userEmail: refs.currentUser.email,
@@ -464,19 +468,9 @@ function updateFooterSupportBadge() {
     };
     
     try {
-        if (refs.db && refs.addDoc && refs.collection) {
-            // ИСПРАВЛЕНО: используем коллекцию supportTickets
-            await refs.addDoc(refs.collection(refs.db, "supportTickets"), ticketData);
-            footerShowToast('Обращение отправлено!');
-        } else {
-            // Локально
-            const supportTickets = JSON.parse(localStorage.getItem('supportTickets') || '[]');
-            ticketData.id = 'local_' + Date.now();
-            ticketData.createdAt = new Date().toISOString();
-            supportTickets.push(ticketData);
-            localStorage.setItem('supportTickets', JSON.stringify(supportTickets));
-            footerShowToast('Обращение сохранено локально');
-        }
+        // Записываем В ТУ ЖЕ КОЛЛЕКЦИЮ feedbacks
+        await refs.addDoc(refs.collection(refs.db, "feedbacks"), ticketData);
+        footerShowToast('Обращение отправлено!');
     } catch(err) {
         console.error('Error:', err);
         footerShowToast('Ошибка отправки: ' + err.message);
@@ -486,7 +480,6 @@ function updateFooterSupportBadge() {
     btn.disabled = false;
     document.getElementById('supportForm').reset();
     closeSupportModal();
-    updateFooterSupportBadge();
 };
 
     // ============ MY SUPPORT MESSAGES ============
