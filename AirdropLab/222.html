@@ -316,6 +316,12 @@
         </div>
       </div>
       <div class="flex gap-2 items-center">
+          <div id="supportRequestPanel" class="relative hidden" id="supportRequestBtn">
+    <button onclick="openFeedbackListModal('support')" class="relative p-2.5 text-slate-400 hover:text-purple-400 transition-all rounded-xl hover:bg-purple-500/10 group border border-transparent hover:border-purple-500/30" title="Мои обращения в поддержку">
+        <i class="fas fa-life-ring text-lg group-hover:animate-bounce"></i>
+        <span id="supportBadge" class="absolute -top-1 -right-1 w-5 h-5 bg-gradient-to-r from-purple-500 to-pink-500 rounded-full text-xs hidden items-center justify-center font-bold shadow-lg shadow-purple-500/50">0</span>
+    </button>
+</div>
         <div id="notificationPanel" class="relative">
           <button onclick="showNotifications()" class="relative p-2.5 text-slate-400 hover:text-cyan-400 transition-all rounded-xl hover:bg-cyan-500/10 group border border-transparent hover:border-cyan-500/30">
             <i class="fas fa-bell text-lg group-hover:animate-bounce"></i>
@@ -1057,6 +1063,33 @@ function initFeedbacksListener(uid) {
       });
       adminFeedbacks.sort((a, b) => (b.createdAt?.toDate() || new Date(b.createdAt || 0)) - (a.createdAt?.toDate() || new Date(a.createdAt || 0)));
       updateFeedbackBadgeUI(unreadCount);
+        // Обновляем бейдж поддержки отдельно
+const supportUnread = adminFeedbacks.filter(fb => 
+    fb.projectId === '__support__' && (isAdmin ? !fb.read : !fb.userRead)
+).length;
+
+const supportBadge = document.getElementById('supportBadge');
+if (supportBadge) {
+    if (supportUnread > 0) {
+        supportBadge.textContent = supportUnread > 9 ? '9+' : supportUnread;
+        supportBadge.classList.remove('hidden');
+        supportBadge.classList.add('flex');
+    } else {
+        supportBadge.classList.add('hidden');
+        supportBadge.classList.remove('flex');
+    }
+}
+
+// Обновляем бейдж в футере
+const footerSupportBadge = document.getElementById('supportListBadge');
+if (footerSupportBadge) {
+    if (supportUnread > 0) {
+        footerSupportBadge.textContent = supportUnread;
+        footerSupportBadge.classList.remove('hidden');
+    } else {
+        footerSupportBadge.classList.add('hidden');
+    }
+}
       const listModal = document.getElementById('feedbackListModal');
       if (listModal && listModal.classList.contains('active')) renderFeedbackList();
     });
@@ -1689,6 +1722,9 @@ onAuthStateChanged(auth, async function(user) {
     await saveUserData(user);
     await syncLocalStorageToFirestore(user.uid);
     document.getElementById('generalFeedbackPanel').classList.remove('hidden');
+      // Показываем кнопку обращений в поддержку
+const supportBtn = document.getElementById('supportRequestPanel');
+if (supportBtn) supportBtn.classList.remove('hidden');
     initFeedbacksListener(user.uid);
     if (user.uid === "SAkz4mdW9reDaIsvqigCNZhEKJR2") activateAdminMode();
     try {
@@ -1712,6 +1748,8 @@ onAuthStateChanged(auth, async function(user) {
   } else {
     currentUser = null; userFavorites = []; userCompleted = [];
     document.getElementById('generalFeedbackPanel').classList.add('hidden');
+      const supportBtn = document.getElementById('supportRequestPanel');
+if (supportBtn) supportBtn.classList.add('hidden');
     if (notificationsUnsubscribe) { notificationsUnsubscribe(); notificationsUnsubscribe = null; }
     if (adminFeedbacksUnsubscribe) { adminFeedbacksUnsubscribe(); adminFeedbacksUnsubscribe = null; }
     notifications = []; unreadNotificationsCount = 0; updateNotificationBadge();
