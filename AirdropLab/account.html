@@ -28,7 +28,32 @@
         const db = getFirestore(app);
         
         let currentUser = null;
-        
+        // Загружаем сохраненные данные при открытии страницы
+async function loadSavedProfile() {
+    try {
+        const savedData = localStorage.getItem('userProfileData');
+        if (savedData) {
+            const profile = JSON.parse(savedData);
+            document.getElementById('firstName').value = profile.firstName || '';
+            document.getElementById('lastName').value = profile.lastName || '';
+            document.getElementById('username').value = profile.username || '';
+            document.getElementById('birthDate').value = profile.birthdate || '';
+            document.getElementById('gender').value = profile.gender || '';
+            document.getElementById('country').value = profile.country || '';
+            document.getElementById('bio').value = profile.bio || '';
+            document.getElementById('telegram').value = profile.telegram || '';
+            if (profile.avatar) {
+                document.getElementById('avatarPreview').src = profile.avatar;
+                document.getElementById('avatarData').value = profile.avatar;
+            }
+        }
+    } catch (e) {
+        console.log('No saved profile data');
+    }
+}
+
+// Вызываем при загрузке
+loadSavedProfile();
         // Проверка авторизации
         onAuthStateChanged(auth, async (user) => {
             if (!user) {
@@ -96,7 +121,8 @@
             
             saveBtn.disabled = true;
             saveBtn.innerHTML = '<span class="loading"></span> Сохранение...';
-            
+            // Также сохраняем локально для надежности
+            localStorage.setItem('userProfileData', JSON.stringify(profileData));
             const profileData = {
                 firstName: document.getElementById('firstName').value,
                 lastName: document.getElementById('lastName').value,
