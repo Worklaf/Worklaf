@@ -328,7 +328,11 @@
             <span id="feedbackBadge" class="absolute -top-1 -right-1 w-5 h-5 bg-gradient-to-r from-purple-500 to-pink-500 rounded-full text-xs flex items-center justify-center hidden font-bold shadow-lg shadow-purple-500/50">0</span>
           </button>
         </div>
-        
+        <a href="#" onclick="openSupportTicketsModal(); return false;" class="footer-link group flex items-center gap-2 text-slate-400 hover:text-white transition-colors">
+    <i class="fas fa-ticket-alt text-xs w-4"></i>
+    <span class="text-sm">Мои обращения</span>
+    <span id="footerSupportBadge" class="hidden ml-auto bg-purple-500 text-white text-[10px] px-1.5 py-0.5 rounded-full font-bold min-w-[18px] text-center">0</span>
+</a>
         <!-- Language Toggle Button -->
         <button onclick="toggleLang()" id="langBtn" class="flex items-center gap-2 px-3 py-2 rounded-lg border transition-all">
     <span class="lang-flag"></span>
@@ -831,7 +835,9 @@ const STORAGE_KEY = 'arc_tracker_v3';
 const COMPLETED_KEY = 'arc_completed_v1';
 const NEW_ACTIVITIES_KEY = 'arc_new_activities_v1';
 const VIEWED_ACTIVITIES_KEY = 'arc_viewed_activities_v1';
-
+// Глобальные переменные для тикетов поддержки
+let supportTickets = [];
+let supportTicketsUnsubscribe = null;
 let projects = [];
 let categories = ['DeFi', 'Gaming', 'Infra', 'L1/L2', 'NFT', 'Social', 'Other'];
 let currentFilters = { statuses: [], categories: [] };
@@ -1461,6 +1467,7 @@ onAuthStateChanged(auth, async function(user) {
     await syncLocalStorageToFirestore(user.uid);
     document.getElementById('generalFeedbackPanel').classList.remove('hidden');
     initFeedbacksListener(user.uid);
+    initSupportTicketsListener(user.uid);
     if (user.uid === "SAkz4mdW9reDaIsvqigCNZhEKJR2") activateAdminMode();
     try {
       const userRef = doc(db, "users", user.uid);
@@ -1485,6 +1492,12 @@ onAuthStateChanged(auth, async function(user) {
     document.getElementById('generalFeedbackPanel').classList.add('hidden');
     if (notificationsUnsubscribe) { notificationsUnsubscribe(); notificationsUnsubscribe = null; }
     if (adminFeedbacksUnsubscribe) { adminFeedbacksUnsubscribe(); adminFeedbacksUnsubscribe = null; }
+      if (supportTicketsUnsubscribe) {
+        supportTicketsUnsubscribe();
+        supportTicketsUnsubscribe = null;
+    }
+    supportTickets = [];
+    updateSupportBadge(0);
     notifications = []; unreadNotificationsCount = 0; updateNotificationBadge();
     document.getElementById('loggedOutView').classList.remove('hidden');
     document.getElementById('loggedInView').classList.add('hidden');
@@ -1492,6 +1505,7 @@ onAuthStateChanged(auth, async function(user) {
     arcData = JSON.parse(localStorage.getItem(STORAGE_KEY)) || [];
     userCompleted = JSON.parse(localStorage.getItem(COMPLETED_KEY) || []);
     applyFilters();
+      
   }
 });
 
