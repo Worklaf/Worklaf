@@ -179,7 +179,150 @@ const translations = {
     start_support_request: 'Опишите вашу проблему — мы ответим в течение 24 часов',
     support_message_placeholder: 'Опишите вашу проблему подробно...',
     cat_technical: 'Техническая проблема',
-    cat_account: 'Проблема с аккаунтом'
+    cat_account: 'Проблема с аккаунтом',
+        // ============ FOOTER TRANSLATIONS ============
+    // Brand
+    footer_tagline: 'Лаборатория крипто-возможностей',
+    footer_tagline_desc: 'Исследуем, тестируем и помогаем участвовать в самых перспективных аирдропах и тестнетах.',
+    footer_live: 'Live',
+    footer_updated: 'Обновлено',
+    
+    // Quick Links
+    footer_quick_links: 'Быстрые ссылки',
+    footer_home: 'Главная',
+    footer_projects: 'Проекты',
+    footer_guides: 'Гайды',
+    footer_support: 'Поддержка',
+    
+    // Account section
+    footer_account_title: 'Личный кабинет',
+    footer_my_account: 'Мой аккаунт',
+    footer_faq: 'FAQ',
+    footer_language: 'Язык',
+    footer_active_users: 'активных',
+    footer_projects_count: 'проектов',
+    
+    // Legal
+    footer_legal_title: 'Юридическая информация',
+    footer_documents: 'Документы',
+    footer_terms: 'Условия использования',
+    footer_privacy: 'Политика конфиденциальности',
+    footer_cookies: 'Политика cookies',
+    footer_disclaimer: 'Отказ от ответственности',
+    footer_contacts: 'Контакты',
+    footer_worldwide: 'Worldwide (Remote)',
+    
+    // Newsletter
+    footer_newsletter_title: 'Подписаться на обновления',
+    footer_newsletter_desc: 'Получайте уведомления о новых аирдропах и тестнетах',
+    footer_email_placeholder: 'Ваш email',
+    footer_subscribe_btn: 'Подписаться',
+    footer_privacy_note: 'Мы уважаем вашу конфиденциальность. Отписаться можно в любой момент.',
+    footer_already_subscribed: 'Уже подписаны ✓',
+    footer_thanks: 'Спасибо! ✓',
+    footer_subscribed_toast: 'Подписка оформлена!',
+    footer_already_toast: 'Этот email уже подписан!',
+    footer_error_toast: 'Ошибка. Попробуйте позже.',
+    footer_invalid_email: 'Введите корректный email',
+    footer_sending: 'Отправка...',
+    
+    // Bottom bar
+    footer_rights: 'Все права защищены.',
+    footer_made_with: 'Сделано с',
+    footer_love: 'любовью к крипте',
+    footer_back_to_top: 'Наверх',
+    
+    // Mobile bottom links
+    footer_mobile_terms: 'Условия',
+    footer_mobile_privacy: 'Приватность',
+    
+    // Newsletter success modal
+    newsletter_success_title: 'Подписка оформлена!',
+    newsletter_success_desc: 'Вы будете получать уведомления о новых аирдропах и важных обновлениях.',
+    
+    // Support modal
+    footer_support_title: 'Служба поддержки',
+    footer_support_subtitle: 'Мы ответим на ваш вопрос в течение 24 часов',
+    footer_support_category: 'Тема обращения *',
+    footer_support_select: 'Выберите категорию',
+    footer_support_technical: '🔧 Техническая проблема',
+    footer_support_account: '👤 Проблема с аккаунтом',
+    footer_support_project: '📋 Вопрос о проекте',
+    footer_support_suggestion: '💡 Предложение',
+    footer_support_partnership: '🤝 Партнёрство',
+    footer_support_other: '💬 Другое',
+    footer_support_name: 'Ваше имя',
+    footer_support_email: 'Email *',
+    footer_support_subject: 'Заголовок *',
+    footer_support_subject_placeholder: 'Краткое описание проблемы',
+    footer_support_message: 'Подробное описание *',
+    footer_support_message_placeholder: 'Опишите вашу проблему подробно...',
+    footer_support_submit: 'Отправить обращение',
+    footer_support_sent: 'Обращение отправлено! Ответим в течение 24 часов.',
+    footer_support_login: 'Войдите в аккаунт!',
+    footer_support_error: 'Ошибка отправки',
+    footer_support_sending: 'Отправка...',
+    
+    // FAQ modal
+    footer_faq_title: 'Часто задаваемые вопросы',
+    footer_faq_subtitle: 'Ответы на популярные вопросы о AirdropLab',
+    footer_faq_not_found: 'Не нашли ответ?',
+    footer_faq_contact: 'Свяжитесь с нашей службой поддержки',
+    footer_faq_write: 'Написать в поддержку',
+    
+    // FAQ questions & answers
+    faq_q1: 'Как начать участвовать в аирдропах?',
+    faq_a1: 'Зарегистрируйтесь на AirdropLab, выберите интересующий проект из списка и следуйте инструкциям в гайде. Выполняйте задания и следите за обновлениями.',
+    faq_q2: 'Что такое тестнет и зачем в нем участвовать?',
+    faq_a2: 'Тестнет - это тестовая сеть блокчейна до его запуска в основной сети. Участие в тестнетах позволяет получить токены проекта бесплатно, которые могут стать ценными при запуске mainnet.',
+    faq_q3: 'Как не попасть на скам-проект?',
+    faq_a3: 'Мы проверяем все проекты перед добавлением, но всегда проводите собственное исследование. Не вводите приватные ключи, не отправляйте ETH на неизвестные адреса и не доверяйте проектам без аудита безопасности.',
+    faq_q4: 'Почему проект не отображается в списке?',
+    faq_a4: 'Проект может быть в архиве (завершен), находиться на модерации или быть удален. Также убедитесь, что вы используете правильные фильтры в боковой панели.',
+    faq_q5: 'Как получить помощь по проекту?',
+    faq_a5: 'Используйте раздел "Поддержка" в футере или оставьте отзыв на странице конкретного проекта. Наша команда отвечает в течение 24 часов.',
+    faq_q6: 'Можно ли добавить свой проект?',
+    faq_a6: 'Да, вы можете предложить проект через форму обратной связи или написав в Telegram. Мы рассмотрим все предложения.',
+    
+    // Guides modal
+    footer_guides_title: 'Гайды',
+    footer_guides_subtitle: 'Пошаговые инструкции по участию в тестнетах',
+    footer_guide_active: 'Активен',
+    footer_guide_go: 'Перейти к гайду',
+    footer_guide_lock: 'Для доступа к гайдам необходимо выполнить задания на главной странице',
+    
+    // Account modal
+    footer_account_manage: 'Управление профилем и настройками',
+    footer_account_not_logged: 'Вход не выполнен',
+    footer_account_login_desc: 'Войдите в аккаунт для управления профилем',
+    footer_account_firstname: 'Имя',
+    footer_account_lastname: 'Фамилия',
+    footer_account_username: 'Никнейм',
+    footer_account_telegram: 'Telegram',
+    footer_account_birthdate: 'Дата рождения',
+    footer_account_gender: 'Пол',
+    footer_account_male: 'Мужской',
+    footer_account_female: 'Женский',
+    footer_account_other_gender: 'Другое',
+    footer_account_country: 'Страна',
+    footer_account_bio: 'О себе',
+    footer_account_bio_placeholder: 'Расскажите о себе...',
+    footer_account_cancel: 'Отмена',
+    footer_account_save: 'Сохранить',
+    footer_account_saved: 'Профиль сохранён!',
+    footer_account_saved_local: 'Профиль сохранён локально',
+    footer_account_photo: 'Фото обновлено!',
+    
+    // Legal modals
+    footer_legal_updated: 'Обновлено:',
+    footer_legal_close: 'Закрыть',
+    
+    // Legal titles
+    legal_terms_title: 'Условия использования',
+    legal_privacy_title: 'Политика конфиденциальности',
+    legal_cookie_title: 'Политика использования Cookies',
+    legal_disclaimer_title: 'Отказ от ответственности',
+    legal_updated_date: '07 марта 2026'
   },
   
   en: {
@@ -362,6 +505,149 @@ const translations = {
     support_message_placeholder: 'Describe your issue in detail...',
     cat_technical: 'Technical Issue',
     cat_account: 'Account Problem',
+        // ============ FOOTER TRANSLATIONS ============
+    // Brand
+    footer_tagline: 'Crypto Opportunities Laboratory',
+    footer_tagline_desc: 'We research, test and help participate in the most promising airdrops and testnets.',
+    footer_live: 'Live',
+    footer_updated: 'Updated',
+    
+    // Quick Links
+    footer_quick_links: 'Quick Links',
+    footer_home: 'Home',
+    footer_projects: 'Projects',
+    footer_guides: 'Guides',
+    footer_support: 'Support',
+    
+    // Account section
+    footer_account_title: 'My Account',
+    footer_my_account: 'My Account',
+    footer_faq: 'FAQ',
+    footer_language: 'Language',
+    footer_active_users: 'active',
+    footer_projects_count: 'projects',
+    
+    // Legal
+    footer_legal_title: 'Legal Information',
+    footer_documents: 'Documents',
+    footer_terms: 'Terms of Service',
+    footer_privacy: 'Privacy Policy',
+    footer_cookies: 'Cookie Policy',
+    footer_disclaimer: 'Disclaimer',
+    footer_contacts: 'Contacts',
+    footer_worldwide: 'Worldwide (Remote)',
+    
+    // Newsletter
+    footer_newsletter_title: 'Subscribe to Updates',
+    footer_newsletter_desc: 'Get notified about new airdrops and testnets',
+    footer_email_placeholder: 'Your email',
+    footer_subscribe_btn: 'Subscribe',
+    footer_privacy_note: 'We respect your privacy. Unsubscribe at any time.',
+    footer_already_subscribed: 'Already subscribed ✓',
+    footer_thanks: 'Thank you! ✓',
+    footer_subscribed_toast: 'Subscribed successfully!',
+    footer_already_toast: 'This email is already subscribed!',
+    footer_error_toast: 'Error. Please try again.',
+    footer_invalid_email: 'Please enter a valid email',
+    footer_sending: 'Sending...',
+    
+    // Bottom bar
+    footer_rights: 'All rights reserved.',
+    footer_made_with: 'Made with',
+    footer_love: 'love for crypto',
+    footer_back_to_top: 'Back to top',
+    
+    // Mobile bottom links
+    footer_mobile_terms: 'Terms',
+    footer_mobile_privacy: 'Privacy',
+    
+    // Newsletter success modal
+    newsletter_success_title: 'Subscribed!',
+    newsletter_success_desc: 'You will receive notifications about new airdrops and important updates.',
+    
+    // Support modal
+    footer_support_title: 'Support Center',
+    footer_support_subtitle: 'We will answer your question within 24 hours',
+    footer_support_category: 'Subject *',
+    footer_support_select: 'Select category',
+    footer_support_technical: '🔧 Technical Issue',
+    footer_support_account: '👤 Account Problem',
+    footer_support_project: '📋 Project Question',
+    footer_support_suggestion: '💡 Suggestion',
+    footer_support_partnership: '🤝 Partnership',
+    footer_support_other: '💬 Other',
+    footer_support_name: 'Your Name',
+    footer_support_email: 'Email *',
+    footer_support_subject: 'Subject *',
+    footer_support_subject_placeholder: 'Brief description of the issue',
+    footer_support_message: 'Detailed Description *',
+    footer_support_message_placeholder: 'Describe your issue in detail...',
+    footer_support_submit: 'Submit Request',
+    footer_support_sent: 'Request submitted! We will respond within 24 hours.',
+    footer_support_login: 'Please log in!',
+    footer_support_error: 'Submission error',
+    footer_support_sending: 'Sending...',
+    
+    // FAQ modal
+    footer_faq_title: 'Frequently Asked Questions',
+    footer_faq_subtitle: 'Answers to popular questions about AirdropLab',
+    footer_faq_not_found: "Didn't find an answer?",
+    footer_faq_contact: 'Contact our support team',
+    footer_faq_write: 'Write to Support',
+    
+    // FAQ questions & answers
+    faq_q1: 'How to start participating in airdrops?',
+    faq_a1: 'Register on AirdropLab, select a project from the list and follow the guide instructions. Complete tasks and track updates.',
+    faq_q2: 'What is a testnet and why participate?',
+    faq_a2: 'A testnet is a test blockchain network before its mainnet launch. Participating in testnets allows you to earn project tokens for free, which may become valuable at mainnet launch.',
+    faq_q3: 'How to avoid scam projects?',
+    faq_a3: 'We verify all projects before adding them, but always do your own research. Never enter private keys, never send ETH to unknown addresses, and never trust projects without a security audit.',
+    faq_q4: 'Why is a project not showing in the list?',
+    faq_a4: 'The project may be archived (completed), under moderation, or deleted. Also make sure you are using the correct filters in the sidebar.',
+    faq_q5: 'How to get help with a project?',
+    faq_a5: 'Use the "Support" section in the footer or leave feedback on the specific project page. Our team responds within 24 hours.',
+    faq_q6: 'Can I add my own project?',
+    faq_a6: 'Yes, you can suggest a project through the feedback form or by writing to Telegram. We will review all suggestions.',
+    
+    // Guides modal
+    footer_guides_title: 'Guides',
+    footer_guides_subtitle: 'Step-by-step instructions for participating in testnets',
+    footer_guide_active: 'Active',
+    footer_guide_go: 'Go to Guide',
+    footer_guide_lock: 'Complete tasks on the main page to access guides',
+    
+    // Account modal
+    footer_account_manage: 'Manage profile and settings',
+    footer_account_not_logged: 'Not Logged In',
+    footer_account_login_desc: 'Log in to manage your profile',
+    footer_account_firstname: 'First Name',
+    footer_account_lastname: 'Last Name',
+    footer_account_username: 'Username',
+    footer_account_telegram: 'Telegram',
+    footer_account_birthdate: 'Date of Birth',
+    footer_account_gender: 'Gender',
+    footer_account_male: 'Male',
+    footer_account_female: 'Female',
+    footer_account_other_gender: 'Other',
+    footer_account_country: 'Country',
+    footer_account_bio: 'About Me',
+    footer_account_bio_placeholder: 'Tell us about yourself...',
+    footer_account_cancel: 'Cancel',
+    footer_account_save: 'Save',
+    footer_account_saved: 'Profile saved!',
+    footer_account_saved_local: 'Profile saved locally',
+    footer_account_photo: 'Photo updated!',
+    
+    // Legal modals
+    footer_legal_updated: 'Updated:',
+    footer_legal_close: 'Close',
+    
+    // Legal titles
+    legal_terms_title: 'Terms of Service',
+    legal_privacy_title: 'Privacy Policy',
+    legal_cookie_title: 'Cookie Policy',
+    legal_disclaimer_title: 'Disclaimer',
+    legal_updated_date: 'March 07, 2026'
   }
 };
 
