@@ -428,6 +428,9 @@
                             <a href="#projects" class="footer-link text-slate-400 hover:text-white"><i class="fas fa-layer-group w-4"></i> Проекты</a>
                             <a href="#" onclick="openPageModal('guides'); return false;" class="footer-link text-slate-400 hover:text-white"><i class="fas fa-book-open w-4"></i> Гайды</a>
                             <a href="#" onclick="openSupportModal(); return false;" class="footer-link text-slate-400 hover:text-white"><i class="fas fa-headset w-4"></i> Поддержка</a>
+                            <a href="#" onclick="openMySupportTickets(); return false;" class="footer-link text-slate-400 hover:text-white">
+    <i class="fas fa-life-ring w-4"></i> Мои обращения
+</a>
                             <a href="https://cryptorank.io" target="_blank" class="footer-link text-slate-400 hover:text-white"><i class="fas fa-chart-line w-4"></i> CryptoRank</a>
                         </nav>
                     </div>
@@ -1004,3 +1007,44 @@ window.submitSupportTicket = async function(e) {
     }
 
 })();
+window.openMySupportTickets = function() {
+    if (!currentUser) {
+        showToast('Войдите для просмотра');
+        return;
+    }
+    
+    const modal = document.getElementById('pageModal');
+    const content = document.getElementById('pageModalContent');
+    
+    // Загружаем из Firebase
+    let tickets = JSON.parse(localStorage.getItem('supportTickets') || '[]');
+    
+    // Фильтруем только обращения текущего пользователя
+    tickets = tickets.filter(t => t.userId === currentUser.uid);
+    
+    content.innerHTML = `
+        <div class="bg-gradient-to-r from-slate-900 to-slate-800 p-6 border-b border-slate-700">
+            <h2 class="text-2xl font-bold text-white">
+                <i class="fas fa-life-ring text-purple-400 mr-2"></i>Мои обращения в поддержку
+            </h2>
+        </div>
+        <div class="p-6 max-h-[70vh] overflow-y-auto">
+            ${tickets.length > 0 ? tickets.map(ticket => `
+                <div class="border border-slate-700 rounded-xl p-4 mb-4">
+                    <div class="flex justify-between items-start mb-2">
+                        <div>
+                            <div class="font-bold text-white">${ticket.subject}</div>
+                            <div class="text-xs text-slate-400">${ticket.category} • ${new Date(ticket.createdAt).toLocaleDateString('ru-RU')}</div>
+                        </div>
+                        <span class="px-2 py-1 rounded text-xs ${ticket.status === 'open' ? 'bg-yellow-500/20 text-yellow-400' : 'bg-green-500/20 text-green-400'}">
+                            ${ticket.status === 'open' ? 'Открыт' : 'Закрыт'}
+                        </span>
+                    </div>
+                    <div class="text-sm text-slate-300">${ticket.message}</div>
+                </div>
+            `).join('') : '<div class="text-center text-slate-500 py-8">Нет обращений</div>'}
+        </div>
+    `;
+    
+    modal.classList.add('active');
+};
