@@ -11,7 +11,7 @@
     <link rel="stylesheet" href="styles.css">
     <!-- languages.js ДОЛЖЕН загружаться ПЕРЕД основным скриптом -->
     <script src="languages.js"></script>
-    <script src="footer.js"></script>
+     <script src="footer.js"></script>
    <style>
        #langBtn {
   display: flex;
@@ -316,12 +316,6 @@
         </div>
       </div>
       <div class="flex gap-2 items-center">
-          <div id="supportPanel" class="hidden">
-    <button onclick="openSupportMessagesModal()" class="relative p-2.5 text-slate-400 hover:text-purple-400 transition-all rounded-xl hover:bg-purple-500/10 group border border-transparent hover:border-purple-500/30">
-        <i class="fas fa-headset text-lg group-hover:animate-bounce"></i>
-        <span id="supportPanelBadge" class="absolute -top-1 -right-1 w-5 h-5 bg-gradient-to-r from-purple-500 to-pink-500 rounded-full text-xs flex items-center justify-center hidden font-bold shadow-lg shadow-purple-500/50">0</span>
-    </button>
-</div>
         <div id="notificationPanel" class="relative">
           <button onclick="showNotifications()" class="relative p-2.5 text-slate-400 hover:text-cyan-400 transition-all rounded-xl hover:bg-cyan-500/10 group border border-transparent hover:border-cyan-500/30">
             <i class="fas fa-bell text-lg group-hover:animate-bounce"></i>
@@ -838,35 +832,40 @@ const COMPLETED_KEY = 'arc_completed_v1';
 const NEW_ACTIVITIES_KEY = 'arc_new_activities_v1';
 const VIEWED_ACTIVITIES_KEY = 'arc_viewed_activities_v1';
 
-var projects = [];
-var categories = ['DeFi', 'Gaming', 'Infra', 'L1/L2', 'NFT', 'Social', 'Other'];
-var currentFilters = { statuses: [], categories: [] };
-var editingId = null;
-var isEditModalOpen = false;
-var currentDetailId = null;
-var isAdminMode = false;
-var currentUser = null;
-var userFavorites = [];
-var userCompleted = [];
-var arcData = JSON.parse(localStorage.getItem(STORAGE_KEY)) || [];
-var tempCustomCategories = [];
-var newActivitiesData = JSON.parse(localStorage.getItem(NEW_ACTIVITIES_KEY)) || {};
-var viewedActivitiesData = JSON.parse(localStorage.getItem(VIEWED_ACTIVITIES_KEY)) || {};
-var notifications = [];
-var unreadNotificationsCount = 0;
-var notificationsUnsubscribe = null;
-var currentImageIndex = 0;
-var currentImages = [];
-var itemsPerPage = parseInt(localStorage.getItem('itemsPerPage')) || 10;
-var currentPage = parseInt(localStorage.getItem('currentPage'), 10) || 1;
-var currentFilteredList = [];
-var pendingLinkInsert = null;
-var currentEditingActivities = [];
-var editingActivityId = null;
-var mainProjectCategories = [];
-var currentSortType = 'latest';
-var useEnglishData = false;
-var modalClickStartTarget = null;
+let projects = [];
+let categories = ['DeFi', 'Gaming', 'Infra', 'L1/L2', 'NFT', 'Social', 'Other'];
+let currentFilters = { statuses: [], categories: [] };
+let editingId = null;
+let isEditModalOpen = false;
+let currentDetailId = null;
+let isAdminMode = false;
+let currentUser = null;
+let userFavorites = [];
+let userCompleted = [];
+let arcData = JSON.parse(localStorage.getItem(STORAGE_KEY)) || {};
+let tempCustomCategories = [];
+let newActivitiesData = JSON.parse(localStorage.getItem(NEW_ACTIVITIES_KEY)) || {};
+let viewedActivitiesData = JSON.parse(localStorage.getItem(VIEWED_ACTIVITIES_KEY)) || {};
+
+let notifications = [];
+let unreadNotificationsCount = 0;
+let notificationsUnsubscribe = null;
+let currentImageIndex = 0;
+let currentImages = [];
+let itemsPerPage = parseInt(localStorage.getItem('itemsPerPage')) || 10;
+let currentPage = parseInt(localStorage.getItem('currentPage'), 10) || 1;
+let currentFilteredList = [];
+let pendingLinkInsert = null;
+let currentEditingActivities = [];
+let editingActivityId = null;
+let mainProjectCategories = [];
+let currentSortType = 'latest';
+
+// English data source flag
+let useEnglishData = false;
+
+// Modal click tracking
+let modalClickStartTarget = null;
 
 // ============ LANGUAGE SYSTEM FUNCTIONS ============
 
@@ -1043,87 +1042,24 @@ function initFeedbacksListener(uid) {
   let q;
   const isAdmin = uid === "SAkz4mdW9reDaIsvqigCNZhEKJR2";
   try {
-    if (isAdmin) {
-      // Для админа получаем ВСЕ обращения (и support, и feedback)
-      q = query(collection(db, "feedbacks"));
-      q = query(collection(db, "supportTickets")); // ДОБАВЛЯЕМ также supportTickets
-    } else {
-      // Для пользователя получаем его обращения
-      q = query(
-        collection(db, "feedbacks"), 
-        where("userId", "==", uid)
-      );
-    }
-    
-    // Слушаем обе коллекции
-    const unsub1 = onSnapshot(query(collection(db, "feedbacks"), isAdmin ? query() : where("userId", "==", uid)), (snapshot) => {
-      // Обрабатываем feedback
-      snapshot.forEach((doc) => {
-        const data = doc.data();
-        if (isAdmin && data.deleted) return;
-        if (!isAdmin && data.userDeleted) return;
-        // Не добавляем support в общий список feedback
-        if (data.type === 'support') return;
-        
-        data.id = doc.id;
-        const existingIdx = adminFeedbacks.findIndex(f => f.id === data.id);
-        if (existingIdx >= 0) {
-          adminFeedbacks[existingIdx] = data;
-        } else {
-          adminFeedbacks.push(data);
-        }
-      });
-      updateFeedbackList();
-    });
-    
-    const unsub2 = onSnapshot(query(collection(db, "supportTickets"), isAdmin ? query() : where("userId", "==", uid)), (snapshot) => {
-      // Обрабатываем support
-      snapshot.forEach((doc) => {
-        const data = doc.data();
-        if (isAdmin && data.deleted) return;
-        if (!isAdmin && data.userDeleted) return;
-        
-        data.id = doc.id;
-        data.type = 'support'; // Явно указываем тип
-        
-        const existingIdx = adminFeedbacks.findIndex(f => f.id === data.id);
-        if (existingIdx >= 0) {
-          adminFeedbacks[existingIdx] = data;
-        } else {
-          adminFeedbacks.push(data);
-        }
-      });
-      updateFeedbackList();
-    });
-    
-    // Обновляем UI
-    function updateFeedbackList() {
-      adminFeedbacks.sort((a, b) => (b.createdAt?.toDate() || new Date(b.createdAt || 0)) - (a.createdAt?.toDate() || new Date(a.createdAt || 0)));
-      
-      // Считаем непрочитанные
+    if (isAdmin) q = query(collection(db, "feedbacks"));
+    else q = query(collection(db, "feedbacks"), where("userId", "==", uid));
+    adminFeedbacksUnsubscribe = onSnapshot(q, (snapshot) => {
+      adminFeedbacks = [];
       let unreadCount = 0;
-      adminFeedbacks.forEach(fb => {
-        if (isAdmin ? !fb.read : !fb.userRead) unreadCount++;
+      snapshot.forEach((doc) => {
+        const data = doc.data();
+        if (isAdmin && data.deleted) return;
+        if (!isAdmin && data.userDeleted) return;
+        data.id = doc.id;
+        if (isAdmin ? !data.read : !data.userRead) unreadCount++;
+        adminFeedbacks.push(data);
       });
-      
+      adminFeedbacks.sort((a, b) => (b.createdAt?.toDate() || new Date(b.createdAt || 0)) - (a.createdAt?.toDate() || new Date(a.createdAt || 0)));
       updateFeedbackBadgeUI(unreadCount);
-      
-      // Обновляем badge поддержки
-      const supportBadge = document.getElementById('supportPanelBadge');
-      const supportUnread = adminFeedbacks.filter(fb => fb.type === 'support' && (isAdmin ? !fb.read : !fb.userRead)).length;
-      if (supportBadge) {
-        if (supportUnread > 0) {
-          supportBadge.textContent = supportUnread > 9 ? '9+' : supportUnread;
-          supportBadge.classList.remove('hidden');
-        } else {
-          supportBadge.classList.add('hidden');
-        }
-      }
-      
       const listModal = document.getElementById('feedbackListModal');
       if (listModal && listModal.classList.contains('active')) renderFeedbackList();
-    }
-    
+    });
   } catch (e) { console.error("Error init listener:", e); }
 }
 
@@ -1271,35 +1207,16 @@ window.renderFeedbackList = function() {
     container.innerHTML = '<div class="text-center py-12 text-slate-500"><div class="bg-slate-800/50 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4"><i class="fas fa-inbox text-2xl text-slate-600"></i></div><p>' + t('no_messages') + '</p></div>';
     return; 
   }
-
-  // Фильтруем по типу: для пользователя - только feedback, для админа - все
-  let filteredFeedbacks = adminFeedbacks;
-  if (!isAdmin) {
-    filteredFeedbacks = adminFeedbacks.filter(fb => fb.type !== 'support');
-  }
   
-  if (filteredFeedbacks.length === 0) {
-    const emptyMessage = isAdmin 
-      ? 'Нет отзывов и предложений' 
-      : 'У вас пока нет отзывов о проектах';
-    container.innerHTML = '<div class="text-center py-12 text-slate-500"><div class="bg-slate-800/50 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4"><i class="fas fa-inbox text-2xl text-slate-600"></i></div><p>' + emptyMessage + '</p></div>';
-    return;
-  }
-  
-  container.innerHTML = filteredFeedbacks.map((item) => {
+  container.innerHTML = adminFeedbacks.map((item) => {
     const messages = item.messages || [];
     const lastMsg = messages[messages.length - 1] || { text: '...', sender: 'unknown' };
     const date = item.createdAt?.toDate() || new Date(item.createdAt || 0);
     const isUnread = isAdmin ? !item.read : !item.userRead;
     const project = getProj(item.projectId);
-    const projectName = project.name || item.projectId || (item.type === 'support' ? 'Поддержка' : 'Неизвестный проект');
+    const projectName = project.name || item.projectId || 'Неизвестный проект';
     const projectLogo = project.image || '';
     const projectId = item.projectId || '';
-    
-    // Добавляем иконку типа
-    const typeIcon = item.type === 'support' 
-      ? '<i class="fas fa-headset text-purple-400 mr-1"></i>' 
-      : '<i class="fas fa-comment-dots text-blue-400 mr-1"></i>';
     
     let titleHtml = '';
     if (isAdmin) {
@@ -1311,7 +1228,7 @@ window.renderFeedbackList = function() {
       
       titleHtml = `
         <div class="flex flex-col gap-1">
-          <div class="flex items-center gap-1.5">${typeIcon}${projectInfoHtml}</div>
+          <div class="flex items-center gap-1.5">${projectInfoHtml}</div>
           <div class="text-xs text-slate-400 flex items-center gap-1">
             <span>от</span>
             <span class="text-white font-medium">${item.userName || 'Пользователь'}</span>
@@ -1536,149 +1453,47 @@ async function syncLocalStorageToFirestore(userId) {
     if (Object.keys(updates).length > 0) await updateDoc(userRef, updates);
   } catch (e) { console.error('Error sync:', e); }
 }
-// После получения данных пользователя добавь:
-async function loadUserProfileData(user) {
-    if (!user) return;
-    
-    try {
-        const userDoc = await getDoc(doc(db, "users", user.uid));
-        if (userDoc.exists()) {
-            const data = userDoc.data();
-            
-            // Обновляем имя
-            if (data.profile?.firstName || data.profile?.lastName) {
-                const displayName = [data.profile.firstName, data.profile.lastName].filter(Boolean).join(' ');
-                document.getElementById('userName').textContent = displayName;
-            }
-            
-            // Обновляем аватар
-            if (data.profile?.avatar) {
-                document.getElementById('userAvatar').src = data.profile.avatar;
-            } else if (user.photoURL) {
-                document.getElementById('userAvatar').src = user.photoURL;
-            }
-        }
-    } catch (e) {
-        console.log('Profile load error:', e);
-    }
-}
-
 
 onAuthStateChanged(auth, async function(user) {
-
-  // 🔄 Всегда обновляем глобальные переменные
-  window.currentUser = user;
-  currentUser = user;
-
   if (user) {
-    // ============================
-    // 🔐 ПОЛЬЗОВАТЕЛЬ АВТОРИЗОВАН
-    // ============================
-
+    currentUser = user;
     await saveUserData(user);
     await syncLocalStorageToFirestore(user.uid);
-
-    // Показываем панели
     document.getElementById('generalFeedbackPanel').classList.remove('hidden');
-    document.getElementById('supportPanel').classList.remove('hidden');
-
     initFeedbacksListener(user.uid);
-
-    // Admin mode
-    if (user.uid === "SAkz4mdW9reDaIsvqigCNZhEKJR2") {
-      activateAdminMode();
-    }
-
-    // Загрузка данных пользователя
+    if (user.uid === "SAkz4mdW9reDaIsvqigCNZhEKJR2") activateAdminMode();
     try {
       const userRef = doc(db, "users", user.uid);
       const userDoc = await getDoc(userRef);
-
       if (userDoc.exists()) {
         const data = userDoc.data();
         userFavorites = data.favorites || [];
         userCompleted = data.completed || [];
-
-        if (data.arcGuideStats) {
-          arcData = { ...arcData, ...data.arcGuideStats };
-          localStorage.setItem(STORAGE_KEY, JSON.stringify(arcData));
-        }
-
-      } else {
-        await setDoc(userRef, {
-          favorites: [],
-          completed: [],
-          arcGuideStats: {}
-        });
-      }
-
-    } catch (e) {
-      console.error("Error:", e);
-    }
-
-    // UI обновление
+        if (data.arcGuideStats) { arcData = { ...arcData, ...data.arcGuideStats }; localStorage.setItem(STORAGE_KEY, JSON.stringify(arcData)); }
+      } else { await setDoc(userRef, { favorites: [], completed: [], arcGuideStats: {} }); }
+    } catch (e) { console.error('Error:', e); }
     document.getElementById('loggedOutView').classList.add('hidden');
     document.getElementById('loggedInView').classList.remove('hidden');
     document.getElementById('guestWarning').classList.add('hidden');
-
-    document.getElementById('userAvatar').src =
-      user.photoURL ||
-      'https://ui-avatars.com/api/?name=' +
-      (user.email || 'User') +
-      '&background=random';
-
-    document.getElementById('userName').textContent =
-      user.displayName || user.email.split('@')[0];
-
+    document.getElementById('userAvatar').src = user.photoURL || 'https://ui-avatars.com/api/?name=' + (user.email || 'User') + '&background=random';
+    document.getElementById('userName').textContent = user.displayName || user.email.split('@')[0];
     initUserSync(user.uid);
     initNotificationsListener(user.uid);
     applyFilters();
-
   } else {
-
-    // ============================
-    // 🚪 ПОЛЬЗОВАТЕЛЬ ВЫШЕЛ
-    // ============================
-
-    currentUser = null;
-    window.currentUser = null;
-
-    userFavorites = [];
-    userCompleted = [];
-
-    // Скрываем панели
+    currentUser = null; userFavorites = []; userCompleted = [];
     document.getElementById('generalFeedbackPanel').classList.add('hidden');
-    document.getElementById('supportPanel').classList.add('hidden');
-
-    // Отписки
-    if (notificationsUnsubscribe) {
-      notificationsUnsubscribe();
-      notificationsUnsubscribe = null;
-    }
-
-    if (adminFeedbacksUnsubscribe) {
-      adminFeedbacksUnsubscribe();
-      adminFeedbacksUnsubscribe = null;
-    }
-
-    notifications = [];
-    unreadNotificationsCount = 0;
-    updateNotificationBadge();
-
-    // UI
+    if (notificationsUnsubscribe) { notificationsUnsubscribe(); notificationsUnsubscribe = null; }
+    if (adminFeedbacksUnsubscribe) { adminFeedbacksUnsubscribe(); adminFeedbacksUnsubscribe = null; }
+    notifications = []; unreadNotificationsCount = 0; updateNotificationBadge();
     document.getElementById('loggedOutView').classList.remove('hidden');
     document.getElementById('loggedInView').classList.add('hidden');
     document.getElementById('guestWarning').classList.remove('hidden');
-
     arcData = JSON.parse(localStorage.getItem(STORAGE_KEY)) || [];
     userCompleted = JSON.parse(localStorage.getItem(COMPLETED_KEY) || []);
-
     applyFilters();
-
-    loadUserProfileData(user); // user = null, но функция должна вызваться
   }
 });
-
 
 function initUserSync(uid) {
   const userRef = doc(db, "users", uid);
@@ -3005,31 +2820,6 @@ function detectNewActivities() {
 setTimeout(() => {
   detectNewActivities();
 }, 1000);
-    window.openAdminSupportPanel = function() {
-  // Открывает те же отзывы, но отфильтрованные по type === 'support'
-  window.openFeedbackListModal();
-  // Фильтр по поддержке можно добавить в existing функцию
-};
-    // Экспорт переменных в глобальную область видимости для footer.js
-window.currentUser = currentUser;
-window.db = db;
-window.auth = auth;
-window.projects = projects;
-window.categories = categories;
-window.userProfileData = window.userProfileData || {};
-
-// Добавляем функции Firebase для доступа из footer
-window.addDoc = addDoc;
-window.collection = collection;
-window.doc = doc;
-window.setDoc = setDoc;
-window.getDoc = getDoc;
-window.getDocs = getDocs;
-window.updateDoc = updateDoc;
-window.query = query;
-window.where = where;
-window.serverTimestamp = serverTimestamp;
-window.arrayUnion = arrayUnion;
 </script>
 </body>
 </html>
