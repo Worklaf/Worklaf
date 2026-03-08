@@ -301,51 +301,86 @@
     }
 
     function getAccountContent() {
-        const refs = getFirebaseRefs();
-        const user = refs.currentUser;
-        const userData = window.userProfileData || {};
-        
-        return `
-            <div class="bg-gradient-to-r from-slate-900 to-slate-800 p-6 border-b border-slate-700">
-                <h2 class="text-2xl font-bold text-white">Личный кабинет</h2>
-            </div>
-            <div class="p-6 max-h-[70vh] overflow-y-auto">
-                ${user ? `
-                    <div class="flex items-center gap-6 mb-8 pb-6 border-b border-slate-700/50">
+    const refs = getFirebaseRefs();
+    const user = refs.currentUser;
+    const userData = window.userProfileData || {};
+    
+    return `
+        <div class="bg-gradient-to-r from-slate-900 to-slate-800 p-6 border-b border-slate-700">
+            <h2 class="text-2xl font-bold text-white">Личный кабинет</h2>
+        </div>
+        <div class="p-6 max-h-[70vh] overflow-y-auto">
+            ${user ? `
+                <div class="flex items-center gap-6 mb-8 pb-6 border-b border-slate-700/50">
+                    <div class="relative group">
                         <div class="w-24 h-24 rounded-full overflow-hidden border-4 border-cyan-500/50">
-                            <img id="accountAvatar" src="${user.photoURL || 'https://ui-avatars.com/api/?name=' + (user.displayName || 'U')}" class="w-full h-full object-cover">
+                            <img id="accountAvatar" 
+                                 src="${userData.avatar || user.photoURL || 'https://ui-avatars.com/api/?name=' + (user.displayName || 'U')}" 
+                                 class="w-full h-full object-cover">
+                        </div>
+
+                        <!-- 🔥 Кнопка смены аватара -->
+                        <button onclick="changeAvatar()" 
+                                class="absolute bottom-0 right-0 w-8 h-8 bg-cyan-500 rounded-full flex items-center justify-center text-white hover:bg-cyan-400 transition-colors shadow-lg">
+                            <i class="fas fa-camera text-xs"></i>
+                        </button>
+                    </div>
+
+                    <div>
+                        <h3 class="text-xl font-bold text-white">${user.displayName || 'Пользователь'}</h3>
+                        <p class="text-slate-400">${user.email}</p>
+                    </div>
+                </div>
+                
+                <form id="accountForm" onsubmit="saveAccountProfile(event)" class="space-y-4">
+                    <div class="grid grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-sm font-medium text-slate-300 mb-2">Имя</label>
+                            <input type="text" id="profileFirstName" value="${userData.firstName || ''}" placeholder="Иван"
+                                   class="w-full bg-slate-800 border border-slate-700 rounded-lg px-4 py-2.5 text-sm text-white">
                         </div>
                         <div>
-                            <h3 class="text-xl font-bold text-white">${user.displayName || 'Пользователь'}</h3>
-                            <p class="text-slate-400">${user.email}</p>
+                            <label class="block text-sm font-medium text-slate-300 mb-2">Фамилия</label>
+                            <input type="text" id="profileLastName" value="${userData.lastName || ''}" placeholder="Иванов"
+                                   class="w-full bg-slate-800 border border-slate-700 rounded-lg px-4 py-2.5 text-sm text-white">
                         </div>
                     </div>
-                    
-                    <form id="accountForm" onsubmit="saveAccountProfile(event)" class="space-y-4">
-                        <div class="grid grid-cols-2 gap-4">
-                            <div><label class="block text-sm font-medium text-slate-300 mb-2">Имя</label><input type="text" id="profileFirstName" value="${userData.firstName || ''}" placeholder="Иван" class="w-full bg-slate-800 border border-slate-700 rounded-lg px-4 py-2.5 text-sm text-white"></div>
-                            <div><label class="block text-sm font-medium text-slate-300 mb-2">Фамилия</label><input type="text" id="profileLastName" value="${userData.lastName || ''}" placeholder="Иванов" class="w-full bg-slate-800 border border-slate-700 rounded-lg px-4 py-2.5 text-sm text-white"></div>
-                        </div>
-                        <div><label class="block text-sm font-medium text-slate-300 mb-2">Telegram</label><input type="text" id="profileTelegram" value="${userData.telegram || ''}" placeholder="@username" class="w-full bg-slate-800 border border-slate-700 rounded-lg px-4 py-2.5 text-sm text-white"></div>
-                        <div class="flex gap-3 pt-4">
-                            <button type="button" onclick="closePageModal()" class="flex-1 bg-slate-700 py-3 rounded-lg text-sm text-white">Отмена</button>
-                            <button type="submit" class="flex-1 bg-gradient-to-r from-cyan-600 to-blue-600 py-3 rounded-lg text-sm font-bold text-white">Сохранить</button>
-                        </div>
-                    </form>
-                    
-                    <div class="mt-8 pt-6 border-t border-slate-700/50">
-                        <button onclick="openDeleteAccountModal()" class="w-full bg-red-500/10 border border-red-500/30 rounded-lg px-4 py-3 text-left text-red-400">Удалить аккаунт</button>
+
+                    <div>
+                        <label class="block text-sm font-medium text-slate-300 mb-2">Telegram</label>
+                        <input type="text" id="profileTelegram" value="${userData.telegram || ''}" placeholder="@username"
+                               class="w-full bg-slate-800 border border-slate-700 rounded-lg px-4 py-2.5 text-sm text-white">
                     </div>
-                ` : `
-                    <div class="text-center py-8">
-                        <div class="w-20 h-20 bg-slate-800 rounded-full flex items-center justify-center mx-auto mb-4"><i class="fas fa-user-lock text-4xl text-slate-500"></i></div>
-                        <h3 class="text-xl font-bold text-white mb-2">Вход не выполнен</h3>
-                        <p class="text-slate-400 mb-6">Войдите для управления профилем</p>
-                        <button onclick="closePageModal(); if(typeof openLoginModal==='function') openLoginModal();" class="bg-gradient-to-r from-cyan-600 to-blue-600 px-6 py-3 rounded-lg text-sm font-bold text-white">Войти</button>
+
+                    <div class="flex gap-3 pt-4">
+                        <button type="button" onclick="closePageModal()" 
+                                class="flex-1 bg-slate-700 py-3 rounded-lg text-sm text-white">Отмена</button>
+                        <button type="submit" 
+                                class="flex-1 bg-gradient-to-r from-cyan-600 to-blue-600 py-3 rounded-lg text-sm font-bold text-white">Сохранить</button>
                     </div>
-                `}
-            </div>`;
-    }
+                </form>
+
+                <div class="mt-8 pt-6 border-t border-slate-700/50">
+                    <button onclick="openDeleteAccountModal()" 
+                            class="w-full bg-red-500/10 border border-red-500/30 rounded-lg px-4 py-3 text-left text-red-400">
+                        Удалить аккаунт
+                    </button>
+                </div>
+            ` : `
+                <div class="text-center py-8">
+                    <div class="w-20 h-20 bg-slate-800 rounded-full flex items-center justify-center mx-auto mb-4">
+                        <i class="fas fa-user-lock text-4xl text-slate-500"></i>
+                    </div>
+                    <h3 class="text-xl font-bold text-white mb-2">Вход не выполнен</h3>
+                    <p class="text-slate-400 mb-6">Войдите для управления профилем</p>
+                    <button onclick="closePageModal(); if(typeof openLoginModal==='function') openLoginModal();" 
+                            class="bg-gradient-to-r from-cyan-600 to-blue-600 px-6 py-3 rounded-lg text-sm font-bold text-white">
+                        Войти
+                    </button>
+                </div>
+            `}
+        </div>`;
+}
 
     function initAccountPage() {
         const refs = getFirebaseRefs();
@@ -368,69 +403,70 @@
     };
 
     window.submitSupportTicket = async function(e) {
-        e.preventDefault();
-        
-        const refs = getFirebaseRefs();
-        if (!refs.currentUser) {
-            footerShowToast('Войдите для отправки обращения');
-            if (typeof openLoginModal === 'function') openLoginModal();
-            return;
-        }
-        
-        const btn = document.getElementById('supportSubmitBtn');
-        const originalText = btn.innerHTML;
-        btn.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i>Отправка...';
-        btn.disabled = true;
-        
-        const categoryText = document.getElementById('supportCategory').options[document.getElementById('supportCategory').selectedIndex].text;
-        
-        const ticketData = {
-            type: 'support',
-            supportCategory: document.getElementById('supportCategory').value,
-            supportCategoryText: categoryText,
-            subject: document.getElementById('supportSubject').value,
-            message: document.getElementById('supportMessage').value,
-            userId: refs.currentUser.uid,
-            userName: refs.currentUser.displayName || refs.currentUser.email,
-            userEmail: refs.currentUser.email,
-            userPhoto: refs.currentUser.photoURL || '',
-            status: 'open',
-            read: false,
-            userRead: true,
-            deleted: false,
-            userDeleted: false,
-            createdAt: refs.serverTimestamp ? refs.serverTimestamp() : new Date().toISOString(),
-            messages: [{
-                sender: 'user',
-                text: document.getElementById('supportMessage').value,
-                timestamp: new Date().toISOString()
-            }]
-        };
-        
-        try {
-            if (refs.db && refs.addDoc && refs.collection) {
-                await refs.addDoc(refs.collection(refs.db, "feedbacks"), ticketData);
-                footerShowToast('Обращение отправлено!');
-            } else {
-                // Локально
-                const supportTickets = JSON.parse(localStorage.getItem('supportTickets') || '[]');
-                ticketData.id = 'local_' + Date.now();
-                ticketData.createdAt = new Date().toISOString();
-                supportTickets.push(ticketData);
-                localStorage.setItem('supportTickets', JSON.stringify(supportTickets));
-                footerShowToast('Обращение сохранено локально');
-            }
-        } catch(err) {
-            console.error('Error:', err);
-            footerShowToast('Ошибка отправки');
-        }
-        
-        btn.innerHTML = originalText;
-        btn.disabled = false;
-        document.getElementById('supportForm').reset();
-        closeSupportModal();
-        updateFooterSupportBadge();
+    e.preventDefault();
+    
+    const refs = getFirebaseRefs();
+    if (!refs.currentUser) {
+        footerShowToast('Войдите для отправки обращения');
+        if (typeof openLoginModal === 'function') openLoginModal();
+        return;
+    }
+    
+    const btn = document.getElementById('supportSubmitBtn');
+    const originalText = btn.innerHTML;
+    btn.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i>Отправка...';
+    btn.disabled = true;
+    
+    const categoryText = document.getElementById('supportCategory').options[document.getElementById('supportCategory').selectedIndex].text;
+    
+    const ticketData = {
+        type: 'support',  // Явно указываем тип
+        supportCategory: document.getElementById('supportCategory').value,
+        supportCategoryText: categoryText,
+        subject: document.getElementById('supportSubject').value,
+        message: document.getElementById('supportMessage').value,
+        userId: refs.currentUser.uid,
+        userName: refs.currentUser.displayName || refs.currentUser.email,
+        userEmail: refs.currentUser.email,
+        userPhoto: refs.currentUser.photoURL || '',
+        status: 'open',
+        read: false,
+        userRead: true,
+        deleted: false,
+        userDeleted: false,
+        createdAt: refs.serverTimestamp ? refs.serverTimestamp() : new Date().toISOString(),
+        messages: [{
+            sender: 'user',
+            text: document.getElementById('supportMessage').value,
+            timestamp: new Date().toISOString()
+        }]
     };
+    
+    try {
+        if (refs.db && refs.addDoc && refs.collection) {
+            // ИСПРАВЛЕНО: используем коллекцию supportTickets
+            await refs.addDoc(refs.collection(refs.db, "supportTickets"), ticketData);
+            footerShowToast('Обращение отправлено!');
+        } else {
+            // Локально
+            const supportTickets = JSON.parse(localStorage.getItem('supportTickets') || '[]');
+            ticketData.id = 'local_' + Date.now();
+            ticketData.createdAt = new Date().toISOString();
+            supportTickets.push(ticketData);
+            localStorage.setItem('supportTickets', JSON.stringify(supportTickets));
+            footerShowToast('Обращение сохранено локально');
+        }
+    } catch(err) {
+        console.error('Error:', err);
+        footerShowToast('Ошибка отправки: ' + err.message);
+    }
+    
+    btn.innerHTML = originalText;
+    btn.disabled = false;
+    document.getElementById('supportForm').reset();
+    closeSupportModal();
+    updateFooterSupportBadge();
+};
 
     // ============ MY SUPPORT MESSAGES ============
 
@@ -464,66 +500,90 @@
     };
 
     async function loadSupportMessages() {
-        const refs = getFirebaseRefs();
-        if (!refs.currentUser) return;
+    const refs = getFirebaseRefs();
+    if (!refs.currentUser) return;
+    
+    const listContainer = document.getElementById('supportMessagesList');
+    const countContainer = document.getElementById('supportMessagesCount');
+    
+    try {
+        let supportTickets = [];
         
-        const listContainer = document.getElementById('supportMessagesList');
-        const countContainer = document.getElementById('supportMessagesCount');
-        
-        try {
-            let supportTickets = [];
-            
-            if (refs.db && refs.getDocs && refs.query && refs.where && refs.collection) {
-                const q = refs.query(
-                    refs.collection(refs.db, "feedbacks"),
-                    refs.where("userId", "==", refs.currentUser.uid),
-                    refs.where("type", "==", "support")
-                );
-                const snapshot = await refs.getDocs(q);
-                snapshot.forEach(doc => {
-                    supportTickets.push({ id: doc.id, ...doc.data() });
-                });
-            } else {
-                const local = JSON.parse(localStorage.getItem('supportTickets') || '[]');
-                supportTickets = local.filter(t => t.userId === refs.currentUser.uid);
-            }
-            
-            supportTickets.sort((a, b) => {
-                const dateA = a.createdAt ? (a.createdAt.toDate ? a.createdAt.toDate() : new Date(a.createdAt)) : new Date(0);
-                const dateB = b.createdAt ? (b.createdAt.toDate ? b.createdAt.toDate() : new Date(b.createdAt)) : new Date(0);
-                return dateB - dateA;
+        if (refs.db && refs.getDocs && refs.query && refs.where && refs.collection) {
+            // ИСПРАВЛЕНО: используем правильную коллекцию
+            const q = refs.query(
+                refs.collection(refs.db, "supportTickets"),
+                refs.where("userId", "==", refs.currentUser.uid)
+            );
+            const snapshot = await refs.getDocs(q);
+            supportTickets = [];
+            snapshot.forEach(doc => {
+                const data = doc.data();
+                // Фильтруем только support тикеты
+                if (data.type === 'support') {
+                    supportTickets.push({ id: doc.id, ...data });
+                }
             });
-            
-            countContainer.textContent = `${supportTickets.length} обращений`;
-            
-            if (supportTickets.length === 0) {
-                listContainer.innerHTML = '<div class="text-center py-12"><p class="text-slate-400">Нет обращений</p></div>';
-                return;
-            }
-            
-            listContainer.innerHTML = supportTickets.map(ticket => {
-                const date = ticket.createdAt ? (ticket.createdAt.toDate ? ticket.createdAt.toDate() : new Date(ticket.createdAt)) : new Date();
-                const dateStr = date.toLocaleDateString('ru-RU');
-                const hasNewReply = !ticket.userRead && ticket.messages && ticket.messages.length > 1;
-                
-                return `
-                    <div class="border border-slate-700/50 rounded-xl p-4 mb-4 ${hasNewReply ? 'bg-purple-500/10' : 'bg-slate-800/30'}">
-                        <div class="flex items-start justify-between mb-2">
-                            <div>
-                                <h4 class="font-bold text-white">${ticket.subject || 'Обращение'}</h4>
-                                <p class="text-xs text-slate-500">${dateStr}</p>
-                            </div>
-                            <span class="px-2 py-1 rounded text-xs ${ticket.status === 'open' ? 'bg-green-500/20 text-green-400' : 'bg-slate-700 text-slate-400'}">${ticket.status === 'open' ? 'Открыт' : 'Закрыт'}</span>
-                        </div>
-                        <button onclick="openSupportChat('${ticket.id}')" class="text-cyan-400 text-sm">${hasNewReply ? 'Есть ответ' : 'Открыть чат'} →</button>
-                    </div>`;
-            }).join('');
-            
-        } catch(err) {
-            console.error('Error:', err);
-            listContainer.innerHTML = '<p class="text-center text-red-400 py-8">Ошибка загрузки</p>';
+        } else {
+            const local = JSON.parse(localStorage.getItem('supportTickets') || '[]');
+            supportTickets = local.filter(t => t.userId === refs.currentUser.uid && t.type === 'support');
         }
+        
+        // Сортируем по дате (новые сверху)
+        supportTickets.sort((a, b) => {
+            const dateA = a.createdAt ? (a.createdAt.toDate ? a.createdAt.toDate() : new Date(a.createdAt)) : new Date(0);
+            const dateB = b.createdAt ? (b.createdAt.toDate ? b.createdAt.toDate() : new Date(b.createdAt)) : new Date(0);
+            return dateB - dateA;
+        });
+        
+        countContainer.textContent = `${supportTickets.length} обращений`;
+        
+        if (supportTickets.length === 0) {
+            listContainer.innerHTML = '<div class="text-center py-12"><p class="text-slate-400">Нет обращений в поддержку</p></div>';
+            return;
+        }
+        
+        listContainer.innerHTML = supportTickets.map(ticket => {
+            const date = ticket.createdAt ? (ticket.createdAt.toDate ? ticket.createdAt.toDate() : new Date(ticket.createdAt)) : new Date();
+            const dateStr = date.toLocaleDateString('ru-RU');
+            
+            // Проверяем есть ли новый ответ от админа
+            const messages = ticket.messages || [];
+            const hasNewReply = !ticket.userRead && messages.length > 1;
+            const lastMessage = messages[messages.length - 1];
+            const isLastFromAdmin = lastMessage && lastMessage.sender === 'admin';
+            
+            return `
+                <div class="border border-slate-700/50 rounded-xl p-4 mb-4 ${hasNewReply ? 'bg-purple-500/10 border-purple-500/30' : 'bg-slate-800/30'}">
+                    <div class="flex items-start justify-between mb-2">
+                        <div>
+                            <div class="flex items-center gap-2">
+                                <span class="px-2 py-0.5 bg-purple-600/30 text-purple-300 text-xs rounded">Support</span>
+                                <h4 class="font-bold text-white">${ticket.subject || 'Обращение в поддержку'}</h4>
+                            </div>
+                            <p class="text-xs text-slate-500 mt-1">${dateStr}</p>
+                        </div>
+                        <span class="px-2 py-1 rounded text-xs ${ticket.status === 'open' ? 'bg-green-500/20 text-green-400' : 'bg-slate-700 text-slate-400'}">${ticket.status === 'open' ? 'Открыт' : 'Закрыт'}</span>
+                    </div>
+                    <div class="text-sm text-slate-400 mb-3">
+                        ${lastMessage ? (lastMessage.text ? lastMessage.text.substring(0, 100) + (lastMessage.text.length > 100 ? '...' : '') : '') : 'Нет сообщений'}
+                    </div>
+                    <div class="flex items-center justify-between">
+                        <span class="text-xs ${isLastFromAdmin && hasNewReply ? 'text-purple-400 font-medium' : 'text-slate-500'}">
+                            ${isLastFromAdmin ? (hasNewReply ? 'Новый ответ' : 'Есть ответ') : 'Ожидает ответа'}
+                        </span>
+                        <button onclick="openSupportChat('${ticket.id}')" class="text-cyan-400 text-sm hover:text-cyan-300">
+                            ${hasNewReply ? 'Есть ответ' : 'Открыть чат'} →
+                        </button>
+                    </div>
+                </div>`;
+        }).join('');
+        
+    } catch(err) {
+        console.error('Error loading support messages:', err);
+        listContainer.innerHTML = '<p class="text-center text-red-400 py-8">Ошибка загрузки: ' + err.message + '</p>';
     }
+}
 
     window.openSupportChat = function(ticketId) {
         if (typeof openFeedbackFromList === 'function') {
@@ -567,85 +627,156 @@
     };
 
     window.submitDeleteAccountRequest = async function(e) {
-        e.preventDefault();
-        const refs = getFirebaseRefs();
+    e.preventDefault();
+    const refs = getFirebaseRefs();
+    
+    if (!refs.currentUser) {
+        footerShowToast('Войдите для удаления аккаунта');
+        return;
+    }
+    
+    const reason = document.getElementById('deleteReason').value;
+    if (!reason) {
+        footerShowToast('Выберите причину');
+        return;
+    }
+    
+    const btn = document.querySelector('#deleteAccountModal button[type="submit"]');
+    if (btn) {
+        btn.disabled = true;
+        btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Отправка...';
+    }
+    
+    try {
+        const requestData = {
+            type: 'account_deletion',
+            userId: refs.currentUser.uid,
+            userEmail: refs.currentUser.email,
+            reason: reason,
+            status: 'pending',
+            createdAt: refs.serverTimestamp ? refs.serverTimestamp() : new Date().toISOString()
+        };
         
-        if (!refs.currentUser) {
-            footerShowToast('Войдите для удаления аккаунта');
-            return;
+        if (refs.db && refs.addDoc && refs.collection) {
+            // ИСПРАВЛЕНО: правильное имя коллекции
+            await refs.addDoc(refs.collection(refs.db, "supportTickets"), requestData);
+            footerShowToast('Запрос отправлен');
+        } else {
+            const requests = JSON.parse(localStorage.getItem('deletionRequests') || '[]');
+            requests.push({ ...requestData, id: 'local_' + Date.now(), createdAt: new Date().toISOString() });
+            localStorage.setItem('deletionRequests', JSON.stringify(requests));
+            footerShowToast('Запрос сохранен локально');
         }
         
-        const reason = document.getElementById('deleteReason').value;
-        if (!reason) {
-            footerShowToast('Выберите причину');
-            return;
-        }
+        closeDeleteAccountModal();
+        document.getElementById('deleteReason').value = '';
         
-        try {
-            const requestData = {
-                type: 'account_deletion',
-                userId: refs.currentUser.uid,
-                userEmail: refs.currentUser.email,
-                reason: reason,
-                status: 'pending',
-                createdAt: refs.serverTimestamp ? refs.serverTimestamp() : new Date().toISOString()
-            };
-            
-            if (refs.db && refs.addDoc && refs.collection) {
-                await refs.addDoc(refs.collection(refs.db, "accountDeletionRequests"), requestData);
-                footerShowToast('Запрос отправлен');
-            } else {
-                const requests = JSON.parse(localStorage.getItem('deletionRequests') || '[]');
-                requests.push({ ...requestData, id: 'local_' + Date.now(), createdAt: new Date().toISOString() });
-                localStorage.setItem('deletionRequests', JSON.stringify(requests));
-                footerShowToast('Запрос сохранен локально');
-            }
-            
-            closeDeleteAccountModal();
-            document.getElementById('deleteReason').value = '';
-            
-        } catch(err) {
-            console.error('Error:', err);
-            footerShowToast('Ошибка');
+    } catch(err) {
+        console.error('Error:', err);
+        footerShowToast('Ошибка: ' + err.message);
+    } finally {
+        if (btn) {
+            btn.disabled = false;
+            btn.innerHTML = 'Отправить';
         }
-    };
+    }
+};
 
     // ============ PROFILE SAVE ============
 
     window.saveAccountProfile = async function(e) {
-        e.preventDefault();
-        
-        const refs = getFirebaseRefs();
-        const profileData = {
-            firstName: document.getElementById('profileFirstName').value,
-            lastName: document.getElementById('profileLastName').value,
-            telegram: document.getElementById('profileTelegram').value,
-            updatedAt: new Date().toISOString()
-        };
-        
-        window.userProfileData = { ...window.userProfileData, ...profileData };
-        localStorage.setItem('userProfileData', JSON.stringify(window.userProfileData));
-        
-        if (refs.currentUser && refs.db && refs.setDoc && refs.doc) {
-            try {
-                const userRef = refs.doc(refs.db, "users", refs.currentUser.uid);
-                await refs.setDoc(userRef, { profile: profileData }, { merge: true });
-                
-                // Обновляем имя на главной
-                const userNameEl = document.getElementById('userName');
-                if (userNameEl && profileData.firstName) {
-                    userNameEl.textContent = profileData.firstName + (profileData.lastName ? ' ' + profileData.lastName : '');
-                }
-                
-                footerShowToast('Профиль сохранён!');
-            } catch(err) {
-                console.error('Error:', err);
-                footerShowToast('Профиль сохранён локально');
+    e.preventDefault();
+    
+    const refs = getFirebaseRefs();
+    const profileData = {
+        firstName: document.getElementById('profileFirstName').value,
+        lastName: document.getElementById('profileLastName').value,
+        telegram: document.getElementById('profileTelegram').value,
+        updatedAt: new Date().toISOString()
+    };
+    
+    // Сохраняем локально
+    window.userProfileData = { ...window.userProfileData, ...profileData };
+    localStorage.setItem('userProfileData', JSON.stringify(window.userProfileData));
+    
+    if (refs.currentUser && refs.db && refs.setDoc && refs.doc) {
+        try {
+            const userRef = refs.doc(refs.db, "users", refs.currentUser.uid);
+            await refs.setDoc(userRef, { profile: profileData }, { merge: true });
+            
+            // Обновляем имя на главной
+            const userNameEl = document.getElementById('userName');
+            if (userNameEl && profileData.firstName) {
+                userNameEl.textContent = profileData.firstName + (profileData.lastName ? ' ' + profileData.lastName : '');
             }
-        } else {
+            
+            footerShowToast('Профиль сохранён!');
+        } catch(err) {
+            console.error('Error:', err);
             footerShowToast('Профиль сохранён локально');
         }
+    } else {
+        footerShowToast('Профиль сохранён локально');
+    }
+};
+
+// Добавляем функцию смены аватара
+window.changeAvatar = async function() {
+    const input = document.createElement('input');
+    input.type = 'file';
+    input.accept = 'image/*';
+    
+    input.onchange = async function(e) {
+        const file = e.target.files[0];
+        if (!file) return;
+        
+        // Проверяем размер (макс 2MB)
+        if (file.size > 2 * 1024 * 1024) {
+            footerShowToast('Слишком большой файл (макс 2MB)');
+            return;
+        }
+        
+        const refs = getFirebaseRefs();
+        if (!refs.currentUser) {
+            footerShowToast('Войдите для смены аватара');
+            return;
+        }
+        
+        try {
+            // Читаем файл как base64
+            const reader = new FileReader();
+            reader.onload = async function(event) {
+                const base64 = event.target.result;
+                
+                // Обновляем локально
+                window.userProfileData = window.userProfileData || {};
+                window.userProfileData.avatar = base64;
+                localStorage.setItem('userProfileData', JSON.stringify(window.userProfileData));
+                
+                // Обновляем отображение
+                document.getElementById('accountAvatar').src = base64;
+                document.getElementById('userAvatar').src = base64;
+                
+                // Сохраняем в Firestore
+                if (refs.db && refs.setDoc && refs.doc) {
+                    const userRef = refs.doc(refs.db, "users", refs.currentUser.uid);
+                    await refs.setDoc(userRef, { 
+                        profile: window.userProfileData,
+                        photoURL: base64 
+                    }, { merge: true });
+                }
+                
+                footerShowToast('Аватар обновлён!');
+            };
+            reader.readAsDataURL(file);
+        } catch(err) {
+            console.error('Error:', err);
+            footerShowToast('Ошибка загрузки');
+        }
     };
+    
+    input.click();
+};
 
     async function loadUserProfileData(user) {
         if (!user || !user.uid) return;
