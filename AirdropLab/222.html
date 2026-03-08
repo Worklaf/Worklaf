@@ -11,7 +11,7 @@
     <link rel="stylesheet" href="styles.css">
     <!-- languages.js ДОЛЖЕН загружаться ПЕРЕД основным скриптом -->
     <script src="languages.js"></script>
-     <script src="footer.js"></script>
+    <script src="footer.js"></script>
    <style>
        #langBtn {
   display: flex;
@@ -316,6 +316,12 @@
         </div>
       </div>
       <div class="flex gap-2 items-center">
+          <div id="supportPanel" class="hidden">
+    <button onclick="openSupportMessagesModal()" class="relative p-2.5 text-slate-400 hover:text-purple-400 transition-all rounded-xl hover:bg-purple-500/10 group border border-transparent hover:border-purple-500/30">
+        <i class="fas fa-headset text-lg group-hover:animate-bounce"></i>
+        <span id="supportPanelBadge" class="absolute -top-1 -right-1 w-5 h-5 bg-gradient-to-r from-purple-500 to-pink-500 rounded-full text-xs flex items-center justify-center hidden font-bold shadow-lg shadow-purple-500/50">0</span>
+    </button>
+</div>
         <div id="notificationPanel" class="relative">
           <button onclick="showNotifications()" class="relative p-2.5 text-slate-400 hover:text-cyan-400 transition-all rounded-xl hover:bg-cyan-500/10 group border border-transparent hover:border-cyan-500/30">
             <i class="fas fa-bell text-lg group-hover:animate-bounce"></i>
@@ -328,12 +334,6 @@
             <span id="feedbackBadge" class="absolute -top-1 -right-1 w-5 h-5 bg-gradient-to-r from-purple-500 to-pink-500 rounded-full text-xs flex items-center justify-center hidden font-bold shadow-lg shadow-purple-500/50">0</span>
           </button>
         </div>
-          <div id="supportPanel" class="relative">
-  <button onclick="openSupportMessagesModal()" class="relative p-2.5 text-slate-400 hover:text-purple-400 transition-all rounded-xl hover:bg-purple-500/10 group border border-transparent hover:border-purple-500/30">
-    <i class="fas fa-headset text-lg group-hover:animate-bounce"></i>
-    <span id="supportBadge" class="absolute -top-1 -right-1 w-5 h-5 bg-gradient-to-r from-purple-500 to-pink-500 rounded-full text-xs flex items-center justify-center hidden font-bold shadow-lg shadow-purple-500/50">0</span>
-  </button>
-</div>
         
         <!-- Language Toggle Button -->
         <button onclick="toggleLang()" id="langBtn" class="flex items-center gap-2 px-3 py-2 rounded-lg border transition-all">
@@ -838,40 +838,35 @@ const COMPLETED_KEY = 'arc_completed_v1';
 const NEW_ACTIVITIES_KEY = 'arc_new_activities_v1';
 const VIEWED_ACTIVITIES_KEY = 'arc_viewed_activities_v1';
 
-let projects = [];
-let categories = ['DeFi', 'Gaming', 'Infra', 'L1/L2', 'NFT', 'Social', 'Other'];
-let currentFilters = { statuses: [], categories: [] };
-let editingId = null;
-let isEditModalOpen = false;
-let currentDetailId = null;
-let isAdminMode = false;
-let currentUser = null;
-let userFavorites = [];
-let userCompleted = [];
-let arcData = JSON.parse(localStorage.getItem(STORAGE_KEY)) || {};
-let tempCustomCategories = [];
-let newActivitiesData = JSON.parse(localStorage.getItem(NEW_ACTIVITIES_KEY)) || {};
-let viewedActivitiesData = JSON.parse(localStorage.getItem(VIEWED_ACTIVITIES_KEY)) || {};
-
-let notifications = [];
-let unreadNotificationsCount = 0;
-let notificationsUnsubscribe = null;
-let currentImageIndex = 0;
-let currentImages = [];
-let itemsPerPage = parseInt(localStorage.getItem('itemsPerPage')) || 10;
-let currentPage = parseInt(localStorage.getItem('currentPage'), 10) || 1;
-let currentFilteredList = [];
-let pendingLinkInsert = null;
-let currentEditingActivities = [];
-let editingActivityId = null;
-let mainProjectCategories = [];
-let currentSortType = 'latest';
-
-// English data source flag
-let useEnglishData = false;
-
-// Modal click tracking
-let modalClickStartTarget = null;
+var projects = [];
+var categories = ['DeFi', 'Gaming', 'Infra', 'L1/L2', 'NFT', 'Social', 'Other'];
+var currentFilters = { statuses: [], categories: [] };
+var editingId = null;
+var isEditModalOpen = false;
+var currentDetailId = null;
+var isAdminMode = false;
+var currentUser = null;
+var userFavorites = [];
+var userCompleted = [];
+var arcData = JSON.parse(localStorage.getItem(STORAGE_KEY)) || [];
+var tempCustomCategories = [];
+var newActivitiesData = JSON.parse(localStorage.getItem(NEW_ACTIVITIES_KEY)) || {};
+var viewedActivitiesData = JSON.parse(localStorage.getItem(VIEWED_ACTIVITIES_KEY)) || {};
+var notifications = [];
+var unreadNotificationsCount = 0;
+var notificationsUnsubscribe = null;
+var currentImageIndex = 0;
+var currentImages = [];
+var itemsPerPage = parseInt(localStorage.getItem('itemsPerPage')) || 10;
+var currentPage = parseInt(localStorage.getItem('currentPage'), 10) || 1;
+var currentFilteredList = [];
+var pendingLinkInsert = null;
+var currentEditingActivities = [];
+var editingActivityId = null;
+var mainProjectCategories = [];
+var currentSortType = 'latest';
+var useEnglishData = false;
+var modalClickStartTarget = null;
 
 // ============ LANGUAGE SYSTEM FUNCTIONS ============
 
@@ -1048,24 +1043,87 @@ function initFeedbacksListener(uid) {
   let q;
   const isAdmin = uid === "SAkz4mdW9reDaIsvqigCNZhEKJR2";
   try {
-    if (isAdmin) q = query(collection(db, "feedbacks"));
-    else q = query(collection(db, "feedbacks"), where("userId", "==", uid));
-    adminFeedbacksUnsubscribe = onSnapshot(q, (snapshot) => {
-      adminFeedbacks = [];
-      let unreadCount = 0;
+    if (isAdmin) {
+      // Для админа получаем ВСЕ обращения (и support, и feedback)
+      q = query(collection(db, "feedbacks"));
+      q = query(collection(db, "supportTickets")); // ДОБАВЛЯЕМ также supportTickets
+    } else {
+      // Для пользователя получаем его обращения
+      q = query(
+        collection(db, "feedbacks"), 
+        where("userId", "==", uid)
+      );
+    }
+    
+    // Слушаем обе коллекции
+    const unsub1 = onSnapshot(query(collection(db, "feedbacks"), isAdmin ? query() : where("userId", "==", uid)), (snapshot) => {
+      // Обрабатываем feedback
       snapshot.forEach((doc) => {
         const data = doc.data();
         if (isAdmin && data.deleted) return;
         if (!isAdmin && data.userDeleted) return;
+        // Не добавляем support в общий список feedback
+        if (data.type === 'support') return;
+        
         data.id = doc.id;
-        if (isAdmin ? !data.read : !data.userRead) unreadCount++;
-        adminFeedbacks.push(data);
+        const existingIdx = adminFeedbacks.findIndex(f => f.id === data.id);
+        if (existingIdx >= 0) {
+          adminFeedbacks[existingIdx] = data;
+        } else {
+          adminFeedbacks.push(data);
+        }
       });
+      updateFeedbackList();
+    });
+    
+    const unsub2 = onSnapshot(query(collection(db, "supportTickets"), isAdmin ? query() : where("userId", "==", uid)), (snapshot) => {
+      // Обрабатываем support
+      snapshot.forEach((doc) => {
+        const data = doc.data();
+        if (isAdmin && data.deleted) return;
+        if (!isAdmin && data.userDeleted) return;
+        
+        data.id = doc.id;
+        data.type = 'support'; // Явно указываем тип
+        
+        const existingIdx = adminFeedbacks.findIndex(f => f.id === data.id);
+        if (existingIdx >= 0) {
+          adminFeedbacks[existingIdx] = data;
+        } else {
+          adminFeedbacks.push(data);
+        }
+      });
+      updateFeedbackList();
+    });
+    
+    // Обновляем UI
+    function updateFeedbackList() {
       adminFeedbacks.sort((a, b) => (b.createdAt?.toDate() || new Date(b.createdAt || 0)) - (a.createdAt?.toDate() || new Date(a.createdAt || 0)));
+      
+      // Считаем непрочитанные
+      let unreadCount = 0;
+      adminFeedbacks.forEach(fb => {
+        if (isAdmin ? !fb.read : !fb.userRead) unreadCount++;
+      });
+      
       updateFeedbackBadgeUI(unreadCount);
+      
+      // Обновляем badge поддержки
+      const supportBadge = document.getElementById('supportPanelBadge');
+      const supportUnread = adminFeedbacks.filter(fb => fb.type === 'support' && (isAdmin ? !fb.read : !fb.userRead)).length;
+      if (supportBadge) {
+        if (supportUnread > 0) {
+          supportBadge.textContent = supportUnread > 9 ? '9+' : supportUnread;
+          supportBadge.classList.remove('hidden');
+        } else {
+          supportBadge.classList.add('hidden');
+        }
+      }
+      
       const listModal = document.getElementById('feedbackListModal');
       if (listModal && listModal.classList.contains('active')) renderFeedbackList();
-    });
+    }
+    
   } catch (e) { console.error("Error init listener:", e); }
 }
 
@@ -1099,74 +1157,30 @@ function showNewFeedbackForm() {
   document.getElementById('feedbackText').value = '';
 }
 
-window.loadFeedbackChat = function(docId, projId) {
+function loadFeedbackChat(docId, projId) {
   const unsub = onSnapshot(doc(db, "feedbacks", docId), (snap) => {
-    try {
-      if (!snap.exists()) return showNewFeedbackForm();
-      const d = snap.data();
-      const messages = d.messages || [];
-      
-      // Безопасная сортировка (учитываем как объекты Firestore, так и обычные даты)
-      messages.sort((a, b) => {
-        const timeA = a.timestamp?.toDate ? a.timestamp.toDate() : new Date(a.timestamp || 0);
-        const timeB = b.timestamp?.toDate ? b.timestamp.toDate() : new Date(b.timestamp || 0);
-        return timeA - timeB;
-      });
-
-      const html = messages.map((msg) => {
-        const bubbleSide = msg.sender === 'user' ? 'user' : 'admin';
-        // Здесь используется глобальная функция t()
-        const senderName = msg.sender === 'user' ? t('you') : t('support');
-        const avatar = msg.sender === 'user' 
-          ? `<img src="${currentUser?.photoURL || 'https://ui-avatars.com/api/?name=U'}" class="chat-avatar">` 
-          : `<div class="chat-avatar"><i class="fas fa-user-shield"></i></div>`;
-        
-        // ИСПРАВЛЕНИЕ: Переименовали 't' в 'msgTime', чтобы не конфликтовало с функцией перевода t()
-        const msgTime = msg.timestamp ? formatTimeAgo(msg.timestamp.toDate ? msg.timestamp.toDate() : new Date(msg.timestamp)) : '';
-        
-        return `<div class="chat-bubble ${bubbleSide}">
-                  ${avatar}
-                  <div class="chat-bubble-wrapper">
-                    <span class="chat-sender">${senderName}</span>
-                    <div class="chat-content">${msg.text}</div>
-                    <span class="chat-time">${msgTime}</span>
-                  </div>
-                </div>`;
-      }).join('');
-
-      const history = document.getElementById("feedbackChatHistory");
-      history.innerHTML = html || '<p class="text-center text-slate-500 py-4">' + t('no_messages') + '</p>';
-      
-      document.getElementById('feedbackFormNew').classList.add('hidden');
-      document.getElementById('feedbackFormReply').classList.remove('hidden');
-      
-      // Включаем отправку по Enter
-      if (typeof enableUserEnterSend === 'function') enableUserEnterSend();
-      
-      document.getElementById('feedbackSendBtn').classList.add('hidden');
-      
-      // Прокрутка чата вниз
-      setTimeout(() => {
-        history.scrollTop = history.scrollHeight;
-      }, 50);
-
-      // Обновляем статус прочтения
-      if (!d.userRead) updateDoc(doc(db, "feedbacks", docId), { userRead: true });
-
-    } catch (err) {
-      console.error("Ошибка при обработке сообщений чата:", err);
-      document.getElementById("feedbackChatHistory").innerHTML = 
-        '<div class="text-center py-8 text-red-400"><p>Произошла ошибка при загрузке сообщений.</p></div>';
-    }
-  }, (error) => {
-    // Обработка ошибок прав доступа Firebase или проблем с сетью
-    console.error("Ошибка подписки на чат:", error);
-    document.getElementById("feedbackChatHistory").innerHTML = 
-      '<div class="text-center py-8 text-red-400"><i class="fas fa-lock mb-2 text-2xl"></i><p>Нет доступа или удален</p></div>';
+    if (!snap.exists()) return showNewFeedbackForm();
+    const d = snap.data();
+    const messages = d.messages || [];
+    messages.sort((a,b) => new Date(a.timestamp) - new Date(b.timestamp));
+    const html = messages.map((msg) => {
+      const bubbleSide = msg.sender === 'user' ? 'user' : 'admin';
+      const senderName = msg.sender === 'user' ? t('you') : t('support');
+      const avatar = msg.sender === 'user' ? `<img src="${currentUser?.photoURL || 'https://ui-avatars.com/api/?name=U'}" class="chat-avatar">` : `<div class="chat-avatar"><i class="fas fa-user-shield"></i></div>`;
+      const t = msg.timestamp ? formatTimeAgo(msg.timestamp.toDate ? msg.timestamp.toDate() : new Date(msg.timestamp)) : '';
+      return `<div class="chat-bubble ${bubbleSide}">${avatar}<div class="chat-bubble-wrapper"><span class="chat-sender">${senderName}</span><div class="chat-content">${msg.text}</div><span class="chat-time">${t}</span></div></div>`;
+    }).join('');
+    const history = document.getElementById("feedbackChatHistory");
+    history.innerHTML = html || '<p class="text-center text-slate-500 py-4">' + t('no_messages') + '</p>';
+    document.getElementById('feedbackFormNew').classList.add('hidden');
+    document.getElementById('feedbackFormReply').classList.remove('hidden');
+    enableUserEnterSend();
+    document.getElementById('feedbackSendBtn').classList.add('hidden');
+    history.scrollTop = history.scrollHeight;
+    if (!d.userRead) updateDoc(doc(db, "feedbacks", docId), { userRead: true });
   });
-  
   window.currentFeedbackUnsub = unsub;
-};
+}
 
 window.sendUserFeedback = async function() {
   if (!currentUser) return showToast('Войдите');
@@ -1213,16 +1227,35 @@ window.renderFeedbackList = function() {
     container.innerHTML = '<div class="text-center py-12 text-slate-500"><div class="bg-slate-800/50 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4"><i class="fas fa-inbox text-2xl text-slate-600"></i></div><p>' + t('no_messages') + '</p></div>';
     return; 
   }
+
+  // Фильтруем по типу: для пользователя - только feedback, для админа - все
+  let filteredFeedbacks = adminFeedbacks;
+  if (!isAdmin) {
+    filteredFeedbacks = adminFeedbacks.filter(fb => fb.type !== 'support');
+  }
   
-  container.innerHTML = adminFeedbacks.map((item) => {
+  if (filteredFeedbacks.length === 0) {
+    const emptyMessage = isAdmin 
+      ? 'Нет отзывов и предложений' 
+      : 'У вас пока нет отзывов о проектах';
+    container.innerHTML = '<div class="text-center py-12 text-slate-500"><div class="bg-slate-800/50 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4"><i class="fas fa-inbox text-2xl text-slate-600"></i></div><p>' + emptyMessage + '</p></div>';
+    return;
+  }
+  
+  container.innerHTML = filteredFeedbacks.map((item) => {
     const messages = item.messages || [];
     const lastMsg = messages[messages.length - 1] || { text: '...', sender: 'unknown' };
     const date = item.createdAt?.toDate() || new Date(item.createdAt || 0);
     const isUnread = isAdmin ? !item.read : !item.userRead;
     const project = getProj(item.projectId);
-    const projectName = project.name || item.projectId || 'Неизвестный проект';
+    const projectName = project.name || item.projectId || (item.type === 'support' ? 'Поддержка' : 'Неизвестный проект');
     const projectLogo = project.image || '';
     const projectId = item.projectId || '';
+    
+    // Добавляем иконку типа
+    const typeIcon = item.type === 'support' 
+      ? '<i class="fas fa-headset text-purple-400 mr-1"></i>' 
+      : '<i class="fas fa-comment-dots text-blue-400 mr-1"></i>';
     
     let titleHtml = '';
     if (isAdmin) {
@@ -1234,7 +1267,7 @@ window.renderFeedbackList = function() {
       
       titleHtml = `
         <div class="flex flex-col gap-1">
-          <div class="flex items-center gap-1.5">${projectInfoHtml}</div>
+          <div class="flex items-center gap-1.5">${typeIcon}${projectInfoHtml}</div>
           <div class="text-xs text-slate-400 flex items-center gap-1">
             <span>от</span>
             <span class="text-white font-medium">${item.userName || 'Пользователь'}</span>
@@ -1459,69 +1492,150 @@ async function syncLocalStorageToFirestore(userId) {
     if (Object.keys(updates).length > 0) await updateDoc(userRef, updates);
   } catch (e) { console.error('Error sync:', e); }
 }
+// После получения данных пользователя добавь:
+async function loadUserProfileData(user) {
+    if (!user) return;
+    
+    try {
+        const userDoc = await getDoc(doc(db, "users", user.uid));
+        if (userDoc.exists()) {
+            const data = userDoc.data();
+            
+            // Обновляем имя
+            if (data.profile?.firstName || data.profile?.lastName) {
+                const displayName = [data.profile.firstName, data.profile.lastName].filter(Boolean).join(' ');
+                document.getElementById('userName').textContent = displayName;
+            }
+            
+            // Обновляем аватар
+            if (data.profile?.avatar) {
+                document.getElementById('userAvatar').src = data.profile.avatar;
+            } else if (user.photoURL) {
+                document.getElementById('userAvatar').src = user.photoURL;
+            }
+        }
+    } catch (e) {
+        console.log('Profile load error:', e);
+    }
+}
+
 
 onAuthStateChanged(auth, async function(user) {
+
+  // 🔄 Всегда обновляем глобальные переменные
+  window.currentUser = user;
+  currentUser = user;
+
   if (user) {
-    currentUser = user;
+    // ============================
+    // 🔐 ПОЛЬЗОВАТЕЛЬ АВТОРИЗОВАН
+    // ============================
+
     await saveUserData(user);
     await syncLocalStorageToFirestore(user.uid);
+
+    // Показываем панели
     document.getElementById('generalFeedbackPanel').classList.remove('hidden');
+    document.getElementById('supportPanel').classList.remove('hidden');
+
     initFeedbacksListener(user.uid);
-    if (user.uid === "SAkz4mdW9reDaIsvqigCNZhEKJR2") activateAdminMode();
+
+    // Admin mode
+    if (user.uid === "SAkz4mdW9reDaIsvqigCNZhEKJR2") {
+      activateAdminMode();
+    }
+
+    // Загрузка данных пользователя
     try {
       const userRef = doc(db, "users", user.uid);
       const userDoc = await getDoc(userRef);
+
       if (userDoc.exists()) {
         const data = userDoc.data();
         userFavorites = data.favorites || [];
         userCompleted = data.completed || [];
-        if (data.arcGuideStats) { arcData = { ...arcData, ...data.arcGuideStats }; localStorage.setItem(STORAGE_KEY, JSON.stringify(arcData)); }
-      } else { await setDoc(userRef, { favorites: [], completed: [], arcGuideStats: {} }); }
-    } catch (e) { console.error('Error:', e); }
+
+        if (data.arcGuideStats) {
+          arcData = { ...arcData, ...data.arcGuideStats };
+          localStorage.setItem(STORAGE_KEY, JSON.stringify(arcData));
+        }
+
+      } else {
+        await setDoc(userRef, {
+          favorites: [],
+          completed: [],
+          arcGuideStats: {}
+        });
+      }
+
+    } catch (e) {
+      console.error("Error:", e);
+    }
+
+    // UI обновление
     document.getElementById('loggedOutView').classList.add('hidden');
     document.getElementById('loggedInView').classList.remove('hidden');
     document.getElementById('guestWarning').classList.add('hidden');
-    document.getElementById('userAvatar').src = user.photoURL || 'https://ui-avatars.com/api/?name=' + (user.email || 'User') + '&background=random';
-    document.getElementById('userName').textContent = user.displayName || user.email.split('@')[0];
+
+    document.getElementById('userAvatar').src =
+      user.photoURL ||
+      'https://ui-avatars.com/api/?name=' +
+      (user.email || 'User') +
+      '&background=random';
+
+    document.getElementById('userName').textContent =
+      user.displayName || user.email.split('@')[0];
+
     initUserSync(user.uid);
     initNotificationsListener(user.uid);
     applyFilters();
+
   } else {
-    currentUser = null; userFavorites = []; userCompleted = [];
+
+    // ============================
+    // 🚪 ПОЛЬЗОВАТЕЛЬ ВЫШЕЛ
+    // ============================
+
+    currentUser = null;
+    window.currentUser = null;
+
+    userFavorites = [];
+    userCompleted = [];
+
+    // Скрываем панели
     document.getElementById('generalFeedbackPanel').classList.add('hidden');
-    if (notificationsUnsubscribe) { notificationsUnsubscribe(); notificationsUnsubscribe = null; }
-    if (adminFeedbacksUnsubscribe) { adminFeedbacksUnsubscribe(); adminFeedbacksUnsubscribe = null; }
-    notifications = []; unreadNotificationsCount = 0; updateNotificationBadge();
+    document.getElementById('supportPanel').classList.add('hidden');
+
+    // Отписки
+    if (notificationsUnsubscribe) {
+      notificationsUnsubscribe();
+      notificationsUnsubscribe = null;
+    }
+
+    if (adminFeedbacksUnsubscribe) {
+      adminFeedbacksUnsubscribe();
+      adminFeedbacksUnsubscribe = null;
+    }
+
+    notifications = [];
+    unreadNotificationsCount = 0;
+    updateNotificationBadge();
+
+    // UI
     document.getElementById('loggedOutView').classList.remove('hidden');
     document.getElementById('loggedInView').classList.add('hidden');
     document.getElementById('guestWarning').classList.remove('hidden');
+
     arcData = JSON.parse(localStorage.getItem(STORAGE_KEY)) || [];
     userCompleted = JSON.parse(localStorage.getItem(COMPLETED_KEY) || []);
-    applyFilters();
-  }
-    window.projects = projects; window.currentUser = currentUser; window.adminFeedbacks = adminFeedbacks;
-});
-// Функция для обновления badge поддержки
-function updateSupportBadge() {
-    const badge = document.getElementById('supportBadge');
-    if (!badge || !currentUser) {
-        if (badge) badge.classList.add('hidden');
-        return;
-    }
-    
-    const myFeedbacks = adminFeedbacks.filter(fb => 
-        fb && fb.userId === currentUser.uid && !fb.userRead
-    );
-    
-    if (myFeedbacks.length > 0) {
-        badge.textContent = myFeedbacks.length > 9 ? '9+' : myFeedbacks.length;
-        badge.classList.remove('hidden');
-    } else {
-        badge.classList.add('hidden');
-    }
-}
 
-// Вызывайте updateSupportBadge() после изменений в adminFeedbacks
+    applyFilters();
+
+    loadUserProfileData(user); // user = null, но функция должна вызваться
+  }
+});
+
+
 function initUserSync(uid) {
   const userRef = doc(db, "users", uid);
   onSnapshot(userRef, function(docSnap) {
@@ -2847,52 +2961,31 @@ function detectNewActivities() {
 setTimeout(() => {
   detectNewActivities();
 }, 1000);
-// Экспорт переменных для footer.js
-window.projects = projects;
+    window.openAdminSupportPanel = function() {
+  // Открывает те же отзывы, но отфильтрованные по type === 'support'
+  window.openFeedbackListModal();
+  // Фильтр по поддержке можно добавить в existing функцию
+};
+    // Экспорт переменных в глобальную область видимости для footer.js
 window.currentUser = currentUser;
 window.db = db;
 window.auth = auth;
+window.projects = projects;
+window.categories = categories;
+window.userProfileData = window.userProfileData || {};
+
+// Добавляем функции Firebase для доступа из footer
+window.addDoc = addDoc;
 window.collection = collection;
 window.doc = doc;
-window.addDoc = addDoc;
 window.setDoc = setDoc;
 window.getDoc = getDoc;
 window.getDocs = getDocs;
 window.updateDoc = updateDoc;
-window.deleteDoc = deleteDoc;
 window.query = query;
 window.where = where;
 window.serverTimestamp = serverTimestamp;
 window.arrayUnion = arrayUnion;
-window.onSnapshot = onSnapshot;
-window.adminFeedbacks = adminFeedbacks;
-
-// Функция для открытия чата поддержки
-window.openSupportChatFromList = function(docId) {
-    const feedback = adminFeedbacks.find(fb => fb.id === docId);
-    if (!feedback) return;
-    
-    document.getElementById('feedbackProjectId').value = feedback.projectId || 'support';
-    document.getElementById('feedbackProjectName').textContent = feedback.supportSubject || 'Служба поддержки';
-    document.getElementById('adminChatDeleteBtn').classList.add('hidden');
-    document.getElementById('feedbackDocId').value = docId;
-    document.getElementById('feedbackFormNew').classList.add('hidden');
-    document.getElementById('feedbackFormReply').classList.remove('hidden');
-    document.getElementById('feedbackSendBtn').classList.add('hidden');
-    
-    const modal = document.getElementById('feedbackModal');
-    modal.classList.add('active');
-    
-    loadFeedbackChat(docId, feedback.projectId || 'support');
-};
-// Обновление переменных при изменении
-function syncVarsToWindow() {
-    window.projects = projects;
-    window.currentUser = currentUser;
-    window.adminFeedbacks = adminFeedbacks;
-}
-
-// Добавьте вызов syncVarsToWindow() после изменений переменных
 </script>
 </body>
 </html>
