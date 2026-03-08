@@ -1121,54 +1121,85 @@ window.footerSubmitSupport = async function(e) {
     btn.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i>Отправка...';
     btn.disabled = true;
 
-    const user = typeof window.currentUser !== 'undefined' ? window.currentUser : null;
+    const user = (typeof window.currentUser !== 'undefined') ? window.currentUser : null;
 
-    const ticketData = {
-        type:      'support',
-        category:  document.getElementById('fsSupportCategory').value,
-        name:      document.getElementById('fsSupportName').value,
-        email:     document.getElementById('fsSupportEmail').value,
-        subject:   document.getElementById('fsSupportSubject').value,
-        message:   document.getElementById('fsSupportMessage').value,
-        userId:    user ? user.uid : 'guest',
-        status:    'new',
-        priority:  'normal',
-        createdAt: new Date().toISOString()
-    };
-
-    // Сохраняем локально
-    try {
-        const tickets = JSON.parse(localStorage.getItem('supportTickets') || '[]');
-        tickets.push(ticketData);
-        localStorage.setItem('supportTickets', JSON.stringify(tickets));
-    } catch(err) {}
-
-    // Сохраняем в Firebase если доступен
-    if (typeof window.db !== 'undefined') {
-        try {
-            const firestoreModule = window.__firestoreExports;
-            if (firestoreModule && firestoreModule.collection && firestoreModule.addDoc) {
-                await firestoreModule.addDoc(
-                    firestoreModule.collection(window.db, 'supportTickets'), 
-                    ticketData
-                );
-            }
-        } catch(err) {
-            console.error('Support ticket Firebase error:', err);
+    // Проверяем авторизацию
+    if (!user) {
+        btn.innerHTML = originalHTML;
+        btn.disabled = false;
+        footerShowToast('Войдите в аккаунт для отправки обращения');
+        closePageModal();
+        // Открываем окно входа если оно есть
+        if (typeof window.openLoginModal === 'function') {
+            setTimeout(function() { window.openLoginModal(); }, 300);
         }
+        return;
     }
 
-    btn.innerHTML = originalHTML;
-    btn.disabled = false;
+    const category  = document.getElementById('fsSupportCategory').value;
+    const name      = document.getElementById('fsSupportName').value;
+    const email     = document.getElementById('fsSupportEmail').value;
+    const subject   = document.getElementById('fsSupportSubject').value;
+    const message   = document.getElementById('fsSupportMessage').value;
 
-    // Показываем успех и закрываем
-    footerShowToast('Обращение отправлено! Ответим в течение 24 часов.');
-    
-    setTimeout(function() {
-        closePageModal();
-    }, 1200);
+    if (!category) {
+        btn.innerHTML = originalHTML;
+        btn.disabled = false;
+        footerShowToast('Выберите категорию обращения');
+        return;
+    }
+
+    // Формируем текст сообщения с заголовком
+    const fullMessage = subject 
+        ? '[' + subject + ']\n\n' + message 
+        : message;
+
+    try {
+        const firestoreModule = window.__firestoreExports;
+
+        if (firestoreModule && firestoreModule.addDoc && firestoreModule.collection && window.db) {
+            // Отправляем в feedbacks — туда же куда openFeedbackModal
+            await firestoreModule.addDoc(
+                firestoreModule.collection(window.db, 'feedbacks'),
+                {
+                    projectId:   '__support__',
+                    projectName: 'Support',
+                    projectLogo: '',
+                    type:        'support',
+                    category:    category,
+                    userId:      user.uid,
+                    userName:    name || user.displayName || user.email,
+                    userPhoto:   user.photoURL || '',
+                    status:      'open',
+                    read:        false,
+                    userRead:    true,
+                    deleted:     false,
+                    userDeleted: false,
+                    createdAt:   new Date(),
+                    messages: [{
+                        sender:    'user',
+                        text:      fullMessage,
+                        timestamp: new Date()
+                    }]
+                }
+            );
+
+            btn.innerHTML = originalHTML;
+            btn.disabled = false;
+            footerShowToast('Обращение отправлено! Ответим в течение 24 часов.');
+            setTimeout(function() { closePageModal(); }, 1200);
+
+        } else {
+            throw new Error('Firebase недоступен');
+        }
+
+    } catch(err) {
+        console.error('Support submit error:', err);
+        btn.innerHTML = originalHTML;
+        btn.disabled = false;
+        footerShowToast('Ошибка отправки. Попробуйте позже.');
+    }
 };
-
     window.closeSupportModal = function() {
         const modal = document.getElementById('supportModal');
         if (modal) modal.classList.remove('active');
@@ -1614,19 +1645,9 @@ window.footerSubmitSupport = async function(e) {
     // --- Пользователи ---
     const user = (typeof window.currentUser !== 'undefined') ? window.currentUser : null;
 
-    if (userEl) {
-        if (user) {
-            // Пользователь залогинен — показываем имя
-            const name = user.displayName 
-                || (user.email ? user.email.split('@')[0] : null) 
-                || 'Пользователь';
-            userEl.textContent = name;
-            userEl.classList.add('text-emerald-400');
-            userEl.classList.remove('text-slate-400');
-        } else {
-            // Гость — пробуем получить количество из Firebase
-            _tryGetUserCountFromFirebase(userEl);
-        }
+        if (userEl) {
+        // Всегда показываем количество пользователей из Firebase
+        _tryGetUserCountFromFirebase(userEl);
     }
 }
 
