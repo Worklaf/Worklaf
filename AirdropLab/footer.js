@@ -15,10 +15,10 @@
             tagline: 'Лаборатория крипто-возможностей'
         },
         social: {
-            twitter: 'https://twitter.com/airdroplab',
-            telegram: 'https://t.me/airdroplab',
-            discord: 'https://discord.gg/airdroplab',
-            youtube: 'https://youtube.com/@airdroplab',
+            twitter: '',
+            telegram: '',
+            discord: '',
+            youtube: '',
             email: 'support@airdroplab.com'
         },
         // Данные для FAQ
