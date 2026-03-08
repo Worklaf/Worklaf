@@ -1018,11 +1018,155 @@
     // ============ SUPPORT MODAL ============
 
     window.openSupportModal = function() {
-    if (typeof openFeedbackModal === 'function') {
-        openFeedbackModal('__support__', '🛡️ Support');
-    } else {
-        footerShowToast('Пожалуйста, войдите в аккаунт', 'error');
+    // Показываем собственную форму поддержки — всегда новую
+    _showSupportForm();
+};
+
+function _showSupportForm() {
+    const modal = document.getElementById('pageModal');
+    const content = document.getElementById('pageModalContent');
+    if (!modal || !content) return;
+
+    content.innerHTML = `
+        <div class="bg-gradient-to-r from-slate-900 to-slate-800 p-6 border-b border-slate-700">
+            <div class="flex items-center gap-3">
+                <div class="w-12 h-12 rounded-xl bg-gradient-to-br from-purple-500/20 to-blue-500/20 border border-purple-500/30 flex items-center justify-center">
+                    <i class="fas fa-headset text-purple-400 text-xl"></i>
+                </div>
+                <div>
+                    <h2 class="text-xl font-bold text-white">Служба поддержки</h2>
+                    <p class="text-sm text-slate-400">Мы ответим в течение 24 часов</p>
+                </div>
+            </div>
+        </div>
+        <div class="p-6 max-h-[75vh] overflow-y-auto">
+            <form id="footerSupportForm" onsubmit="footerSubmitSupport(event)" class="space-y-4">
+                <div>
+                    <label class="block text-xs font-medium text-slate-400 mb-1.5">Тема обращения *</label>
+                    <select id="fsSupportCategory" required 
+                            class="w-full bg-slate-800 border border-slate-700 rounded-lg px-4 py-2.5 text-sm text-white focus:border-purple-500 focus:outline-none">
+                        <option value="">Выберите категорию</option>
+                        <option value="technical">🔧 Техническая проблема</option>
+                        <option value="account">👤 Проблема с аккаунтом</option>
+                        <option value="project">📋 Вопрос о проекте</option>
+                        <option value="suggestion">💡 Предложение</option>
+                        <option value="partnership">🤝 Партнёрство</option>
+                        <option value="other">💬 Другое</option>
+                    </select>
+                </div>
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-xs font-medium text-slate-400 mb-1.5">Ваше имя</label>
+                        <input type="text" id="fsSupportName" 
+                               value="${_getSupportUserName()}"
+                               placeholder="Иван" 
+                               class="w-full bg-slate-800 border border-slate-700 rounded-lg px-4 py-2.5 text-sm text-white focus:border-purple-500 focus:outline-none">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-medium text-slate-400 mb-1.5">Email *</label>
+                        <input type="email" id="fsSupportEmail" required 
+                               value="${_getSupportUserEmail()}"
+                               placeholder="example@mail.com" 
+                               class="w-full bg-slate-800 border border-slate-700 rounded-lg px-4 py-2.5 text-sm text-white focus:border-purple-500 focus:outline-none">
+                    </div>
+                </div>
+                <div>
+                    <label class="block text-xs font-medium text-slate-400 mb-1.5">Заголовок *</label>
+                    <input type="text" id="fsSupportSubject" required 
+                           placeholder="Краткое описание" 
+                           class="w-full bg-slate-800 border border-slate-700 rounded-lg px-4 py-2.5 text-sm text-white focus:border-purple-500 focus:outline-none">
+                </div>
+                <div>
+                    <label class="block text-xs font-medium text-slate-400 mb-1.5">Описание *</label>
+                    <textarea id="fsSupportMessage" required rows="5" 
+                              placeholder="Опишите вашу проблему подробно..." 
+                              class="w-full bg-slate-800 border border-slate-700 rounded-lg px-4 py-2.5 text-sm text-white focus:border-purple-500 focus:outline-none resize-none"></textarea>
+                </div>
+                <div class="flex gap-3 pt-2">
+                    <button type="button" onclick="closePageModal()" 
+                            class="flex-1 bg-slate-700 hover:bg-slate-600 py-3 rounded-lg text-sm font-medium text-white transition-colors">
+                        Отмена
+                    </button>
+                    <button type="submit" id="fsSupportSubmitBtn" 
+                            class="flex-1 bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-500 hover:to-blue-500 py-3 rounded-lg text-sm font-bold text-white transition-all">
+                        <i class="fas fa-paper-plane mr-2"></i>Отправить
+                    </button>
+                </div>
+            </form>
+        </div>
+    `;
+
+    modal.classList.add('active');
+}
+
+function _getSupportUserName() {
+    const user = typeof window.currentUser !== 'undefined' ? window.currentUser : null;
+    if (user) return user.displayName || '';
+    return '';
+}
+
+function _getSupportUserEmail() {
+    const user = typeof window.currentUser !== 'undefined' ? window.currentUser : null;
+    if (user) return user.email || '';
+    return '';
+}
+
+window.footerSubmitSupport = async function(e) {
+    e.preventDefault();
+
+    const btn = document.getElementById('fsSupportSubmitBtn');
+    if (!btn) return;
+
+    const originalHTML = btn.innerHTML;
+    btn.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i>Отправка...';
+    btn.disabled = true;
+
+    const user = typeof window.currentUser !== 'undefined' ? window.currentUser : null;
+
+    const ticketData = {
+        type:      'support',
+        category:  document.getElementById('fsSupportCategory').value,
+        name:      document.getElementById('fsSupportName').value,
+        email:     document.getElementById('fsSupportEmail').value,
+        subject:   document.getElementById('fsSupportSubject').value,
+        message:   document.getElementById('fsSupportMessage').value,
+        userId:    user ? user.uid : 'guest',
+        status:    'new',
+        priority:  'normal',
+        createdAt: new Date().toISOString()
+    };
+
+    // Сохраняем локально
+    try {
+        const tickets = JSON.parse(localStorage.getItem('supportTickets') || '[]');
+        tickets.push(ticketData);
+        localStorage.setItem('supportTickets', JSON.stringify(tickets));
+    } catch(err) {}
+
+    // Сохраняем в Firebase если доступен
+    if (typeof window.db !== 'undefined') {
+        try {
+            const firestoreModule = window.__firestoreExports;
+            if (firestoreModule && firestoreModule.collection && firestoreModule.addDoc) {
+                await firestoreModule.addDoc(
+                    firestoreModule.collection(window.db, 'supportTickets'), 
+                    ticketData
+                );
+            }
+        } catch(err) {
+            console.error('Support ticket Firebase error:', err);
+        }
     }
+
+    btn.innerHTML = originalHTML;
+    btn.disabled = false;
+
+    // Показываем успех и закрываем
+    footerShowToast('Обращение отправлено! Ответим в течение 24 часов.');
+    
+    setTimeout(function() {
+        closePageModal();
+    }, 1200);
 };
 
     window.closeSupportModal = function() {
@@ -1292,17 +1436,32 @@
     // ============ FUNCTIONS ============
 
     function initializeFooterFunctions() {
-        const footer = document.getElementById('site-footer');
-        if (!footer) return;
+    const footer = document.getElementById('site-footer');
+    if (!footer) return;
 
-        initBackToTop();
-        initNewsletterForm();
-        initFooterLinks();
-        updateFooterStats();
-        updateFooterLanguageButton();
-        
-        console.log('Footer v2.2 initialized successfully');
-    }
+    initBackToTop();
+    initNewsletterForm();
+    initFooterLinks();
+    updateFooterLanguageButton();
+    
+    // Запускаем статистику сразу и повторно через интервалы
+    updateFooterStats();
+    setTimeout(updateFooterStats, 2000);
+    setTimeout(updateFooterStats, 5000);
+    setTimeout(updateFooterStats, 10000);
+
+    // Слушаем событие когда пользователь залогинился/разлогинился
+    document.addEventListener('userAuthChanged', function() {
+        setTimeout(updateFooterStats, 500);
+    });
+
+    // Слушаем когда проекты загрузились
+    document.addEventListener('projectsLoaded', function() {
+        setTimeout(updateFooterStats, 300);
+    });
+    
+    console.log('Footer v2.2 initialized successfully');
+}
 
     function initBackToTop() {
         const backToTopBtn = document.getElementById('backToTop');
@@ -1447,45 +1606,63 @@
             projectEl.textContent = projectCount;
             projectEl.classList.add('text-cyan-400');
             projectEl.classList.remove('text-slate-400');
+        } else {
+            projectEl.textContent = '0';
         }
-        // если 0 — не трогаем, подождём следующего вызова
     }
 
-    // --- Пользователи (уникальные из коллекции users в Firebase) ---
-    // Читаем из window.db если он доступен
-    if (typeof window.db !== 'undefined' && typeof window.getFirestoreUserCount === 'undefined') {
-        // Определяем функцию один раз
-        window.getFirestoreUserCount = true;
-        try {
-            // Используем глобальный db и функции Firestore которые уже импортированы в index.html
-            const { collection, getCountFromServer } = window.__firestoreExports || {};
-            if (collection && getCountFromServer && window.db) {
-                getCountFromServer(collection(window.db, 'users')).then(function(snapshot) {
-                    const count = snapshot.data().count;
-                    if (userEl && count > 0) {
-                        userEl.textContent = count;
-                        userEl.classList.add('text-emerald-400');
-                        userEl.classList.remove('text-slate-400');
-                    }
-                }).catch(function(e) {
-                    // fallback — показываем статус текущего юзера
-                    _updateUserStatusFallback(userEl);
-                });
-            } else {
-                _updateUserStatusFallback(userEl);
-            }
-        } catch(e) {
-            _updateUserStatusFallback(userEl);
+    // --- Пользователи ---
+    const user = (typeof window.currentUser !== 'undefined') ? window.currentUser : null;
+
+    if (userEl) {
+        if (user) {
+            // Пользователь залогинен — показываем имя
+            const name = user.displayName 
+                || (user.email ? user.email.split('@')[0] : null) 
+                || 'Пользователь';
+            userEl.textContent = name;
+            userEl.classList.add('text-emerald-400');
+            userEl.classList.remove('text-slate-400');
+        } else {
+            // Гость — пробуем получить количество из Firebase
+            _tryGetUserCountFromFirebase(userEl);
         }
-    } else {
-        _updateUserStatusFallback(userEl);
+    }
+}
+
+function _tryGetUserCountFromFirebase(userEl) {
+    if (!userEl) return;
+    
+    // Если db недоступен — показываем Гость
+    if (typeof window.db === 'undefined') {
+        userEl.textContent = 'Гость';
+        userEl.classList.remove('text-emerald-400');
+        return;
     }
 
-    // Повторяем каждые 10 секунд пока данные не появились
-    if (projectCount === 0) {
-        setTimeout(updateFooterStats, 10000);
-    } else {
-        setTimeout(updateFooterStats, 60000);
+    // Пробуем получить количество пользователей
+    try {
+        const firestoreModule = window.__firestoreExports;
+        if (firestoreModule && firestoreModule.getCountFromServer && firestoreModule.collection) {
+            firestoreModule.getCountFromServer(
+                firestoreModule.collection(window.db, 'users')
+            ).then(function(snapshot) {
+                const count = snapshot.data().count;
+                if (count > 0) {
+                    userEl.textContent = count;
+                    userEl.classList.add('text-emerald-400');
+                    userEl.classList.remove('text-slate-400');
+                } else {
+                    userEl.textContent = 'Гость';
+                }
+            }).catch(function() {
+                userEl.textContent = 'Гость';
+            });
+        } else {
+            userEl.textContent = 'Гость';
+        }
+    } catch(e) {
+        userEl.textContent = 'Гость';
     }
 }
 
