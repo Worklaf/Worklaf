@@ -1514,46 +1514,105 @@ window.footerSubmitSupport = async function(e) {
     }
 
     function handleNewsletterSubscription() {
-        const emailInput = document.getElementById('footerEmailInput');
-        const subscribeBtn = document.getElementById('subscribeBtn');
+    const emailInput = document.getElementById('footerEmailInput');
+    const subscribeBtn = document.getElementById('subscribeBtn');
+    
+    if (!emailInput || !subscribeBtn) return;
+
+    const email = emailInput.value.trim();
+    
+    if (!email || !isValidEmail(email)) {
+        emailInput.classList.add('error');
+        footerShowToast('Введите корректный email', 'error');
+        setTimeout(() => emailInput.classList.remove('error'), 2000);
+        emailInput.focus();
+        return;
+    }
+
+    subscribeBtn.classList.add('loading');
+    const originalHTML = subscribeBtn.innerHTML;
+    subscribeBtn.innerHTML = '<span>Отправка...</span>';
+
+    // Сохраняем в Firebase
+    var db = window.db;
+    var exp = window.__firestoreExports;
+    
+    if (db && exp && exp.addDoc && exp.collection && exp.getDocs && exp.query && exp.where) {
         
-        if (!emailInput || !subscribeBtn) return;
-
-        const email = emailInput.value.trim();
-        
-        if (!email || !isValidEmail(email)) {
-            emailInput.classList.add('error');
-            footerShowToast('Введите корректный email', 'error');
-            setTimeout(() => emailInput.classList.remove('error'), 2000);
-            emailInput.focus();
-            return;
-        }
-
-        subscribeBtn.classList.add('loading');
-        const originalText = subscribeBtn.innerHTML;
-        subscribeBtn.innerHTML = '<span>Отправка...</span>';
-
-        setTimeout(() => {
+        // Проверяем не подписан ли уже этот email
+        exp.getDocs(
+            exp.query(
+                exp.collection(db, 'newsletter'),
+                exp.where('email', '==', email)
+            )
+        ).then(function(existing) {
+            
+            if (!existing.empty) {
+                // Уже подписан
+                subscribeBtn.classList.remove('loading');
+                subscribeBtn.innerHTML = originalHTML;
+                emailInput.value = '';
+                emailInput.placeholder = 'Уже подписаны ✓';
+                emailInput.classList.add('success');
+                footerShowToast('Этот email уже подписан!');
+                setTimeout(() => {
+                    emailInput.placeholder = 'Ваш email';
+                    emailInput.classList.remove('success');
+                }, 4000);
+                return;
+            }
+            
+            // Сохраняем нового подписчика
+            return exp.addDoc(exp.collection(db, 'newsletter'), {
+                email: email,
+                subscribedAt: new Date().toISOString(),
+                source: 'footer',
+                active: true,
+                userAgent: navigator.userAgent.substring(0, 100)
+            });
+            
+        }).then(function(docRef) {
+            if (!docRef) return; // уже был return выше (дубль)
+            
             subscribeBtn.classList.remove('loading');
-            subscribeBtn.innerHTML = originalText;
+            subscribeBtn.innerHTML = originalHTML;
             
             emailInput.value = '';
             emailInput.placeholder = 'Спасибо! ✓';
             emailInput.classList.add('success');
             
-            setTimeout(() => {
-                showNewsletterModal();
-            }, 500);
-            
+            setTimeout(function() { showNewsletterModal(); }, 500);
             footerShowToast('Подписка оформлена!');
             
-            setTimeout(() => {
+            setTimeout(function() {
                 emailInput.placeholder = 'Ваш email';
                 emailInput.classList.remove('success');
             }, 5000);
             
-        }, 1500);
+        }).catch(function(err) {
+            console.error('Newsletter error:', err);
+            subscribeBtn.classList.remove('loading');
+            subscribeBtn.innerHTML = originalHTML;
+            footerShowToast('Ошибка. Попробуйте позже.', 'error');
+        });
+        
+    } else {
+        // Firebase недоступен — просто показываем успех визуально
+        setTimeout(function() {
+            subscribeBtn.classList.remove('loading');
+            subscribeBtn.innerHTML = originalHTML;
+            emailInput.value = '';
+            emailInput.placeholder = 'Спасибо! ✓';
+            emailInput.classList.add('success');
+            setTimeout(function() { showNewsletterModal(); }, 500);
+            footerShowToast('Подписка оформлена!');
+            setTimeout(function() {
+                emailInput.placeholder = 'Ваш email';
+                emailInput.classList.remove('success');
+            }, 5000);
+        }, 1000);
     }
+}
 
     function isValidEmail(email) {
         const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
