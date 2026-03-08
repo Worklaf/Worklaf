@@ -1409,7 +1409,34 @@ async function syncLocalStorageToFirestore(userId) {
     if (Object.keys(updates).length > 0) await updateDoc(userRef, updates);
   } catch (e) { console.error('Error sync:', e); }
 }
+// После получения данных пользователя добавь:
+async function loadUserProfileData(user) {
+    if (!user) return;
+    
+    try {
+        const userDoc = await getDoc(doc(db, "users", user.uid));
+        if (userDoc.exists()) {
+            const data = userDoc.data();
+            
+            // Обновляем имя
+            if (data.profile?.firstName || data.profile?.lastName) {
+                const displayName = [data.profile.firstName, data.profile.lastName].filter(Boolean).join(' ');
+                document.getElementById('userName').textContent = displayName;
+            }
+            
+            // Обновляем аватар
+            if (data.profile?.avatar) {
+                document.getElementById('userAvatar').src = data.profile.avatar;
+            } else if (user.photoURL) {
+                document.getElementById('userAvatar').src = user.photoURL;
+            }
+        }
+    } catch (e) {
+        console.log('Profile load error:', e);
+    }
+}
 
+/
 onAuthStateChanged(auth, async function(user) {
   if (user) {
     currentUser = user;
@@ -1448,7 +1475,8 @@ onAuthStateChanged(auth, async function(user) {
     arcData = JSON.parse(localStorage.getItem(STORAGE_KEY)) || [];
     userCompleted = JSON.parse(localStorage.getItem(COMPLETED_KEY) || []);
     applyFilters();
-  }
+      loadUserProfileData(user);
+    }
 });
 
 function initUserSync(uid) {
