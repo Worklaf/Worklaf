@@ -1624,15 +1624,25 @@ window.footerSubmitSupport = async function(e) {
             projectEl.classList.add('text-cyan-400');
         }
 
-        // Количество пользователей (из Firebase)
+                // Количество пользователей — читаем из публичного config/stats
         if (userEl) {
-            if (typeof window.db !== 'undefined' && window.__firestoreExports?.getCountFromServer) {
-                const { collection, getCountFromServer } = window.__firestoreExports;
-                getCountFromServer(collection(window.db, 'users')).then(snapshot => {
-                    const count = snapshot.data().count;
-                    userEl.textContent = count > 0 ? count : 0;
-                    userEl.classList.add('text-emerald-400');
-                }).catch(() => userEl.textContent = '0');
+            if (typeof window.db !== 'undefined' && window.__firestoreExports) {
+                const { doc, getDoc } = window.__firestoreExports;
+                if (doc && getDoc) {
+                    getDoc(doc(window.db, 'config', 'stats')).then(function(snap) {
+                        if (snap.exists()) {
+                            const count = snap.data().userCount || 0;
+                            userEl.textContent = count;
+                            if (count > 0) userEl.classList.add('text-emerald-400');
+                        } else {
+                            userEl.textContent = '0';
+                        }
+                    }).catch(function() {
+                        userEl.textContent = '0';
+                    });
+                } else {
+                    userEl.textContent = '0';
+                }
             } else {
                 userEl.textContent = '0';
             }
