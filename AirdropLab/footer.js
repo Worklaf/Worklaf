@@ -1626,27 +1626,44 @@ window.footerSubmitSupport = async function(e) {
 
                 // Количество пользователей — читаем из публичного config/stats
         if (userEl) {
-            if (typeof window.db !== 'undefined' && window.__firestoreExports) {
-                const { doc, getDoc } = window.__firestoreExports;
-                if (doc && getDoc) {
-                    getDoc(doc(window.db, 'config', 'stats')).then(function(snap) {
-                        if (snap.exists()) {
-                            const count = snap.data().userCount || 0;
-                            userEl.textContent = count;
-                            if (count > 0) userEl.classList.add('text-emerald-400');
-                        } else {
-                            userEl.textContent = '0';
-                        }
-                    }).catch(function() {
-                        userEl.textContent = '0';
-                    });
+    // Читаем из config/stats — доступно всем без авторизации
+    function tryReadUserCount(attempt) {
+        attempt = attempt || 1;
+        var db = window.db;
+        var exp = window.__firestoreExports;
+        
+        if (db && exp && exp.doc && exp.getDoc) {
+            exp.getDoc(exp.doc(db, 'config', 'stats')).then(function(snap) {
+                if (snap.exists()) {
+                    var count = snap.data().userCount || 0;
+                    userEl.textContent = count;
+                    if (count > 0) {
+                        userEl.classList.add('text-emerald-400');
+                        userEl.classList.remove('text-slate-400');
+                    }
                 } else {
                     userEl.textContent = '0';
+                    console.warn('config/stats документ не найден');
                 }
+            }).catch(function(err) {
+                console.warn('Ошибка чтения config/stats:', err.message);
+                userEl.textContent = '0';
+            });
+        } else {
+            // db или экспорты ещё не готовы — повторяем попытку
+            if (attempt < 10) {
+                setTimeout(function() {
+                    tryReadUserCount(attempt + 1);
+                }, 500);
             } else {
                 userEl.textContent = '0';
+                console.warn('Firebase не инициализирован после 10 попыток');
             }
         }
+    }
+    
+    tryReadUserCount(1);
+}
     }
 
     // Замени эту функцию, чтобы она всегда открывала новую форму
