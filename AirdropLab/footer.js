@@ -252,36 +252,35 @@
                 `
             }
         },
-        // Гайды для страницы
         guides: [
-            {
-                id: 'arc',
-                title: 'Arc Testnet',
-                description: 'Тестнет от Circle - создателей USDC',
-                logo: 'https://givemebit.com/wp-content/uploads/2025/11/arc-testnet-logo-1024x235.jpg',
-                link: '../AirdropLab/guides/Arc/Arc_Testnet_by_Circle.html',
-                status: 'active',
-                difficulty: 'Легко'
-            },
-            {
-                id: 'tempo',
-                title: 'Tempo Testnet',
-                description: 'L2 решение от MetaStreet',
-                logo: 'https://givemebit.com/wp-content/uploads/2025/12/tempo-testnet-logo-1024x235.jpg',
-                link: '../AirdropLab/guides/Tempo/Tempo_Testnet.html',
-                status: 'active',
-                difficulty: 'Средне'
-            },
-            {
-                id: 'robinhood',
-                title: 'Robinhood Chain',
-                description: 'Тестнет от Robinhood - известного брокера',
-                logo: 'https://cryptocurrencyjobs.co/startups/assets/logos/robinhood.e4ca7c6b17d08763d0714e8a061cf5ba65950fe4d236e3c2db812421997fb743_hu_e366a75e4d388edb.jpg',
-                link: '../AirdropLab/guides/Robinhood/robinhood-chain.html',
-                status: 'new',
-                difficulty: 'Легко'
-            }
-        ]
+    {
+        id: 'arc',
+        title: 'Arc Testnet',
+        descKey: 'guide_arc_desc',
+        logo: 'https://givemebit.com/wp-content/uploads/2025/11/arc-testnet-logo-1024x235.jpg',
+        link: '../AirdropLab/guides/Arc/Arc_Testnet_by_Circle.html',
+        status: 'active',
+        difficultyKey: 'guide_difficulty_easy'
+    },
+    {
+        id: 'tempo',
+        title: 'Tempo Testnet',
+        descKey: 'guide_tempo_desc',
+        logo: 'https://givemebit.com/wp-content/uploads/2025/12/tempo-testnet-logo-1024x235.jpg',
+        link: '../AirdropLab/guides/Tempo/Tempo_Testnet.html',
+        status: 'active',
+        difficultyKey: 'guide_difficulty_medium'
+    },
+    {
+        id: 'robinhood',
+        title: 'Robinhood Chain',
+        descKey: 'guide_robinhood_desc',
+        logo: 'https://cryptocurrencyjobs.co/startups/assets/logos/robinhood.e4ca7c6b17d08763d0714e8a061cf5ba65950fe4d236e3c2db812421997fb743_hu_e366a75e4d388edb.jpg',
+        link: '../AirdropLab/guides/Robinhood/robinhood-chain.html',
+        status: 'new',
+        difficultyKey: 'guide_difficulty_easy'
+    }
+]
     };
 
     function DOMReady(fn) {
@@ -777,14 +776,18 @@
                             <div class="flex-1 min-w-0">
                                 <div class="flex items-center gap-2 flex-wrap mb-1">
                                     <h3 class="font-bold text-white">${guide.title}</h3>
-                                    ${guide.status === 'new' ? '<span class="bg-green-500/20 text-green-400 text-xs px-2 py-0.5 rounded-full">NEW</span>' : ''}
-                                    ${guide.status === 'active' ? `<span class="bg-cyan-500/20 text-cyan-400 text-xs px-2 py-0.5 rounded-full">${lang('footer_guide_active')}</span>` : ''}
+                                    ${guide.status === 'new'
+                                        ? '<span class="bg-green-500/20 text-green-400 text-xs px-2 py-0.5 rounded-full">NEW</span>'
+                                        : ''}
+                                    ${guide.status === 'active'
+                                        ? `<span class="bg-cyan-500/20 text-cyan-400 text-xs px-2 py-0.5 rounded-full">${lang('footer_guide_active')}</span>`
+                                        : ''}
                                 </div>
-                                <p class="text-sm text-slate-400 mb-2">${guide.description}</p>
+                                <p class="text-sm text-slate-400 mb-2">${lang(guide.descKey)}</p>
                                 <div class="flex items-center gap-4 text-xs text-slate-500">
                                     <span class="flex items-center gap-1">
                                         <i class="fas fa-signal text-green-400"></i>
-                                        ${guide.difficulty}
+                                        ${lang(guide.difficultyKey)}
                                     </span>
                                 </div>
                                 <a href="${guide.link}" target="_blank" class="mt-3 inline-flex items-center gap-2 px-4 py-2 bg-cyan-600 hover:bg-cyan-500 rounded-lg text-sm font-medium text-white transition-colors">
@@ -805,170 +808,451 @@
         </div>
     `;
 }
-
     function getAccountContent() {
-        const user = typeof currentUser !== 'undefined' ? currentUser : null;
-        const userData = typeof window.userProfileData !== 'undefined' ? window.userProfileData : {};
-        
-        return `
-            <div class="bg-gradient-to-r from-slate-900 to-slate-800 p-6 border-b border-slate-700">
-                <h2 class="text-2xl font-bold text-white flex items-center gap-3">
-                    <i class="fas fa-user-cog text-emerald-400"></i>
-                    Личный кабинет
-                </h2>
-                <p class="text-slate-400 mt-2">Управление профилем и настройками</p>
-            </div>
-            <div class="p-6 max-h-[70vh] overflow-y-auto">
-                ${user ? `
-                    <!-- Avatar Section -->
-                    <div class="flex items-center gap-6 mb-8 pb-6 border-b border-slate-700/50">
-                        <div class="relative group">
-                            <div class="w-24 h-24 rounded-full overflow-hidden border-4 border-cyan-500/50">
-                                <img id="accountAvatar" src="${user.photoURL || 'https://ui-avatars.com/api/?name=' + (user.displayName || 'U') + '&background=random'}" alt="Avatar" class="w-full h-full object-cover">
-                            </div>
-                            <label for="avatarUpload" class="absolute bottom-0 right-0 w-8 h-8 bg-cyan-600 rounded-full flex items-center justify-center cursor-pointer hover:bg-cyan-500 transition-colors shadow-lg">
-                                <i class="fas fa-camera text-white text-xs"></i>
-                            </label>
-                            <input type="file" id="avatarUpload" accept="image/*" class="hidden" onchange="uploadAvatar(event)">
+    const lang = typeof window.t === 'function' ? window.t : (k) => k;
+    const user = typeof currentUser !== 'undefined' ? currentUser : null;
+    const userData = typeof window.userProfileData !== 'undefined' ? window.userProfileData : {};
+
+    // Полный список стран
+    const countries = [
+        { code: 'AF', name: 'Afghanistan' },
+        { code: 'AL', name: 'Albania' },
+        { code: 'DZ', name: 'Algeria' },
+        { code: 'AD', name: 'Andorra' },
+        { code: 'AO', name: 'Angola' },
+        { code: 'AR', name: 'Argentina' },
+        { code: 'AM', name: 'Armenia' },
+        { code: 'AU', name: 'Australia' },
+        { code: 'AT', name: 'Austria' },
+        { code: 'AZ', name: 'Azerbaijan' },
+        { code: 'BH', name: 'Bahrain' },
+        { code: 'BD', name: 'Bangladesh' },
+        { code: 'BY', name: 'Belarus' },
+        { code: 'BE', name: 'Belgium' },
+        { code: 'BZ', name: 'Belize' },
+        { code: 'BJ', name: 'Benin' },
+        { code: 'BT', name: 'Bhutan' },
+        { code: 'BO', name: 'Bolivia' },
+        { code: 'BA', name: 'Bosnia and Herzegovina' },
+        { code: 'BW', name: 'Botswana' },
+        { code: 'BR', name: 'Brazil' },
+        { code: 'BN', name: 'Brunei' },
+        { code: 'BG', name: 'Bulgaria' },
+        { code: 'BF', name: 'Burkina Faso' },
+        { code: 'BI', name: 'Burundi' },
+        { code: 'KH', name: 'Cambodia' },
+        { code: 'CM', name: 'Cameroon' },
+        { code: 'CA', name: 'Canada' },
+        { code: 'CF', name: 'Central African Republic' },
+        { code: 'TD', name: 'Chad' },
+        { code: 'CL', name: 'Chile' },
+        { code: 'CN', name: 'China' },
+        { code: 'CO', name: 'Colombia' },
+        { code: 'KM', name: 'Comoros' },
+        { code: 'CG', name: 'Congo' },
+        { code: 'CR', name: 'Costa Rica' },
+        { code: 'HR', name: 'Croatia' },
+        { code: 'CU', name: 'Cuba' },
+        { code: 'CY', name: 'Cyprus' },
+        { code: 'CZ', name: 'Czech Republic' },
+        { code: 'DK', name: 'Denmark' },
+        { code: 'DJ', name: 'Djibouti' },
+        { code: 'DO', name: 'Dominican Republic' },
+        { code: 'EC', name: 'Ecuador' },
+        { code: 'EG', name: 'Egypt' },
+        { code: 'SV', name: 'El Salvador' },
+        { code: 'EE', name: 'Estonia' },
+        { code: 'ET', name: 'Ethiopia' },
+        { code: 'FJ', name: 'Fiji' },
+        { code: 'FI', name: 'Finland' },
+        { code: 'FR', name: 'France' },
+        { code: 'GA', name: 'Gabon' },
+        { code: 'GE', name: 'Georgia' },
+        { code: 'DE', name: 'Germany' },
+        { code: 'GH', name: 'Ghana' },
+        { code: 'GR', name: 'Greece' },
+        { code: 'GT', name: 'Guatemala' },
+        { code: 'GN', name: 'Guinea' },
+        { code: 'HT', name: 'Haiti' },
+        { code: 'HN', name: 'Honduras' },
+        { code: 'HK', name: 'Hong Kong' },
+        { code: 'HU', name: 'Hungary' },
+        { code: 'IS', name: 'Iceland' },
+        { code: 'IN', name: 'India' },
+        { code: 'ID', name: 'Indonesia' },
+        { code: 'IR', name: 'Iran' },
+        { code: 'IQ', name: 'Iraq' },
+        { code: 'IE', name: 'Ireland' },
+        { code: 'IL', name: 'Israel' },
+        { code: 'IT', name: 'Italy' },
+        { code: 'JM', name: 'Jamaica' },
+        { code: 'JP', name: 'Japan' },
+        { code: 'JO', name: 'Jordan' },
+        { code: 'KZ', name: 'Kazakhstan' },
+        { code: 'KE', name: 'Kenya' },
+        { code: 'KW', name: 'Kuwait' },
+        { code: 'KG', name: 'Kyrgyzstan' },
+        { code: 'LA', name: 'Laos' },
+        { code: 'LV', name: 'Latvia' },
+        { code: 'LB', name: 'Lebanon' },
+        { code: 'LY', name: 'Libya' },
+        { code: 'LI', name: 'Liechtenstein' },
+        { code: 'LT', name: 'Lithuania' },
+        { code: 'LU', name: 'Luxembourg' },
+        { code: 'MK', name: 'Macedonia' },
+        { code: 'MG', name: 'Madagascar' },
+        { code: 'MY', name: 'Malaysia' },
+        { code: 'MV', name: 'Maldives' },
+        { code: 'ML', name: 'Mali' },
+        { code: 'MT', name: 'Malta' },
+        { code: 'MR', name: 'Mauritania' },
+        { code: 'MX', name: 'Mexico' },
+        { code: 'MD', name: 'Moldova' },
+        { code: 'MC', name: 'Monaco' },
+        { code: 'MN', name: 'Mongolia' },
+        { code: 'ME', name: 'Montenegro' },
+        { code: 'MA', name: 'Morocco' },
+        { code: 'MZ', name: 'Mozambique' },
+        { code: 'MM', name: 'Myanmar' },
+        { code: 'NA', name: 'Namibia' },
+        { code: 'NP', name: 'Nepal' },
+        { code: 'NL', name: 'Netherlands' },
+        { code: 'NZ', name: 'New Zealand' },
+        { code: 'NI', name: 'Nicaragua' },
+        { code: 'NE', name: 'Niger' },
+        { code: 'NG', name: 'Nigeria' },
+        { code: 'KP', name: 'North Korea' },
+        { code: 'NO', name: 'Norway' },
+        { code: 'OM', name: 'Oman' },
+        { code: 'PK', name: 'Pakistan' },
+        { code: 'PA', name: 'Panama' },
+        { code: 'PG', name: 'Papua New Guinea' },
+        { code: 'PY', name: 'Paraguay' },
+        { code: 'PE', name: 'Peru' },
+        { code: 'PH', name: 'Philippines' },
+        { code: 'PL', name: 'Poland' },
+        { code: 'PT', name: 'Portugal' },
+        { code: 'QA', name: 'Qatar' },
+        { code: 'RO', name: 'Romania' },
+        { code: 'RU', name: 'Russia' },
+        { code: 'RW', name: 'Rwanda' },
+        { code: 'SA', name: 'Saudi Arabia' },
+        { code: 'SN', name: 'Senegal' },
+        { code: 'RS', name: 'Serbia' },
+        { code: 'SL', name: 'Sierra Leone' },
+        { code: 'SG', name: 'Singapore' },
+        { code: 'SK', name: 'Slovakia' },
+        { code: 'SI', name: 'Slovenia' },
+        { code: 'SO', name: 'Somalia' },
+        { code: 'ZA', name: 'South Africa' },
+        { code: 'KR', name: 'South Korea' },
+        { code: 'SS', name: 'South Sudan' },
+        { code: 'ES', name: 'Spain' },
+        { code: 'LK', name: 'Sri Lanka' },
+        { code: 'SD', name: 'Sudan' },
+        { code: 'SE', name: 'Sweden' },
+        { code: 'CH', name: 'Switzerland' },
+        { code: 'SY', name: 'Syria' },
+        { code: 'TW', name: 'Taiwan' },
+        { code: 'TJ', name: 'Tajikistan' },
+        { code: 'TZ', name: 'Tanzania' },
+        { code: 'TH', name: 'Thailand' },
+        { code: 'TG', name: 'Togo' },
+        { code: 'TN', name: 'Tunisia' },
+        { code: 'TR', name: 'Turkey' },
+        { code: 'TM', name: 'Turkmenistan' },
+        { code: 'UG', name: 'Uganda' },
+        { code: 'UA', name: 'Ukraine' },
+        { code: 'AE', name: 'United Arab Emirates' },
+        { code: 'GB', name: 'United Kingdom' },
+        { code: 'US', name: 'United States' },
+        { code: 'UY', name: 'Uruguay' },
+        { code: 'UZ', name: 'Uzbekistan' },
+        { code: 'VE', name: 'Venezuela' },
+        { code: 'VN', name: 'Vietnam' },
+        { code: 'YE', name: 'Yemen' },
+        { code: 'ZM', name: 'Zambia' },
+        { code: 'ZW', name: 'Zimbabwe' }
+    ];
+
+    const savedCountry = userData.country || '';
+
+    return `
+        <div class="bg-gradient-to-r from-slate-900 to-slate-800 p-6 border-b border-slate-700">
+            <h2 class="text-2xl font-bold text-white flex items-center gap-3">
+                <i class="fas fa-user-cog text-emerald-400"></i>
+                ${lang('footer_account_title')}
+            </h2>
+            <p class="text-slate-400 mt-2">${lang('footer_account_manage')}</p>
+        </div>
+        <div class="p-6 max-h-[70vh] overflow-y-auto">
+            ${user ? `
+                <!-- Avatar Section -->
+                <div class="flex items-center gap-6 mb-8 pb-6 border-b border-slate-700/50">
+                    <div class="relative group">
+                        <div class="w-24 h-24 rounded-full overflow-hidden border-4 border-cyan-500/50">
+                            <img id="accountAvatar" src="${user.photoURL || 'https://ui-avatars.com/api/?name=' + (user.displayName || 'U') + '&background=random'}" alt="Avatar" class="w-full h-full object-cover">
+                        </div>
+                        <label for="avatarUpload" class="absolute bottom-0 right-0 w-8 h-8 bg-cyan-600 rounded-full flex items-center justify-center cursor-pointer hover:bg-cyan-500 transition-colors shadow-lg">
+                            <i class="fas fa-camera text-white text-xs"></i>
+                        </label>
+                        <input type="file" id="avatarUpload" accept="image/*" class="hidden" onchange="uploadAvatar(event)">
+                    </div>
+                    <div>
+                        <h3 class="text-xl font-bold text-white">${user.displayName || lang('user')}</h3>
+                        <p class="text-slate-400">${user.email}</p>
+                        <p class="text-xs text-slate-500 mt-1">ID: ${user.uid.substring(0, 8)}...</p>
+                    </div>
+                </div>
+
+                <!-- Profile Form -->
+                <form id="accountForm" onsubmit="saveAccountProfile(event)" class="space-y-6">
+                    <div class="grid grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-sm font-medium text-slate-300 mb-2">${lang('footer_account_firstname')}</label>
+                            <input type="text" id="profileFirstName" value="${userData.firstName || ''}"
+                                   placeholder="${lang('footer_account_firstname')}"
+                                   class="w-full bg-slate-800 border border-slate-700 rounded-lg px-4 py-2.5 text-sm text-white focus:border-cyan-500 focus:outline-none">
                         </div>
                         <div>
-                            <h3 class="text-xl font-bold text-white">${user.displayName || 'Пользователь'}</h3>
-                            <p class="text-slate-400">${user.email}</p>
-                            <p class="text-xs text-slate-500 mt-1">ID: ${user.uid.substring(0, 8)}...</p>
+                            <label class="block text-sm font-medium text-slate-300 mb-2">${lang('footer_account_lastname')}</label>
+                            <input type="text" id="profileLastName" value="${userData.lastName || ''}"
+                                   placeholder="${lang('footer_account_lastname')}"
+                                   class="w-full bg-slate-800 border border-slate-700 rounded-lg px-4 py-2.5 text-sm text-white focus:border-cyan-500 focus:outline-none">
                         </div>
                     </div>
-                    
-                    <!-- Profile Form -->
-                    <form id="accountForm" onsubmit="saveAccountProfile(event)" class="space-y-6">
-                        <div class="grid grid-cols-2 gap-4">
-                            <div>
-                                <label class="block text-sm font-medium text-slate-300 mb-2">Имя</label>
-                                <input type="text" id="profileFirstName" value="${userData.firstName || ''}" placeholder="Иван" class="w-full bg-slate-800 border border-slate-700 rounded-lg px-4 py-2.5 text-sm text-white focus:border-cyan-500 focus:outline-none">
-                            </div>
-                            <div>
-                                <label class="block text-sm font-medium text-slate-300 mb-2">Фамилия</label>
-                                <input type="text" id="profileLastName" value="${userData.lastName || ''}" placeholder="Иванов" class="w-full bg-slate-800 border border-slate-700 rounded-lg px-4 py-2.5 text-sm text-white focus:border-cyan-500 focus:outline-none">
-                            </div>
-                        </div>
-                        
-                        <div class="grid grid-cols-2 gap-4">
-                            <div>
-                                <label class="block text-sm font-medium text-slate-300 mb-2">Никнейм</label>
-                                <div class="relative">
-                                    <span class="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500">@</span>
-                                    <input type="text" id="profileUsername" value="${userData.username || ''}" placeholder="nickname" class="w-full bg-slate-800 border border-slate-700 rounded-lg pl-8 pr-4 py-2.5 text-sm text-white focus:border-cyan-500 focus:outline-none">
-                                </div>
-                            </div>
-                            <div>
-                                <label class="block text-sm font-medium text-slate-300 mb-2">Telegram</label>
-                                <input type="text" id="profileTelegram" value="${userData.telegram || ''}" placeholder="@username" class="w-full bg-slate-800 border border-slate-700 rounded-lg px-4 py-2.5 text-sm text-white focus:border-cyan-500 focus:outline-none">
-                            </div>
-                        </div>
-                        
+
+                    <div class="grid grid-cols-2 gap-4">
                         <div>
-                            <label class="block text-sm font-medium text-slate-300 mb-2">Дата рождения</label>
-                            <input type="date" id="profileBirthdate" value="${userData.birthdate || ''}" class="w-full bg-slate-800 border border-slate-700 rounded-lg px-4 py-2.5 text-sm text-white focus:border-cyan-500 focus:outline-none">
-                        </div>
-                        
-                        <div>
-                            <label class="block text-sm font-medium text-slate-300 mb-2">Пол</label>
-                            <div class="flex gap-4">
-                                <label class="flex items-center gap-2 cursor-pointer">
-                                    <input type="radio" name="gender" value="male" ${userData.gender === 'male' ? 'checked' : ''} class="text-cyan-500 bg-slate-800 border-slate-600">
-                                    <span class="text-sm text-slate-300">Мужской</span>
-                                </label>
-                                <label class="flex items-center gap-2 cursor-pointer">
-                                    <input type="radio" name="gender" value="female" ${userData.gender === 'female' ? 'checked' : ''} class="text-cyan-500 bg-slate-800 border-slate-600">
-                                    <span class="text-sm text-slate-300">Женский</span>
-                                </label>
-                                <label class="flex items-center gap-2 cursor-pointer">
-                                    <input type="radio" name="gender" value="other" ${userData.gender === 'other' ? 'checked' : ''} class="text-cyan-500 bg-slate-800 border-slate-600">
-                                    <span class="text-sm text-slate-300">Другое</span>
-                                </label>
+                            <label class="block text-sm font-medium text-slate-300 mb-2">${lang('footer_account_username')}</label>
+                            <div class="relative">
+                                <span class="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500">@</span>
+                                <input type="text" id="profileUsername" value="${userData.username || ''}"
+                                       placeholder="nickname"
+                                       class="w-full bg-slate-800 border border-slate-700 rounded-lg pl-8 pr-4 py-2.5 text-sm text-white focus:border-cyan-500 focus:outline-none">
                             </div>
                         </div>
-                        
                         <div>
-                            <label class="block text-sm font-medium text-slate-300 mb-2">Страна</label>
-                            <select id="profileCountry" class="w-full bg-slate-800 border border-slate-700 rounded-lg px-4 py-2.5 text-sm text-white focus:border-cyan-500 focus:outline-none">
-                                <option value="">Выберите страну</option>
-                                <option value="RU" ${userData.country === 'RU' ? 'selected' : ''}>Россия</option>
-                                <option value="UA" ${userData.country === 'UA' ? 'selected' : ''}>Украина</option>
-                                <option value="KZ" ${userData.country === 'KZ' ? 'selected' : ''}>Казахстан</option>
-                                <option value="BY" ${userData.country === 'BY' ? 'selected' : ''}>Беларусь</option>
-                                <option value="US" ${userData.country === 'US' ? 'selected' : ''}>США</option>
-                                <option value="OTHER" ${userData.country === 'OTHER' ? 'selected' : ''}>Другое</option>
-                            </select>
+                            <label class="block text-sm font-medium text-slate-300 mb-2">${lang('footer_account_telegram')}</label>
+                            <input type="text" id="profileTelegram" value="${userData.telegram || ''}"
+                                   placeholder="@username"
+                                   class="w-full bg-slate-800 border border-slate-700 rounded-lg px-4 py-2.5 text-sm text-white focus:border-cyan-500 focus:outline-none">
                         </div>
-                        
-                        <div>
-                            <label class="block text-sm font-medium text-slate-300 mb-2">О себе</label>
-                            <textarea id="profileBio" rows="3" placeholder="Расскажите о себе..." class="w-full bg-slate-800 border border-slate-700 rounded-lg px-4 py-2.5 text-sm text-white focus:border-cyan-500 focus:outline-none resize-none">${userData.bio || ''}</textarea>
+                    </div>
+
+                    <div>
+                        <label class="block text-sm font-medium text-slate-300 mb-2">${lang('footer_account_birthdate')}</label>
+                        <input type="date" id="profileBirthdate" value="${userData.birthdate || ''}"
+                               class="w-full bg-slate-800 border border-slate-700 rounded-lg px-4 py-2.5 text-sm text-white focus:border-cyan-500 focus:outline-none">
+                    </div>
+
+                    <div>
+                        <label class="block text-sm font-medium text-slate-300 mb-2">${lang('footer_account_gender')}</label>
+                        <div class="flex gap-4">
+                            <label class="flex items-center gap-2 cursor-pointer">
+                                <input type="radio" name="gender" value="male" ${userData.gender === 'male' ? 'checked' : ''} class="text-cyan-500 bg-slate-800 border-slate-600">
+                                <span class="text-sm text-slate-300">${lang('footer_account_male')}</span>
+                            </label>
+                            <label class="flex items-center gap-2 cursor-pointer">
+                                <input type="radio" name="gender" value="female" ${userData.gender === 'female' ? 'checked' : ''} class="text-cyan-500 bg-slate-800 border-slate-600">
+                                <span class="text-sm text-slate-300">${lang('footer_account_female')}</span>
+                            </label>
+                            <label class="flex items-center gap-2 cursor-pointer">
+                                <input type="radio" name="gender" value="other" ${userData.gender === 'other' ? 'checked' : ''} class="text-cyan-500 bg-slate-800 border-slate-600">
+                                <span class="text-sm text-slate-300">${lang('footer_account_other_gender')}</span>
+                            </label>
                         </div>
-                        
-                        <div class="flex gap-3 pt-4">
-                            <button type="button" onclick="closePageModal()" class="flex-1 bg-slate-700 hover:bg-slate-600 py-3 rounded-lg text-sm font-medium text-white transition-colors">
-                                Отмена
-                            </button>
-                            <button type="submit" class="flex-1 bg-gradient-to-r from-cyan-600 to-blue-600 hover:from-cyan-500 hover:to-blue-500 py-3 rounded-lg text-sm font-bold text-white transition-all">
-                                <i class="fas fa-save mr-2"></i>Сохранить
-                            </button>
+                    </div>
+
+                    <!-- Country with searchable input -->
+                    <div>
+                        <label class="block text-sm font-medium text-slate-300 mb-2">${lang('footer_account_country')}</label>
+                        <div class="relative" id="countryPickerWrapper">
+                            <div class="relative">
+                                <i class="fas fa-search absolute left-3 top-1/2 -translate-y-1/2 text-slate-500 text-xs"></i>
+                                <input type="text"
+                                       id="countrySearchInput"
+                                       placeholder="${lang('account_select_country')}"
+                                       autocomplete="off"
+                                       class="w-full bg-slate-800 border border-slate-700 rounded-lg pl-9 pr-10 py-2.5 text-sm text-white focus:border-cyan-500 focus:outline-none"
+                                       oninput="filterCountryList(this.value)"
+                                       onfocus="showCountryDropdown()"
+                                       value="${countries.find(c => c.code === savedCountry)?.name || savedCountry || ''}">
+                                <button type="button" onclick="clearCountryInput()" class="absolute right-3 top-1/2 -translate-y-1/2 text-slate-500 hover:text-white transition-colors">
+                                    <i class="fas fa-times text-xs"></i>
+                                </button>
+                            </div>
+                            <input type="hidden" id="profileCountry" value="${savedCountry}">
+
+                            <!-- Dropdown list -->
+                            <div id="countryDropdown"
+                                 class="hidden absolute z-50 w-full mt-1 bg-slate-800 border border-slate-600 rounded-lg shadow-xl max-h-48 overflow-y-auto">
+                                ${countries.map(c => `
+                                    <div class="country-option px-4 py-2.5 text-sm text-slate-300 hover:bg-slate-700 hover:text-white cursor-pointer transition-colors flex items-center gap-2"
+                                         data-code="${c.code}"
+                                         data-name="${c.name}"
+                                         onclick="selectCountry('${c.code}', '${c.name}')">
+                                        ${c.name}
+                                    </div>
+                                `).join('')}
+                            </div>
                         </div>
-                    </form>
-                ` : `
-                    <div class="text-center py-8">
-                        <div class="w-20 h-20 bg-slate-800 rounded-full flex items-center justify-center mx-auto mb-4">
-                            <i class="fas fa-user-lock text-4xl text-slate-500"></i>
-                        </div>
-                        <h3 class="text-xl font-bold text-white mb-2">Вход не выполнен</h3>
-                        <p class="text-slate-400 mb-6">Войдите в аккаунт для управления профилем</p>
-                        <button onclick="closePageModal(); setTimeout(() => { if(typeof openLoginModal==='function') openLoginModal(); }, 300);" class="bg-gradient-to-r from-cyan-600 to-blue-600 hover:from-cyan-500 hover:to-blue-500 px-6 py-3 rounded-lg text-sm font-bold text-white transition-all">
-                            <i class="fas fa-sign-in-alt mr-2"></i>Войти
+                    </div>
+
+                    <div>
+                        <label class="block text-sm font-medium text-slate-300 mb-2">${lang('footer_account_bio')}</label>
+                        <textarea id="profileBio" rows="3"
+                                  placeholder="${lang('footer_account_bio_placeholder')}"
+                                  class="w-full bg-slate-800 border border-slate-700 rounded-lg px-4 py-2.5 text-sm text-white focus:border-cyan-500 focus:outline-none resize-none">${userData.bio || ''}</textarea>
+                    </div>
+
+                    <div class="flex gap-3 pt-4">
+                        <button type="button" onclick="closePageModal()"
+                                class="flex-1 bg-slate-700 hover:bg-slate-600 py-3 rounded-lg text-sm font-medium text-white transition-colors">
+                            ${lang('footer_account_cancel')}
+                        </button>
+                        <button type="submit"
+                                class="flex-1 bg-gradient-to-r from-cyan-600 to-blue-600 hover:from-cyan-500 hover:to-blue-500 py-3 rounded-lg text-sm font-bold text-white transition-all">
+                            <i class="fas fa-save mr-2"></i>${lang('footer_account_save')}
                         </button>
                     </div>
-                `}
-            </div>
-        `;
-    }
+                </form>
+            ` : `
+                <div class="text-center py-8">
+                    <div class="w-20 h-20 bg-slate-800 rounded-full flex items-center justify-center mx-auto mb-4">
+                        <i class="fas fa-user-lock text-4xl text-slate-500"></i>
+                    </div>
+                    <h3 class="text-xl font-bold text-white mb-2">${lang('footer_account_not_logged')}</h3>
+                    <p class="text-slate-400 mb-6">${lang('footer_account_login_desc')}</p>
+                    <button onclick="closePageModal(); setTimeout(() => { if(typeof openLoginModal==='function') openLoginModal(); }, 300);"
+                            class="bg-gradient-to-r from-cyan-600 to-blue-600 hover:from-cyan-500 hover:to-blue-500 px-6 py-3 rounded-lg text-sm font-bold text-white transition-all">
+                        <i class="fas fa-sign-in-alt mr-2"></i>${lang('login_btn')}
+                    </button>
+                </div>
+            `}
+        </div>
+    `;
+}
 
     function initAccountPage() {
         console.log('Account page initialized');
     }
+// ============ COUNTRY PICKER FUNCTIONS ============
 
-    window.saveAccountProfile = async function(e) {
-        e.preventDefault();
-        
-        const profileData = {
-            firstName: document.getElementById('profileFirstName').value,
-            lastName: document.getElementById('profileLastName').value,
-            username: document.getElementById('profileUsername').value,
-            telegram: document.getElementById('profileTelegram').value,
-            birthdate: document.getElementById('profileBirthdate').value,
-            gender: document.querySelector('input[name="gender"]:checked')?.value || '',
-            country: document.getElementById('profileCountry').value,
-            bio: document.getElementById('profileBio').value,
-            updatedAt: new Date().toISOString()
-        };
-        
-        // Сохраняем в localStorage как резерв
-        window.userProfileData = profileData;
-        localStorage.setItem('userProfileData', JSON.stringify(profileData));
-        
-        // Если пользователь авторизован, сохраняем в Firebase
-        if (typeof currentUser !== 'undefined' && currentUser && typeof db !== 'undefined') {
-            try {
-                const userRef = doc(db, "users", currentUser.uid);
-                await setDoc(userRef, { profile: profileData }, { merge: true });
-                footerShowToast('Профиль сохранён!');
-            } catch(err) {
-                console.error('Error saving profile:', err);
-                footerShowToast('Профиль сохранён локально');
-            }
+window.filterCountryList = function(query) {
+    const dropdown = document.getElementById('countryDropdown');
+    const options = dropdown.querySelectorAll('.country-option');
+    const q = query.toLowerCase().trim();
+
+    let hasVisible = false;
+    options.forEach(function(opt) {
+        const name = opt.getAttribute('data-name').toLowerCase();
+        if (name.includes(q)) {
+            opt.style.display = '';
+            hasVisible = true;
         } else {
-            footerShowToast('Профиль сохранён локально');
+            opt.style.display = 'none';
         }
+    });
+
+    dropdown.classList.remove('hidden');
+
+    // Если ничего не найдено — показываем "можно ввести вручную"
+    let noResult = dropdown.querySelector('.no-country-result');
+    if (!hasVisible) {
+        if (!noResult) {
+            noResult = document.createElement('div');
+            noResult.className = 'no-country-result px-4 py-2.5 text-sm text-slate-500 italic';
+            dropdown.appendChild(noResult);
+        }
+        const lang = typeof window.t === 'function' ? window.t : (k) => k;
+        noResult.textContent = lang('account_country_other_input');
+
+        // Сохраняем введённое значение как есть
+        document.getElementById('profileCountry').value = query;
+    } else {
+        if (noResult) noResult.remove();
+    }
+};
+
+window.showCountryDropdown = function() {
+    const dropdown = document.getElementById('countryDropdown');
+    if (dropdown) {
+        dropdown.classList.remove('hidden');
+        // Сбрасываем фильтр — показываем все
+        const options = dropdown.querySelectorAll('.country-option');
+        options.forEach(opt => opt.style.display = '');
+    }
+};
+
+window.selectCountry = function(code, name) {
+    const input = document.getElementById('countrySearchInput');
+    const hidden = document.getElementById('profileCountry');
+    const dropdown = document.getElementById('countryDropdown');
+
+    if (input) input.value = name;
+    if (hidden) hidden.value = code;
+    if (dropdown) dropdown.classList.add('hidden');
+};
+
+window.clearCountryInput = function() {
+    const input = document.getElementById('countrySearchInput');
+    const hidden = document.getElementById('profileCountry');
+    const dropdown = document.getElementById('countryDropdown');
+
+    if (input) { input.value = ''; input.focus(); }
+    if (hidden) hidden.value = '';
+    if (dropdown) {
+        dropdown.classList.remove('hidden');
+        dropdown.querySelectorAll('.country-option').forEach(opt => opt.style.display = '');
+    }
+};
+
+// Закрываем дропдаун при клике вне него
+document.addEventListener('click', function(e) {
+    const wrapper = document.getElementById('countryPickerWrapper');
+    if (wrapper && !wrapper.contains(e.target)) {
+        const dropdown = document.getElementById('countryDropdown');
+        if (dropdown) dropdown.classList.add('hidden');
+    }
+});
+    window.saveAccountProfile = async function(e) {
+    e.preventDefault();
+    const lang = typeof window.t === 'function' ? window.t : (k) => k;
+
+    // Берём и код страны (hidden input) и текстовое название (visible input)
+    const countryCode = document.getElementById('profileCountry').value;
+    const countryName = document.getElementById('countrySearchInput')?.value || countryCode;
+
+    const profileData = {
+        firstName: document.getElementById('profileFirstName').value,
+        lastName: document.getElementById('profileLastName').value,
+        username: document.getElementById('profileUsername').value,
+        telegram: document.getElementById('profileTelegram').value,
+        birthdate: document.getElementById('profileBirthdate').value,
+        gender: document.querySelector('input[name="gender"]:checked')?.value || '',
+        country: countryCode,
+        countryName: countryName,
+        bio: document.getElementById('profileBio').value,
+        updatedAt: new Date().toISOString()
     };
 
+    window.userProfileData = profileData;
+    localStorage.setItem('userProfileData', JSON.stringify(profileData));
+
+    if (typeof currentUser !== 'undefined' && currentUser && typeof db !== 'undefined') {
+        try {
+            const userRef = doc(db, "users", currentUser.uid);
+            await setDoc(userRef, { profile: profileData }, { merge: true });
+            footerShowToast(lang('footer_account_saved'));
+        } catch(err) {
+            console.error('Error saving profile:', err);
+            footerShowToast(lang('footer_account_saved_local'));
+        }
+    } else {
+        footerShowToast(lang('footer_account_saved_local'));
+    }
+};
     window.uploadAvatar = async function(e) {
         const file = e.target.files[0];
         if (!file) return;
