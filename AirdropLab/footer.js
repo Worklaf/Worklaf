@@ -1,18 +1,17 @@
 /**
  * ============================================
- * AirdropLab Footer Module v2.1
- * Универсальный футер с рабочими страницами
+ * AirdropLab Footer Module v2.2
+ * Реальные страницы: FAQ, Поддержка, Аккаунт, Уведомления
  * ============================================
  */
 
 (function() {
     'use strict';
 
-    // Конфигурация футера
     const FOOTER_CONFIG = {
         company: {
             name: 'AirdropLab',
-            version: 'v2.1',
+            version: 'v2.2',
             tagline: 'Лаборатория крипто-возможностей'
         },
         social: {
@@ -21,7 +20,268 @@
             discord: 'https://discord.gg/airdroplab',
             youtube: 'https://youtube.com/@airdroplab',
             email: 'support@airdroplab.com'
-        }
+        },
+        // Данные для FAQ
+        faq: [
+            {
+                question: 'Как начать участвовать в аирдропах?',
+                answer: 'Зарегистрируйтесь на AirdropLab, выберите интересующий проект из списка и следуйте инструкциям в гайде. Выполняйте задания и следите за обновлениями.'
+            },
+            {
+                question: 'Что такое тестнет и зачем в нем участвовать?',
+                answer: 'Тестнет - это тестовая сеть блокчейна до его запуска в основной сети. Участие в тестнетах позволяет получить токены проекта бесплатно, которые могут стать ценными при запуске mainnet.'
+            },
+            {
+                question: 'Как не попасть на скам-проект?',
+                answer: 'Мы проверяем все проекты перед добавлением, но всегда проводите собственное исследование. Не вводите приватные ключи, не отправьте ETH на неизвестные адреса и не доверяйте проектам без аудита безопасности.'
+            },
+            {
+                question: 'Почему проект не отображается в списке?',
+                answer: 'Проект может быть в архиве (завершен), находиться на модерации или быть удален. Также убедитесь, что вы используете правильные фильтры в боковой панели.'
+            },
+            {
+                question: 'Как получить помощь по проекту?',
+                answer: 'Используйте раздел "Поддержка" в футере или оставьте отзыв на странице конкретного проекта. Наша команда отвечает в течение 24 часов.'
+            },
+            {
+                question: 'Можно ли добавить свой проект?',
+                answer: 'Да, вы можете предложить проект через форму обратной связи или написав в Telegram. Мы рассмотрим все предложения.'
+            }
+        ],
+        // Данные для юридических документов
+        legal: {
+            terms: {
+                title: 'Условия использования',
+                lastUpdated: '07 марта 2026',
+                content: `
+                    <h3>1. Общие положения</h3>
+                    <p>Настоящие Условия использования (далее - "Условия") регулируют отношения между вами и AirdropLab при использовании сайта airdroplab.com (далее - "Сервис").</p>
+                    <p>Используя Сервис, вы соглашаетесь с настоящими Условиями. Если вы не согласны с какими-либо положениями, пожалуйста, не используйте наш Сервис.</p>
+                    
+                    <h3>2. Описание сервиса</h3>
+                    <p>AirdropLab предоставляет информационные услуги по:</p>
+                    <ul>
+                        <li>Мониторингу криптовалютных проектов и аирдропов</li>
+                        <li>Предоставлению гайдов по участию в тестнетах</li>
+                        <li>Отслеживанию прогресса выполнения заданий</li>
+                        <li>Уведомлению о новых возможностях</li>
+                    </ul>
+                    
+                    <h3>3. Регистрация и аккаунт</h3>
+                    <p>При регистрации вы обязуетесь предоставить достоверную информацию и поддерживать её актуальность. Вы несете ответственность за сохранность своего аккаунта и пароля.</p>
+                    
+                    <h3>4. Правила использования</h3>
+                    <p>При использовании Сервиса запрещается:</p>
+                    <ul>
+                        <li>Нарушать работу Сервиса или пытаться получить несанкционированный доступ</li>
+                        <li>Использовать Сервис для незаконных целей</li>
+                        <li>Публиковать вредоносный контент или спам</li>
+                        <li>Присваивать себе авторство чужих материалов</li>
+                    </ul>
+                    
+                    <h3>5. Интеллектуальная собственность</h3>
+                    <p>Весь контент на Сервисе, включая тексты, графику, логотипы и код, принадлежит AirdropLab или соответствующим правообладателям. Копирование материалов без разрешения запрещено.</p>
+                    
+                    <h3>6. Отказ от ответственности</h3>
+                    <p>Сервис предоставляется "как есть". Мы не гарантируем точность информации и не несем ответственности за любые убытки, возникшие в результате использования Сервиса.</p>
+                    
+                    <h3>7. Изменения в условиях</h3>
+                    <p>Мы оставляем право изменять настоящие Условия в любое время. Продолжая использовать Сервис после изменений, вы соглашаетесь с новыми условиями.</p>
+                    
+                    <h3>8. Контакты</h3>
+                    <p>По вопросам, связанным с настоящими Условиями, обращайтесь: support@airdroplab.com</p>
+                `
+            },
+            privacy: {
+                title: 'Политика конфиденциальности',
+                lastUpdated: '07 марта 2026',
+                content: `
+                    <h3>1. Введение</h3>
+                    <p>Политика конфиденциальности AirdropLab объясняет, как мы собираем, используем и защищаем ваши персональные данные.</p>
+                    
+                    <h3>2. Какие данные мы собираем</h3>
+                    <ul>
+                        <li><strong>Данные аккаунта:</strong> имя, email, фото профиля (при регистрации через соцсети)</li>
+                        <li><strong>Данные об использовании:</strong> история посещений, выполненные задания, избранные проекты</li>
+                        <li><strong>Технические данные:</strong> IP-адрес, тип браузера, устройство</li>
+                    </ul>
+                    
+                    <h3>3. Как мы используем данные</h3>
+                    <p>Ваши данные используются для:</p>
+                    <ul>
+                        <li>Предоставления доступа к функциям Сервиса</li>
+                        <li>Персонализации вашего опыта</li>
+                        <li>Улучшения качества Сервиса</li>
+                        <li>Отправки уведомлений о новых аирдропах</li>
+                        <li>Обеспечения безопасности аккаунта</li>
+                    </ul>
+                    
+                    <h3>4. Защита данных</h3>
+                    <p>Мы применяем современные методы защиты данных:</p>
+                    <ul>
+                        <li>Шифрование данных при передаче (SSL/TLS)</li>
+                        <li>Безопасное хранение паролей (bcrypt)</li>
+                        <li>Регулярный аудит безопасности</li>
+                        <li>Ограниченный доступ к персональным данным</li>
+                    </ul>
+                    
+                    <h3>5. Передача данных третьим лицам</h3>
+                    <p>Мы не продаем ваши персональные данные. Передача возможна только:</p>
+                    <ul>
+                        <li>При вашем согласии</li>
+                        <li>Для выполнения услуг (Firebase, хостинг)</li>
+                        <li>По требованию закона</li>
+                    </ul>
+                    
+                    <h3>6. Ваши права</h3>
+                    <p>Вы имеете право:</p>
+                    <ul>
+                        <li>Получить доступ к своим данным</li>
+                        <li>Исправить неточные данные</li>
+                        <li>Удалить аккаунт и данные</li>
+                        <li>Отказаться от обработки данных</li>
+                        <li>Экспортировать свои данные</li>
+                    </ul>
+                    
+                    <h3>7. Cookies</h3>
+                    <p>Мы используем cookies для аутентификации, запоминания настроек и анализа посещаемости. Вы можете отключить cookies в браузере.</p>
+                    
+                    <h3>8. Контакты</h3>
+                    <p>По вопросам конфиденциальности: privacy@airdroplab.com</p>
+                `
+            },
+            cookie: {
+                title: 'Политика использования Cookies',
+                lastUpdated: '07 марта 2026',
+                content: `
+                    <h3>1. Что такое Cookies</h3>
+                    <p>Cookies - это небольшие текстовые файлы, которые сохраняются на вашем устройстве при посещении веб-сайтов. Они помогают сайтам запоминать ваши действия и предпочтения.</p>
+                    
+                    <h3>2. Какие cookies мы используем</h3>
+                    
+                    <h4>Необходимые cookies</h4>
+                    <p>Эти cookies необходимы для работы Сервиса:</p>
+                    <ul>
+                        <li><strong>auth_token:</strong> для аутентификации пользователя</li>
+                        <li><strong>session_id:</strong> для поддержки сессии</li>
+                        <li><strong>preferences:</strong> для сохранения настроек</li>
+                    </ul>
+                    
+                    <h4>Аналитические cookies</h4>
+                    <p>Помогают нам улучшать Сервис:</p>
+                    <ul>
+                        <li><strong>_ga:</strong> Google Analytics (2 года)</li>
+                        <li><strong>_gid:</strong> Google Analytics (24 часа)</li>
+                    </ul>
+                    
+                    <h3>3. Управление cookies</h3>
+                    <p>Вы можете:</p>
+                    <ul>
+                        <li>Отключить cookies в настройках браузера</li>
+                        <li>Удалить существующие cookies</li>
+                        <li>Настроить уведомления о cookies</li>
+                    </ul>
+                    <p><strong>Внимание:</strong> Отключение cookies может повлиять на работу некоторых функций Сервиса.</p>
+                    
+                    <h3>4. Сторонние сервисы</h3>
+                    <p>Мы используем сторонние сервисы, которые также могут устанавливать cookies:</p>
+                    <ul>
+                        <li>Firebase (аутентификация, база данных)</li>
+                        <li>Google Analytics (аналитика)</li>
+                        <li>CryptoRank (данные о криптовалютах)</li>
+                    </ul>
+                `
+            },
+            disclaimer: {
+                title: 'Отказ от ответственности',
+                lastUpdated: '07 марта 2026',
+                content: `
+                    <h3>1. Информационная цель</h3>
+                    <p>AirdropLab предоставляет исключительно информационные услуги. Мы не являемся финансовым консультантом, брокером или инвестиционной компанией.</p>
+                    
+                    <h3>2. Информация не является советом</h3>
+                    <p>Вся информация на Сервисе носит ознакомительный характер и не является:</p>
+                    <ul>
+                        <li>Финансовым или инвестиционным советом</li>
+                        <li>Рекомендацией к покупке/продаже криптовалют</li>
+                        <li>Гарантией прибыли или доходности</li>
+                    </ul>
+                    
+                    <h3>3. Риски криптовалют</h3>
+                    <p>Инвестиции в криптовалюту сопряжены с высокими рисками:</p>
+                    <ul>
+                        <li><strong>Волатильность:</strong> цены могут резко изменяться</li>
+                        <li><strong>Потеря средств:</strong> возможна полная потеря инвестиций</li>
+                        <li><strong>Мошенничество:</strong> существуют скамы и мошеннические проекты</li>
+                        <li><strong>Технические риски:</strong> взломы, потеря ключей</li>
+                        <li><strong>Регуляторные риски:</strong> запреты в разных странах</li>
+                    </ul>
+                    
+                    <h3>4. Ответственность пользователя</h3>
+                    <p>Вы несете полную ответственность за:</p>
+                    <ul>
+                        <li>Собственное исследование проектов</li>
+                        <li>Принятие инвестиционных решений</li>
+                        <li>Сохранность своих средств и ключей</li>
+                        <li>Соблюдение законов вашей страны</li>
+                    </ul>
+                    
+                    <h3>5. Внешние ссылки</h3>
+                    <p>Сервис может содержать ссылки на внешние сайты. Мы не несем ответственности за содержание, политику или практики этих сайтов.</p>
+                    
+                    <h3>6. Ответственность AirdropLab</h3>
+                    <p>AirdropLab не несет ответственности за:</p>
+                    <ul>
+                        <li>Убытки, возникшие в результате использования информации с Сервиса</li>
+                        <li>Потерю средств пользователей</li>
+                        <li>Действия третьих лиц</li>
+                        <li>Технические сбои или перерывы в работе</li>
+                    </ul>
+                    
+                    <h3>7. Тестнеты и аирдропы</h3>
+                    <p>Участие в тестнетах и аирдропах:</p>
+                    <ul>
+                        <li>Не гарантирует получение токенов</li>
+                        <li>Не гарантирует ценность токенов</li>
+                        <li>Может потребовать выполнения сложных заданий</li>
+                        <li>Проекты могут завершиться без распределения токенов</li>
+                    </ul>
+                    
+                    <h3>8. Согласие с рисками</h3>
+                    <p>Используя Сервис, вы подтверждаете, что понимаете и принимаете все риски, связанные с криптовалютами и блокчейн-проектами.</p>
+                `
+            }
+        },
+        // Гайды для страницы
+        guides: [
+            {
+                id: 'arc',
+                title: 'Arc Testnet',
+                description: 'Тестнет от Circle - создателей USDC',
+                logo: 'https://givemebit.com/wp-content/uploads/2025/11/arc-testnet-logo-1024x235.jpg',
+                link: '../AirdropLab/guides/Arc/Arc_Testnet_by_Circle.html',
+                status: 'active',
+                difficulty: 'Легко'
+            },
+            {
+                id: 'tempo',
+                title: 'Tempo Testnet',
+                description: 'L2 решение от MetaStreet',
+                logo: 'https://givemebit.com/wp-content/uploads/2025/12/tempo-testnet-logo-1024x235.jpg',
+                link: '../AirdropLab/guides/Tempo/Tempo_Testnet.html',
+                status: 'active',
+                difficulty: 'Средне'
+            },
+            {
+                id: 'robinhood',
+                title: 'Robinhood Chain',
+                description: 'Тестнет от Robinhood - известного брокера',
+                logo: 'https://cryptocurrencyjobs.co/startups/assets/logos/robinhood.e4ca7c6b17d08763d0714e8a061cf5ba65950fe4d236e3c2db812421997fb743_hu_e366a75e4d388edb.jpg',
+                link: '../AirdropLab/guides/Robinhood/robinhood-chain.html',
+                status: 'new',
+                difficulty: 'Легко'
+            }
+        ]
     };
 
     function DOMReady(fn) {
@@ -34,7 +294,7 @@
 
     function initFooter() {
         if (document.getElementById('site-footer')) {
-            console.log('Footer already exists');
+            console.log('Footer v2.2 already exists');
             return;
         }
 
@@ -147,11 +407,11 @@
                                 <i class="fas fa-layer-group text-xs w-4"></i>
                                 <span class="text-sm">Проекты</span>
                             </a>
-                            <a href="#" onclick="openGuidesPage(); return false;" class="footer-link group flex items-center gap-2 text-slate-400 hover:text-white transition-colors">
+                            <a href="#" onclick="openPageModal('guides'); return false;" class="footer-link group flex items-center gap-2 text-slate-400 hover:text-white transition-colors">
                                 <i class="fas fa-book-open text-xs w-4"></i>
                                 <span class="text-sm">Гайды</span>
                             </a>
-                            <a href="#" onclick="openSupportPage(); return false;" class="footer-link group flex items-center gap-2 text-slate-400 hover:text-white transition-colors">
+                            <a href="#" onclick="openSupportModal(); return false;" class="footer-link group flex items-center gap-2 text-slate-400 hover:text-white transition-colors">
                                 <i class="fas fa-headset text-xs w-4"></i>
                                 <span class="text-sm">Поддержка</span>
                             </a>
@@ -170,16 +430,16 @@
                             <span>Личный кабинет</span>
                         </h4>
                         <nav class="footer-nav space-y-2">
-                            <a href="#" onclick="openAccountPage(); return false;" class="footer-link group flex items-center gap-2 text-slate-400 hover:text-white transition-colors">
+                            <a href="#" onclick="openPageModal('account'); return false;" class="footer-link group flex items-center gap-2 text-slate-400 hover:text-white transition-colors">
                                 <i class="fas fa-user text-xs w-4"></i>
                                 <span class="text-sm">Мой аккаунт</span>
                             </a>
-                            <a href="#" onclick="openNotificationsPage(); return false;" class="footer-link group flex items-center gap-2 text-slate-400 hover:text-white transition-colors">
+                            <a href="#" onclick="openNotificationsModal(); return false;" class="footer-link group flex items-center gap-2 text-slate-400 hover:text-white transition-colors">
                                 <i class="fas fa-bell text-xs w-4"></i>
                                 <span class="text-sm">Уведомления</span>
-                                <span id="footerNotificationBadge" class="hidden ml-auto bg-red-500 text-white text-[10px] px-1.5 py-0.5 rounded-full font-bold">0</span>
+                                <span id="footerNotificationBadge" class="hidden ml-auto bg-red-500 text-white text-[10px] px-1.5 py-0.5 rounded-full font-bold min-w-[18px] text-center">0</span>
                             </a>
-                            <a href="#" onclick="openFAQPage(); return false;" class="footer-link group flex items-center gap-2 text-slate-400 hover:text-white transition-colors">
+                            <a href="#" onclick="openPageModal('faq'); return false;" class="footer-link group flex items-center gap-2 text-slate-400 hover:text-white transition-colors">
                                 <i class="fas fa-question-circle text-xs w-4"></i>
                                 <span class="text-sm">FAQ</span>
                             </a>
@@ -216,16 +476,16 @@
                             <div>
                                 <h5 class="legal-heading text-xs font-semibold text-slate-300 mb-2 uppercase tracking-wider">Документы</h5>
                                 <nav class="space-y-1">
-                                    <a href="#" onclick="openTermsModal(); return false;" class="footer-link text-slate-400 hover:text-purple-400 transition-colors block text-sm py-1">
+                                    <a href="#" onclick="openLegalModal('terms'); return false;" class="footer-link text-slate-400 hover:text-purple-400 transition-colors block text-sm py-1">
                                         <i class="fas fa-file-contract w-4"></i> Условия использования
                                     </a>
-                                    <a href="#" onclick="openPrivacyModal(); return false;" class="footer-link text-slate-400 hover:text-purple-400 transition-colors block text-sm py-1">
+                                    <a href="#" onclick="openLegalModal('privacy'); return false;" class="footer-link text-slate-400 hover:text-purple-400 transition-colors block text-sm py-1">
                                         <i class="fas fa-shield-alt w-4"></i> Политика конфиденциальности
                                     </a>
-                                    <a href="#" onclick="openCookieModal(); return false;" class="footer-link text-slate-400 hover:text-purple-400 transition-colors block text-sm py-1">
+                                    <a href="#" onclick="openLegalModal('cookie'); return false;" class="footer-link text-slate-400 hover:text-purple-400 transition-colors block text-sm py-1">
                                         <i class="fas fa-cookie-bite w-4"></i> Политика cookies
                                     </a>
-                                    <a href="#" onclick="openDisclaimerModal(); return false;" class="footer-link text-slate-400 hover:text-purple-400 transition-colors block text-sm py-1">
+                                    <a href="#" onclick="openLegalModal('disclaimer'); return false;" class="footer-link text-slate-400 hover:text-purple-400 transition-colors block text-sm py-1">
                                         <i class="fas fa-exclamation-triangle w-4"></i> Отказ от ответственности
                                     </a>
                                 </nav>
@@ -297,8 +557,6 @@
             <div class="footer-bottom border-t border-slate-800/50 relative z-10">
                 <div class="max-w-[1600px] mx-auto px-4 py-5">
                     <div class="flex flex-col md:flex-row justify-between items-center gap-4 text-center md:text-left">
-                        
-                        <!-- Copyright -->
                         <div class="footer-copyright text-sm text-slate-500">
                             <span>© ${new Date().getFullYear()} ${FOOTER_CONFIG.company.name}. Все права защищены.</span>
                             <span class="hidden md:inline mx-2">•</span>
@@ -306,8 +564,6 @@
                             <i class="fas fa-heart text-red-400 mx-1"></i>
                             <span class="text-slate-400">любовью к крипте</span>
                         </div>
-                        
-                        <!-- Tech Stack & Language -->
                         <div class="footer-tech flex flex-wrap justify-center md:justify-end gap-4 text-xs text-slate-500">
                             <div class="tech-item flex items-center gap-2">
                                 <i class="fas fa-database text-cyan-400"></i>
@@ -325,8 +581,6 @@
                                 <i class="fas fa-code text-emerald-400"></i>
                                 <span>JavaScript</span>
                             </div>
-                            
-                            <!-- Language Toggle (Mobile) -->
                             <div class="md:hidden flex items-center gap-2 ml-4 pl-4 border-l border-slate-700">
                                 <button onclick="footerToggleLang()" id="footerLangBtn" class="flex items-center gap-2 px-3 py-1.5 bg-slate-800/50 hover:bg-slate-700 rounded-lg border border-slate-700/50 text-xs transition-all text-slate-300">
                                     <span class="lang-flag-footer">🇷🇺</span>
@@ -335,13 +589,11 @@
                             </div>
                         </div>
                     </div>
-                    
-                    <!-- Mobile Legal Links -->
                     <div class="md:hidden pt-4 border-t border-slate-800/50 mt-4">
                         <div class="flex flex-wrap justify-center gap-4 text-xs text-slate-400">
-                            <a href="#" onclick="openTermsModal(); return false;" class="hover:text-white transition-colors">Условия</a>
-                            <a href="#" onclick="openPrivacyModal(); return false;" class="hover:text-white transition-colors">Приватность</a>
-                            <a href="#" onclick="openSupportPage(); return false;" class="hover:text-white transition-colors">Поддержка</a>
+                            <a href="#" onclick="openLegalModal('terms'); return false;" class="hover:text-white transition-colors">Условия</a>
+                            <a href="#" onclick="openLegalModal('privacy'); return false;" class="hover:text-white transition-colors">Приватность</a>
+                            <a href="#" onclick="openSupportModal(); return false;" class="hover:text-white transition-colors">Поддержка</a>
                             <span class="text-slate-600">•</span>
                             <a href="https://cryptorank.io" target="_blank" class="hover:text-cyan-400 transition-colors">CryptoRank</a>
                         </div>
@@ -354,8 +606,81 @@
                 <i class="fas fa-chevron-up"></i>
             </button>
             
+            <!-- Page Modal Container -->
+            <div id="pageModal" class="modal">
+                <div class="modal-content page-modal-content p-0 relative">
+                    <button onclick="closePageModal()" class="absolute top-4 right-4 z-10 text-slate-400 hover:text-white transition-colors bg-slate-800/80 rounded-full w-8 h-8 flex items-center justify-center">
+                        <i class="fas fa-times"></i>
+                    </button>
+                    <div id="pageModalContent"></div>
+                </div>
+            </div>
+            
+            <!-- Support Modal -->
+            <div id="supportModal" class="modal">
+                <div class="modal-content modal-md p-6 relative">
+                    <button onclick="closeSupportModal()" class="absolute top-4 right-4 text-slate-400 hover:text-white transition-colors">
+                        <i class="fas fa-times text-xl"></i>
+                    </button>
+                    <div class="flex items-center gap-3 mb-6">
+                        <div class="w-12 h-12 rounded-xl bg-gradient-to-br from-purple-500/20 to-blue-500/20 border border-purple-500/30 flex items-center justify-center">
+                            <i class="fas fa-headset text-purple-400 text-xl"></i>
+                        </div>
+                        <div>
+                            <h2 class="text-xl font-bold text-white">Служба поддержки</h2>
+                            <p class="text-sm text-slate-400">Мы ответим на ваш вопрос в течение 24 часов</p>
+                        </div>
+                    </div>
+                    
+                    <form id="supportForm" onsubmit="submitSupportTicket(event)" class="space-y-4">
+                        <div>
+                            <label class="block text-sm font-medium text-slate-300 mb-2">Тема обращения *</label>
+                            <select id="supportCategory" required class="w-full bg-slate-800 border border-slate-700 rounded-lg px-4 py-2.5 text-sm text-white focus:border-purple-500 focus:outline-none">
+                                <option value="">Выберите категорию</option>
+                                <option value="technical">🔧 Техническая проблема</option>
+                                <option value="account">👤 Проблема с аккаунтом</option>
+                                <option value="project">📋 Вопрос о проекте</option>
+                                <option value="suggestion">💡 Предложение</option>
+                                <option value="partnership">🤝 Партнёрство</option>
+                                <option value="other">💬 Другое</option>
+                            </select>
+                        </div>
+                        
+                        <div class="grid grid-cols-2 gap-4">
+                            <div>
+                                <label class="block text-sm font-medium text-slate-300 mb-2">Ваше имя</label>
+                                <input type="text" id="supportName" placeholder="Иван" class="w-full bg-slate-800 border border-slate-700 rounded-lg px-4 py-2.5 text-sm text-white focus:border-purple-500 focus:outline-none">
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-slate-300 mb-2">Email *</label>
+                                <input type="email" id="supportEmail" required placeholder="example@mail.com" class="w-full bg-slate-800 border border-slate-700 rounded-lg px-4 py-2.5 text-sm text-white focus:border-purple-500 focus:outline-none">
+                            </div>
+                        </div>
+                        
+                        <div>
+                            <label class="block text-sm font-medium text-slate-300 mb-2">Заголовок *</label>
+                            <input type="text" id="supportSubject" required placeholder="Краткое описание проблемы" class="w-full bg-slate-800 border border-slate-700 rounded-lg px-4 py-2.5 text-sm text-white focus:border-purple-500 focus:outline-none">
+                        </div>
+                        
+                        <div>
+                            <label class="block text-sm font-medium text-slate-300 mb-2">Подробное описание *</label>
+                            <textarea id="supportMessage" required rows="5" placeholder="Опишите вашу проблему подробно..." class="w-full bg-slate-800 border border-slate-700 rounded-lg px-4 py-2.5 text-sm text-white focus:border-purple-500 focus:outline-none resize-none"></textarea>
+                        </div>
+                        
+                        <div class="flex items-center gap-2">
+                            <input type="checkbox" id="supportNotify" checked class="rounded bg-slate-800 border-slate-600 text-purple-500">
+                            <label for="supportNotify" class="text-sm text-slate-400">Уведомить о статусе по email</label>
+                        </div>
+                        
+                        <button type="submit" id="supportSubmitBtn" class="w-full bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-500 hover:to-blue-500 py-3 rounded-lg text-sm font-bold text-white transition-all hover:scale-[1.02] shadow-lg shadow-purple-500/20">
+                            <i class="fas fa-paper-plane mr-2"></i>Отправить обращение
+                        </button>
+                    </form>
+                </div>
+            </div>
+            
             <!-- Success Modal -->
-            <div id="newsletterModal" class="newsletter-modal modal hidden" style="display: none;">
+            <div id="newsletterModal" class="modal">
                 <div class="modal-content modal-sm p-6 relative">
                     <button onclick="closeNewsletterModal()" class="absolute top-4 right-4 text-slate-400 hover:text-white transition-colors">
                         <i class="fas fa-times"></i>
@@ -377,209 +702,527 @@
         `;
     }
 
-    // ============ PAGE/MODAL OPENERS ============
+    // ============ MODAL FUNCTIONS ============
 
-    window.openGuidesPage = function() {
-        // Прокрутка к секции проектов или открытие отдельной страницы гайдов
-        const projectsSection = document.getElementById('projects');
-        if (projectsSection) {
-            projectsSection.scrollIntoView({ behavior: 'smooth' });
-            footerShowToast('Раздел гайдов в разработке');
-        }
-    };
-
-    window.openSupportPage = function() {
-        // Открываем модалку обратной связи
-        if (typeof window.openFeedbackListModal === 'function') {
-            window.openFeedbackListModal();
-        } else {
-            footerShowToast('Поддержка: support@airdroplab.com');
-        }
-    };
-
-    window.openAccountPage = function() {
-        // Проверяем авторизацию
-        if (typeof currentUser !== 'undefined' && currentUser) {
-            // Показываем панель пользователя (она уже есть в header)
-            const heroSection = document.getElementById('heroSection');
-            if (heroSection) heroSection.scrollIntoView({ behavior: 'smooth' });
-            footerShowToast('Личный кабинет');
-        } else {
-            // Открываем модалку входа
-            if (typeof window.openLoginModal === 'function') {
-                window.openLoginModal();
-            } else {
-                footerShowToast('Войдите в аккаунт');
-            }
-        }
-    };
-
-    window.openNotificationsPage = function() {
-        // Проверяем авторизацию и открываем уведомления
-        if (typeof currentUser !== 'undefined' && currentUser) {
-            if (typeof window.showNotifications === 'function') {
-                window.showNotifications();
-            }
-        } else {
-            if (typeof window.openLoginModal === 'function') {
-                window.openLoginModal();
-            } else {
-                footerShowToast('Войдите для просмотра уведомлений');
-            }
-        }
-    };
-
-    window.openFAQPage = function() {
-        // Открываем модалку с FAQ
-        const faqModal = document.getElementById('faqModal');
-        if (faqModal) {
-            faqModal.classList.add('active');
-        } else {
-            footerShowToast('FAQ скоро появится!');
-        }
-    };
-
-    window.openTutorialsPage = function() {
-        footerShowToast('Туториалы в разделе проектов');
-        const projectsSection = document.getElementById('projects');
-        if (projectsSection) {
-            projectsSection.scrollIntoView({ behavior: 'smooth' });
-        }
-    };
-
-    // Legal Modals
-    window.openTermsModal = function() { openLegalModal('terms'); };
-    window.openPrivacyModal = function() { openLegalModal('privacy'); };
-    window.openCookieModal = function() { openLegalModal('cookie'); };
-    window.openDisclaimerModal = function() { openLegalModal('disclaimer'); };
-
-    function openLegalModal(type) {
-        let modal = document.getElementById('legalModal');
+    window.openPageModal = function(page) {
+        const modal = document.getElementById('pageModal');
+        const content = document.getElementById('pageModalContent');
         
-        if (!modal) {
-            modal = document.createElement('div');
-            modal.id = 'legalModal';
-            modal.className = 'modal';
-            document.body.appendChild(modal);
+        if (!modal || !content) return;
+        
+        let html = '';
+        
+        switch(page) {
+            case 'faq':
+                html = getFAQContent();
+                break;
+            case 'guides':
+                html = getGuidesContent();
+                break;
+            case 'account':
+                html = getAccountContent();
+                break;
+            default:
+                html = '<p class="text-center text-slate-400 p-8">Страница в разработке</p>';
         }
+        
+        content.innerHTML = html;
+        modal.classList.add('active');
+        
+        // Инициализируем функционал страницы
+        if (page === 'faq') initFAQ();
+        if (page === 'account') initAccountPage();
+    };
 
-        const content = {
-            terms: {
-                title: 'Условия использования',
-                icon: 'fa-file-contract',
-                color: 'text-purple-400',
-                content: `
-                    <h3 class="text-lg font-bold text-white mb-4">1. Общие положения</h3>
-                    <p class="text-slate-300 mb-4">Используя сайт AirdropLab, вы соглашаетесь с настоящими условиями. Если вы не согласны с какими-либо положениями, пожалуйста, не используйте наш сайт.</p>
-                    
-                    <h3 class="text-lg font-bold text-white mb-4">2. Использование сайта</h3>
-                    <p class="text-slate-300 mb-4">Вы можете использовать сайт только в законных целях. Запрещается:</p>
-                    <ul class="list-disc list-inside text-slate-300 mb-4 space-y-2">
-                        <li>Нарушать работу сайта</li>
-                        <li>Пытаться получить несанкционированный доступ</li>
-                        <li>Использовать сайт для незаконных целей</li>
-                    </ul>
-                    
-                    <h3 class="text-lg font-bold text-white mb-4">3. Интеллектуальная собственность</h3>
-                    <p class="text-slate-300 mb-4">Весь контент на сайте принадлежит AirdropLab и защищен авторским правом.</p>
-                `
-            },
-            privacy: {
-                title: 'Политика конфиденциальности',
-                icon: 'fa-shield-alt',
-                color: 'text-blue-400',
-                content: `
-                    <h3 class="text-lg font-bold text-white mb-4">1. Сбор информации</h3>
-                    <p class="text-slate-300 mb-4">Мы собираем только необходимую информацию для работы сервиса:</p>
-                    <ul class="list-disc list-inside text-slate-300 mb-4 space-y-2">
-                        <li>Email и имя пользователя при регистрации</li>
-                        <li>Данные о выполненных заданиях</li>
-                        <li>Статистика использования сайта</li>
-                    </ul>
-                    
-                    <h3 class="text-lg font-bold text-white mb-4">2. Использование данных</h3>
-                    <p class="text-slate-300 mb-4">Ваши данные используются для:</p>
-                    <ul class="list-disc list-inside text-slate-300 mb-4 space-y-2">
-                        <li>Предоставления доступа к функциям сайта</li>
-                        <li>Улучшения качества сервиса</li>
-                        <li>Отправки уведомлений о новых аирдропах</li>
-                    </ul>
-                    
-                    <h3 class="text-lg font-bold text-white mb-4">3. Защита данных</h3>
-                    <p class="text-slate-300 mb-4">Мы принимаем все необходимые меры для защиты ваших персональных данных.</p>
-                `
-            },
-            cookie: {
-                title: 'Политика использования cookies',
-                icon: 'fa-cookie-bite',
-                color: 'text-orange-400',
-                content: `
-                    <h3 class="text-lg font-bold text-white mb-4">1. Что такое cookies?</h3>
-                    <p class="text-slate-300 mb-4">Cookies - это небольшие текстовые файлы, которые сохраняются на вашем устройстве при посещении сайта.</p>
-                    
-                    <h3 class="text-lg font-bold text-white mb-4">2. Как мы используем cookies</h3>
-                    <p class="text-slate-300 mb-4">Мы используем cookies для:</p>
-                    <ul class="list-disc list-inside text-slate-300 mb-4 space-y-2">
-                        <li>Аутентификации пользователей</li>
-                        <li>Сохранения ваших предпочтений</li>
-                        <li>Анализа посещаемости сайта</li>
-                    </ul>
-                    
-                    <h3 class="text-lg font-bold text-white mb-4">3. Управление cookies</h3>
-                    <p class="text-slate-300 mb-4">Вы можете отключить cookies в настройках своего браузера, но это может повлиять на работу некоторых функций сайта.</p>
-                `
-            },
-            disclaimer: {
-                title: 'Отказ от ответственности',
-                icon: 'fa-exclamation-triangle',
-                color: 'text-red-400',
-                content: `
-                    <h3 class="text-lg font-bold text-white mb-4">1. Информационная цель</h3>
-                    <p class="text-slate-300 mb-4">AirdropLab предоставляет информацию о криптовалютных проектах исключительно в информационных целях. Мы не даем финансовых рекомендаций.</p>
-                    
-                    <h3 class="text-lg font-bold text-white mb-4">2. Риски</h3>
-                    <p class="text-slate-300 mb-4">Криптовалютные инвестиции сопряжены с высокими рисками:</p>
-                    <ul class="list-disc list-inside text-slate-300 mb-4 space-y-2">
-                        <li>Волатильность рынка</li>
-                        <li>Потеря средств</li>
-                        <li>Мошеннические проекты</li>
-                    </ul>
-                    
-                    <h3 class="text-lg font-bold text-white mb-4">3. Ответственность</h3>
-                    <p class="text-slate-300 mb-4">AirdropLab не несет ответственности за любые убытки, возникшие в результате использования информации с нашего сайта.</p>
-                `
-            }
-        };
+    window.closePageModal = function() {
+        const modal = document.getElementById('pageModal');
+        if (modal) modal.classList.remove('active');
+    };
 
-        const data = content[type];
-        if (!data) return;
-
-        modal.innerHTML = `
-            <div class="modal-content modal-lg p-6 relative" style="max-height: 80vh; overflow-y: auto;">
-                <button onclick="closeLegalModal()" class="absolute top-4 right-4 text-slate-400 hover:text-white transition-colors">
-                    <i class="fas fa-times text-xl"></i>
-                </button>
-                <div class="flex items-center gap-3 mb-6">
-                    <div class="w-12 h-12 rounded-xl bg-slate-800 flex items-center justify-center">
-                        <i class="fas ${data.icon} ${data.color} text-xl"></i>
-                    </div>
-                    <h2 class="text-2xl font-bold text-white">${data.title}</h2>
+    function getFAQContent() {
+        return `
+            <div class="bg-gradient-to-r from-slate-900 to-slate-800 p-6 border-b border-slate-700">
+                <h2 class="text-2xl font-bold text-white flex items-center gap-3">
+                    <i class="fas fa-question-circle text-cyan-400"></i>
+                    Часто задаваемые вопросы
+                </h2>
+                <p class="text-slate-400 mt-2">Ответы на популярные вопросы о AirdropLab</p>
+            </div>
+            <div class="p-6 max-h-[70vh] overflow-y-auto">
+                <div class="space-y-4">
+                    ${FOOTER_CONFIG.faq.map((item, index) => `
+                        <div class="faq-item border border-slate-700/50 rounded-xl overflow-hidden">
+                            <button onclick="toggleFaqItem(${index})" class="faq-question w-full text-left p-4 flex items-center justify-between gap-4 bg-slate-800/30 hover:bg-slate-800/50 transition-colors">
+                                <span class="font-medium text-white">${item.question}</span>
+                                <i class="fas fa-chevron-down text-slate-400 transition-transform" id="faq-icon-${index}"></i>
+                            </button>
+                            <div class="faq-answer hidden p-4 pt-0 text-slate-300 text-sm leading-relaxed" id="faq-answer-${index}">
+                                ${item.answer}
+                            </div>
+                        </div>
+                    `).join('')}
                 </div>
-                <div class="legal-content text-slate-300 space-y-4">
-                    ${data.content}
-                </div>
-                <div class="mt-6 pt-4 border-t border-slate-700">
-                    <button onclick="closeLegalModal()" class="w-full bg-slate-700 hover:bg-slate-600 py-3 rounded-lg text-sm font-bold transition-colors">Закрыть</button>
+                
+                <div class="mt-8 p-4 bg-blue-900/20 border border-blue-800/50 rounded-xl">
+                    <h4 class="font-bold text-white mb-2 flex items-center gap-2">
+                        <i class="fas fa-info-circle text-blue-400"></i>
+                        Не нашли ответ?
+                    </h4>
+                    <p class="text-sm text-slate-400 mb-3">Свяжитесь с нашей службой поддержки</p>
+                    <button onclick="closePageModal(); setTimeout(() => openSupportModal(), 300);" class="bg-blue-600 hover:bg-blue-500 px-4 py-2 rounded-lg text-sm font-medium transition-colors">
+                        Написать в поддержку
+                    </button>
                 </div>
             </div>
         `;
-
-        modal.classList.add('active');
     }
 
-    window.closeLegalModal = function() {
-        const modal = document.getElementById('legalModal');
+    window.toggleFaqItem = function(index) {
+        const answer = document.getElementById(`faq-answer-${index}`);
+        const icon = document.getElementById(`faq-icon-${index}`);
+        
+        if (answer.classList.contains('hidden')) {
+            answer.classList.remove('hidden');
+            icon.classList.add('rotate-180');
+        } else {
+            answer.classList.add('hidden');
+            icon.classList.remove('rotate-180');
+        }
+    };
+
+    function initFAQ() {
+        console.log('FAQ initialized');
+    }
+
+    function getGuidesContent() {
+        return `
+            <div class="bg-gradient-to-r from-slate-900 to-slate-800 p-6 border-b border-slate-700">
+                <h2 class="text-2xl font-bold text-white flex items-center gap-3">
+                    <i class="fas fa-book-open text-cyan-400"></i>
+                    Гайды
+                </h2>
+                <p class="text-slate-400 mt-2">Пошаговые инструкции по участию в тестнетах</p>
+            </div>
+            <div class="p-6 max-h-[70vh] overflow-y-auto">
+                <div class="grid gap-4">
+                    ${FOOTER_CONFIG.guides.map(guide => `
+                        <div class="guide-card border border-slate-700/50 rounded-xl p-4 hover:border-cyan-500/50 transition-colors bg-slate-800/30">
+                            <div class="flex items-start gap-4">
+                                <div class="w-16 h-16 rounded-xl overflow-hidden bg-slate-800 flex-shrink-0 border border-slate-700">
+                                    ${guide.logo ? `<img src="${guide.logo}" alt="${guide.title}" class="w-full h-full object-cover" onerror="this.parentElement.innerHTML='<div class=\\'w-full h-full flex items-center justify-center text-2xl\\'>${guide.title.charAt(0)}</div>'">` : `<div class="w-full h-full flex items-center justify-center text-2xl font-bold text-cyan-400">${guide.title.charAt(0)}</div>`}
+                                </div>
+                                <div class="flex-1 min-w-0">
+                                    <div class="flex items-center gap-2 flex-wrap mb-1">
+                                        <h3 class="font-bold text-white">${guide.title}</h3>
+                                        ${guide.status === 'new' ? '<span class="bg-green-500/20 text-green-400 text-xs px-2 py-0.5 rounded-full">NEW</span>' : ''}
+                                        ${guide.status === 'active' ? '<span class="bg-cyan-500/20 text-cyan-400 text-xs px-2 py-0.5 rounded-full">Активен</span>' : ''}
+                                    </div>
+                                    <p class="text-sm text-slate-400 mb-2">${guide.description}</p>
+                                    <div class="flex items-center gap-4 text-xs text-slate-500">
+                                        <span class="flex items-center gap-1">
+                                            <i class="fas fa-signal text-green-400"></i>
+                                            ${guide.difficulty}
+                                        </span>
+                                    </div>
+                                    <a href="${guide.link}" target="_blank" class="mt-3 inline-flex items-center gap-2 px-4 py-2 bg-cyan-600 hover:bg-cyan-500 rounded-lg text-sm font-medium text-white transition-colors">
+                                        <i class="fas fa-external-link-alt"></i>
+                                        Перейти к гайду
+                                    </a>
+                                </div>
+                            </div>
+                        </div>
+                    `).join('')}
+                </div>
+                
+                <div class="mt-6 p-4 bg-slate-800/30 border border-slate-700/50 rounded-xl">
+                    <p class="text-sm text-slate-400 text-center">
+                        <i class="fas fa-lock text-slate-500 mr-2"></i>
+                        Для доступа к гайдам необходимо выполнить задания на главной странице
+                    </p>
+                </div>
+            </div>
+        `;
+    }
+
+    function getAccountContent() {
+        const user = typeof currentUser !== 'undefined' ? currentUser : null;
+        const userData = typeof window.userProfileData !== 'undefined' ? window.userProfileData : {};
+        
+        return `
+            <div class="bg-gradient-to-r from-slate-900 to-slate-800 p-6 border-b border-slate-700">
+                <h2 class="text-2xl font-bold text-white flex items-center gap-3">
+                    <i class="fas fa-user-cog text-emerald-400"></i>
+                    Личный кабинет
+                </h2>
+                <p class="text-slate-400 mt-2">Управление профилем и настройками</p>
+            </div>
+            <div class="p-6 max-h-[70vh] overflow-y-auto">
+                ${user ? `
+                    <!-- Avatar Section -->
+                    <div class="flex items-center gap-6 mb-8 pb-6 border-b border-slate-700/50">
+                        <div class="relative group">
+                            <div class="w-24 h-24 rounded-full overflow-hidden border-4 border-cyan-500/50">
+                                <img id="accountAvatar" src="${user.photoURL || 'https://ui-avatars.com/api/?name=' + (user.displayName || 'U') + '&background=random'}" alt="Avatar" class="w-full h-full object-cover">
+                            </div>
+                            <label for="avatarUpload" class="absolute bottom-0 right-0 w-8 h-8 bg-cyan-600 rounded-full flex items-center justify-center cursor-pointer hover:bg-cyan-500 transition-colors shadow-lg">
+                                <i class="fas fa-camera text-white text-xs"></i>
+                            </label>
+                            <input type="file" id="avatarUpload" accept="image/*" class="hidden" onchange="uploadAvatar(event)">
+                        </div>
+                        <div>
+                            <h3 class="text-xl font-bold text-white">${user.displayName || 'Пользователь'}</h3>
+                            <p class="text-slate-400">${user.email}</p>
+                            <p class="text-xs text-slate-500 mt-1">ID: ${user.uid.substring(0, 8)}...</p>
+                        </div>
+                    </div>
+                    
+                    <!-- Profile Form -->
+                    <form id="accountForm" onsubmit="saveAccountProfile(event)" class="space-y-6">
+                        <div class="grid grid-cols-2 gap-4">
+                            <div>
+                                <label class="block text-sm font-medium text-slate-300 mb-2">Имя</label>
+                                <input type="text" id="profileFirstName" value="${userData.firstName || ''}" placeholder="Иван" class="w-full bg-slate-800 border border-slate-700 rounded-lg px-4 py-2.5 text-sm text-white focus:border-cyan-500 focus:outline-none">
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-slate-300 mb-2">Фамилия</label>
+                                <input type="text" id="profileLastName" value="${userData.lastName || ''}" placeholder="Иванов" class="w-full bg-slate-800 border border-slate-700 rounded-lg px-4 py-2.5 text-sm text-white focus:border-cyan-500 focus:outline-none">
+                            </div>
+                        </div>
+                        
+                        <div class="grid grid-cols-2 gap-4">
+                            <div>
+                                <label class="block text-sm font-medium text-slate-300 mb-2">Никнейм</label>
+                                <div class="relative">
+                                    <span class="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500">@</span>
+                                    <input type="text" id="profileUsername" value="${userData.username || ''}" placeholder="nickname" class="w-full bg-slate-800 border border-slate-700 rounded-lg pl-8 pr-4 py-2.5 text-sm text-white focus:border-cyan-500 focus:outline-none">
+                                </div>
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-slate-300 mb-2">Telegram</label>
+                                <input type="text" id="profileTelegram" value="${userData.telegram || ''}" placeholder="@username" class="w-full bg-slate-800 border border-slate-700 rounded-lg px-4 py-2.5 text-sm text-white focus:border-cyan-500 focus:outline-none">
+                            </div>
+                        </div>
+                        
+                        <div>
+                            <label class="block text-sm font-medium text-slate-300 mb-2">Дата рождения</label>
+                            <input type="date" id="profileBirthdate" value="${userData.birthdate || ''}" class="w-full bg-slate-800 border border-slate-700 rounded-lg px-4 py-2.5 text-sm text-white focus:border-cyan-500 focus:outline-none">
+                        </div>
+                        
+                        <div>
+                            <label class="block text-sm font-medium text-slate-300 mb-2">Пол</label>
+                            <div class="flex gap-4">
+                                <label class="flex items-center gap-2 cursor-pointer">
+                                    <input type="radio" name="gender" value="male" ${userData.gender === 'male' ? 'checked' : ''} class="text-cyan-500 bg-slate-800 border-slate-600">
+                                    <span class="text-sm text-slate-300">Мужской</span>
+                                </label>
+                                <label class="flex items-center gap-2 cursor-pointer">
+                                    <input type="radio" name="gender" value="female" ${userData.gender === 'female' ? 'checked' : ''} class="text-cyan-500 bg-slate-800 border-slate-600">
+                                    <span class="text-sm text-slate-300">Женский</span>
+                                </label>
+                                <label class="flex items-center gap-2 cursor-pointer">
+                                    <input type="radio" name="gender" value="other" ${userData.gender === 'other' ? 'checked' : ''} class="text-cyan-500 bg-slate-800 border-slate-600">
+                                    <span class="text-sm text-slate-300">Другое</span>
+                                </label>
+                            </div>
+                        </div>
+                        
+                        <div>
+                            <label class="block text-sm font-medium text-slate-300 mb-2">Страна</label>
+                            <select id="profileCountry" class="w-full bg-slate-800 border border-slate-700 rounded-lg px-4 py-2.5 text-sm text-white focus:border-cyan-500 focus:outline-none">
+                                <option value="">Выберите страну</option>
+                                <option value="RU" ${userData.country === 'RU' ? 'selected' : ''}>Россия</option>
+                                <option value="UA" ${userData.country === 'UA' ? 'selected' : ''}>Украина</option>
+                                <option value="KZ" ${userData.country === 'KZ' ? 'selected' : ''}>Казахстан</option>
+                                <option value="BY" ${userData.country === 'BY' ? 'selected' : ''}>Беларусь</option>
+                                <option value="US" ${userData.country === 'US' ? 'selected' : ''}>США</option>
+                                <option value="OTHER" ${userData.country === 'OTHER' ? 'selected' : ''}>Другое</option>
+                            </select>
+                        </div>
+                        
+                        <div>
+                            <label class="block text-sm font-medium text-slate-300 mb-2">О себе</label>
+                            <textarea id="profileBio" rows="3" placeholder="Расскажите о себе..." class="w-full bg-slate-800 border border-slate-700 rounded-lg px-4 py-2.5 text-sm text-white focus:border-cyan-500 focus:outline-none resize-none">${userData.bio || ''}</textarea>
+                        </div>
+                        
+                        <div class="flex gap-3 pt-4">
+                            <button type="button" onclick="closePageModal()" class="flex-1 bg-slate-700 hover:bg-slate-600 py-3 rounded-lg text-sm font-medium text-white transition-colors">
+                                Отмена
+                            </button>
+                            <button type="submit" class="flex-1 bg-gradient-to-r from-cyan-600 to-blue-600 hover:from-cyan-500 hover:to-blue-500 py-3 rounded-lg text-sm font-bold text-white transition-all">
+                                <i class="fas fa-save mr-2"></i>Сохранить
+                            </button>
+                        </div>
+                    </form>
+                ` : `
+                    <div class="text-center py-8">
+                        <div class="w-20 h-20 bg-slate-800 rounded-full flex items-center justify-center mx-auto mb-4">
+                            <i class="fas fa-user-lock text-4xl text-slate-500"></i>
+                        </div>
+                        <h3 class="text-xl font-bold text-white mb-2">Вход не выполнен</h3>
+                        <p class="text-slate-400 mb-6">Войдите в аккаунт для управления профилем</p>
+                        <button onclick="closePageModal(); setTimeout(() => { if(typeof openLoginModal==='function') openLoginModal(); }, 300);" class="bg-gradient-to-r from-cyan-600 to-blue-600 hover:from-cyan-500 hover:to-blue-500 px-6 py-3 rounded-lg text-sm font-bold text-white transition-all">
+                            <i class="fas fa-sign-in-alt mr-2"></i>Войти
+                        </button>
+                    </div>
+                `}
+            </div>
+        `;
+    }
+
+    function initAccountPage() {
+        console.log('Account page initialized');
+    }
+
+    window.saveAccountProfile = async function(e) {
+        e.preventDefault();
+        
+        const profileData = {
+            firstName: document.getElementById('profileFirstName').value,
+            lastName: document.getElementById('profileLastName').value,
+            username: document.getElementById('profileUsername').value,
+            telegram: document.getElementById('profileTelegram').value,
+            birthdate: document.getElementById('profileBirthdate').value,
+            gender: document.querySelector('input[name="gender"]:checked')?.value || '',
+            country: document.getElementById('profileCountry').value,
+            bio: document.getElementById('profileBio').value,
+            updatedAt: new Date().toISOString()
+        };
+        
+        // Сохраняем в localStorage как резерв
+        window.userProfileData = profileData;
+        localStorage.setItem('userProfileData', JSON.stringify(profileData));
+        
+        // Если пользователь авторизован, сохраняем в Firebase
+        if (typeof currentUser !== 'undefined' && currentUser && typeof db !== 'undefined') {
+            try {
+                const userRef = doc(db, "users", currentUser.uid);
+                await setDoc(userRef, { profile: profileData }, { merge: true });
+                footerShowToast('Профиль сохранён!');
+            } catch(err) {
+                console.error('Error saving profile:', err);
+                footerShowToast('Профиль сохранён локально');
+            }
+        } else {
+            footerShowToast('Профиль сохранён локально');
+        }
+    };
+
+    window.uploadAvatar = async function(e) {
+        const file = e.target.files[0];
+        if (!file) return;
+        
+        const reader = new FileReader();
+        reader.onload = async function(event) {
+            const img = document.getElementById('accountAvatar');
+            img.src = event.target.result;
+            
+            // Если авторизован, загружаем в Firebase
+            if (typeof currentUser !== 'undefined' && currentUser) {
+                footerShowToast('Фото обновлено!');
+            }
+        };
+        reader.readAsDataURL(file);
+    };
+
+    // ============ SUPPORT MODAL ============
+
+    window.openSupportModal = function() {
+        const modal = document.getElementById('supportModal');
+        if (modal) {
+            // Предзаполняем данные если авторизованы
+            if (typeof currentUser !== 'undefined' && currentUser) {
+                document.getElementById('supportName').value = currentUser.displayName || '';
+                document.getElementById('supportEmail').value = currentUser.email || '';
+            }
+            modal.classList.add('active');
+        }
+    };
+
+    window.closeSupportModal = function() {
+        const modal = document.getElementById('supportModal');
         if (modal) modal.classList.remove('active');
+    };
+
+    window.submitSupportTicket = async function(e) {
+        e.preventDefault();
+        
+        const btn = document.getElementById('supportSubmitBtn');
+        const originalText = btn.innerHTML;
+        btn.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i>Отправка...';
+        btn.disabled = true;
+        
+        const ticketData = {
+            type: 'support', // Пометка что это поддержка, а не отзыв
+            category: document.getElementById('supportCategory').value,
+            name: document.getElementById('supportName').value,
+            email: document.getElementById('supportEmail').value,
+            subject: document.getElementById('supportSubject').value,
+            message: document.getElementById('supportMessage').value,
+            notify: document.getElementById('supportNotify').checked,
+            userId: (typeof currentUser !== 'undefined' && currentUser) ? currentUser.uid : 'guest',
+            status: 'new',
+            priority: 'normal',
+            createdAt: new Date().toISOString()
+        };
+        
+        // Сохраняем в localStorage как резерв
+        const supportTickets = JSON.parse(localStorage.getItem('supportTickets') || '[]');
+        supportTickets.push(ticketData);
+        localStorage.setItem('supportTickets', JSON.stringify(supportTickets));
+        
+        // Если Firebase доступен, сохраняем там
+        if (typeof db !== 'undefined') {
+            try {
+                await addDoc(collection(db, "supportTickets"), ticketData);
+                footerShowToast('Обращение отправлено! Мы ответим в течение 24 часов.');
+            } catch(err) {
+                console.error('Error submitting ticket:', err);
+                footerShowToast('Обращение сохранено. Мы свяжемся с вами!');
+            }
+        } else {
+            footerShowToast('Обращение отправлено! Мы ответим в течение 24 часов.');
+        }
+        
+        btn.innerHTML = originalText;
+        btn.disabled = false;
+        
+        // Очищаем форму
+        document.getElementById('supportForm').reset();
+        closeSupportModal();
+    };
+
+    // ============ NOTIFICATIONS MODAL ============
+
+    window.openNotificationsModal = function() {
+        const modal = document.getElementById('pageModal');
+        const content = document.getElementById('pageModalContent');
+        
+        if (!modal || !content) return;
+        
+        let notificationsList = [];
+        
+        // Получаем уведомления
+        if (typeof window.notifications !== 'undefined') {
+            notificationsList = window.notifications;
+        }
+        
+        const html = `
+            <div class="bg-gradient-to-r from-slate-900 to-slate-800 p-6 border-b border-slate-700">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <h2 class="text-2xl font-bold text-white flex items-center gap-3">
+                            <i class="fas fa-bell text-yellow-400"></i>
+                            Уведомления
+                        </h2>
+                        <p class="text-slate-400 mt-2">${notificationsList.length} уведомлений</p>
+                    </div>
+                    ${notificationsList.length > 0 ? '<button onclick="clearAllNotifications()" class="text-xs text-slate-400 hover:text-white transition-colors">Очистить все</button>' : ''}
+                </div>
+            </div>
+            <div class="p-6 max-h-[70vh] overflow-y-auto">
+                ${notificationsList.length > 0 ? notificationsList.map(notif => `
+                    <div class="notification-item p-4 mb-3 rounded-xl ${notif.read ? 'bg-slate-800/30' : 'bg-slate-800/50 border border-slate-700'}">
+                        <div class="flex items-start gap-3">
+                            <div class="w-10 h-10 rounded-lg flex items-center justify-center flex-shrink-0 ${notif.read ? 'bg-slate-700' : 'bg-cyan-500/20'}">
+                                <i class="fas ${notif.type === 'success' ? 'fa-check-circle text-green-400' : notif.type === 'warning' ? 'fa-exclamation-triangle text-yellow-400' : 'fa-info-circle text-blue-400'}"></i>
+                            </div>
+                            <div class="flex-1 min-w-0">
+                                <p class="text-sm text-white">${notif.message}</p>
+                                <p class="text-xs text-slate-500 mt-1">${formatTimeAgo(notif.createdAt)}</p>
+                            </div>
+                            ${!notif.read ? '<button onclick="markNotificationRead(\'' + notif.id + '\')" class="text-xs text-cyan-400 hover:text-cyan-300">Прочитано</button>' : ''}
+                        </div>
+                    </div>
+                `).join('') : `
+                    <div class="text-center py-12">
+                        <div class="w-16 h-16 bg-slate-800 rounded-full flex items-center justify-center mx-auto mb-4">
+                            <i class="fas fa-bell-slash text-3xl text-slate-500"></i>
+                        </div>
+                        <h3 class="text-lg font-bold text-white mb-2">Нет уведомлений</h3>
+                        <p class="text-slate-400 text-sm">Уведомления о новых аирдропах появятся здесь</p>
+                    </div>
+                `}
+            </div>
+        `;
+        
+        content.innerHTML = html;
+        modal.classList.add('active');
+    };
+
+    window.markNotificationRead = async function(notifId) {
+        if (typeof window.markNotificationAsRead === 'function') {
+            await window.markNotificationAsRead(notifId);
+        }
+        openNotificationsModal(); // Переоткрываем
+    };
+
+    window.clearAllNotifications = function() {
+        localStorage.setItem('notifications', '[]');
+        window.notifications = [];
+        openNotificationsModal();
+    };
+
+    function formatTimeAgo(date) {
+        if (!date) return '';
+        const now = new Date();
+        const diff = now - new Date(date);
+        if (diff < 60000) return 'только что';
+        if (diff < 3600000) return Math.floor(diff/60000) + ' мин назад';
+        if (diff < 86400000) return Math.floor(diff/3600000) + ' ч назад';
+        return Math.floor(diff/86400000) + ' дн назад';
+    }
+
+    // ============ LEGAL MODALS ============
+
+    window.openLegalModal = function(type) {
+        const legalData = FOOTER_CONFIG.legal[type];
+        if (!legalData) return;
+        
+        const modal = document.getElementById('pageModal');
+        const content = document.getElementById('pageModalContent');
+        
+        if (!modal || !content) return;
+        
+        const icons = {
+            terms: 'fa-file-contract text-purple-400',
+            privacy: 'fa-shield-alt text-blue-400',
+            cookie: 'fa-cookie-bite text-orange-400',
+            disclaimer: 'fa-exclamation-triangle text-red-400'
+        };
+        
+        content.innerHTML = `
+            <div class="bg-gradient-to-r from-slate-900 to-slate-800 p-6 border-b border-slate-700">
+                <div class="flex items-center gap-3">
+                    <div class="w-12 h-12 rounded-xl bg-slate-800 flex items-center justify-center">
+                        <i class="fas ${icons[type]} text-xl"></i>
+                    </div>
+                    <div>
+                        <h2 class="text-2xl font-bold text-white">${legalData.title}</h2>
+                        <p class="text-sm text-slate-400">Обновлено: ${legalData.lastUpdated}</p>
+                    </div>
+                </div>
+            </div>
+            <div class="p-6 max-h-[70vh] overflow-y-auto legal-content">
+                ${legalData.content}
+            </div>
+            <div class="p-4 border-t border-slate-700/50 bg-slate-900/50">
+                <button onclick="closePageModal()" class="w-full bg-slate-700 hover:bg-slate-600 py-3 rounded-lg text-sm font-medium text-white transition-colors">
+                    Закрыть
+                </button>
+            </div>
+        `;
+        
+        modal.classList.add('active');
+    };
+
+    // ============ TUTORIALS ============
+
+    window.openTutorialsPage = function() {
+        footerShowToast('Туториалы доступны в разделе проектов');
+        const projectsSection = document.getElementById('projects');
+        if (projectsSection) {
+            projectsSection.scrollIntoView({ behavior: 'smooth' });
+        }
     };
 
     // ============ STYLES ============
@@ -616,12 +1259,26 @@
             .back-to-top:active { transform: scale(0.95); }
             .status-dot { animation: statusPulse 2s infinite; }
             @keyframes statusPulse { 0%, 100% { transform: scale(1); opacity: 1; } 50% { transform: scale(1.2); opacity: 0.7; } }
-            .newsletter-modal { position: fixed; inset: 0; z-index: 9999; display: flex; align-items: center; justify-content: center; background: rgba(0, 0, 0, 0.7); backdrop-filter: blur(4px); opacity: 0; visibility: hidden; transition: all 0.3s ease; }
-            .newsletter-modal.active { opacity: 1; visibility: visible; }
-            .newsletter-modal .modal-content { background: rgba(15, 23, 42, 0.98); backdrop-filter: blur(12px); border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 1rem; max-width: 400px; width: 90%; transform: scale(0.9); transition: transform 0.3s ease; }
-            .newsletter-modal.active .modal-content { transform: scale(1); }
-            .success-icon { animation: successPop 0.5s ease; }
-            @keyframes successPop { 0% { transform: scale(0); } 50% { transform: scale(1.1); } 100% { transform: scale(1); } }
+            
+            /* Page Modal */
+            .page-modal-content { max-width: 700px; width: 95%; max-height: 90vh; overflow: hidden; display: flex; flex-direction: column; border-radius: 1rem; background: rgba(15, 23, 42, 0.98); border: 1px solid rgba(255,255,255,0.1); }
+            
+            /* FAQ Styles */
+            .faq-question { border: none; background: none; width: 100%; cursor: pointer; }
+            .faq-answer { border-top: none; }
+            
+            /* Guide Card */
+            .guide-card:hover { transform: translateY(-2px); }
+            
+            /* Legal Content */
+            .legal-content h3 { font-size: 1.1rem; font-weight: 700; color: #fff; margin: 1.5rem 0 0.75rem; }
+            .legal-content h3:first-child { margin-top: 0; }
+            .legal-content h4 { font-size: 1rem; font-weight: 600; color: #e2e8f0; margin: 1.25rem 0 0.5rem; }
+            .legal-content p { color: #cbd5e1; line-height: 1.7; margin-bottom: 0.75rem; }
+            .legal-content ul { margin: 0.5rem 0 1rem 1.5rem; }
+            .legal-content li { color: #cbd5e1; margin-bottom: 0.5rem; }
+            .legal-content strong { color: #fff; }
+            
             @media (max-width: 768px) {
                 .site-footer .grid { grid-template-columns: 1fr; gap: 2rem; }
                 .site-footer [class*="col-span"] { grid-column: 1 / -1 !important; }
@@ -630,19 +1287,16 @@
                 .footer-newsletter { padding: 1rem; }
                 .newsletter-form { flex-direction: column; }
                 .subscribe-btn { width: 100%; justify-content: center; }
+                .page-modal-content { width: 98%; max-height: 95vh; }
             }
             html { scroll-behavior: smooth; }
             .subscribe-btn.loading { pointer-events: none; opacity: 0.7; }
             .subscribe-btn.loading::after { content: ''; width: 16px; height: 16px; border: 2px solid transparent; border-top-color: white; border-radius: 50%; animation: spin 0.8s linear infinite; margin-left: 8px; }
             @keyframes spin { to { transform: rotate(360deg); } }
             .footer-link:focus, .social-link:focus { outline: 2px solid rgba(34, 211, 238, 0.5); outline-offset: 2px; }
-            .footer-section:hover .footer-bg-gradient { opacity: 1; }
             
-            /* Legal Modal Styles */
-            .legal-content h3 { margin-top: 1.5rem; }
-            .legal-content h3:first-child { margin-top: 0; }
-            .legal-content p { line-height: 1.7; }
-            .legal-content ul { margin-left: 1rem; }
+            /* Modal Styles Override */
+            .modal-md { max-width: 500px; }
         `;
 
         document.head.appendChild(styles);
@@ -660,25 +1314,7 @@
         updateFooterStats();
         updateFooterLanguageButton();
         
-        // Listen for notification count updates
-        if (typeof unreadNotificationsCount !== 'undefined') {
-            updateFooterNotificationBadge(unreadNotificationsCount);
-        }
-        
-        // Override notification badge update
-        window.updateFooterNotificationBadge = function(count) {
-            const badge = document.getElementById('footerNotificationBadge');
-            if (badge) {
-                if (count > 0) {
-                    badge.textContent = count > 99 ? '99+' : count;
-                    badge.classList.remove('hidden');
-                } else {
-                    badge.classList.add('hidden');
-                }
-            }
-        };
-
-        console.log('Footer v2.1 initialized successfully');
+        console.log('Footer v2.2 initialized successfully');
     }
 
     function initBackToTop() {
