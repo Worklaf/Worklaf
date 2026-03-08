@@ -316,12 +316,6 @@
         </div>
       </div>
       <div class="flex gap-2 items-center">
-          <div id="supportRequestPanel" class="relative hidden">
-    <button onclick="openFeedbackListModal('support')" class="relative p-2.5 text-slate-400 hover:text-purple-400 transition-all rounded-xl hover:bg-purple-500/10 group border border-transparent hover:border-purple-500/30" title="Мои обращения в поддержку">
-        <i class="fas fa-life-ring text-lg group-hover:animate-bounce"></i>
-        <span id="supportBadge" class="absolute -top-1 -right-1 w-5 h-5 bg-gradient-to-r from-purple-500 to-pink-500 rounded-full text-xs hidden items-center justify-center font-bold shadow-lg shadow-purple-500/50">0</span>
-    </button>
-</div>
         <div id="notificationPanel" class="relative">
           <button onclick="showNotifications()" class="relative p-2.5 text-slate-400 hover:text-cyan-400 transition-all rounded-xl hover:bg-cyan-500/10 group border border-transparent hover:border-cyan-500/30">
             <i class="fas fa-bell text-lg group-hover:animate-bounce"></i>
@@ -1063,33 +1057,6 @@ function initFeedbacksListener(uid) {
       });
       adminFeedbacks.sort((a, b) => (b.createdAt?.toDate() || new Date(b.createdAt || 0)) - (a.createdAt?.toDate() || new Date(a.createdAt || 0)));
       updateFeedbackBadgeUI(unreadCount);
-        // Обновляем бейдж поддержки отдельно
-const supportUnread = adminFeedbacks.filter(fb => 
-    fb.projectId === '__support__' && (isAdmin ? !fb.read : !fb.userRead)
-).length;
-
-const supportBadge = document.getElementById('supportBadge');
-if (supportBadge) {
-    if (supportUnread > 0) {
-        supportBadge.textContent = supportUnread > 9 ? '9+' : supportUnread;
-        supportBadge.classList.remove('hidden');
-        supportBadge.classList.add('flex');
-    } else {
-        supportBadge.classList.add('hidden');
-        supportBadge.classList.remove('flex');
-    }
-}
-
-// Обновляем бейдж в футере
-const footerSupportBadge = document.getElementById('supportListBadge');
-if (footerSupportBadge) {
-    if (supportUnread > 0) {
-        footerSupportBadge.textContent = supportUnread;
-        footerSupportBadge.classList.remove('hidden');
-    } else {
-        footerSupportBadge.classList.add('hidden');
-    }
-}
       const listModal = document.getElementById('feedbackListModal');
       if (listModal && listModal.classList.contains('active')) renderFeedbackList();
     });
@@ -1104,83 +1071,26 @@ function updateFeedbackBadgeUI(unreadCount) {
 }
 
 window.openFeedbackModal = function(projId, projName) {
-    if (!currentUser) { showToast('Войдите'); openLoginModal(); return; }
-    const modal = document.getElementById('feedbackModal');
-    document.getElementById('adminChatDeleteBtn').classList.add('hidden');
-    document.getElementById('feedbackProjectId').value = projId;
-    document.getElementById('feedbackProjectName').textContent = projName || 'Unknown';
-    document.getElementById('feedbackChatHistory').innerHTML = '<div class="text-center py-8"><i class="fas fa-spinner fa-spin text-blue-400"></i></div>';
-    
-    // Обновляем заголовок модального окна
-    const modalTitle = document.getElementById('feedbackModalTitle');
-    if (projId === '__support__') {
-        if (modalTitle) {
-            modalTitle.innerHTML = '<i class="fas fa-life-ring text-purple-400 mr-2"></i>' + t('support_title');
-        }
-    } else {
-        if (modalTitle) {
-            modalTitle.setAttribute('data-translate', 'feedback');
-            modalTitle.textContent = t('feedback');
-        }
-    }
-    
-    const userFeedback = adminFeedbacks.find(fb => 
-        fb.userId === currentUser.uid && fb.projectId === projId
-    );
-    
-    if (userFeedback) { 
-        document.getElementById('feedbackDocId').value = userFeedback.id; 
-        loadFeedbackChat(userFeedback.id, projId); 
-    } else { 
-        document.getElementById('feedbackDocId').value = ''; 
-        showNewFeedbackForm(projId); 
-    }
-    modal.classList.add('active');
+  if (!currentUser) { showToast('Войдите'); openLoginModal(); return; }
+  const modal = document.getElementById('feedbackModal');
+  document.getElementById('adminChatDeleteBtn').classList.add('hidden');
+  document.getElementById('feedbackProjectId').value = projId;
+  document.getElementById('feedbackProjectName').textContent = projName || 'Unknown';
+  document.getElementById('feedbackChatHistory').innerHTML = '<div class="text-center py-8"><i class="fas fa-spinner fa-spin text-blue-400"></i></div>';
+  const userFeedback = adminFeedbacks.find(fb => fb.userId === currentUser.uid && fb.projectId === projId);
+  if (userFeedback) { document.getElementById('feedbackDocId').value = userFeedback.id; loadFeedbackChat(userFeedback.id, projId); }
+  else { document.getElementById('feedbackDocId').value = ''; showNewFeedbackForm(); }
+  modal.classList.add('active');
 };
 
-function showNewFeedbackForm(projId) {
-    const isSupport = projId === '__support__';
-    
-    document.getElementById('feedbackChatHistory').innerHTML = `
-        <div class="flex flex-col items-center justify-center h-full text-slate-500">
-            <i class="fas ${isSupport ? 'fa-life-ring' : 'fa-inbox'} text-4xl mb-3 opacity-50"></i>
-            <p class="text-sm">${isSupport ? t('start_support_request') : t('start_new_feedback')}</p>
-        </div>
-    `;
-    
-    // Показываем нужные категории
-    const categorySelect = document.getElementById('feedbackCategory');
-    if (categorySelect) {
-        if (isSupport) {
-            categorySelect.innerHTML = `
-                <option value="technical">🔧 ${t('cat_technical')}</option>
-                <option value="account">👤 ${t('cat_account')}</option>
-                <option value="question">❓ ${t('question')}</option>
-                <option value="suggestion">💡 ${t('suggestion')}</option>
-                <option value="other">💬 ${t('other')}</option>
-            `;
-        } else {
-            categorySelect.innerHTML = `
-                <option value="suggestion">💡 ${t('suggestion')}</option>
-                <option value="bug">🐛 ${t('bug')}</option>
-                <option value="question">❓ ${t('question')}</option>
-                <option value="other">💬 ${t('other')}</option>
-            `;
-        }
-    }
-    
-    document.getElementById('feedbackFormNew').classList.remove('hidden');
-    document.getElementById('feedbackFormReply').classList.add('hidden');
-    document.getElementById('feedbackSendBtn').classList.remove('hidden');
-    document.getElementById('feedbackSendBtn').textContent = t('send');
-    document.getElementById('feedbackSendBtn').onclick = window.sendUserFeedback;
-    document.getElementById('feedbackText').value = '';
-    
-    // Обновляем placeholder
-    const feedbackText = document.getElementById('feedbackText');
-    if (feedbackText) {
-        feedbackText.placeholder = isSupport ? t('support_message_placeholder') : t('message_placeholder');
-    }
+function showNewFeedbackForm() {
+  document.getElementById('feedbackChatHistory').innerHTML = '<div class="flex flex-col items-center justify-center h-full text-slate-500"><i class="fas fa-inbox text-4xl mb-3 opacity-50"></i><p class="text-sm">' + t('start_new_feedback') + '</p></div>';
+  document.getElementById('feedbackFormNew').classList.remove('hidden');
+  document.getElementById('feedbackFormReply').classList.add('hidden');
+  document.getElementById('feedbackSendBtn').classList.remove('hidden');
+  document.getElementById('feedbackSendBtn').textContent = t('send');
+  document.getElementById('feedbackSendBtn').onclick = window.sendUserFeedback;
+  document.getElementById('feedbackText').value = '';
 }
 
 window.loadFeedbackChat = function(docId, projId) {
@@ -1252,236 +1162,127 @@ window.loadFeedbackChat = function(docId, projId) {
   window.currentFeedbackUnsub = unsub;
 };
 
-
 window.sendUserFeedback = async function() {
-    if (!currentUser) return showToast('Войдите');
-    const projId = document.getElementById('feedbackProjectId').value;
-    const category = document.getElementById('feedbackCategory').value;
-    const message = document.getElementById('feedbackText').value.trim();
-    if (!message) return showToast('Введите сообщение');
-    
-    const isSupport = projId === '__support__';
-    
-    try {
-        let projectName = '';
-        let projectLogo = '';
-        
-        if (isSupport) {
-            projectName = 'Поддержка AirdropLab';
-            projectLogo = '';
-        } else {
-            const proj = projects.find(p => p.id === projId);
-            projectName = proj?.name || '';
-            projectLogo = proj?.image || '';
-        }
-        
-        await addDoc(collection(db, "feedbacks"), {
-            projectId: projId,
-            projectName: projectName,
-            projectLogo: projectLogo,
-            type: isSupport ? 'support' : 'project',
-            category,
-            userId: currentUser.uid,
-            userName: currentUser.displayName || currentUser.email,
-            userPhoto: currentUser.photoURL || '',
-            status: 'open',
-            read: false,
-            userRead: true,
-            deleted: false,
-            userDeleted: false,
-            createdAt: serverTimestamp(),
-            messages: [{ 
-                sender: 'user', 
-                text: message, 
-                timestamp: new Date() 
-            }]
-        });
-        
-        showToast('Отправлено!');
-        document.getElementById('feedbackText').value = '';
-    } catch (e) { 
-        console.error(e); 
-        showToast('Ошибка: ' + e.message); 
-    }
+  if (!currentUser) return showToast('Войдите');
+  const projId = document.getElementById('feedbackProjectId').value;
+  const category = document.getElementById('feedbackCategory').value;
+  const message = document.getElementById('feedbackText').value.trim();
+  if (!message) return showToast('Введите сообщение');
+  try {
+    const proj = projects.find(p => p.id === projId);
+    await addDoc(collection(db, "feedbacks"), {
+      projectId: projId, projectName: proj?.name || '', projectLogo: proj?.image || '',
+      category, userId: currentUser.uid, userName: currentUser.displayName || currentUser.email, userPhoto: currentUser.photoURL || '',
+      status: 'open', read: false, userRead: true, deleted: false, userDeleted: false,
+      createdAt: serverTimestamp(),
+      messages: [{ sender: 'user', text: message, timestamp: new Date() }]
+    });
+    showToast('Отправлено!');
+    document.getElementById('feedbackText').value = '';
+  } catch (e) { console.error(e); showToast('Ошибка: ' + e.message); }
+};
+
+window.sendUserFeedbackReply = async function() {
+  const docId = document.getElementById('feedbackDocId').value;
+  const text = document.getElementById('feedbackUserReplyText').value.trim();
+  if (!text || !docId) return;
+  try {
+    await updateDoc(doc(db, "feedbacks", docId), {
+      messages: arrayUnion({ sender: 'user', text, timestamp: new Date() }),
+      userRead: true, read: false
+    });
+    document.getElementById('feedbackUserReplyText').value = '';
+    showToast('Отправлено!');
+  } catch (e) { console.error(e); showToast('Ошибка'); }
 };
 
 window.closeFeedbackModal = function() { document.getElementById('feedbackModal').classList.remove('active'); if (window.currentFeedbackUnsub) { window.currentFeedbackUnsub(); window.currentFeedbackUnsub = null; } };
 
-window.renderFeedbackList = function(filterType) {
-    // Используем сохранённый фильтр если не передан
-    if (filterType === undefined) {
-        filterType = window._feedbackListFilter || 'all';
+window.renderFeedbackList = function() {
+  const getProj = id => projects.find(p => p.id === id) || {};
+  const container = document.getElementById('feedbacksContainer');
+  const isAdmin = currentUser && currentUser.uid === "SAkz4mdW9reDaIsvqigCNZhEKJR2";
+  
+  if (!adminFeedbacks || adminFeedbacks.length === 0) { 
+    container.innerHTML = '<div class="text-center py-12 text-slate-500"><div class="bg-slate-800/50 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4"><i class="fas fa-inbox text-2xl text-slate-600"></i></div><p>' + t('no_messages') + '</p></div>';
+    return; 
+  }
+  
+  container.innerHTML = adminFeedbacks.map((item) => {
+    const messages = item.messages || [];
+    const lastMsg = messages[messages.length - 1] || { text: '...', sender: 'unknown' };
+    const date = item.createdAt?.toDate() || new Date(item.createdAt || 0);
+    const isUnread = isAdmin ? !item.read : !item.userRead;
+    const project = getProj(item.projectId);
+    const projectName = project.name || item.projectId || 'Неизвестный проект';
+    const projectLogo = project.image || '';
+    const projectId = item.projectId || '';
+    
+    let titleHtml = '';
+    if (isAdmin) {
+      let projectInfoHtml = '';
+      if (projectLogo) {
+        projectInfoHtml += `<img src="${projectLogo}" class="w-5 h-5 rounded object-cover mr-1.5" alt="${projectName}" onerror="this.style.display='none'">`;
+      }
+      projectInfoHtml += `<span class="text-blue-400 font-medium">${projectName}</span>`;
+      
+      titleHtml = `
+        <div class="flex flex-col gap-1">
+          <div class="flex items-center gap-1.5">${projectInfoHtml}</div>
+          <div class="text-xs text-slate-400 flex items-center gap-1">
+            <span>от</span>
+            <span class="text-white font-medium">${item.userName || 'Пользователь'}</span>
+          </div>
+        </div>
+      `;
+    } else {
+      titleHtml = `<div class="flex items-center gap-2">${projectLogo ? `<img src="${projectLogo}" class="w-6 h-6 rounded">` : ''}<span class="font-bold text-white">${projectName}</span></div>`;
     }
     
-    const getProj = id => {
-        if (id === '__support__') return { name: 'Поддержка AirdropLab', image: '' };
-        return projects.find(p => p.id === id) || {};
-    };
-    
-    const container = document.getElementById('feedbacksContainer');
-    const isAdmin = currentUser && currentUser.uid === "SAkz4mdW9reDaIsvqigCNZhEKJR2";
-    
-    // Фильтруем обращения по типу
-    let filtered = adminFeedbacks;
-    
-    if (filterType === 'support') {
-        filtered = adminFeedbacks.filter(fb => fb.projectId === '__support__');
-    } else if (filterType === 'projects') {
-        filtered = adminFeedbacks.filter(fb => fb.projectId !== '__support__');
-    }
-    
-    if (!filtered || filtered.length === 0) { 
-        container.innerHTML = `
-            <div class="text-center py-12 text-slate-500">
-                <div class="bg-slate-800/50 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4">
-                    <i class="fas fa-inbox text-2xl text-slate-600"></i>
-                </div>
-                <p>${filterType === 'support' ? t('no_support_requests') : t('no_messages')}</p>
-            </div>
-        `;
-        return; 
-    }
-    
-    container.innerHTML = filtered.map((item) => {
-        const messages = item.messages || [];
-        const lastMsg = messages[messages.length - 1] || { text: '...', sender: 'unknown' };
-        const date = item.createdAt?.toDate() || new Date(item.createdAt || 0);
-        const isUnread = isAdmin ? !item.read : !item.userRead;
-        const project = getProj(item.projectId);
-        const projectName = project.name || item.projectId || 'Неизвестный проект';
-        const projectLogo = project.image || '';
-        const projectId = item.projectId || '';
-        const isSupport = projectId === '__support__';
-        
-        let titleHtml = '';
-        if (isAdmin) {
-            let projectInfoHtml = '';
-            
-            if (isSupport) {
-                projectInfoHtml += `<div class="w-5 h-5 rounded bg-purple-600/30 flex items-center justify-center mr-1.5 flex-shrink-0"><i class="fas fa-life-ring text-purple-400 text-xs"></i></div>`;
-            } else if (projectLogo) {
-                projectInfoHtml += `<img src="${projectLogo}" class="w-5 h-5 rounded object-cover mr-1.5" alt="${projectName}" onerror="this.style.display='none'">`;
-            }
-            projectInfoHtml += `<span class="${isSupport ? 'text-purple-400' : 'text-blue-400'} font-medium">${projectName}</span>`;
-            
-            titleHtml = `
-                <div class="flex flex-col gap-1">
-                    <div class="flex items-center gap-1.5">${projectInfoHtml}</div>
-                    <div class="text-xs text-slate-400 flex items-center gap-1">
-                        <span>от</span>
-                        <span class="text-white font-medium">${item.userName || 'Пользователь'}</span>
-                    </div>
-                </div>
-            `;
-        } else {
-            titleHtml = `
-                <div class="flex items-center gap-2">
-                    ${isSupport 
-                        ? `<div class="w-6 h-6 rounded bg-purple-600/30 flex items-center justify-center"><i class="fas fa-life-ring text-purple-400 text-xs"></i></div>`
-                        : (projectLogo ? `<img src="${projectLogo}" class="w-6 h-6 rounded">` : '')
-                    }
-                    <span class="font-bold text-white">${projectName}</span>
-                    ${isSupport ? '<span class="text-xs bg-purple-600/20 text-purple-400 px-2 py-0.5 rounded-full">Поддержка</span>' : ''}
-                </div>
-            `;
-        }
-        
-        const clickFn = isAdmin 
-            ? `openAdminFeedbackChat('${item.id}')`
-            : `openFeedbackFromList('${item.id}', '${projectId}', '${(projectName).replace(/'/g,"\\'")}')`;
-        
-        return `
-            <div onclick="${clickFn}" class="cursor-pointer group relative bg-slate-800/40 border ${isSupport ? 'border-purple-700/30 hover:border-purple-600/50' : 'border-slate-700/50 hover:border-slate-600'} hover:bg-slate-800 rounded-xl p-4 transition-all">
-                ${isUnread ? '<div class="absolute top-4 right-4 w-3 h-3 bg-purple-500 rounded-full animate-pulse"></div>' : ''}
-                <div class="flex justify-between items-start mb-2">
-                    <div>
-                        ${titleHtml}
-                        <span class="text-xs text-slate-500 mt-0.5 block">${formatTimeAgo(date)}</span>
-                    </div>
-                    <div class="flex items-center gap-2">
-                        ${isSupport ? '<span class="text-xs bg-purple-600/20 text-purple-400 px-2 py-0.5 rounded-full hidden sm:block">Поддержка</span>' : ''}
-                        ${isUnread ? '<span class="bg-purple-600 text-white text-xs px-2 py-1 rounded-full font-bold">NEW</span>' : ''}
-                    </div>
-                </div>
-                <div class="text-sm text-slate-300 line-clamp-2">${lastMsg.text}</div>
-            </div>
-        `;
-    }).join('');
+    return `<div onclick="${isAdmin ? `openAdminFeedbackChat('${item.id}')` : `openFeedbackFromList('${item.id}', '${projectId}', '${(projectName).replace(/'/g,"\\'")}')`}" class="cursor-pointer group relative bg-slate-800/40 border border-slate-700/50 hover:bg-slate-800 hover:border-slate-600 rounded-xl p-4 transition-all">${isUnread ? '<div class="absolute top-4 right-4 w-3 h-3 bg-purple-500 rounded-full animate-pulse"></div>' : ''}<div class="flex justify-between items-start mb-2"><div>${titleHtml}<span class="text-xs text-slate-500 mt-0.5 block">${formatTimeAgo(date)}</span></div>${isUnread ? '<span class="bg-purple-600 text-white text-xs px-2 py-1 rounded-full font-bold">NEW</span>' : ''}</div><div class="text-sm text-slate-300 line-clamp-2">${lastMsg.text}</div></div>`;
+  }).join('');
 };
 
 window.closeFeedbackChat = function() {
-    document.getElementById('feedbackModal').classList.remove('active');
-    if (window.currentFeedbackUnsub) {
-        window.currentFeedbackUnsub();
-        window.currentFeedbackUnsub = null;
-    }
-    // Возвращаемся к списку с правильным фильтром
-    openFeedbackListModal(window._feedbackListFilter || 'all');
+  document.getElementById('feedbackModal').classList.remove('active');
+  if (window.currentFeedbackUnsub) {
+    window.currentFeedbackUnsub();
+    window.currentFeedbackUnsub = null;
+  }
+  openFeedbackListModal();
 };
 
 window.backToFeedbackList = function() {
-    document.getElementById('feedbackModal').classList.remove('active');
-    if (window.currentFeedbackUnsub) {
-        window.currentFeedbackUnsub();
-        window.currentFeedbackUnsub = null;
-    }
-    // Возвращаемся к списку с правильным фильтром
-    openFeedbackListModal(window._feedbackListFilter || 'all');
+  document.getElementById('feedbackModal').classList.remove('active');
+  if (window.currentFeedbackUnsub) {
+    window.currentFeedbackUnsub();
+    window.currentFeedbackUnsub = null;
+  }
+  openFeedbackListModal();
 };
 
 window.openFeedbackFromList = function(docId, projectId, projectName) {
-    const isSupport = projectId === '__support__';
-    
-    document.getElementById('feedbackProjectName').textContent = projectName || projectId;
-    document.getElementById('adminChatDeleteBtn').classList.add('hidden');
-    document.getElementById('feedbackListModal').classList.remove('active');
-    
-    const modal = document.getElementById('feedbackModal');
-    document.getElementById('feedbackProjectId').value = projectId;
-    document.getElementById('feedbackDocId').value = docId;
-    
-    // Обновляем заголовок
-    const modalTitle = document.getElementById('feedbackModalTitle');
-    if (isSupport) {
-        modalTitle.innerHTML = `
-            <button onclick="closeFeedbackChat()" class="flex items-center justify-center w-8 h-8 rounded-lg bg-slate-700 hover:bg-slate-600 text-white mr-2 transition-colors">
-                <i class="fas fa-arrow-left text-sm"></i>
-            </button>
-            <i class="fas fa-life-ring text-purple-400 mr-2"></i>${t('support_title')}
-        `;
-    } else {
-        modalTitle.innerHTML = `
-            <button onclick="closeFeedbackChat()" class="flex items-center justify-center w-8 h-8 rounded-lg bg-slate-700 hover:bg-slate-600 text-white mr-2 transition-colors">
-                <i class="fas fa-arrow-left text-sm"></i>
-            </button>
-            ${t('chat_with_support')}
-        `;
-    }
-    
-    document.getElementById('feedbackFormNew').classList.add('hidden');
-    document.getElementById('feedbackFormReply').classList.remove('hidden');
-    document.getElementById('feedbackSendBtn').classList.add('hidden');
-    loadFeedbackChat(docId, projectId);
-    modal.classList.add('active');
+  document.getElementById('feedbackProjectName').textContent = projectName || projectId;
+  document.getElementById('adminChatDeleteBtn').classList.add('hidden');
+  document.getElementById('feedbackListModal').classList.remove('active');
+  const modal = document.getElementById('feedbackModal');
+  document.getElementById('feedbackProjectId').value = projectId;
+  document.getElementById('feedbackDocId').value = docId;
+  document.getElementById('feedbackModalTitle').innerHTML = '<button onclick="closeFeedbackChat()" class="flex items-center justify-center w-8 h-8 rounded-lg bg-slate-700 hover:bg-slate-600 text-white mr-2 transition-colors"><i class="fas fa-arrow-left text-sm"></i></button>' + t('chat_with_support');
+  document.getElementById('feedbackFormNew').classList.add('hidden');
+  document.getElementById('feedbackFormReply').classList.remove('hidden');
+  document.getElementById('feedbackSendBtn').classList.add('hidden');
+  loadFeedbackChat(docId, projectId);
+  modal.classList.add('active');
 };
 
 window.openAdminFeedbackChat = function(feedbackId) {
-    const fb = adminFeedbacks.find(f => f.id === feedbackId);
-    if (!fb) return;
+  const fb = adminFeedbacks.find(f => f.id === feedbackId);
+  if (!fb) return;
 
-    const isSupport = fb.projectId === '__support__';
-    
-    let project, projectName, projectLogo;
-    
-    if (isSupport) {
-        project = null;
-        projectName = 'Поддержка AirdropLab';
-        projectLogo = '';
-    } else {
-        project = projects.find(p => p.id === fb.projectId);
-        projectName = project?.name || fb.projectId || 'Неизвестный проект';
-        projectLogo = project?.image || '';
-    }
+  const project = projects.find(p => p.id === fb.projectId);
+  const projectName = project?.name || fb.projectId || 'Неизвестный проект';
+  const projectLogo = project?.image || '';
 
   const listModal = document.getElementById('feedbackListModal');
   if (listModal) listModal.classList.remove('active');
@@ -1561,25 +1362,13 @@ window.sendAdminReply = async function(feedbackId) {
 window.markFeedbackRead = async function(id) { try { await updateDoc(doc(db, "feedbacks", id), { read: true }); } catch (e) { console.error(e); } };
 window.deleteAdminFeedback = async function(id) { if (!confirm('Удалить?')) return; try { await deleteDoc(doc(db, "feedbacks", id)); showToast('Удалено'); renderFeedbackList(); } catch (e) { showToast('Ошибка'); } };
 
-window.openFeedbackListModal = function(filterType = 'all') {
-    if (!currentUser) { showToast('Войдите'); openLoginModal(); return; }
-    
-    const isAdmin = currentUser.uid === "SAkz4mdW9reDaIsvqigCNZhEKJR2";
-    
-    // Сохраняем текущий фильтр
-    window._feedbackListFilter = filterType;
-    
-    const modal = document.getElementById('feedbackListModal');
-    const titleContainer = modal.querySelector('h2');
-    
-    if (filterType === 'support') {
-        if (titleContainer) titleContainer.innerHTML = '<i class="fas fa-life-ring text-purple-400 mr-2"></i>' + (isAdmin ? t('all_support_requests') : t('my_support_requests'));
-    } else {
-        if (titleContainer) titleContainer.innerHTML = isAdmin ? '<i class="fas fa-shield-alt text-purple-400 mr-2"></i>' + t('all_requests') : '<i class="fas fa-comments text-purple-400 mr-2"></i>' + t('my_messages');
-    }
-    
-    modal.classList.add('active');
-    setTimeout(() => renderFeedbackList(filterType), 100);
+window.openFeedbackListModal = function() {
+  if (!currentUser) { showToast('Войдите'); openLoginModal(); return; }
+  const isAdmin = currentUser.uid === "SAkz4mdW9reDaIsvqigCNZhEKJR2";
+  const titleContainer = document.querySelector('#feedbackListModal h2');
+  if (titleContainer) titleContainer.innerHTML = isAdmin ? '<i class="fas fa-shield-alt text-purple-400 mr-2"></i>' + t('all_requests') : '<i class="fas fa-comments text-purple-400 mr-2"></i>' + t('my_messages');
+  document.getElementById('feedbackListModal').classList.add('active');
+  setTimeout(() => renderFeedbackList(), 100);
 };
 
 window.closeFeedbackListModal = function() { document.getElementById('feedbackListModal').classList.remove('active'); };
@@ -1668,13 +1457,9 @@ async function syncLocalStorageToFirestore(userId) {
 onAuthStateChanged(auth, async function(user) {
   if (user) {
     currentUser = user;
-      window._currentUser = user; // Делаем доступным для footer.js
     await saveUserData(user);
     await syncLocalStorageToFirestore(user.uid);
     document.getElementById('generalFeedbackPanel').classList.remove('hidden');
-      // Показываем кнопку обращений в поддержку
-const supportBtn = document.getElementById('supportRequestPanel');
-if (supportBtn) supportBtn.classList.remove('hidden');
     initFeedbacksListener(user.uid);
     if (user.uid === "SAkz4mdW9reDaIsvqigCNZhEKJR2") activateAdminMode();
     try {
@@ -1697,10 +1482,7 @@ if (supportBtn) supportBtn.classList.remove('hidden');
     applyFilters();
   } else {
     currentUser = null; userFavorites = []; userCompleted = [];
-      window._currentUser = null;
     document.getElementById('generalFeedbackPanel').classList.add('hidden');
-      const supportBtn = document.getElementById('supportRequestPanel');
-if (supportBtn) supportBtn.classList.add('hidden');
     if (notificationsUnsubscribe) { notificationsUnsubscribe(); notificationsUnsubscribe = null; }
     if (adminFeedbacksUnsubscribe) { adminFeedbacksUnsubscribe(); adminFeedbacksUnsubscribe = null; }
     notifications = []; unreadNotificationsCount = 0; updateNotificationBadge();
@@ -1831,18 +1613,8 @@ setTimeout(() => {
     { id: 'feedbackListModal', closeFn: window.closeFeedbackListModal },
     { id: 'promptModal', closeFn: window.closePromptModal },
     { id: 'deletedProjectsModal', closeFn: window.closeDeletedProjectsModal },
-    { id: 'imageModal', closeFn: window.closeImageModal },
-
-    // ✅ ДОБАВЛЕНО: supportModal
-    { 
-        id: 'supportModal', 
-        closeFn: function() { 
-            const m = document.getElementById('supportModal'); 
-            if (m) m.classList.remove('active'); 
-        }
-    }
-];
-
+    { id: 'imageModal', closeFn: window.closeImageModal }
+  ];
 
   modalConfigs.forEach(config => {
     const modalElement = document.getElementById(config.id);
