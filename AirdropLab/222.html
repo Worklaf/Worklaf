@@ -1039,94 +1039,90 @@ let adminFeedbacks = [];
 let adminFeedbacksUnsubscribe = null;
 
 function initFeedbacksListener(uid) {
-  if (adminFeedbacksUnsubscribe) { adminFeedbacksUnsubscribe(); adminFeedbacksUnsubscribe = null; }
-  let q;
+  if (adminFeedbacksUnsubscribe) { 
+    adminFeedbacksUnsubscribe(); 
+    adminFeedbacksUnsubscribe = null; 
+  }
+  
   const isAdmin = uid === "SAkz4mdW9reDaIsvqigCNZhEKJR2";
-  try {
-    if (isAdmin) {
-      // Для админа получаем ВСЕ обращения (и support, и feedback)
-      q = query(collection(db, "feedbacks"));
-      q = query(collection(db, "supportTickets")); // ДОБАВЛЯЕМ также supportTickets
-    } else {
-      // Для пользователя получаем его обращения
-      q = query(
-        collection(db, "feedbacks"), 
-        where("userId", "==", uid)
-      );
-    }
-    
-    // Слушаем обе коллекции
-    const unsub1 = onSnapshot(query(collection(db, "feedbacks"), isAdmin ? query() : where("userId", "==", uid)), (snapshot) => {
-      // Обрабатываем feedback
-      snapshot.forEach((doc) => {
-        const data = doc.data();
-        if (isAdmin && data.deleted) return;
-        if (!isAdmin && data.userDeleted) return;
-        // Не добавляем support в общий список feedback
-        if (data.type === 'support') return;
-        
-        data.id = doc.id;
-        const existingIdx = adminFeedbacks.findIndex(f => f.id === data.id);
-        if (existingIdx >= 0) {
-          adminFeedbacks[existingIdx] = data;
-        } else {
-          adminFeedbacks.push(data);
-        }
-      });
-      updateFeedbackList();
-    });
-    
-    const unsub2 = onSnapshot(query(collection(db, "supportTickets"), isAdmin ? query() : where("userId", "==", uid)), (snapshot) => {
-      // Обрабатываем support
-      snapshot.forEach((doc) => {
-        const data = doc.data();
-        if (isAdmin && data.deleted) return;
-        if (!isAdmin && data.userDeleted) return;
-        
-        data.id = doc.id;
-        data.type = 'support'; // Явно указываем тип
-        
-        const existingIdx = adminFeedbacks.findIndex(f => f.id === data.id);
-        if (existingIdx >= 0) {
-          adminFeedbacks[existingIdx] = data;
-        } else {
-          adminFeedbacks.push(data);
-        }
-      });
-      updateFeedbackList();
-    });
-    
-    // Обновляем UI
-    function updateFeedbackList() {
-      adminFeedbacks.sort((a, b) => (b.createdAt?.toDate() || new Date(b.createdAt || 0)) - (a.createdAt?.toDate() || new Date(a.createdAt || 0)));
+  
+  // Слушаем feedbacks
+  const feedbacksQuery = isAdmin 
+    ? query(collection(db, "feedbacks")) 
+    : query(collection(db, "feedbacks"), where("userId", "==", uid));
+  
+  const unsub1 = onSnapshot(feedbacksQuery, (snapshot) => {
+    snapshot.forEach((doc) => {
+      const data = doc.data();
+      if (isAdmin && data.deleted) return;
+      if (!isAdmin && data.userDeleted) return;
+      // Не добавляем support в общий список
+      if (data.type === 'support') return;
       
-      // Считаем непрочитанные
-      let unreadCount = 0;
-      adminFeedbacks.forEach(fb => {
-        if (isAdmin ? !fb.read : !fb.userRead) unreadCount++;
-      });
-      
-      updateFeedbackBadgeUI(unreadCount);
-      
-      // Обновляем badge поддержки
-      const supportBadge = document.getElementById('supportPanelBadge');
-      const supportUnread = adminFeedbacks.filter(fb => fb.type === 'support' && (isAdmin ? !fb.read : !fb.userRead)).length;
-      if (supportBadge) {
-        if (supportUnread > 0) {
-          supportBadge.textContent = supportUnread > 9 ? '9+' : supportUnread;
-          supportBadge.classList.remove('hidden');
-        } else {
-          supportBadge.classList.add('hidden');
-        }
+      data.id = doc.id;
+      const existingIdx = adminFeedbacks.findIndex(f => f.id === data.id);
+      if (existingIdx >= 0) {
+        adminFeedbacks[existingIdx] = data;
+      } else {
+        adminFeedbacks.push(data);
       }
+    });
+    updateFeedbackList();
+  });
+  
+  // Слушаем supportTickets (ИСПРАВЛЕНО)
+  const supportQuery = isAdmin 
+    ? query(collection(db, "supportTickets")) 
+    : query(collection(db, "supportTickets"), where("userId", "==", uid));
+  
+  const unsub2 = onSnapshot(supportQuery, (snapshot) => {
+    snapshot.forEach((doc) => {
+      const data = doc.data();
+      if (isAdmin && data.deleted) return;
+      if (!isAdmin && data.userDeleted) return;
       
-      const listModal = document.getElementById('feedbackListModal');
-      if (listModal && listModal.classList.contains('active')) renderFeedbackList();
+      data.id = doc.id;
+      data.type = 'support';
+      
+      const existingIdx = adminFeedbacks.findIndex(f => f.id === data.id);
+      if (existingIdx >= 0) {
+        adminFeedbacks[existingIdx] = data;
+      } else {
+        adminFeedbacks.push(data);
+      }
+    });
+    updateFeedbackList();
+  });
+  
+  function updateFeedbackList() {
+    adminFeedbacks.sort((a, b) => {
+      const dateA = a.createdAt?.toDate ? a.createdAt.toDate() : new Date(a.createdAt || 0);
+      const dateB = b.createdAt?.toDate ? b.createdAt.toDate() : new Date(b.createdAt || 0);
+      return dateB - dateA;
+    });
+    
+    let unreadCount = 0;
+    adminFeedbacks.forEach(fb => {
+      if (isAdmin ? !fb.read : !fb.userRead) unreadCount++;
+    });
+    
+    updateFeedbackBadgeUI(unreadCount);
+    
+    const supportBadge = document.getElementById('supportPanelBadge');
+    if (supportBadge) {
+      const supportUnread = adminFeedbacks.filter(fb => fb.type === 'support' && (isAdmin ? !fb.read : !fb.userRead)).length;
+      if (supportUnread > 0) {
+        supportBadge.textContent = supportUnread > 9 ? '9+' : supportUnread;
+        supportBadge.classList.remove('hidden');
+      } else {
+        supportBadge.classList.add('hidden');
+      }
     }
     
-  } catch (e) { console.error("Error init listener:", e); }
+    const listModal = document.getElementById('feedbackListModal');
+    if (listModal && listModal.classList.contains('active')) renderFeedbackList();
+  }
 }
-
 function updateFeedbackBadgeUI(unreadCount) {
   const badge = document.getElementById('feedbackBadge');
   if (!badge) return;
