@@ -1027,16 +1027,12 @@
     // ============ SUPPORT MODAL ============
 
     window.openSupportModal = function() {
-        const modal = document.getElementById('supportModal');
-        if (modal) {
-            // Предзаполняем данные если авторизованы
-            if (typeof currentUser !== 'undefined' && currentUser) {
-                document.getElementById('supportName').value = currentUser.displayName || '';
-                document.getElementById('supportEmail').value = currentUser.email || '';
-            }
-            modal.classList.add('active');
-        }
-    };
+    if (typeof openFeedbackModal === 'function') {
+        openFeedbackModal('__support__', '🛡️ Support');
+    } else {
+        footerShowToast('Пожалуйста, войдите в аккаунт', 'error');
+    }
+};
 
     window.closeSupportModal = function() {
         const modal = document.getElementById('supportModal');
