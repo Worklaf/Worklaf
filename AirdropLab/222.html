@@ -316,7 +316,7 @@
         </div>
       </div>
       <div class="flex gap-2 items-center">
-          <div id="supportRequestPanel" class="relative hidden" id="supportRequestBtn">
+          <div id="supportRequestPanel" class="relative hidden">
     <button onclick="openFeedbackListModal('support')" class="relative p-2.5 text-slate-400 hover:text-purple-400 transition-all rounded-xl hover:bg-purple-500/10 group border border-transparent hover:border-purple-500/30" title="Мои обращения в поддержку">
         <i class="fas fa-life-ring text-lg group-hover:animate-bounce"></i>
         <span id="supportBadge" class="absolute -top-1 -right-1 w-5 h-5 bg-gradient-to-r from-purple-500 to-pink-500 rounded-full text-xs hidden items-center justify-center font-bold shadow-lg shadow-purple-500/50">0</span>
@@ -1252,57 +1252,6 @@ window.loadFeedbackChat = function(docId, projId) {
   window.currentFeedbackUnsub = unsub;
 };
 
-window.sendUserFeedback = async function() {
-    if (!currentUser) return showToast('Войдите');
-    const projId = document.getElementById('feedbackProjectId').value;
-    const category = document.getElementById('feedbackCategory').value;
-    const message = document.getElementById('feedbackText').value.trim();
-    if (!message) return showToast('Введите сообщение');
-    
-    const isSupport = projId === '__support__';
-    
-    try {
-        let projectName = '';
-        let projectLogo = '';
-        
-        if (isSupport) {
-            projectName = 'Поддержка AirdropLab';
-            projectLogo = '';
-        } else {
-            const proj = projects.find(p => p.id === projId);
-            projectName = proj?.name || '';
-            projectLogo = proj?.image || '';
-        }
-        
-        await addDoc(collection(db, "feedbacks"), {
-            projectId: projId,
-            projectName: projectName,
-            projectLogo: projectLogo,
-            type: isSupport ? 'support' : 'project',
-            category,
-            userId: currentUser.uid,
-            userName: currentUser.displayName || currentUser.email,
-            userPhoto: currentUser.photoURL || '',
-            status: 'open',
-            read: false,
-            userRead: true,
-            deleted: false,
-            userDeleted: false,
-            createdAt: serverTimestamp(),
-            messages: [{ 
-                sender: 'user', 
-                text: message, 
-                timestamp: new Date() 
-            }]
-        });
-        
-        showToast('Отправлено!');
-        document.getElementById('feedbackText').value = '';
-    } catch (e) { 
-        console.error(e); 
-        showToast('Ошибка: ' + e.message); 
-    }
-};
 
 window.sendUserFeedback = async function() {
     if (!currentUser) return showToast('Войдите');
@@ -1719,6 +1668,7 @@ async function syncLocalStorageToFirestore(userId) {
 onAuthStateChanged(auth, async function(user) {
   if (user) {
     currentUser = user;
+      window._currentUser = user; // Делаем доступным для footer.js
     await saveUserData(user);
     await syncLocalStorageToFirestore(user.uid);
     document.getElementById('generalFeedbackPanel').classList.remove('hidden');
@@ -1747,6 +1697,7 @@ if (supportBtn) supportBtn.classList.remove('hidden');
     applyFilters();
   } else {
     currentUser = null; userFavorites = []; userCompleted = [];
+      window._currentUser = null;
     document.getElementById('generalFeedbackPanel').classList.add('hidden');
       const supportBtn = document.getElementById('supportRequestPanel');
 if (supportBtn) supportBtn.classList.add('hidden');
@@ -1880,8 +1831,18 @@ setTimeout(() => {
     { id: 'feedbackListModal', closeFn: window.closeFeedbackListModal },
     { id: 'promptModal', closeFn: window.closePromptModal },
     { id: 'deletedProjectsModal', closeFn: window.closeDeletedProjectsModal },
-    { id: 'imageModal', closeFn: window.closeImageModal }
-  ];
+    { id: 'imageModal', closeFn: window.closeImageModal },
+
+    // ✅ ДОБАВЛЕНО: supportModal
+    { 
+        id: 'supportModal', 
+        closeFn: function() { 
+            const m = document.getElementById('supportModal'); 
+            if (m) m.classList.remove('active'); 
+        }
+    }
+];
+
 
   modalConfigs.forEach(config => {
     const modalElement = document.getElementById(config.id);
