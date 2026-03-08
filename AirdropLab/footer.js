@@ -19,7 +19,7 @@
             telegram: '',
             discord: '',
             youtube: '',
-            email: 'support@airdroplab.com'
+            email: 'airdroplab.support@gmail.com'
         },
         // Данные для FAQ
         faq: [
@@ -89,7 +89,7 @@
                     <p>Мы оставляем право изменять настоящие Условия в любое время. Продолжая использовать Сервис после изменений, вы соглашаетесь с новыми условиями.</p>
                     
                     <h3>8. Контакты</h3>
-                    <p>По вопросам, связанным с настоящими Условиями, обращайтесь: support@airdroplab.com</p>
+                    <p>По вопросам, связанным с настоящими Условиями, обращайтесь: airdroplab.support@gmail.com</p>
                 `
             },
             privacy: {
@@ -486,7 +486,7 @@
                                 <nav class="space-y-2 text-sm">
                                     <a href="mailto:${FOOTER_CONFIG.social.email}" class="footer-link flex items-center gap-2 text-slate-400 hover:text-white transition-colors">
                                         <i class="fas fa-envelope text-cyan-400 w-4"></i>
-                                        <span>support@airdroplab.com</span>
+                                        <span>airdroplab.support@gmail.com</span>
                                     </a>
                                     <div class="flex items-center gap-2 text-slate-400">
                                         <i class="fas fa-map-marker-alt text-orange-400 w-4"></i>
