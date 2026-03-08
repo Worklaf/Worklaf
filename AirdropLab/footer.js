@@ -1015,13 +1015,7 @@
         reader.readAsDataURL(file);
     };
 
-    // ============ SUPPORT MODAL ============
-
-    window.openSupportModal = function() {
-    // Показываем собственную форму поддержки — всегда новую
-    _showSupportForm();
-};
-
+ 
 function _showSupportForm() {
     const modal = document.getElementById('pageModal');
     const content = document.getElementById('pageModalContent');
@@ -1205,52 +1199,48 @@ window.footerSubmitSupport = async function(e) {
         if (modal) modal.classList.remove('active');
     };
 
-    window.submitSupportTicket = async function(e) {
+        window.submitSupportTicket = async function(e) {
         e.preventDefault();
-        
         const btn = document.getElementById('supportSubmitBtn');
-        const originalText = btn.innerHTML;
-        btn.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i>Отправка...';
-        btn.disabled = true;
-        
-        const ticketData = {
-            type: 'support', // Пометка что это поддержка, а не отзыв
-            category: document.getElementById('supportCategory').value,
-            name: document.getElementById('supportName').value,
-            email: document.getElementById('supportEmail').value,
-            subject: document.getElementById('supportSubject').value,
-            message: document.getElementById('supportMessage').value,
-            notify: document.getElementById('supportNotify').checked,
-            userId: (typeof currentUser !== 'undefined' && currentUser) ? currentUser.uid : 'guest',
-            status: 'new',
-            priority: 'normal',
-            createdAt: new Date().toISOString()
-        };
-        
-        // Сохраняем в localStorage как резерв
-        const supportTickets = JSON.parse(localStorage.getItem('supportTickets') || '[]');
-        supportTickets.push(ticketData);
-        localStorage.setItem('supportTickets', JSON.stringify(supportTickets));
-        
-        // Если Firebase доступен, сохраняем там
-        if (typeof db !== 'undefined') {
-            try {
-                await addDoc(collection(db, "supportTickets"), ticketData);
-                footerShowToast('Обращение отправлено! Мы ответим в течение 24 часов.');
-            } catch(err) {
-                console.error('Error submitting ticket:', err);
-                footerShowToast('Обращение сохранено. Мы свяжемся с вами!');
-            }
-        } else {
-            footerShowToast('Обращение отправлено! Мы ответим в течение 24 часов.');
+        const user = typeof window.currentUser !== 'undefined' ? window.currentUser : null;
+
+        if (!user) {
+            footerShowToast('Войдите в аккаунт!');
+            return;
         }
-        
-        btn.innerHTML = originalText;
-        btn.disabled = false;
-        
-        // Очищаем форму
-        document.getElementById('supportForm').reset();
-        closeSupportModal();
+
+        btn.disabled = true;
+        btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Отправка...';
+
+        try {
+            const { collection, addDoc } = window.__firestoreExports;
+            await addDoc(collection(window.db, 'feedbacks'), {
+                projectId: '__support__',
+                projectName: 'Support',
+                category: document.getElementById('supportCategory').value,
+                userId: user.uid,
+                userName: user.displayName || 'User',
+                userPhoto: user.photoURL || '',
+                status: 'open',
+                read: false,
+                userRead: true,
+                createdAt: new Date(),
+                messages: [{
+                    sender: 'user',
+                    text: `[${document.getElementById('supportSubject').value}] ${document.getElementById('supportMessage').value}`,
+                    timestamp: new Date()
+                }]
+            });
+
+            footerShowToast('Обращение отправлено!');
+            closeSupportModal(); // Это закроет модалку поддержки
+            document.getElementById('supportForm').reset();
+        } catch (err) {
+            footerShowToast('Ошибка отправки');
+        } finally {
+            btn.disabled = false;
+            btn.innerHTML = 'Отправить обращение';
+        }
     };
 
     // ============ NOTIFICATIONS MODAL ============
@@ -1622,34 +1612,41 @@ window.footerSubmitSupport = async function(e) {
         });
     }
 
-   function updateFooterStats() {
-    const userEl    = document.getElementById('footerUserCount');
-    const projectEl = document.getElementById('footerProjectCount');
+       // Замени эту функцию для корректного отображения статистики
+    function updateFooterStats() {
+        const userEl = document.getElementById('footerUserCount');
+        const projectEl = document.getElementById('footerProjectCount');
 
-    // --- Проекты ---
-    let projectCount = 0;
-    if (typeof window.projects !== 'undefined' && Array.isArray(window.projects)) {
-        projectCount = window.projects.filter(function(p) { return !p.deleted; }).length;
-    }
-
-    if (projectEl) {
-        if (projectCount > 0) {
+        // Количество проектов (фильтруем удаленные)
+        let projectCount = 0;
+        if (typeof window.projects !== 'undefined' && Array.isArray(window.projects)) {
+            projectCount = window.projects.filter(p => !p.deleted).length;
+        }
+        if (projectEl) {
             projectEl.textContent = projectCount;
             projectEl.classList.add('text-cyan-400');
-            projectEl.classList.remove('text-slate-400');
-        } else {
-            projectEl.textContent = '0';
+        }
+
+        // Количество пользователей (из Firebase)
+        if (userEl) {
+            if (typeof window.db !== 'undefined' && window.__firestoreExports?.getCountFromServer) {
+                const { collection, getCountFromServer } = window.__firestoreExports;
+                getCountFromServer(collection(window.db, 'users')).then(snapshot => {
+                    const count = snapshot.data().count;
+                    userEl.textContent = count > 0 ? count : 0;
+                    userEl.classList.add('text-emerald-400');
+                }).catch(() => userEl.textContent = '0');
+            } else {
+                userEl.textContent = '0';
+            }
         }
     }
 
-    // --- Пользователи ---
-    const user = (typeof window.currentUser !== 'undefined') ? window.currentUser : null;
-
-        if (userEl) {
-        // Всегда показываем количество пользователей из Firebase
-        _tryGetUserCountFromFirebase(userEl);
-    }
-}
+    // Замени эту функцию, чтобы она всегда открывала новую форму
+    window.openSupportModal = function() {
+        const modal = document.getElementById('supportModal');
+        if (modal) modal.classList.add('active');
+    };
 
 function _tryGetUserCountFromFirebase(userEl) {
     if (!userEl) return;
