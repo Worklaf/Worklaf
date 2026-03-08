@@ -1157,30 +1157,74 @@ function showNewFeedbackForm() {
   document.getElementById('feedbackText').value = '';
 }
 
-function loadFeedbackChat(docId, projId) {
+window.loadFeedbackChat = function(docId, projId) {
   const unsub = onSnapshot(doc(db, "feedbacks", docId), (snap) => {
-    if (!snap.exists()) return showNewFeedbackForm();
-    const d = snap.data();
-    const messages = d.messages || [];
-    messages.sort((a,b) => new Date(a.timestamp) - new Date(b.timestamp));
-    const html = messages.map((msg) => {
-      const bubbleSide = msg.sender === 'user' ? 'user' : 'admin';
-      const senderName = msg.sender === 'user' ? t('you') : t('support');
-      const avatar = msg.sender === 'user' ? `<img src="${currentUser?.photoURL || 'https://ui-avatars.com/api/?name=U'}" class="chat-avatar">` : `<div class="chat-avatar"><i class="fas fa-user-shield"></i></div>`;
-      const t = msg.timestamp ? formatTimeAgo(msg.timestamp.toDate ? msg.timestamp.toDate() : new Date(msg.timestamp)) : '';
-      return `<div class="chat-bubble ${bubbleSide}">${avatar}<div class="chat-bubble-wrapper"><span class="chat-sender">${senderName}</span><div class="chat-content">${msg.text}</div><span class="chat-time">${t}</span></div></div>`;
-    }).join('');
-    const history = document.getElementById("feedbackChatHistory");
-    history.innerHTML = html || '<p class="text-center text-slate-500 py-4">' + t('no_messages') + '</p>';
-    document.getElementById('feedbackFormNew').classList.add('hidden');
-    document.getElementById('feedbackFormReply').classList.remove('hidden');
-    enableUserEnterSend();
-    document.getElementById('feedbackSendBtn').classList.add('hidden');
-    history.scrollTop = history.scrollHeight;
-    if (!d.userRead) updateDoc(doc(db, "feedbacks", docId), { userRead: true });
+    try {
+      if (!snap.exists()) return showNewFeedbackForm();
+      const d = snap.data();
+      const messages = d.messages || [];
+      
+      // Безопасная сортировка (учитываем как объекты Firestore, так и обычные даты)
+      messages.sort((a, b) => {
+        const timeA = a.timestamp?.toDate ? a.timestamp.toDate() : new Date(a.timestamp || 0);
+        const timeB = b.timestamp?.toDate ? b.timestamp.toDate() : new Date(b.timestamp || 0);
+        return timeA - timeB;
+      });
+
+      const html = messages.map((msg) => {
+        const bubbleSide = msg.sender === 'user' ? 'user' : 'admin';
+        // Здесь используется глобальная функция t()
+        const senderName = msg.sender === 'user' ? t('you') : t('support');
+        const avatar = msg.sender === 'user' 
+          ? `<img src="${currentUser?.photoURL || 'https://ui-avatars.com/api/?name=U'}" class="chat-avatar">` 
+          : `<div class="chat-avatar"><i class="fas fa-user-shield"></i></div>`;
+        
+        // ИСПРАВЛЕНИЕ: Переименовали 't' в 'msgTime', чтобы не конфликтовало с функцией перевода t()
+        const msgTime = msg.timestamp ? formatTimeAgo(msg.timestamp.toDate ? msg.timestamp.toDate() : new Date(msg.timestamp)) : '';
+        
+        return `<div class="chat-bubble ${bubbleSide}">
+                  ${avatar}
+                  <div class="chat-bubble-wrapper">
+                    <span class="chat-sender">${senderName}</span>
+                    <div class="chat-content">${msg.text}</div>
+                    <span class="chat-time">${msgTime}</span>
+                  </div>
+                </div>`;
+      }).join('');
+
+      const history = document.getElementById("feedbackChatHistory");
+      history.innerHTML = html || '<p class="text-center text-slate-500 py-4">' + t('no_messages') + '</p>';
+      
+      document.getElementById('feedbackFormNew').classList.add('hidden');
+      document.getElementById('feedbackFormReply').classList.remove('hidden');
+      
+      // Включаем отправку по Enter
+      if (typeof enableUserEnterSend === 'function') enableUserEnterSend();
+      
+      document.getElementById('feedbackSendBtn').classList.add('hidden');
+      
+      // Прокрутка чата вниз
+      setTimeout(() => {
+        history.scrollTop = history.scrollHeight;
+      }, 50);
+
+      // Обновляем статус прочтения
+      if (!d.userRead) updateDoc(doc(db, "feedbacks", docId), { userRead: true });
+
+    } catch (err) {
+      console.error("Ошибка при обработке сообщений чата:", err);
+      document.getElementById("feedbackChatHistory").innerHTML = 
+        '<div class="text-center py-8 text-red-400"><p>Произошла ошибка при загрузке сообщений.</p></div>';
+    }
+  }, (error) => {
+    // Обработка ошибок прав доступа Firebase или проблем с сетью
+    console.error("Ошибка подписки на чат:", error);
+    document.getElementById("feedbackChatHistory").innerHTML = 
+      '<div class="text-center py-8 text-red-400"><i class="fas fa-lock mb-2 text-2xl"></i><p>Нет доступа или удален</p></div>';
   });
+  
   window.currentFeedbackUnsub = unsub;
-}
+};
 
 window.sendUserFeedback = async function() {
   if (!currentUser) return showToast('Войдите');
