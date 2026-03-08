@@ -38,24 +38,24 @@
 
     // Получение ссылок на Firebase из window
     function getFirebaseRefs() {
-        return {
-            db: window.db,
-            auth: window.auth,
-            currentUser: window.currentUser,
-            addDoc: window.addDoc,
-            collection: window.collection,
-            doc: window.doc,
-            setDoc: window.setDoc,
-            getDoc: window.getDoc,
-            getDocs: window.getDocs,
-            updateDoc: window.updateDoc,
-            query: window.query,
-            where: window.where,
-            serverTimestamp: window.serverTimestamp,
-            arrayUnion: window.arrayUnion,
-            onSnapshot: window.onSnapshot
-        };
-    }
+    return {
+        db: window.db,
+        auth: window.auth,
+        currentUser: window.currentUser,
+        addDoc: window.addDoc || window.firebaseAddDoc,
+        collection: window.collection || window.firebaseCollection,
+        doc: window.doc || window.firebaseDoc,
+        setDoc: window.setDoc || window.firebaseSetDoc,
+        getDoc: window.getDoc || window.firebaseGetDoc,
+        getDocs: window.getDocs || window.firebaseGetDocs,
+        updateDoc: window.updateDoc || window.firebaseUpdateDoc,
+        query: window.query || window.firebaseQuery,
+        where: window.where || window.firebaseWhere,
+        serverTimestamp: window.serverTimestamp || window.firebaseServerTimestamp,
+        arrayUnion: window.arrayUnion || window.firebaseArrayUnion,
+        onSnapshot: window.onSnapshot || window.firebaseOnSnapshot
+    };
+}
 
     // Получение всех обращений (feedbacks + support)
     function getAllFeedbacks() {
