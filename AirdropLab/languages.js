@@ -322,7 +322,18 @@ const translations = {
     legal_privacy_title: 'Политика конфиденциальности',
     legal_cookie_title: 'Политика использования Cookies',
     legal_disclaimer_title: 'Отказ от ответственности',
-    legal_updated_date: '07 марта 2026'
+    legal_updated_date: '07 марта 2026',
+    // Guides data
+guide_arc_desc: 'Тестнет от Circle — создателей USDC',
+guide_tempo_desc: 'L2 решение от MetaStreet',
+guide_robinhood_desc: 'Тестнет от Robinhood — известного брокера',
+guide_difficulty_easy: 'Легко',
+guide_difficulty_medium: 'Средне',
+guide_difficulty_hard: 'Сложно',
+
+// Account modal - country select
+account_select_country: 'Выберите страну или введите...',
+account_country_other_input: 'Введите название страны'
   },
   
   en: {
@@ -647,7 +658,18 @@ const translations = {
     legal_privacy_title: 'Privacy Policy',
     legal_cookie_title: 'Cookie Policy',
     legal_disclaimer_title: 'Disclaimer',
-    legal_updated_date: 'March 07, 2026'
+    legal_updated_date: 'March 07, 2026',
+    // Guides data
+guide_arc_desc: 'Testnet by Circle — creators of USDC',
+guide_tempo_desc: 'L2 solution by MetaStreet',
+guide_robinhood_desc: 'Testnet by Robinhood — well-known broker',
+guide_difficulty_easy: 'Easy',
+guide_difficulty_medium: 'Medium',
+guide_difficulty_hard: 'Hard',
+
+// Account modal - country select
+account_select_country: 'Select or type country...',
+account_country_other_input: 'Enter country name'
   }
 };
 
