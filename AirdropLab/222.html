@@ -827,7 +827,7 @@ const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const db = getFirestore(app);
 window.db = db;
-window.__firestoreExports = { collection, getCountFromServer, addDoc, getDocs, query, where };
+window.__firestoreExports = { collection, getCountFromServer, addDoc, getDocs,doc, query, where };
 
 const STORAGE_KEY = 'arc_tracker_v3';
 const COMPLETED_KEY = 'arc_completed_v1';
@@ -1890,6 +1890,24 @@ onAuthStateChanged(auth, async function(user) {
         initUserSync(user.uid);
     initNotificationsListener(user.uid);
     applyFilters();
+          // Обновляем счётчик пользователей в config
+    try {
+        const configRef = doc(db, "config", "stats");
+        const configSnap = await getDoc(configRef);
+        const currentCount = configSnap.exists() ? (configSnap.data().userCount || 0) : 0;
+        
+        // Проверяем есть ли уже этот пользователь в счётчике
+        const userRef = doc(db, "users", user.uid);
+        const userSnap = await getDoc(userRef);
+        if (!userSnap.exists() || !userSnap.data().counted) {
+            // Новый пользователь — увеличиваем счётчик
+            await setDoc(configRef, { userCount: currentCount + 1 }, { merge: true });
+            // Помечаем что уже посчитан
+            await setDoc(userRef, { counted: true }, { merge: true });
+        }
+    } catch(e) {
+        console.log('Counter update skip:', e);
+    }
     
     // Уведомляем футер что авторизация изменилась
     window.currentUser = user;
