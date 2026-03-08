@@ -686,6 +686,7 @@ function setLanguage(lang) {
   if (translations[lang]) {
     currentLang = lang;
     localStorage.setItem('airdropLabLang', lang);
+    document.documentElement.lang = lang;
     updateAllTranslations();
     
     if (lang === 'en') {
@@ -851,6 +852,7 @@ window.t = t;
 
 // Инициализация при загрузке
 document.addEventListener('DOMContentLoaded', function() {
+  document.documentElement.lang = currentLang;
   updateLanguageButton();
   
   if (currentLang === 'en') {
