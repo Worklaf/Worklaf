@@ -1064,7 +1064,10 @@
     }
 };
     window.openSupportListModal = function() {
-    if (typeof currentUser === 'undefined' || !currentUser) {
+    // Берём currentUser из основного скрипта через window
+    const user = window._currentUser || (typeof currentUser !== 'undefined' ? currentUser : null);
+    
+    if (!user) {
         footerShowToast('Войдите в аккаунт для просмотра обращений');
         if (typeof openLoginModal === 'function') openLoginModal();
         return;
