@@ -12,7 +12,55 @@
     <!-- languages.js ДОЛЖЕН загружаться ПЕРЕД основным скриптом -->
     <script src="languages.js"></script>
      <script src="footer.js"></script>
+     <script src="support.js"></script>
    <style>
+       /* Бейджик новых обращений – то же, что у вас для уведомлений */
+#supportBadge {
+    font-size: 0.7rem;
+}
+
+/* Стили для списка обращений (по мотивам feedback) */
+.support-item {
+    border: 1px solid rgba(255,255,255,0.1);
+    background: rgba(15,23,42,0.8);
+    border-radius: .75rem;
+    padding: .75rem 1rem;
+    transition: background .2s;
+}
+.support-item.unread {
+    border-color: #8b5cf6;
+    background: rgba(139,92,246,0.15);
+}
+.support-item .support-header {
+    display:flex;align-items:center;gap:.75rem;
+}
+.support-item .support-avatar {
+    width:2rem;height:2rem;border-radius:50%;overflow:hidden;
+}
+.support-item .support-avatar img{
+    width:100%;height:100%;object-fit:cover;
+}
+.support-item .support-content{
+    flex:1;
+}
+.support-item .support-content .title{
+    font-weight:600;color:#fff;
+}
+.support-item .support-content .msg{
+    color:#cbd5e1;font-size:.875rem;margin-top:.25rem;
+}
+.support-item .support-content .time{
+    color:#64748b;font-size:.75rem;margin-top:.125rem;
+}
+
+/* Анимация появления модального окна */
+.modal.active .modal-content{
+    animation:fadeIn .2s ease-out forwards;
+}
+@keyframes fadeIn{
+    from{opacity:0;transform:translateY(20px);}
+    to{opacity:1;transform:none;}
+}
        #langBtn {
   display: flex;
   align-items: center;
@@ -328,7 +376,17 @@
             <span id="feedbackBadge" class="absolute -top-1 -right-1 w-5 h-5 bg-gradient-to-r from-purple-500 to-pink-500 rounded-full text-xs flex items-center justify-center hidden font-bold shadow-lg shadow-purple-500/50">0</span>
           </button>
         </div>
-        
+        <!-- Внутри <div class="flex gap-2 items-center"> (рядом с notificationPanel) -->
+<div id="supportPanel" class="relative">
+    <button onclick="openSupportModal()" class="relative p-2.5 text-slate-400 hover:text-purple-400 transition-all rounded-xl hover:bg-purple-500/10 group border border-transparent hover:border-purple-500/30">
+        <i class="fas fa-headset text-lg group-hover:animate-bounce"></i>
+        <!-- Бейджик новых обращений -->
+        <span id="supportBadge"
+              class="absolute -top-1 -right-1 w-5 h-5 bg-purple-600 rounded-full text-xs flex items-center justify-center hidden font-bold shadow-lg shadow-purple-500/50 animate-pulse">
+            0
+        </span>
+    </button>
+</div>
         <!-- Language Toggle Button -->
         <button onclick="toggleLang()" id="langBtn" class="flex items-center gap-2 px-3 py-2 rounded-lg border transition-all">
     <span class="lang-flag"></span>
@@ -2821,5 +2879,91 @@ setTimeout(() => {
   detectNewActivities();
 }, 1000);
 </script>
+    <!-- Поместите сразу после всех остальных модальных окон (в конце <body>) -->
+<div id="supportModal" class="modal">
+    <div class="modal-content modal-sm p-6 relative">
+        <button onclick="closeSupportModal()" class="absolute top-4 right-4 text-slate-400 hover:text-white">
+            <i class="fas fa-times text-xl"></i>
+        </button>
+
+        <h2 class="text-2xl font-bold mb-6 text-center" data-translate="new_message">Новое обращение</h2>
+
+        <form id="supportForm" onsubmit="submitSupportTicket(event)" class="space-y-4">
+            <div>
+                <label class="block text-sm font-medium text-slate-300 mb-2" data-translate="support_topic">Тема обращения *</label>
+                <select id="supportCategory" required class="w-full bg-slate-800 border border-slate-700 rounded-lg px-4 py-2.5 text-sm text-white focus:border-purple-500 focus:outline-none">
+                    <option value="">Выберите категорию</option>
+                    <option value="technical">🔧 Техническая проблема</option>
+                    <option value="account">👤 Проблема с аккаунтом</option>
+                    <option value="project">📋 Вопрос о проекте</option>
+                    <option value="suggestion">💡 Предложение</option>
+                    <option value="partnership">🤝 Партнёрство</option>
+                    <option value="other">💬 Другое</option>
+                </select>
+            </div>
+
+            <div>
+                <label class="block text-sm font-medium text-slate-300 mb-2" data-translate="your_name">Ваше имя</label>
+                <input type="text" id="supportName" placeholder="Иван" class="w-full bg-slate-800 border border-slate-700 rounded-lg px-4 py-2.5 text-sm text-white focus:border-purple-500 focus:outline-none">
+            </div>
+
+            <div>
+                <label class="block text-sm font-medium text-slate-300 mb-2" data-translate="your_email">Email *</label>
+                <input type="email" id="supportEmail" required placeholder="example@mail.com"
+                       class="w-full bg-slate-800 border border-slate-700 rounded-lg px-4 py-2.5 text-sm text-white focus:border-purple-500 focus:outline-none">
+            </div>
+
+            <div>
+                <label class="block text-sm font-medium text-slate-300 mb-2" data-translate="subject">Тема *</label>
+                <input type="text" id="supportSubject" required placeholder="Кратко о проблеме"
+                       class="w-full bg-slate-800 border border-slate-700 rounded-lg px-4 py-2.5 text-sm text-white focus:border-purple-500 focus:outline-none">
+            </div>
+
+            <div>
+                <label class="block text-sm font-medium text-slate-300 mb-2" data-translate="message">Сообщение *</label>
+                <textarea id="supportMessage" required rows="5"
+                          placeholder="Опишите проблему подробно..."
+                          class="w-full bg-slate-800 border border-slate-700 rounded-lg px-4 py-2.5 text-sm text-white focus:border-purple-500 focus:outline-none resize-none"></textarea>
+            </div>
+
+            <div class="flex items-center gap-2">
+                <input type="checkbox" id="supportNotify" checked class="rounded bg-slate-800 border-slate-600 text-purple-500">
+                <label for="supportNotify" class="text-sm text-slate-400" data-translate="notify_me">Уведомить по email</label>
+            </div>
+
+            <button type="submit" id="supportSubmitBtn"
+                    class="w-full bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-500 hover:to-blue-500 py-3 rounded-lg text-sm font-bold text-white transition-all hover:scale-[1.02] shadow-lg shadow-purple-500/20">
+                <i class="fas fa-paper-plane mr-2"></i><span data-translate="send">Отправить</span>
+            </button>
+        </form>
+    </div>
+</div>
+    <!-- После всех остальных модальных окон, но до </body> -->
+<div id="supportListModal" class="modal">
+    <div class="modal-content modal-large">
+        <div class="modal-header flex justify-between items-center">
+            <h2 class="text-xl font-bold flex items-center gap-2">
+                <i class="fas fa-headset text-purple-400"></i>
+                <span data-translate="my_requests">Мои обращения</span>
+            </h2>
+            <button onclick="closeSupportListModal()" class="text-slate-400 hover:text-white">
+                <i class="fas fa-times text-xl"></i>
+            </button>
+        </div>
+
+        <div class="modal-body">
+            <div id="supportListContainer"
+                 class="space-y-3 max-h-[60vh] overflow-y-auto pr-2">
+                <p class="text-slate-500 text-center py-8" data-translate="loading_requests">Загрузка…</p>
+            </div>
+        </div>
+
+        <div class="modal-footer">
+            <div class="flex justify-center w-full">
+                <button onclick="closeSupportListModal()" class="bg-slate-700 hover:bg-slate-600 px-6 py-2 rounded-lg text-sm" data-translate="close">Закрыть</button>
+            </div>
+        </div>
+    </div>
+</div>
 </body>
 </html>
