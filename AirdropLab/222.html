@@ -1035,6 +1035,8 @@ window.handleEmailAuth = async function(e) { e.preventDefault(); const email = d
 window.handleRegister = async function() { const email = document.getElementById('emailInput').value; const pass = document.getElementById('passInput').value; try { await createUserWithEmailAndPassword(auth, email, pass); closeLoginModal(); showToast('Аккаунт создан!'); } catch(e) { showToast(e.message); } };
 window.logout = function() { signOut(auth).then(() => { showToast('Выход'); localStorage.removeItem('favorites_backup'); localStorage.removeItem(STORAGE_KEY); userFavorites = []; userCompleted = []; arcData = {}; }); };
 
+// ============ FEEDBACKS & SUPPORT SYSTEM ============
+
 let adminFeedbacks = [];
 let adminFeedbacksUnsubscribe = null;
 
@@ -1046,174 +1048,96 @@ function initFeedbacksListener(uid) {
   
   const isAdmin = uid === "SAkz4mdW9reDaIsvqigCNZhEKJR2";
   
-  // Слушаем feedbacks
-  const feedbacksQuery = isAdmin 
-    ? query(collection(db, "feedbacks")) 
-    : query(collection(db, "feedbacks"), where("userId", "==", uid));
-  
-  const unsub1 = onSnapshot(feedbacksQuery, (snapshot) => {
-    snapshot.forEach((doc) => {
-      const data = doc.data();
-      if (isAdmin && data.deleted) return;
-      if (!isAdmin && data.userDeleted) return;
-      // Не добавляем support в общий список
-      if (data.type === 'support') return;
-      
-      data.id = doc.id;
-      const existingIdx = adminFeedbacks.findIndex(f => f.id === data.id);
-      if (existingIdx >= 0) {
-        adminFeedbacks[existingIdx] = data;
-      } else {
-        adminFeedbacks.push(data);
-      }
-    });
-    updateFeedbackList();
-  });
-  
-  // Слушаем supportTickets (ИСПРАВЛЕНО)
-  const supportQuery = isAdmin 
-    ? query(collection(db, "supportTickets")) 
-    : query(collection(db, "supportTickets"), where("userId", "==", uid));
-  
-  const unsub2 = onSnapshot(supportQuery, (snapshot) => {
-    snapshot.forEach((doc) => {
-      const data = doc.data();
-      if (isAdmin && data.deleted) return;
-      if (!isAdmin && data.userDeleted) return;
-      
-      data.id = doc.id;
-      data.type = 'support';
-      
-      const existingIdx = adminFeedbacks.findIndex(f => f.id === data.id);
-      if (existingIdx >= 0) {
-        adminFeedbacks[existingIdx] = data;
-      } else {
-        adminFeedbacks.push(data);
-      }
-    });
-    updateFeedbackList();
-  });
-  
-  function updateFeedbackList() {
-    adminFeedbacks.sort((a, b) => {
-      const dateA = a.createdAt?.toDate ? a.createdAt.toDate() : new Date(a.createdAt || 0);
-      const dateB = b.createdAt?.toDate ? b.createdAt.toDate() : new Date(b.createdAt || 0);
-      return dateB - dateA;
-    });
-    
-    let unreadCount = 0;
-    adminFeedbacks.forEach(fb => {
-      if (isAdmin ? !fb.read : !fb.userRead) unreadCount++;
-    });
-    
-    updateFeedbackBadgeUI(unreadCount);
-    
-    const supportBadge = document.getElementById('supportPanelBadge');
-    if (supportBadge) {
-      const supportUnread = adminFeedbacks.filter(fb => fb.type === 'support' && (isAdmin ? !fb.read : !fb.userRead)).length;
-      if (supportUnread > 0) {
-        supportBadge.textContent = supportUnread > 9 ? '9+' : supportUnread;
-        supportBadge.classList.remove('hidden');
-      } else {
-        supportBadge.classList.add('hidden');
-      }
+  try {
+    // Одна коллекция feedbacks - и отзывы, и поддержка
+    let q;
+    if (isAdmin) {
+      q = query(collection(db, "feedbacks"));
+    } else {
+      q = query(collection(db, "feedbacks"), where("userId", "==", uid));
     }
     
-    const listModal = document.getElementById('feedbackListModal');
-    if (listModal && listModal.classList.contains('active')) renderFeedbackList();
+    adminFeedbacksUnsubscribe = onSnapshot(q, (snapshot) => {
+      adminFeedbacks = [];
+      let unreadCount = 0;
+      
+      snapshot.forEach((doc) => {
+        const data = doc.data();
+        
+        // Фильтруем удаленные
+        if (isAdmin && data.deleted) return;
+        if (!isAdmin && data.userDeleted) return;
+        
+        data.id = doc.id;
+        
+        // Считаем непрочитанные
+        if (isAdmin ? !data.read : !data.userRead) {
+          unreadCount++;
+        }
+        
+        adminFeedbacks.push(data);
+      });
+      
+      // Сортируем по дате (новые сверху)
+      adminFeedbacks.sort((a, b) => {
+        const dateA = a.createdAt?.toDate ? a.createdAt.toDate() : new Date(a.createdAt || 0);
+        const dateB = b.createdAt?.toDate ? b.createdAt.toDate() : new Date(b.createdAt || 0);
+        return dateB - dateA;
+      });
+      
+      updateFeedbackBadgeUI(unreadCount);
+      
+      const listModal = document.getElementById('feedbackListModal');
+      if (listModal && listModal.classList.contains('active')) {
+        renderFeedbackList();
+      }
+    });
+    
+  } catch (e) { 
+    console.error("Error init feedbacks listener:", e); 
   }
 }
+
 function updateFeedbackBadgeUI(unreadCount) {
   const badge = document.getElementById('feedbackBadge');
   if (!badge) return;
-  if (unreadCount > 0) { badge.textContent = unreadCount > 9 ? '9+' : unreadCount; badge.classList.remove('hidden'); } 
-  else { badge.classList.add('hidden'); badge.textContent = '0'; }
+  if (unreadCount > 0) { 
+    badge.textContent = unreadCount > 9 ? '9+' : unreadCount; 
+    badge.classList.remove('hidden'); 
+  } else { 
+    badge.classList.add('hidden'); 
+    badge.textContent = '0'; 
+  }
 }
 
-window.openFeedbackModal = function(projId, projName) {
-  if (!currentUser) { showToast('Войдите'); openLoginModal(); return; }
-  const modal = document.getElementById('feedbackModal');
-  document.getElementById('adminChatDeleteBtn').classList.add('hidden');
-  document.getElementById('feedbackProjectId').value = projId;
-  document.getElementById('feedbackProjectName').textContent = projName || 'Unknown';
-  document.getElementById('feedbackChatHistory').innerHTML = '<div class="text-center py-8"><i class="fas fa-spinner fa-spin text-blue-400"></i></div>';
-  const userFeedback = adminFeedbacks.find(fb => fb.userId === currentUser.uid && fb.projectId === projId);
-  if (userFeedback) { document.getElementById('feedbackDocId').value = userFeedback.id; loadFeedbackChat(userFeedback.id, projId); }
-  else { document.getElementById('feedbackDocId').value = ''; showNewFeedbackForm(); }
-  modal.classList.add('active');
+// Открыть модальное окно отзывов/обращений
+window.openFeedbackListModal = function() {
+  if (!currentUser) { 
+    showToast('Войдите'); 
+    openLoginModal(); 
+    return; 
+  }
+  
+  const isAdmin = currentUser.uid === "SAkz4mdW9reDaIsvqigCNZhEKJR2";
+  const titleContainer = document.querySelector('#feedbackListModal h2');
+  
+  if (titleContainer) {
+    if (isAdmin) {
+      titleContainer.innerHTML = '<i class="fas fa-shield-alt text-purple-400 mr-2"></i>' + t('all_requests');
+    } else {
+      titleContainer.innerHTML = '<i class="fas fa-comments text-purple-400 mr-2"></i>' + t('my_messages');
+    }
+  }
+  
+  document.getElementById('feedbackListModal').classList.add('active');
+  setTimeout(() => renderFeedbackList(), 100);
 };
 
-function showNewFeedbackForm() {
-  document.getElementById('feedbackChatHistory').innerHTML = '<div class="flex flex-col items-center justify-center h-full text-slate-500"><i class="fas fa-inbox text-4xl mb-3 opacity-50"></i><p class="text-sm">' + t('start_new_feedback') + '</p></div>';
-  document.getElementById('feedbackFormNew').classList.remove('hidden');
-  document.getElementById('feedbackFormReply').classList.add('hidden');
-  document.getElementById('feedbackSendBtn').classList.remove('hidden');
-  document.getElementById('feedbackSendBtn').textContent = t('send');
-  document.getElementById('feedbackSendBtn').onclick = window.sendUserFeedback;
-  document.getElementById('feedbackText').value = '';
-}
-
-function loadFeedbackChat(docId, projId) {
-  const unsub = onSnapshot(doc(db, "feedbacks", docId), (snap) => {
-    if (!snap.exists()) return showNewFeedbackForm();
-    const d = snap.data();
-    const messages = d.messages || [];
-    messages.sort((a,b) => new Date(a.timestamp) - new Date(b.timestamp));
-    const html = messages.map((msg) => {
-      const bubbleSide = msg.sender === 'user' ? 'user' : 'admin';
-      const senderName = msg.sender === 'user' ? t('you') : t('support');
-      const avatar = msg.sender === 'user' ? `<img src="${currentUser?.photoURL || 'https://ui-avatars.com/api/?name=U'}" class="chat-avatar">` : `<div class="chat-avatar"><i class="fas fa-user-shield"></i></div>`;
-      const t = msg.timestamp ? formatTimeAgo(msg.timestamp.toDate ? msg.timestamp.toDate() : new Date(msg.timestamp)) : '';
-      return `<div class="chat-bubble ${bubbleSide}">${avatar}<div class="chat-bubble-wrapper"><span class="chat-sender">${senderName}</span><div class="chat-content">${msg.text}</div><span class="chat-time">${t}</span></div></div>`;
-    }).join('');
-    const history = document.getElementById("feedbackChatHistory");
-    history.innerHTML = html || '<p class="text-center text-slate-500 py-4">' + t('no_messages') + '</p>';
-    document.getElementById('feedbackFormNew').classList.add('hidden');
-    document.getElementById('feedbackFormReply').classList.remove('hidden');
-    enableUserEnterSend();
-    document.getElementById('feedbackSendBtn').classList.add('hidden');
-    history.scrollTop = history.scrollHeight;
-    if (!d.userRead) updateDoc(doc(db, "feedbacks", docId), { userRead: true });
-  });
-  window.currentFeedbackUnsub = unsub;
-}
-
-window.sendUserFeedback = async function() {
-  if (!currentUser) return showToast('Войдите');
-  const projId = document.getElementById('feedbackProjectId').value;
-  const category = document.getElementById('feedbackCategory').value;
-  const message = document.getElementById('feedbackText').value.trim();
-  if (!message) return showToast('Введите сообщение');
-  try {
-    const proj = projects.find(p => p.id === projId);
-    await addDoc(collection(db, "feedbacks"), {
-      projectId: projId, projectName: proj?.name || '', projectLogo: proj?.image || '',
-      category, userId: currentUser.uid, userName: currentUser.displayName || currentUser.email, userPhoto: currentUser.photoURL || '',
-      status: 'open', read: false, userRead: true, deleted: false, userDeleted: false,
-      createdAt: serverTimestamp(),
-      messages: [{ sender: 'user', text: message, timestamp: new Date() }]
-    });
-    showToast('Отправлено!');
-    document.getElementById('feedbackText').value = '';
-  } catch (e) { console.error(e); showToast('Ошибка: ' + e.message); }
+window.closeFeedbackListModal = function() { 
+  document.getElementById('feedbackListModal').classList.remove('active'); 
 };
 
-window.sendUserFeedbackReply = async function() {
-  const docId = document.getElementById('feedbackDocId').value;
-  const text = document.getElementById('feedbackUserReplyText').value.trim();
-  if (!text || !docId) return;
-  try {
-    await updateDoc(doc(db, "feedbacks", docId), {
-      messages: arrayUnion({ sender: 'user', text, timestamp: new Date() }),
-      userRead: true, read: false
-    });
-    document.getElementById('feedbackUserReplyText').value = '';
-    showToast('Отправлено!');
-  } catch (e) { console.error(e); showToast('Ошибка'); }
-};
-
-window.closeFeedbackModal = function() { document.getElementById('feedbackModal').classList.remove('active'); if (window.currentFeedbackUnsub) { window.currentFeedbackUnsub(); window.currentFeedbackUnsub = null; } };
-
+// Рендер списка обращений
 window.renderFeedbackList = function() {
   const getProj = id => projects.find(p => p.id === id) || {};
   const container = document.getElementById('feedbacksContainer');
@@ -1223,35 +1147,33 @@ window.renderFeedbackList = function() {
     container.innerHTML = '<div class="text-center py-12 text-slate-500"><div class="bg-slate-800/50 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4"><i class="fas fa-inbox text-2xl text-slate-600"></i></div><p>' + t('no_messages') + '</p></div>';
     return; 
   }
-
-  // Фильтруем по типу: для пользователя - только feedback, для админа - все
-  let filteredFeedbacks = adminFeedbacks;
-  if (!isAdmin) {
-    filteredFeedbacks = adminFeedbacks.filter(fb => fb.type !== 'support');
-  }
   
-  if (filteredFeedbacks.length === 0) {
-    const emptyMessage = isAdmin 
-      ? 'Нет отзывов и предложений' 
-      : 'У вас пока нет отзывов о проектах';
-    container.innerHTML = '<div class="text-center py-12 text-slate-500"><div class="bg-slate-800/50 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4"><i class="fas fa-inbox text-2xl text-slate-600"></i></div><p>' + emptyMessage + '</p></div>';
-    return;
-  }
-  
-  container.innerHTML = filteredFeedbacks.map((item) => {
+  container.innerHTML = adminFeedbacks.map((item) => {
     const messages = item.messages || [];
     const lastMsg = messages[messages.length - 1] || { text: '...', sender: 'unknown' };
-    const date = item.createdAt?.toDate() || new Date(item.createdAt || 0);
+    const date = item.createdAt?.toDate || new Date(item.createdAt || 0);
     const isUnread = isAdmin ? !item.read : !item.userRead;
     const project = getProj(item.projectId);
-    const projectName = project.name || item.projectId || (item.type === 'support' ? 'Поддержка' : 'Неизвестный проект');
-    const projectLogo = project.image || '';
-    const projectId = item.projectId || '';
     
-    // Добавляем иконку типа
-    const typeIcon = item.type === 'support' 
+    // Определяем тип обращения
+    const isSupport = item.type === 'support';
+    const typeIcon = isSupport 
       ? '<i class="fas fa-headset text-purple-400 mr-1"></i>' 
       : '<i class="fas fa-comment-dots text-blue-400 mr-1"></i>';
+    const typeBadge = isSupport 
+      ? '<span class="px-2 py-0.5 bg-purple-600/30 text-purple-300 text-xs rounded">Support</span>' 
+      : '<span class="px-2 py-0.5 bg-blue-600/30 text-blue-300 text-xs rounded">Feedback</span>';
+    
+    let projectName = '';
+    let projectLogo = '';
+    
+    if (isSupport) {
+      projectName = item.supportSubject || 'Служба поддержки';
+      projectLogo = '';
+    } else {
+      projectName = project.name || item.projectId || 'Неизвестный проект';
+      projectLogo = project.image || '';
+    }
     
     let titleHtml = '';
     if (isAdmin) {
@@ -1263,7 +1185,11 @@ window.renderFeedbackList = function() {
       
       titleHtml = `
         <div class="flex flex-col gap-1">
-          <div class="flex items-center gap-1.5">${typeIcon}${projectInfoHtml}</div>
+          <div class="flex items-center gap-1.5">
+            ${typeIcon}
+            ${typeBadge}
+            ${projectInfoHtml}
+          </div>
           <div class="text-xs text-slate-400 flex items-center gap-1">
             <span>от</span>
             <span class="text-white font-medium">${item.userName || 'Пользователь'}</span>
@@ -1271,11 +1197,281 @@ window.renderFeedbackList = function() {
         </div>
       `;
     } else {
-      titleHtml = `<div class="flex items-center gap-2">${projectLogo ? `<img src="${projectLogo}" class="w-6 h-6 rounded">` : ''}<span class="font-bold text-white">${projectName}</span></div>`;
+      titleHtml = `
+        <div class="flex items-center gap-2">
+          ${typeBadge}
+          ${projectLogo ? `<img src="${projectLogo}" class="w-6 h-6 rounded">` : ''}
+          <span class="font-bold text-white">${projectName}</span>
+        </div>
+      `;
     }
     
-    return `<div onclick="${isAdmin ? `openAdminFeedbackChat('${item.id}')` : `openFeedbackFromList('${item.id}', '${projectId}', '${(projectName).replace(/'/g,"\\'")}')`}" class="cursor-pointer group relative bg-slate-800/40 border border-slate-700/50 hover:bg-slate-800 hover:border-slate-600 rounded-xl p-4 transition-all">${isUnread ? '<div class="absolute top-4 right-4 w-3 h-3 bg-purple-500 rounded-full animate-pulse"></div>' : ''}<div class="flex justify-between items-start mb-2"><div>${titleHtml}<span class="text-xs text-slate-500 mt-0.5 block">${formatTimeAgo(date)}</span></div>${isUnread ? '<span class="bg-purple-600 text-white text-xs px-2 py-1 rounded-full font-bold">NEW</span>' : ''}</div><div class="text-sm text-slate-300 line-clamp-2">${lastMsg.text}</div></div>`;
+    return `<div onclick="${isAdmin ? `openAdminFeedbackChat('${item.id}')` : `openFeedbackFromList('${item.id}', '${item.projectId || 'support'}', '${(projectName).replace(/'/g,"\\'")}')`}" class="cursor-pointer group relative bg-slate-800/40 border border-slate-700/50 hover:bg-slate-800 hover:border-slate-600 rounded-xl p-4 transition-all">${isUnread ? '<div class="absolute top-4 right-4 w-3 h-3 bg-purple-500 rounded-full animate-pulse"></div>' : ''}<div class="flex justify-between items-start mb-2"><div>${titleHtml}<span class="text-xs text-slate-500 mt-0.5 block">${formatTimeAgo(date)}</span></div>${isUnread ? '<span class="bg-purple-600 text-white text-xs px-2 py-1 rounded-full font-bold">NEW</span>' : ''}</div><div class="text-sm text-slate-300 line-clamp-2">${lastMsg.text}</div></div>`;
   }).join('');
+};
+
+// Открыть чат из списка (для обычного пользователя)
+window.openFeedbackFromList = function(docId, projectId, projectName) {
+  document.getElementById('feedbackProjectName').textContent = projectName || projectId;
+  document.getElementById('adminChatDeleteBtn').classList.add('hidden');
+  document.getElementById('feedbackListModal').classList.remove('active');
+  
+  const modal = document.getElementById('feedbackModal');
+  document.getElementById('feedbackProjectId').value = projectId;
+  document.getElementById('feedbackDocId').value = docId;
+  
+  document.getElementById('feedbackModalTitle').innerHTML = '<button onclick="closeFeedbackChat()" class="flex items-center justify-center w-8 h-8 rounded-lg bg-slate-700 hover:bg-slate-600 text-white mr-2 transition-colors"><i class="fas fa-arrow-left text-sm"></i></button>' + t('chat_with_support');
+  
+  document.getElementById('feedbackFormNew').classList.add('hidden');
+  document.getElementById('feedbackFormReply').classList.remove('hidden');
+  document.getElementById('feedbackSendBtn').classList.add('hidden');
+  
+  loadFeedbackChat(docId, projectId);
+  modal.classList.add('active');
+};
+
+// Открыть чат (для админа)
+window.openAdminFeedbackChat = function(feedbackId) {
+  const fb = adminFeedbacks.find(f => f.id === feedbackId);
+  if (!fb) return;
+
+  const isSupport = fb.type === 'support';
+  const project = projects.find(p => p.id === fb.projectId);
+  const projectName = isSupport 
+    ? (fb.supportSubject || 'Служба поддержки') 
+    : (project?.name || fb.projectId || 'Неизвестный проект');
+  const projectLogo = isSupport ? '' : (project?.image || '');
+
+  const listModal = document.getElementById('feedbackListModal');
+  if (listModal) listModal.classList.remove('active');
+  
+  const chatModal = document.getElementById('feedbackModal');
+  document.getElementById('feedbackProjectId').value = fb.projectId || 'support';
+
+  let projectDisplayHtml = '';
+  projectDisplayHtml += '<button onclick="backToFeedbackList()" class="flex items-center justify-center w-8 h-8 rounded-lg bg-slate-700 hover:bg-slate-600 text-white mr-2 transition-colors flex-shrink-0"><i class="fas fa-arrow-left text-sm"></i></button>';
+  
+  if (projectLogo) {
+    projectDisplayHtml += `<img src="${projectLogo}" class="w-6 h-6 rounded mr-2 object-cover" alt="${projectName}" onerror="this.style.display='none'">`;
+  }
+  
+  projectDisplayHtml += `<span class="font-bold text-white">${projectName}</span> <span class="text-xs text-slate-500 ml-1">(от ${fb.userName || 'Пользователь'})</span>`;
+
+  document.getElementById('feedbackProjectName').innerHTML = projectDisplayHtml;
+  document.getElementById('feedbackDocId').value = fb.id;
+  document.getElementById('feedbackModalTitle').innerHTML = '<i class="fas fa-user-shield text-purple-400 mr-2"></i>' + t('chat_with_user');
+
+  document.getElementById('feedbackFormNew').classList.add('hidden');
+  document.getElementById('feedbackFormReply').classList.remove('hidden');
+  document.getElementById('feedbackSendBtn').classList.add('hidden');
+
+  if (window.currentFeedbackUnsub) {
+    window.currentFeedbackUnsub();
+    window.currentFeedbackUnsub = null;
+  }
+
+  const unsub = onSnapshot(doc(db, "feedbacks", feedbackId), (snap) => {
+    if (!snap.exists()) return;
+    const d = snap.data();
+    const messages = (d.messages || []).sort((a, b) => new Date(a.timestamp || 0) - new Date(b.timestamp || 0));
+
+    const html = messages.map(msg => {
+      const bubbleSide = msg.sender;
+      const senderName = msg.sender === 'admin' ? t('you') : (d.userName || t('user'));
+      const avatar = msg.sender === 'admin'
+        ? `<div class="chat-avatar"><i class="fas fa-user-shield"></i></div>`
+        : `<img src="${d.userPhoto || 'https://ui-avatars.com/api/?name=P'}" class="chat-avatar" alt>`;
+      const time = msg.timestamp ? formatTimeAgo(msg.timestamp.toDate ? msg.timestamp.toDate() : new Date(msg.timestamp)) : '';
+      return `<div class="chat-bubble ${bubbleSide}">${avatar}<div class="chat-bubble-wrapper"><span class="chat-sender">${senderName}</span><div class="chat-content">${msg.text}</div><span class="chat-time">${time}</span></div></div>`;
+    }).join('');
+
+    const hist = document.getElementById('feedbackChatHistory');
+    hist.innerHTML = html || '<p class="text-center text-slate-500 py-4">Нет сообщений</p>';
+    hist.scrollTop = hist.scrollHeight;
+  });
+
+  window.currentFeedbackUnsub = unsub;
+
+  const inp = document.getElementById('feedbackUserReplyText');
+  inp.value = '';
+  inp.placeholder = t('reply_placeholder');
+
+  const replyBtn = inp.parentElement.querySelector('button');
+  if (replyBtn) {
+    replyBtn.onclick = function() { sendAdminReply(feedbackId); };
+  }
+  inp.onkeypress = e => { 
+    if (e.key === 'Enter') { 
+      e.preventDefault(); 
+      sendAdminReply(feedbackId); 
+    } 
+  };
+
+  chatModal.classList.add('active');
+  document.getElementById('adminChatDeleteBtn').classList.remove('hidden');
+  markFeedbackRead(feedbackId);
+};
+
+// Загрузить чат
+function loadFeedbackChat(docId, projId) {
+  const unsub = onSnapshot(doc(db, "feedbacks", docId), (snap) => {
+    if (!snap.exists()) return showNewFeedbackForm();
+    
+    const d = snap.data();
+    const messages = d.messages || [];
+    messages.sort((a,b) => new Date(a.timestamp) - new Date(b.timestamp));
+    
+    const html = messages.map((msg) => {
+      const bubbleSide = msg.sender === 'user' ? 'user' : 'admin';
+      const senderName = msg.sender === 'user' ? t('you') : t('support');
+      const avatar = msg.sender === 'user' 
+        ? `<img src="${currentUser?.photoURL || 'https://ui-avatars.com/api/?name=U'}" class="chat-avatar">` 
+        : `<div class="chat-avatar"><i class="fas fa-user-shield"></i></div>`;
+      const time = msg.timestamp ? formatTimeAgo(msg.timestamp.toDate ? msg.timestamp.toDate() : new Date(msg.timestamp)) : '';
+      return `<div class="chat-bubble ${bubbleSide}">${avatar}<div class="chat-bubble-wrapper"><span class="chat-sender">${senderName}</span><div class="chat-content">${msg.text}</div><span class="chat-time">${time}</span></div></div>`;
+    }).join('');
+    
+    const history = document.getElementById("feedbackChatHistory");
+    history.innerHTML = html || '<p class="text-center text-slate-500 py-4">' + t('no_messages') + '</p>';
+    
+    document.getElementById('feedbackFormNew').classList.add('hidden');
+    document.getElementById('feedbackFormReply').classList.remove('hidden');
+    enableUserEnterSend();
+    document.getElementById('feedbackSendBtn').classList.add('hidden');
+    history.scrollTop = history.scrollHeight;
+    
+    // Отмечаем как прочитанное для пользователя
+    if (!d.userRead) {
+      updateDoc(doc(db, "feedbacks", docId), { userRead: true });
+    }
+  });
+  
+  window.currentFeedbackUnsub = unsub;
+}
+
+// Отправить отзыв о проекте
+window.sendUserFeedback = async function() {
+  if (!currentUser) return showToast('Войдите');
+  
+  const projId = document.getElementById('feedbackProjectId').value;
+  const category = document.getElementById('feedbackCategory').value;
+  const message = document.getElementById('feedbackText').value.trim();
+  
+  if (!message) return showToast('Введите сообщение');
+  
+  try {
+    const proj = projects.find(p => p.id === projId);
+    
+    await addDoc(collection(db, "feedbacks"), {
+      type: 'feedback',  // Тип: feedback
+      projectId: projId, 
+      projectName: proj?.name || '', 
+      projectLogo: proj?.image || '',
+      category, 
+      userId: currentUser.uid, 
+      userName: currentUser.displayName || currentUser.email, 
+      userPhoto: currentUser.photoURL || '',
+      status: 'open', 
+      read: false, 
+      userRead: true, 
+      deleted: false, 
+      userDeleted: false,
+      createdAt: serverTimestamp(),
+      messages: [{ 
+        sender: 'user', 
+        text: message, 
+        timestamp: new Date().toISOString() 
+      }]
+    });
+    
+    showToast('Отправлено!');
+    document.getElementById('feedbackText').value = '';
+  } catch (e) { 
+    console.error(e); 
+    showToast('Ошибка: ' + e.message); 
+  }
+};
+
+// Отправить ответ пользователя
+window.sendUserFeedbackReply = async function() {
+  const docId = document.getElementById('feedbackDocId').value;
+  const text = document.getElementById('feedbackUserReplyText').value.trim();
+  
+  if (!text || !docId) return;
+  
+  try {
+    await updateDoc(doc(db, "feedbacks", docId), {
+      messages: arrayUnion({ 
+        sender: 'user', 
+        text: text, 
+        timestamp: new Date().toISOString() 
+      }),
+      userRead: true, 
+      read: false
+    });
+    
+    document.getElementById('feedbackUserReplyText').value = '';
+    showToast('Отправлено!');
+  } catch (e) { 
+    console.error(e); 
+    showToast('Ошибка'); 
+  }
+};
+
+// Отправить ответ админа
+window.sendAdminReply = async function(feedbackId) {
+  const inp = document.getElementById('feedbackUserReplyText');
+  const text = inp.value.trim();
+  
+  if (!text) return showToast('Введите ответ');
+  
+  try {
+    await updateDoc(doc(db, "feedbacks", feedbackId), {
+      messages: arrayUnion({ 
+        sender: 'admin', 
+        text: text, 
+        timestamp: new Date().toISOString() 
+      }),
+      read: true, 
+      userRead: false
+    });
+    
+    inp.value = '';
+    showToast('Ответ отправлен!');
+  } catch (e) { 
+    console.error(e); 
+    showToast('Ошибка: ' + e.message); 
+  }
+};
+
+// Отметить как прочитанное (для админа)
+window.markFeedbackRead = async function(id) { 
+  try { 
+    await updateDoc(doc(db, "feedbacks", id), { read: true }); 
+  } catch (e) { 
+    console.error(e); 
+  } 
+};
+
+// Удалить обращение (для админа)
+window.deleteAdminFeedback = async function(id) { 
+  if (!confirm('Удалить переписку?')) return; 
+  
+  try { 
+    await updateDoc(doc(db, "feedbacks", id), { 
+      deleted: true,
+      deletedAt: new Date().toISOString()
+    }); 
+    
+    // Обновляем локальный массив
+    adminFeedbacks = adminFeedbacks.filter(f => f.id !== id);
+    
+    showToast('Удалено'); 
+    renderFeedbackList(); 
+  } catch (e) { 
+    console.error(e);
+    showToast('Ошибка: ' + e.message); 
+  } 
 };
 
 window.closeFeedbackChat = function() {
