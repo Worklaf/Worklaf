@@ -389,7 +389,28 @@
             updateFooterSupportBadge();
         }
     }
-
+function updateFooterSupportBadge() {
+    const refs = getFirebaseRefs();
+    if (!refs.currentUser) return;
+    
+    const badge = document.getElementById('footerSupportBadge');
+    if (!badge) return;
+    
+    // Считаем все непрочитанные обращения поддержки
+    const supportTickets = adminFeedbacks.filter(fb => 
+        fb.type === 'support' && 
+        fb.userId === refs.currentUser.uid && 
+        !fb.userRead
+    );
+    
+    const count = supportTickets.length;
+    if (count > 0) {
+        badge.textContent = count > 9 ? '9+' : count;
+        badge.classList.remove('hidden');
+    } else {
+        badge.classList.add('hidden');
+    }
+}
     // ============ SUPPORT MODAL ============
 
     window.openSupportModal = function() {
@@ -586,35 +607,91 @@
 }
 
     window.openSupportChat = function(ticketId) {
-        if (typeof openFeedbackFromList === 'function') {
-            openFeedbackFromList(ticketId, 'support', 'Служба поддержки');
-        }
-    };
-
-    function updateFooterSupportBadge() {
-        const refs = getFirebaseRefs();
-        if (!refs.currentUser) return;
-        
-        const badge = document.getElementById('footerSupportBadge');
-        if (!badge) return;
-        
-        if (refs.db && refs.getDocs && refs.query && refs.where) {
-            refs.getDocs(refs.query(
-                refs.collection(refs.db, "feedbacks"),
-                refs.where("userId", "==", refs.currentUser.uid),
-                refs.where("type", "==", "support"),
-                refs.where("userRead", "==", false)
-            )).then(snapshot => {
-                const count = snapshot.size;
-                if (count > 0) {
-                    badge.textContent = count > 9 ? '9+' : count;
-                    badge.classList.remove('hidden');
-                } else {
-                    badge.classList.add('hidden');
-                }
-            }).catch(() => {});
-        }
+    // Открываем чат из supportTickets, не из feedbacks
+    const refs = getFirebaseRefs();
+    
+    // Сначала закрываем текущий чат
+    const chatModal = document.getElementById('feedbackModal');
+    const listModal = document.getElementById('feedbackListModal');
+    
+    if (listModal) listModal.classList.remove('active');
+    
+    // Загружаем чат из supportTickets
+    if (typeof loadSupportChatFromSupport === 'function') {
+        loadSupportChatFromSupport(ticketId);
+        return;
     }
+    
+    // Альтернативный способ - открываем через feedback modal
+    if (chatModal) {
+        document.getElementById('feedbackProjectId').value = 'support';
+        document.getElementById('feedbackDocId').value = ticketId;
+        document.getElementById('feedbackProjectName').innerHTML = '<i class="fas fa-headset text-purple-400 mr-2"></i>Служба поддержки';
+        document.getElementById('feedbackModalTitle').innerHTML = '<i class="fas fa-headset text-purple-400 mr-2"></i>Чат с поддержкой';
+        
+        document.getElementById('feedbackFormNew').classList.add('hidden');
+        document.getElementById('feedbackFormReply').classList.remove('hidden');
+        document.getElementById('feedbackSendBtn').classList.add('hidden');
+        
+        // Загружаем из supportTickets
+        const unsub = onSnapshot(doc(refs.db, "supportTickets", ticketId), (snap) => {
+            if (!snap.exists()) {
+                document.getElementById('feedbackChatHistory').innerHTML = '<p class="text-center text-red-400 py-8">Обращение не найдено</p>';
+                return;
+            }
+            const d = snap.data();
+            const messages = (d.messages || []).sort((a, b) => new Date(a.timestamp || 0) - new Date(b.timestamp || 0));
+            
+            const html = messages.map(msg => {
+                const bubbleSide = msg.sender === 'user' ? 'user' : 'admin';
+                const senderName = msg.sender === 'user' ? t('you') : t('support');
+                const avatar = msg.sender === 'user' 
+                    ? `<img src="${refs.currentUser?.photoURL || 'https://ui-avatars.com/api/?name=U'}" class="chat-avatar">` 
+                    : `<div class="chat-avatar"><i class="fas fa-user-shield"></i></div>`;
+                const time = msg.timestamp ? formatTimeAgo(msg.timestamp.toDate ? msg.timestamp.toDate() : new Date(msg.timestamp)) : '';
+                return `<div class="chat-bubble ${bubbleSide}">${avatar}<div class="chat-bubble-wrapper"><span class="chat-sender">${senderName}</span><div class="chat-content">${msg.text}</div><span class="chat-time">${time}</span></div></div>`;
+            }).join('');
+            
+            const hist = document.getElementById('feedbackChatHistory');
+            hist.innerHTML = html || '<p class="text-center text-slate-500 py-4">Нет сообщений</p>';
+            hist.scrollTop = hist.scrollHeight;
+            
+            // Отмечаем как прочитанное
+            if (!d.userRead) {
+                updateDoc(doc(refs.db, "supportTickets", ticketId), { userRead: true });
+            }
+        });
+        
+        window.currentFeedbackUnsub = unsub;
+        chatModal.classList.add('active');
+    }
+};
+    // Функция для отправки ответа в поддержку
+window.sendSupportReply = async function() {
+    const refs = getFirebaseRefs();
+    const docId = document.getElementById('feedbackDocId').value;
+    const text = document.getElementById('feedbackUserReplyText').value.trim();
+    
+    if (!text || !docId) return;
+    
+    try {
+        await refs.updateDoc(refs.doc(refs.db, "supportTickets", docId), {
+            messages: refs.arrayUnion({ 
+                sender: 'user', 
+                text: text, 
+                timestamp: new Date().toISOString() 
+            }),
+            userRead: true, 
+            read: false
+        });
+        
+        document.getElementById('feedbackUserReplyText').value = '';
+        footerShowToast('Ответ отправлен!');
+    } catch (e) { 
+        console.error(e); 
+        footerShowToast('Ошибка: ' + e.message); 
+    }
+};
 
     // ============ ACCOUNT ACTIONS ============
 
