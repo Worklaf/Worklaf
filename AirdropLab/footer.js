@@ -640,7 +640,7 @@
                         <div class="grid grid-cols-2 gap-4">
                             <div>
                                 <label class="block text-sm font-medium text-slate-300 mb-2">Ваше имя</label>
-                                <input type="text" id="supportName" placeholder="Иван" class="w-full bg-slate-800 border border-slate-700 rounded-lg px-4 py-2.5 text-sm text-white focus:border-purple-500 focus:outline-none">
+                                <input type="text" id="supportName" placeholder="" class="w-full bg-slate-800 border border-slate-700 rounded-lg px-4 py-2.5 text-sm text-white focus:border-purple-500 focus:outline-none">
                             </div>
                             <div>
                                 <label class="block text-sm font-medium text-slate-300 mb-2">Email *</label>
