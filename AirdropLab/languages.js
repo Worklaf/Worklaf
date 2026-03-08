@@ -736,7 +736,10 @@ if (projectLabel) {
   if (typeof window.applyFilters === 'function') {
     window.applyFilters();
   }
-  
+  // Обновляем переводы футера
+if (typeof window.updateFooterTranslations === 'function') {
+    window.updateFooterTranslations();
+}
   // Обновляем динамические модальные окна
   updateFeedbackModalTranslations();
 }
