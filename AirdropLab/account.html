@@ -1,0 +1,320 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Личный кабинет - AirdropLab</title>
+    <link rel="icon" href="assets/favicon.svg" type="image/svg+xml">
+    <link rel="alternate icon" href="assets/favicon.ico">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+        import { getAuth, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
+        import { getFirestore, doc, getDoc, setDoc, updateDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+        
+        const firebaseConfig = {
+            apiKey: "AIzaSyBdXGYg2t8DJBrQHCC80-pFerZU9PWmSCk",
+            authDomain: "testnet-hub.firebaseapp.com",
+            projectId: "testnet-hub",
+            storageBucket: "testnet-hub.firebasestorage.app",
+            messagingSenderId: "497813176653",
+            appId: "1:497813176653:web:089188fdd1555d76cd7704"
+        };
+        
+        const app = initializeApp(firebaseConfig);
+        const auth = getAuth(app);
+        const db = getFirestore(app);
+        
+        let currentUser = null;
+        
+        // Проверка авторизации
+        onAuthStateChanged(auth, async (user) => {
+            if (!user) {
+                window.location.href = 'index.html';
+                return;
+            }
+            currentUser = user;
+            loadUserProfile();
+        });
+        
+        async function loadUserProfile() {
+            if (!currentUser) return;
+            
+            // Загружаем базовые данные
+            document.getElementById('avatarPreview').src = currentUser.photoURL || `https://ui-avatars.com/api/?name=${encodeURIComponent(currentUser.displayName || 'User')}&background=06b6d4&color=fff`;
+            document.getElementById('userNameDisplay').textContent = currentUser.displayName || 'Пользователь';
+            document.getElementById('userEmailDisplay').textContent = currentUser.email;
+            
+            // Загружаем расширенный профиль из Firestore
+            try {
+                const userDoc = await getDoc(doc(db, "users", currentUser.uid));
+                if (userDoc.exists()) {
+                    const data = userDoc.data();
+                    if (data.profile) {
+                        document.getElementById('firstName').value = data.profile.firstName || '';
+                        document.getElementById('lastName').value = data.profile.lastName || '';
+                        document.getElementById('username').value = data.profile.username || '';
+                        document.getElementById('birthDate').value = data.profile.birthdate || '';
+                        document.getElementById('gender').value = data.profile.gender || '';
+                        document.getElementById('country').value = data.profile.country || '';
+                        document.getElementById('bio').value = data.profile.bio || '';
+                        document.getElementById('telegram').value = data.profile.telegram || '';
+                        
+                        if (data.profile.avatar) {
+                            document.getElementById('avatarPreview').src = data.profile.avatar;
+                        }
+                    }
+                    
+                    // Статистика
+                    if (data.favorites) document.getElementById('statProjects').textContent = data.favorites.length || 0;
+                    if (data.completed) document.getElementById('statCompleted').textContent = data.completed.length || 0;
+                }
+            } catch (e) {
+                console.error('Error loading profile:', e);
+            }
+        }
+        
+        window.handleAvatarChange = function(event) {
+            const file = event.target.files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    document.getElementById('avatarPreview').src = e.target.result;
+                    document.getElementById('avatarData').value = e.target.result;
+                };
+                reader.readAsDataURL(file);
+            }
+        }
+        
+        window.handleAccountSubmit = async function(e) {
+            e.preventDefault();
+            
+            const saveBtn = document.getElementById('saveBtn');
+            const originalText = saveBtn.innerHTML;
+            
+            saveBtn.disabled = true;
+            saveBtn.innerHTML = '<span class="loading"></span> Сохранение...';
+            
+            const profileData = {
+                firstName: document.getElementById('firstName').value,
+                lastName: document.getElementById('lastName').value,
+                username: document.getElementById('username').value,
+                telegram: document.getElementById('telegram').value,
+                birthdate: document.getElementById('birthDate').value,
+                gender: document.getElementById('gender').value,
+                country: document.getElementById('country').value,
+                bio: document.getElementById('bio').value,
+                avatar: document.getElementById('avatarData').value,
+                updatedAt: new Date().toISOString()
+            };
+            
+            try {
+                await setDoc(doc(db, "users", currentUser.uid), { profile: profileData }, { merge: true });
+                showToast('Данные сохранены!');
+            } catch (err) {
+                console.error('Error saving:', err);
+                // Сохраняем локально
+                localStorage.setItem('userProfileData', JSON.stringify(profileData));
+                showToast('Данные сохранены локально');
+            }
+            
+            saveBtn.disabled = false;
+            saveBtn.innerHTML = originalText;
+        }
+        
+        window.logout = function() {
+            signOut(auth).then(() => {
+                window.location.href = 'index.html';
+            });
+        }
+        
+        function showToast(msg) {
+            const toast = document.getElementById('toast');
+            document.getElementById('toastMessage').textContent = msg;
+            toast.classList.remove('translate-y-20', 'opacity-0');
+            setTimeout(() => toast.classList.add('translate-y-20', 'opacity-0'), 3000);
+        }
+    </script>
+    <style>
+        body { font-family: 'Inter', sans-serif; background: #0f172a; }
+        .account-card { background: #1e293b; border: 1px solid #334155; border-radius: 1rem; }
+        .account-header { background: linear-gradient(135deg, #06b6d4, #3b82f6); color: white; }
+        .account-field { margin-bottom: 1.5rem; }
+        .account-label { display: block; margin-bottom: 0.5rem; color: #94a3b8; font-weight: 500; font-size: 0.875rem; }
+        .account-input { width: 100%; padding: 0.75rem; background: #0f172a; border: 1px solid #334155; border-radius: 0.5rem; color: white; transition: border-color 0.2s; }
+        .account-input:focus { outline: none; border-color: #06b6d4; }
+        .avatar-preview { width: 120px; height: 120px; border-radius: 50%; overflow: hidden; border: 4px solid #06b6d4; margin: 0 auto 1rem; position: relative; }
+        .avatar-preview img { width: 100%; height: 100%; object-fit: cover; }
+        .avatar-edit-btn { position: absolute; bottom: 0; right: 0; width: 36px; height: 36px; background: #06b6d4; border-radius: 50%; display: flex; align-items: center; justify-content: center; cursor: pointer; transition: background 0.2s; }
+        .avatar-edit-btn:hover { background: #0891b2; }
+        .save-btn { background: linear-gradient(135deg, #06b6d4, #3b82f6); color: white; padding: 0.75rem 2rem; border: none; border-radius: 0.5rem; font-weight: 600; cursor: pointer; transition: all 0.2s; }
+        .save-btn:hover:not(:disabled) { transform: scale(1.02); }
+        .save-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+        .loading { display: inline-block; width: 20px; height: 20px; border: 3px solid #f3f3f3; border-top: 3px solid #06b6d4; border-radius: 50%; animation: spin 1s linear infinite; margin-right: 8px; }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+        .toast { position: fixed; bottom: 20px; right: 20px; background: #1e293b; border: 1px solid #334155; color: white; padding: 14px 20px; border-radius: 12px; box-shadow: 0 10px 40px rgba(0,0,0,0.4); transform: translateY(100px); opacity: 0; transition: all 0.3s; z-index: 9999; display: flex; align-items: center; gap: 10px; }
+        .toast.show { transform: translateY(0); opacity: 1; }
+    </style>
+</head>
+<body class="antialiased">
+    <!-- Header -->
+    <header class="sticky top-0 z-50 bg-slate-900/95 backdrop-blur border-b border-slate-700">
+        <div class="max-w-[1600px] mx-auto px-4 py-3">
+            <div class="flex justify-between items-center">
+                <a href="index.html" class="flex items-center gap-3">
+                    <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-cyan-500 to-blue-600 flex items-center justify-center">
+                        <svg class="w-6 h-6 text-white" viewBox="0 0 24 24" fill="none">
+                            <path d="M9 3h6M12 3v5M8 8l-2 8c-.5 2 1 4 3 4h6c2 0 3.5-2 3-4l-2-8" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+                        </svg>
+                    </div>
+                    <span class="text-xl font-black"><span class="text-cyan-400">Airdrop</span><span class="text-white">Lab</span></span>
+                </a>
+                <div class="flex items-center gap-4">
+                    <a href="index.html" class="text-slate-400 hover:text-white transition-colors"><i class="fas fa-home mr-2"></i>На главную</a>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <div class="max-w-4xl mx-auto px-4 py-12">
+        <div class="text-center mb-8">
+            <h1 class="text-3xl font-black mb-2">
+                <span class="bg-gradient-to-r from-cyan-400 to-blue-400 bg-clip-text text-transparent">Личный кабинет</span>
+            </h1>
+            <p class="text-slate-400">Управление вашим профилем и настройками</p>
+        </div>
+
+        <div class="account-card">
+            <div class="account-header p-6 rounded-t-2xl">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <h2 class="text-2xl font-bold">Мой профиль</h2>
+                        <p class="text-cyan-100">Настройте ваши данные</p>
+                    </div>
+                    <div class="text-right">
+                        <div id="userEmailDisplay" class="text-sm text-cyan-100"></div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="p-6">
+                <form id="accountForm" onsubmit="handleAccountSubmit(event)">
+                    <!-- Аватар -->
+                    <div class="account-field text-center">
+                        <label class="account-label">Фото профиля</label>
+                        <div class="avatar-preview">
+                            <img id="avatarPreview" src="https://ui-avatars.com/api/?name=User&background=06b6d4&color=fff" alt="Avatar">
+                            <label for="avatarInput" class="avatar-edit-btn">
+                                <i class="fas fa-camera text-white text-sm"></i>
+                            </label>
+                        </div>
+                        <input type="file" id="avatarInput" accept="image/*" class="hidden" onchange="handleAvatarChange(event)">
+                        <input type="hidden" id="avatarData" value="">
+                    </div>
+
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <div class="account-field">
+                            <label class="account-label">Имя</label>
+                            <input type="text" id="firstName" class="account-input" placeholder="Иван">
+                        </div>
+                        <div class="account-field">
+                            <label class="account-label">Фамилия</label>
+                            <input type="text" id="lastName" class="account-input" placeholder="Иванов">
+                        </div>
+                    </div>
+
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <div class="account-field">
+                            <label class="account-label">Никнейм / @username</label>
+                            <div class="relative">
+                                <span class="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500">@</span>
+                                <input type="text" id="username" class="account-input pl-8" placeholder="your_username">
+                            </div>
+                        </div>
+                        <div class="account-field">
+                            <label class="account-label">Telegram</label>
+                            <input type="text" id="telegram" class="account-input" placeholder="@username">
+                        </div>
+                    </div>
+
+                    <div class="account-field">
+                        <label class="account-label">Дата рождения</label>
+                        <input type="date" id="birthDate" class="account-input">
+                    </div>
+
+                    <div class="account-field">
+                        <label class="account-label">Пол</label>
+                        <select id="gender" class="account-input">
+                            <option value="">Не указано</option>
+                            <option value="male">Мужской</option>
+                            <option value="female">Женский</option>
+                            <option value="other">Другое</option>
+                        </select>
+                    </div>
+
+                    <div class="account-field">
+                        <label class="account-label">Страна</label>
+                        <select id="country" class="account-input">
+                            <option value="">Выберите страну</option>
+                            <option value="RU">Россия</option>
+                            <option value="UA">Украина</option>
+                            <option value="KZ">Казахстан</option>
+                            <option value="BY">Беларусь</option>
+                            <option value="US">США</option>
+                            <option value="OTHER">Другое</option>
+                        </select>
+                    </div>
+
+                    <div class="account-field">
+                        <label class="account-label">О себе</label>
+                        <textarea id="bio" class="account-input" rows="3" placeholder="Расскажите о себе..."></textarea>
+                    </div>
+
+                    <button type="submit" id="saveBtn" class="save-btn w-full mt-4">
+                        <i class="fas fa-save mr-2"></i> Сохранить изменения
+                    </button>
+                </form>
+
+                <!-- Статистика -->
+                <div class="mt-8 pt-6 border-t border-slate-700">
+                    <h3 class="text-lg font-semibold text-white mb-4">Ваша статистика</h3>
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                        <div class="bg-slate-800/50 p-4 rounded-lg text-center">
+                            <div class="text-2xl font-bold text-cyan-400" id="statProjects">0</div>
+                            <div class="text-sm text-slate-400">В избранном</div>
+                        </div>
+                        <div class="bg-slate-800/50 p-4 rounded-lg text-center">
+                            <div class="text-2xl font-bold text-emerald-400" id="statCompleted">0</div>
+                            <div class="text-sm text-slate-400">Завершено заданий</div>
+                        </div>
+                        <div class="bg-slate-800/50 p-4 rounded-lg text-center">
+                            <div class="text-2xl font-bold text-purple-400" id="statPoints">0</div>
+                            <div class="text-sm text-slate-400">Бонусных очков</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Опасная зона -->
+                <div class="mt-8 pt-6 border-t border-slate-700">
+                    <h3 class="text-lg font-semibold text-red-400 mb-4">Опасная зона</h3>
+                    <div class="flex flex-col sm:flex-row gap-3">
+                        <button class="flex-1 bg-slate-700 hover:bg-slate-600 py-3 rounded-lg font-semibold text-white transition-colors">
+                            <i class="fas fa-key mr-2"></i> Изменить пароль
+                        </button>
+                        <button onclick="logout()" class="flex-1 bg-red-600 hover:bg-red-500 py-3 rounded-lg font-semibold text-white transition-colors">
+                            <i class="fas fa-sign-out-alt mr-2"></i> Выйти из аккаунта
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="toast" class="toast">
+        <i class="fas fa-check-circle text-emerald-400"></i>
+        <span id="toastMessage">Действие выполнено</span>
+    </div>
+</body>
+</html>
