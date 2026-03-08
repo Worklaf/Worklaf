@@ -688,42 +688,52 @@
     };
 
     function getFAQContent() {
-        return `
-            <div class="bg-gradient-to-r from-slate-900 to-slate-800 p-6 border-b border-slate-700">
-                <h2 class="text-2xl font-bold text-white flex items-center gap-3">
-                    <i class="fas fa-question-circle text-cyan-400"></i>
-                    Часто задаваемые вопросы
-                </h2>
-                <p class="text-slate-400 mt-2">Ответы на популярные вопросы о AirdropLab</p>
-            </div>
-            <div class="p-6 max-h-[70vh] overflow-y-auto">
-                <div class="space-y-4">
-                    ${FOOTER_CONFIG.faq.map((item, index) => `
-                        <div class="faq-item border border-slate-700/50 rounded-xl overflow-hidden">
-                            <button onclick="toggleFaqItem(${index})" class="faq-question w-full text-left p-4 flex items-center justify-between gap-4 bg-slate-800/30 hover:bg-slate-800/50 transition-colors">
-                                <span class="font-medium text-white">${item.question}</span>
-                                <i class="fas fa-chevron-down text-slate-400 transition-transform" id="faq-icon-${index}"></i>
-                            </button>
-                            <div class="faq-answer hidden p-4 pt-0 text-slate-300 text-sm leading-relaxed" id="faq-answer-${index}">
-                                ${item.answer}
-                            </div>
+    const lang = typeof window.t === 'function' ? window.t : (k) => k;
+    
+    const faqData = [
+        { q: lang('faq_q1'), a: lang('faq_a1') },
+        { q: lang('faq_q2'), a: lang('faq_a2') },
+        { q: lang('faq_q3'), a: lang('faq_a3') },
+        { q: lang('faq_q4'), a: lang('faq_a4') },
+        { q: lang('faq_q5'), a: lang('faq_a5') },
+        { q: lang('faq_q6'), a: lang('faq_a6') }
+    ];
+    
+    return `
+        <div class="bg-gradient-to-r from-slate-900 to-slate-800 p-6 border-b border-slate-700">
+            <h2 class="text-2xl font-bold text-white flex items-center gap-3">
+                <i class="fas fa-question-circle text-cyan-400"></i>
+                ${lang('footer_faq_title')}
+            </h2>
+            <p class="text-slate-400 mt-2">${lang('footer_faq_subtitle')}</p>
+        </div>
+        <div class="p-6 max-h-[70vh] overflow-y-auto">
+            <div class="space-y-4">
+                ${faqData.map((item, index) => `
+                    <div class="faq-item border border-slate-700/50 rounded-xl overflow-hidden">
+                        <button onclick="toggleFaqItem(${index})" class="faq-question w-full text-left p-4 flex items-center justify-between gap-4 bg-slate-800/30 hover:bg-slate-800/50 transition-colors">
+                            <span class="font-medium text-white">${item.q}</span>
+                            <i class="fas fa-chevron-down text-slate-400 transition-transform" id="faq-icon-${index}"></i>
+                        </button>
+                        <div class="faq-answer hidden p-4 pt-2 text-slate-300 text-sm leading-relaxed" id="faq-answer-${index}">
+                            ${item.a}
                         </div>
-                    `).join('')}
-                </div>
-                
-                <div class="mt-8 p-4 bg-blue-900/20 border border-blue-800/50 rounded-xl">
-                    <h4 class="font-bold text-white mb-2 flex items-center gap-2">
-                        <i class="fas fa-info-circle text-blue-400"></i>
-                        Не нашли ответ?
-                    </h4>
-                    <p class="text-sm text-slate-400 mb-3">Свяжитесь с нашей службой поддержки</p>
-                    <button onclick="closePageModal(); setTimeout(() => openSupportModal(), 300);" class="bg-blue-600 hover:bg-blue-500 px-4 py-2 rounded-lg text-sm font-medium transition-colors">
-                        Написать в поддержку
-                    </button>
-                </div>
+                    </div>
+                `).join('')}
             </div>
-        `;
-    }
+            <div class="mt-8 p-4 bg-blue-900/20 border border-blue-800/50 rounded-xl">
+                <h4 class="font-bold text-white mb-2 flex items-center gap-2">
+                    <i class="fas fa-info-circle text-blue-400"></i>
+                    ${lang('footer_faq_not_found')}
+                </h4>
+                <p class="text-sm text-slate-400 mb-3">${lang('footer_faq_contact')}</p>
+                <button onclick="closePageModal(); setTimeout(() => openSupportModal(), 300);" class="bg-blue-600 hover:bg-blue-500 px-4 py-2 rounded-lg text-sm font-medium transition-colors">
+                    ${lang('footer_faq_write')}
+                </button>
+            </div>
+        </div>
+    `;
+}
 
     window.toggleFaqItem = function(index) {
         const answer = document.getElementById(`faq-answer-${index}`);
@@ -743,54 +753,58 @@
     }
 
     function getGuidesContent() {
-        return `
-            <div class="bg-gradient-to-r from-slate-900 to-slate-800 p-6 border-b border-slate-700">
-                <h2 class="text-2xl font-bold text-white flex items-center gap-3">
-                    <i class="fas fa-book-open text-cyan-400"></i>
-                    Гайды
-                </h2>
-                <p class="text-slate-400 mt-2">Пошаговые инструкции по участию в тестнетах</p>
-            </div>
-            <div class="p-6 max-h-[70vh] overflow-y-auto">
-                <div class="grid gap-4">
-                    ${FOOTER_CONFIG.guides.map(guide => `
-                        <div class="guide-card border border-slate-700/50 rounded-xl p-4 hover:border-cyan-500/50 transition-colors bg-slate-800/30">
-                            <div class="flex items-start gap-4">
-                                <div class="w-16 h-16 rounded-xl overflow-hidden bg-slate-800 flex-shrink-0 border border-slate-700">
-                                    ${guide.logo ? `<img src="${guide.logo}" alt="${guide.title}" class="w-full h-full object-cover" onerror="this.parentElement.innerHTML='<div class=\\'w-full h-full flex items-center justify-center text-2xl\\'>${guide.title.charAt(0)}</div>'">` : `<div class="w-full h-full flex items-center justify-center text-2xl font-bold text-cyan-400">${guide.title.charAt(0)}</div>`}
+    const lang = typeof window.t === 'function' ? window.t : (k) => k;
+    
+    return `
+        <div class="bg-gradient-to-r from-slate-900 to-slate-800 p-6 border-b border-slate-700">
+            <h2 class="text-2xl font-bold text-white flex items-center gap-3">
+                <i class="fas fa-book-open text-cyan-400"></i>
+                ${lang('footer_guides_title')}
+            </h2>
+            <p class="text-slate-400 mt-2">${lang('footer_guides_subtitle')}</p>
+        </div>
+        <div class="p-6 max-h-[70vh] overflow-y-auto">
+            <div class="grid gap-4">
+                ${FOOTER_CONFIG.guides.map(guide => `
+                    <div class="guide-card border border-slate-700/50 rounded-xl p-4 hover:border-cyan-500/50 transition-colors bg-slate-800/30">
+                        <div class="flex items-start gap-4">
+                            <div class="w-16 h-16 rounded-xl overflow-hidden bg-slate-800 flex-shrink-0 border border-slate-700">
+                                ${guide.logo
+                                    ? `<img src="${guide.logo}" alt="${guide.title}" class="w-full h-full object-cover">`
+                                    : `<div class="w-full h-full flex items-center justify-center text-2xl font-bold text-cyan-400">${guide.title.charAt(0)}</div>`
+                                }
+                            </div>
+                            <div class="flex-1 min-w-0">
+                                <div class="flex items-center gap-2 flex-wrap mb-1">
+                                    <h3 class="font-bold text-white">${guide.title}</h3>
+                                    ${guide.status === 'new' ? '<span class="bg-green-500/20 text-green-400 text-xs px-2 py-0.5 rounded-full">NEW</span>' : ''}
+                                    ${guide.status === 'active' ? `<span class="bg-cyan-500/20 text-cyan-400 text-xs px-2 py-0.5 rounded-full">${lang('footer_guide_active')}</span>` : ''}
                                 </div>
-                                <div class="flex-1 min-w-0">
-                                    <div class="flex items-center gap-2 flex-wrap mb-1">
-                                        <h3 class="font-bold text-white">${guide.title}</h3>
-                                        ${guide.status === 'new' ? '<span class="bg-green-500/20 text-green-400 text-xs px-2 py-0.5 rounded-full">NEW</span>' : ''}
-                                        ${guide.status === 'active' ? '<span class="bg-cyan-500/20 text-cyan-400 text-xs px-2 py-0.5 rounded-full">Активен</span>' : ''}
-                                    </div>
-                                    <p class="text-sm text-slate-400 mb-2">${guide.description}</p>
-                                    <div class="flex items-center gap-4 text-xs text-slate-500">
-                                        <span class="flex items-center gap-1">
-                                            <i class="fas fa-signal text-green-400"></i>
-                                            ${guide.difficulty}
-                                        </span>
-                                    </div>
-                                    <a href="${guide.link}" target="_blank" class="mt-3 inline-flex items-center gap-2 px-4 py-2 bg-cyan-600 hover:bg-cyan-500 rounded-lg text-sm font-medium text-white transition-colors">
-                                        <i class="fas fa-external-link-alt"></i>
-                                        Перейти к гайду
-                                    </a>
+                                <p class="text-sm text-slate-400 mb-2">${guide.description}</p>
+                                <div class="flex items-center gap-4 text-xs text-slate-500">
+                                    <span class="flex items-center gap-1">
+                                        <i class="fas fa-signal text-green-400"></i>
+                                        ${guide.difficulty}
+                                    </span>
                                 </div>
+                                <a href="${guide.link}" target="_blank" class="mt-3 inline-flex items-center gap-2 px-4 py-2 bg-cyan-600 hover:bg-cyan-500 rounded-lg text-sm font-medium text-white transition-colors">
+                                    <i class="fas fa-external-link-alt"></i>
+                                    ${lang('footer_guide_go')}
+                                </a>
                             </div>
                         </div>
-                    `).join('')}
-                </div>
-                
-                <div class="mt-6 p-4 bg-slate-800/30 border border-slate-700/50 rounded-xl">
-                    <p class="text-sm text-slate-400 text-center">
-                        <i class="fas fa-lock text-slate-500 mr-2"></i>
-                        Для доступа к гайдам необходимо выполнить задания на главной странице
-                    </p>
-                </div>
+                    </div>
+                `).join('')}
             </div>
-        `;
-    }
+            <div class="mt-6 p-4 bg-slate-800/30 border border-slate-700/50 rounded-xl">
+                <p class="text-sm text-slate-400 text-center">
+                    <i class="fas fa-lock text-slate-500 mr-2"></i>
+                    ${lang('footer_guide_lock')}
+                </p>
+            </div>
+        </div>
+    `;
+}
 
     function getAccountContent() {
         const user = typeof currentUser !== 'undefined' ? currentUser : null;
@@ -1485,7 +1499,7 @@ window.footerSubmitSupport = async function(e) {
     
     if (!email || !isValidEmail(email)) {
         emailInput.classList.add('error');
-        footerShowToast('Введите корректный email', 'error');
+        footerShowToast(typeof window.t === 'function' ? window.t('footer_invalid_email') : 'Invalid email', 'error');
         setTimeout(() => emailInput.classList.remove('error'), 2000);
         emailInput.focus();
         return;
@@ -1493,7 +1507,7 @@ window.footerSubmitSupport = async function(e) {
 
     subscribeBtn.classList.add('loading');
     const originalHTML = subscribeBtn.innerHTML;
-    subscribeBtn.innerHTML = '<span>Отправка...</span>';
+    subscribeBtn.innerHTML = `<span>${typeof window.t === 'function' ? window.t('footer_sending') : 'Sending...'}</span>`;
 
     // Сохраняем в Firebase
     var db = window.db;
@@ -1513,14 +1527,31 @@ window.footerSubmitSupport = async function(e) {
                 // Уже подписан
                 subscribeBtn.classList.remove('loading');
                 subscribeBtn.innerHTML = originalHTML;
-                emailInput.value = '';
-                emailInput.placeholder = 'Уже подписаны ✓';
-                emailInput.classList.add('success');
-                footerShowToast('Этот email уже подписан!');
-                setTimeout(() => {
-                    emailInput.placeholder = 'Ваш email';
-                    emailInput.classList.remove('success');
-                }, 4000);
+               emailInput.value = '';
+emailInput.classList.add('success');
+
+// Новый многоязычный placeholder
+emailInput.placeholder =
+    typeof window.t === 'function'
+        ? window.t('footer_already_subscribed')
+        : 'Already subscribed ✓';
+
+// Новый многоязычный toast
+footerShowToast(
+    typeof window.t === 'function'
+        ? window.t('footer_already_toast')
+        : 'Already subscribed!'
+);
+
+// Возврат placeholder через 4 секунды
+setTimeout(() => {
+    emailInput.placeholder =
+        typeof window.t === 'function'
+            ? window.t('footer_email_placeholder')
+            : 'Your email';
+    emailInput.classList.remove('success');
+}, 4000);
+
                 return;
             }
             
@@ -1540,11 +1571,26 @@ window.footerSubmitSupport = async function(e) {
             subscribeBtn.innerHTML = originalHTML;
             
             emailInput.value = '';
-            emailInput.placeholder = 'Спасибо! ✓';
-            emailInput.classList.add('success');
-            
-            setTimeout(function() { showNewsletterModal(); }, 500);
-            footerShowToast('Подписка оформлена!');
+emailInput.classList.add('success');
+
+// Новый многоязычный placeholder
+emailInput.placeholder =
+    typeof window.t === 'function'
+        ? window.t('footer_thanks')
+        : 'Thank you! ✓';
+
+// Показываем модалку
+setTimeout(function () {
+    showNewsletterModal();
+}, 500);
+
+// Новый многоязычный toast
+footerShowToast(
+    typeof window.t === 'function'
+        ? window.t('footer_subscribed_toast')
+        : 'Subscribed!'
+);
+
             
             setTimeout(function() {
                 emailInput.placeholder = 'Ваш email';
