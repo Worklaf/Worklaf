@@ -657,12 +657,7 @@
                             <label class="block text-sm font-medium text-slate-300 mb-2">Подробное описание *</label>
                             <textarea id="supportMessage" required rows="5" placeholder="Опишите вашу проблему подробно..." class="w-full bg-slate-800 border border-slate-700 rounded-lg px-4 py-2.5 text-sm text-white focus:border-purple-500 focus:outline-none resize-none"></textarea>
                         </div>
-                        
-                        <div class="flex items-center gap-2">
-                            <input type="checkbox" id="supportNotify" checked class="rounded bg-slate-800 border-slate-600 text-purple-500">
-                            <label for="supportNotify" class="text-sm text-slate-400">Уведомить о статусе по email</label>
-                        </div>
-                        
+                                            
                         <button type="submit" id="supportSubmitBtn" class="w-full bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-500 hover:to-blue-500 py-3 rounded-lg text-sm font-bold text-white transition-all hover:scale-[1.02] shadow-lg shadow-purple-500/20">
                             <i class="fas fa-paper-plane mr-2"></i>Отправить обращение
                         </button>
@@ -1144,9 +1139,11 @@ window.footerSubmitSupport = async function(e) {
     }
 
     // Формируем текст сообщения с заголовком
-    const fullMessage = subject 
-        ? '[' + subject + ']\n\n' + message 
-        : message;
+        // Формируем текст сообщения с именем, email и заголовком
+    const contactInfo = '👤 ' + (name || 'Не указано') + '  |  📧 ' + email;
+    const fullMessage = contactInfo + '\n' + '─'.repeat(30) + '\n' 
+        + (subject ? '[' + subject + ']\n\n' : '') 
+        + message;
 
     try {
         const firestoreModule = window.__firestoreExports;
@@ -1227,7 +1224,7 @@ window.footerSubmitSupport = async function(e) {
                 createdAt: new Date(),
                 messages: [{
                     sender: 'user',
-                    text: `[${document.getElementById('supportSubject').value}] ${document.getElementById('supportMessage').value}`,
+                   text: `👤 ${document.getElementById('supportName').value || user.displayName || 'Не указано'}  |  📧 ${document.getElementById('supportEmail').value}\n${'─'.repeat(30)}\n[${document.getElementById('supportSubject').value}]\n\n${document.getElementById('supportMessage').value}`,
                     timestamp: new Date()
                 }]
             });
