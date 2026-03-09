@@ -1039,29 +1039,22 @@
                         </div>
                     </div>
 
-                    <div class="grid grid-cols-2 gap-4">
-                        <div>
-                            <label class="block text-sm font-medium text-slate-300 mb-2">${lang('footer_account_username')}</label>
-                            <div class="relative">
-                                <span class="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500">@</span>
-                                <input type="text" id="profileUsername" value="${userData.username || ''}"
-                                       placeholder="nickname"
-                                       class="w-full bg-slate-800 border border-slate-700 rounded-lg pl-8 pr-4 py-2.5 text-sm text-white focus:border-cyan-500 focus:outline-none">
-                            </div>
-                        </div>
-                        <div>
-                            <label class="block text-sm font-medium text-slate-300 mb-2">${lang('footer_account_telegram')}</label>
-                            <input type="text" id="profileTelegram" value="${userData.telegram || ''}"
-                                   placeholder="@username"
-                                   class="w-full bg-slate-800 border border-slate-700 rounded-lg px-4 py-2.5 text-sm text-white focus:border-cyan-500 focus:outline-none">
-                        </div>
-                    </div>
-
-                    <div>
-                        <label class="block text-sm font-medium text-slate-300 mb-2">${lang('footer_account_birthdate')}</label>
-                        <input type="date" id="profileBirthdate" value="${userData.birthdate || ''}"
-                               class="w-full bg-slate-800 border border-slate-700 rounded-lg px-4 py-2.5 text-sm text-white focus:border-cyan-500 focus:outline-none">
-                    </div>
+                   <div class="grid grid-cols-2 gap-4">
+    <div>
+        <label class="block text-sm font-medium text-slate-300 mb-2">${lang('footer_account_username')}</label>
+        <div class="relative">
+            <span class="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500">@</span>
+            <input type="text" id="profileUsername" value="${userData.username || ''}"
+                   placeholder="nickname"
+                   class="w-full bg-slate-800 border border-slate-700 rounded-lg pl-8 pr-4 py-2.5 text-sm text-white focus:border-cyan-500 focus:outline-none">
+        </div>
+    </div>
+    <div>
+        <label class="block text-sm font-medium text-slate-300 mb-2">${lang('footer_account_birthdate')}</label>
+        <input type="date" id="profileBirthdate" value="${userData.birthdate || ''}"
+               class="w-full bg-slate-800 border border-slate-700 rounded-lg px-4 py-2.5 text-sm text-white focus:border-cyan-500 focus:outline-none">
+    </div>
+</div>
 
                     <div>
                         <label class="block text-sm font-medium text-slate-300 mb-2">${lang('footer_account_gender')}</label>
@@ -1080,42 +1073,52 @@
                             </label>
                         </div>
                     </div>
-
-                    <!-- Country with searchable input -->
-                    <div>
-                        <label class="block text-sm font-medium text-slate-300 mb-2">${lang('footer_account_country')}</label>
-                        <div class="relative" id="countryPickerWrapper">
-                            <div class="relative">
-                                <i class="fas fa-search absolute left-3 top-1/2 -translate-y-1/2 text-slate-500 text-xs"></i>
-                                <input type="text"
-                                       id="countrySearchInput"
-                                       placeholder="${lang('account_select_country')}"
-                                       autocomplete="off"
-                                       class="w-full bg-slate-800 border border-slate-700 rounded-lg pl-9 pr-10 py-2.5 text-sm text-white focus:border-cyan-500 focus:outline-none"
-                                       oninput="filterCountryList(this.value)"
-                                       onfocus="showCountryDropdown()"
-                                       value="${countries.find(c => c.code === savedCountry)?.name || savedCountry || ''}">
-                                <button type="button" onclick="clearCountryInput()" class="absolute right-3 top-1/2 -translate-y-1/2 text-slate-500 hover:text-white transition-colors">
-                                    <i class="fas fa-times text-xs"></i>
-                                </button>
-                            </div>
-                            <input type="hidden" id="profileCountry" value="${savedCountry}">
-
-                            <!-- Dropdown list -->
-                            <div id="countryDropdown"
-                                 class="hidden absolute z-50 w-full mt-1 bg-slate-800 border border-slate-600 rounded-lg shadow-xl max-h-48 overflow-y-auto">
-                                ${countries.map(c => `
-                                    <div class="country-option px-4 py-2.5 text-sm text-slate-300 hover:bg-slate-700 hover:text-white cursor-pointer transition-colors flex items-center gap-2"
-                                         data-code="${c.code}"
-                                         data-name="${c.name}"
-                                         onclick="selectCountry('${c.code}', '${c.name}')">
-                                        ${c.name}
-                                    </div>
-                                `).join('')}
-                            </div>
-                        </div>
+<div class="grid grid-cols-2 gap-4">
+    <!-- Страна -->
+    <div>
+        <label class="block text-sm font-medium text-slate-300 mb-2">${lang('footer_account_country')}</label>
+        <div class="relative" id="countryPickerWrapper">
+            <div class="relative">
+                <i class="fas fa-search absolute left-3 top-1/2 -translate-y-1/2 text-slate-500 text-xs"></i>
+                <input type="text"
+                       id="countrySearchInput"
+                       placeholder="${lang('account_select_country')}"
+                       autocomplete="off"
+                       class="w-full bg-slate-800 border border-slate-700 rounded-lg pl-9 pr-10 py-2.5 text-sm text-white focus:border-cyan-500 focus:outline-none"
+                       oninput="filterCountryList(this.value)"
+                       onfocus="showCountryDropdown()"
+                       value="${countries.find(c => c.code === savedCountry)?.name || savedCountry || ''}">
+                <button type="button" onclick="clearCountryInput()" class="absolute right-3 top-1/2 -translate-y-1/2 text-slate-500 hover:text-white transition-colors">
+                    <i class="fas fa-times text-xs"></i>
+                </button>
+            </div>
+            <input type="hidden" id="profileCountry" value="${savedCountry}">
+            <div id="countryDropdown"
+                 class="hidden absolute z-50 w-full mt-1 bg-slate-800 border border-slate-600 rounded-lg shadow-xl max-h-48 overflow-y-auto">
+                ${countries.map(c => `
+                    <div class="country-option px-4 py-2.5 text-sm text-slate-300 hover:bg-slate-700 hover:text-white cursor-pointer transition-colors"
+                         data-code="${c.code}"
+                         data-name="${c.name}"
+                         onclick="selectCountry('${c.code}', '${c.name}')">
+                        ${c.name}
                     </div>
+                `).join('')}
+            </div>
+        </div>
+    </div>
+    <!-- Город -->
+    <div>
+        <label class="block text-sm font-medium text-slate-300 mb-2">
+            <i class="fas fa-city text-orange-400 mr-1"></i>Город
+        </label>
+        <input type="text" id="profileCity"
+               value="${userData.city || ''}"
+               placeholder="Ваш город"
+               class="w-full bg-slate-800 border border-slate-700 rounded-lg px-4 py-2.5 text-sm text-white focus:border-cyan-500 focus:outline-none transition-colors">
+    </div>
+</div>
 
+                   
                     <div>
                         <label class="block text-sm font-medium text-slate-300 mb-2">${lang('footer_account_bio')}</label>
                         <textarea id="profileBio" rows="3"
@@ -1159,7 +1162,18 @@
         <i class="fas fa-share-alt text-pink-400"></i>
         Социальные сети
     </h4>
-    <div class="grid grid-cols-2 gap-3">
+    <div class="grid grid-cols-3 gap-3">
+        <!-- Telegram -->
+        <div>
+            <label class="block text-xs font-medium text-slate-400 mb-1.5">
+                <i class="fab fa-telegram-plane text-blue-400 mr-1"></i>Telegram
+            </label>
+            <input type="text" id="profileTelegram"
+                   value="${userData.telegram || ''}"
+                   placeholder="@username"
+                   class="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2.5 text-sm text-white focus:border-cyan-500 focus:outline-none">
+        </div>
+        <!-- Twitter -->
         <div>
             <label class="block text-xs font-medium text-slate-400 mb-1.5">
                 <i class="fab fa-twitter text-sky-400 mr-1"></i>Twitter / X
@@ -1169,9 +1183,10 @@
                 <input type="text" id="profileTwitter"
                        value="${userData.twitter || ''}"
                        placeholder="username"
-                       class="w-full bg-slate-800 border border-slate-700 rounded-lg pl-7 pr-4 py-2.5 text-sm text-white focus:border-cyan-500 focus:outline-none transition-colors">
+                       class="w-full bg-slate-800 border border-slate-700 rounded-lg pl-7 pr-3 py-2.5 text-sm text-white focus:border-cyan-500 focus:outline-none">
             </div>
         </div>
+        <!-- Discord -->
         <div>
             <label class="block text-xs font-medium text-slate-400 mb-1.5">
                 <i class="fab fa-discord text-indigo-400 mr-1"></i>Discord
@@ -1179,16 +1194,7 @@
             <input type="text" id="profileDiscord"
                    value="${userData.discord || ''}"
                    placeholder="username"
-                   class="w-full bg-slate-800 border border-slate-700 rounded-lg px-4 py-2.5 text-sm text-white focus:border-cyan-500 focus:outline-none transition-colors">
-        </div>
-        <div class="col-span-2">
-            <label class="block text-xs font-medium text-slate-400 mb-1.5">
-                <i class="fas fa-city text-orange-400 mr-1"></i>Город
-            </label>
-            <input type="text" id="profileCity"
-                   value="${userData.city || ''}"
-                   placeholder="Ваш город"
-                   class="w-full bg-slate-800 border border-slate-700 rounded-lg px-4 py-2.5 text-sm text-white focus:border-cyan-500 focus:outline-none transition-colors">
+                   class="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2.5 text-sm text-white focus:border-cyan-500 focus:outline-none">
         </div>
     </div>
 </div>
