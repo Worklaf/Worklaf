@@ -1228,27 +1228,61 @@
         </div>
     </div>
 
-    ${userData.invitedBy ? `
-<div class="mb-3 text-xs text-slate-500 flex items-center gap-1.5 bg-slate-800/30 rounded-lg px-3 py-2">
-    <i class="fas fa-user-check text-emerald-400"></i>
-    Вас пригласил:
-    <span class="text-slate-300 font-medium">${userData.invitedByName || userData.invitedBy}</span>
-</div>` : `
-<div class="mb-3" id="refCodeInputWrapper">
-    <label class="block text-xs font-medium text-slate-400 mb-1.5">
-        <i class="fas fa-ticket-alt text-yellow-400 mr-1"></i>
-        Ввести реферальный код
-    </label>
-    <div class="flex gap-2">
-        <input type="text" id="profileInviteCode"
-               placeholder="AL-XXXXXX"
-               class="flex-1 bg-slate-800 border border-slate-700 rounded-lg px-4 py-2 text-sm text-white font-mono focus:border-yellow-500 focus:outline-none transition-colors">
-        <button type="button" onclick="applyReferralCode()"
-                class="px-4 py-2 bg-yellow-600 hover:bg-yellow-500 rounded-lg text-sm font-medium text-white transition-colors whitespace-nowrap">
-            Применить
-        </button>
-    </div>
-</div>`}
+   ${(() => {
+    // Показываем поле ввода реф-кода только если:
+    // 1. Пользователь уже делал клейм (документ точно создан)
+    // 2. Ещё не использовал реф-код
+    const hasClaimedBefore =
+        userData.lastClaimDate ||
+        userData.lastClaimAt ||
+        (userData.reagents > 0);
+
+    if (userData.invitedBy) {
+        // Уже использовал код — показываем кто пригласил
+        return `
+        <div class="mb-3 text-xs text-slate-500 flex items-center gap-1.5 
+                    bg-slate-800/30 rounded-lg px-3 py-2">
+            <i class="fas fa-user-check text-emerald-400"></i>
+            Вас пригласил:
+            <span class="text-slate-300 font-medium">${userData.invitedByName || userData.invitedBy}</span>
+        </div>`;
+    } else if (hasClaimedBefore) {
+        // Делал клейм но не использовал код — показываем поле ввода
+        return `
+        <div class="mb-3" id="refCodeInputWrapper">
+            <label class="block text-xs font-medium text-slate-400 mb-1.5">
+                <i class="fas fa-ticket-alt text-yellow-400 mr-1"></i>
+                Ввести реферальный код
+            </label>
+            <div class="flex gap-2">
+                <input type="text" id="profileInviteCode"
+                       placeholder="AL-XXXXXX"
+                       class="flex-1 bg-slate-800 border border-slate-700 rounded-lg px-4 py-2 
+                              text-sm text-white font-mono focus:border-yellow-500 
+                              focus:outline-none transition-colors">
+                <button type="button" onclick="applyReferralCode()"
+                        class="px-4 py-2 bg-yellow-600 hover:bg-yellow-500 rounded-lg 
+                               text-sm font-medium text-white transition-colors whitespace-nowrap">
+                    Применить
+                </button>
+            </div>
+        </div>`;
+    } else {
+        // Ещё не делал клейм — подсказка
+        return `
+        <div class="mb-3 p-3 bg-slate-800/40 border border-slate-700/50 rounded-lg">
+            <div class="flex items-center gap-2 text-xs text-slate-400">
+                <i class="fas fa-lock text-slate-500"></i>
+                <span>Поле для реферального кода откроется после первого клейма Reagents</span>
+            </div>
+            <div class="mt-2 flex items-center gap-2">
+                <div class="w-2 h-2 rounded-full bg-cyan-400 animate-pulse"></div>
+                <span class="text-xs text-cyan-400">Нажмите "Получить Reagents" ниже</span>
+            </div>
+        </div>`;
+    }
+})()}
+
 
     <div class="p-3 bg-emerald-900/20 border border-emerald-800/30 rounded-lg text-xs text-slate-400">
         <i class="fas fa-flask text-emerald-400 mr-1.5"></i>
@@ -2412,8 +2446,38 @@ window.copyAccountUID = function() {
             @keyframes statusPulse { 0%, 100% { transform: scale(1); opacity: 1; } 50% { transform: scale(1.2); opacity: 0.7; } }
             
             /* Page Modal */
-            .page-modal-content { max-width: 700px; width: 95%; max-height: 90vh; overflow: hidden; display: flex; flex-direction: column; border-radius: 1rem; background: rgba(15, 23, 42, 0.98); border: 1px solid rgba(255,255,255,0.1); }
-            
+            .page-modal-content { 
+    max-width: 700px; 
+    width: 95%; 
+    max-height: 90vh; 
+    overflow: hidden; 
+    display: flex; 
+    flex-direction: column; 
+    border-radius: 1rem; 
+    background: rgba(15, 23, 42, 0.98); 
+    border: 1px solid rgba(255,255,255,0.1);
+    /* ДОБАВЬ: */
+    position: relative;
+    margin: auto;
+}
+            /* И убедись что сам .modal центрирует содержимое: */
+.modal {
+    display: none;
+    position: fixed;
+    inset: 0;
+    z-index: 1000;
+    background: rgba(0,0,0,0.7);
+    backdrop-filter: blur(4px);
+    /* ДОБАВЬ: */
+    align-items: center;
+    justify-content: center;
+    overflow-y: auto;
+    padding: 20px;
+}
+
+.modal.active {
+    display: flex;  /* ← flex а не block */
+}
             /* FAQ Styles */
             .faq-question { border: none; background: none; width: 100%; cursor: pointer; }
             .faq-answer { border-top: none; }
@@ -2949,4 +3013,39 @@ document.addEventListener('DOMContentLoaded', function() {
 
 // Экспортируем для вызова из language.js
 window.updateFooterTranslations = updateFooterTranslations;
+    // ============ ОТКРЫТИЕ ПРОФИЛЯ С ПРОКРУТКОЙ ============
+
+window.openMyAccountModal = function() {
+    window.openProfileAndScroll();
+};
+
+window.openProfileAndScroll = function() {
+    // Открываем модалку аккаунта
+    openPageModal('account');
+
+    // Ждём пока модалка отрисуется
+    setTimeout(function() {
+        const modal = document.getElementById('pageModal');
+        if (!modal) return;
+
+        // Прокручиваем модалку наверх сначала
+        const content = modal.querySelector('.page-modal-content');
+        if (content) {
+            content.scrollTop = 0;
+        }
+
+        // Если нужно прокрутить к конкретному блоку — например к форме
+        // (на случай если модалка большая)
+        const form = document.getElementById('accountForm');
+        if (form) {
+            // Небольшая задержка для рендера
+            setTimeout(function() {
+                form.scrollIntoView({ 
+                    behavior: 'smooth', 
+                    block: 'start' 
+                });
+            }, 200);
+        }
+    }, 100);
+};
 })();
