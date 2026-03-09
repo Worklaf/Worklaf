@@ -1575,16 +1575,32 @@ window.copyRefCode = function() {
         }
 
         // ── 5. Получаем имя пригласившего ────────────────────────
-        // Перебираем все возможные поля где может быть имя
-        const inviterName = (
-            inviterData.displayName ||
-            inviterData.profile?.firstName && inviterData.profile?.lastName
-                ? ((inviterData.profile?.firstName || '') + ' ' + (inviterData.profile?.lastName || '')).trim()
-                : null
-        ) || inviterData.profile?.firstName 
-          || inviterData.profile?.username
-          || inviterData.email?.split('@')[0]
-          || 'Пользователь';
+let inviterName = 'Пользователь';
+
+if (inviterData.displayName && inviterData.displayName.trim()) {
+    inviterName = inviterData.displayName.trim();
+} else if (inviterData.profile?.firstName || inviterData.profile?.lastName) {
+    inviterName = [
+        inviterData.profile?.firstName || '',
+        inviterData.profile?.lastName  || ''
+    ].filter(Boolean).join(' ').trim();
+} else if (inviterData.profile?.username) {
+    inviterName = inviterData.profile.username;
+} else if (inviterData.email) {
+    inviterName = inviterData.email.split('@')[0];
+}
+
+console.log('Inviter found:', {
+    id: inviterId,
+    name: inviterName,
+    rawData: {
+        displayName:      inviterData.displayName,
+        profileFirstName: inviterData.profile?.firstName,
+        profileLastName:  inviterData.profile?.lastName,
+        username:         inviterData.profile?.username,
+        email:            inviterData.email
+    }
+});
 
         console.log('Inviter found:', {
             id: inviterId,
