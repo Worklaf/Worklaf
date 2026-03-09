@@ -2769,69 +2769,64 @@ document.addEventListener('DOMContentLoaded', function() {
 // Экспортируем для вызова из language.js
 window.updateFooterTranslations = updateFooterTranslations;
     function _initHeaderAvatarClick() {
-    // Пробуем сразу и повторно — хедер может рендериться позже
-    function _attach() {
-        var avatar  = document.getElementById('userAvatar');
-        var nameEl  = document.getElementById('userName');
-        var loggedIn = document.getElementById('loggedInView');
-
-        if (!avatar && !nameEl) {
-            // Ещё не отрендерилось — повторяем
-            return false;
-        }
-
-        function openProfile() {
-            // Открываем модалку аккаунта
-            if (typeof window.openPageModal === 'function') {
-                window.openPageModal('account');
-            }
-
-            // Прокручиваем модалку наверх
+    function openProfile() {
+        if (typeof window.openPageModal === 'function') {
+            window.openPageModal('account');
             setTimeout(function() {
                 var modalBox = document.querySelector('.page-modal-content');
                 if (modalBox) modalBox.scrollTop = 0;
             }, 150);
         }
+    }
 
-        // Вешаем на аватар
+    function _attach() {
+        // Аватар
+        var avatar = document.getElementById('userAvatar');
         if (avatar) {
-            // Убираем старый onclick из HTML
             avatar.style.cursor = 'pointer';
             avatar.onclick = openProfile;
         }
 
-        // Вешаем на блок с именем
+        // Обёртка аватара (div с id userAvatarWrapper)
+        var avatarWrapper = document.getElementById('userAvatarWrapper');
+        if (avatarWrapper) {
+            avatarWrapper.style.cursor = 'pointer';
+            avatarWrapper.onclick = openProfile;
+        }
+
+        // Имя
+        var nameEl = document.getElementById('userName');
         if (nameEl) {
             nameEl.style.cursor = 'pointer';
             nameEl.onclick = openProfile;
         }
 
-        // Вешаем на весь loggedInView — клик по аватару-обёртке
-        if (loggedIn) {
-            var avatarWrapper = loggedIn.querySelector('.relative.group');
-            if (avatarWrapper) {
-                avatarWrapper.style.cursor = 'pointer';
-                avatarWrapper.onclick = openProfile;
-            }
+        // Обёртка имени
+        var nameWrapper = document.getElementById('userNameWrapper');
+        if (nameWrapper) {
+            nameWrapper.style.cursor = 'pointer';
+            nameWrapper.onclick = openProfile;
         }
 
-        return true;
+        return !!(avatar || avatarWrapper || nameEl || nameWrapper);
     }
 
-    // Пробуем сразу
     if (!_attach()) {
-        // Если не прикрепилось — повторяем каждые 500мс до 10 раз
         var tries = 0;
         var interval = setInterval(function() {
             tries++;
-            if (_attach() || tries >= 10) {
+            if (_attach() || tries >= 20) {
                 clearInterval(interval);
             }
-        }, 500);
+        }, 300);
     }
+
+    // Повторно вешаем после авторизации
+    document.addEventListener('userAuthChanged', function() {
+        setTimeout(_attach, 500);
+    });
 }
 
-// Также добавляем глобальный алиас
 window.openMyAccountModal = function() {
     if (typeof window.openPageModal === 'function') {
         window.openPageModal('account');
