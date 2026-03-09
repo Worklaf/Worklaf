@@ -1435,6 +1435,59 @@ if (streakEl) {
     streakEl.innerHTML = streak + ' <span class="text-xs font-normal text-slate-400">дней</span>';
 }
 }
+window.copyRefCode = function() {
+    const el = document.getElementById('profileRefCode');
+    if (!el) return;
+
+    const code = el.textContent.trim();
+    if (!code || code === 'Генерация...') {
+        footerShowToast('Код ещё не сгенерирован', 'error');
+        return;
+    }
+
+    // Пробуем clipboard API, fallback на execCommand
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(code).then(function() {
+            _showCopySuccess();
+        }).catch(function() {
+            _fallbackCopy(code);
+        });
+    } else {
+        _fallbackCopy(code);
+    }
+
+    function _showCopySuccess() {
+        const btn = el.nextElementSibling; // кнопка рядом
+        if (btn) {
+            const orig = btn.innerHTML;
+            btn.innerHTML = '<i class="fas fa-check text-xs"></i>';
+            btn.classList.add('bg-emerald-600');
+            setTimeout(function() {
+                btn.innerHTML = orig;
+                btn.classList.remove('bg-emerald-600');
+            }, 2000);
+        }
+        footerShowToast('Реферальный код скопирован!', 'success');
+    }
+
+    function _fallbackCopy(text) {
+        const ta = document.createElement('textarea');
+        ta.value = text;
+        ta.style.position = 'fixed';
+        ta.style.opacity = '0';
+        document.body.appendChild(ta);
+        ta.focus();
+        ta.select();
+        try {
+            document.execCommand('copy');
+            _showCopySuccess();
+        } catch(e) {
+            footerShowToast('Не удалось скопировать', 'error');
+        }
+        document.body.removeChild(ta);
+    }
+};
+    
     window.applyReferralCode = async function() {
     const input = document.getElementById('profileInviteCode');
     if (!input) return;
@@ -1453,31 +1506,41 @@ if (streakEl) {
 
     const db  = window.db;
     const exp = window.__firestoreExports;
-    if (!db || !exp) return;
+    if (!db || !exp || !exp.getDoc || !exp.getDocs || !exp.query || !exp.collection || !exp.where || !exp.setDoc) {
+        footerShowToast('Firebase не готов', 'error');
+        return;
+    }
 
-    // Блокируем кнопку сразу
-    const btn = input.nextElementSibling;
-    if (btn) { btn.disabled = true; btn.textContent = 'Проверка...'; }
+    const btn = input.parentElement ? input.parentElement.querySelector('button') : null;
+    if (btn) {
+        btn.disabled = true;
+        btn.textContent = 'Проверка...';
+    }
 
     try {
-        // ── 1. Проверяем: не применял ли уже этот пользователь чей-то код ──
-        const mySnap = await exp.getDoc(exp.doc(db, 'users', user.uid));
+        // 1. Читаем свой документ
+        const myRef  = exp.doc(db, 'users', user.uid);
+        const mySnap = await exp.getDoc(myRef);
         const myData = mySnap.exists() ? mySnap.data() : {};
 
+        // 2. Если уже есть invitedBy — второй раз НЕЛЬЗЯ
         if (myData.invitedBy) {
-            footerShowToast('Вы уже использовали реферальный код', 'error');
-            if (btn) { btn.disabled = false; btn.textContent = 'Применить'; }
+            footerShowToast('Реферальный код уже был использован ранее', 'error');
+            _renderInvitedByBlock(myData.invitedByName || myData.invitedBy);
             return;
         }
 
-        // ── 2. Нельзя применить свой же код ──
-        if (myData.referralCode === code) {
+        // 3. Если это свой код — нельзя
+        if ((myData.referralCode || '').toUpperCase() === code) {
             footerShowToast('Нельзя использовать свой код', 'error');
-            if (btn) { btn.disabled = false; btn.textContent = 'Применить'; }
+            if (btn) {
+                btn.disabled = false;
+                btn.textContent = 'Применить';
+            }
             return;
         }
 
-        // ── 3. Ищем владельца кода ──
+        // 4. Ищем владельца кода
         const snap = await exp.getDocs(
             exp.query(
                 exp.collection(db, 'users'),
@@ -1487,7 +1550,10 @@ if (streakEl) {
 
         if (snap.empty) {
             footerShowToast('Код не найден', 'error');
-            if (btn) { btn.disabled = false; btn.textContent = 'Применить'; }
+            if (btn) {
+                btn.disabled = false;
+                btn.textContent = 'Применить';
+            }
             return;
         }
 
@@ -1497,58 +1563,90 @@ if (streakEl) {
 
         if (inviterId === user.uid) {
             footerShowToast('Нельзя использовать свой код', 'error');
-            if (btn) { btn.disabled = false; btn.textContent = 'Применить'; }
+            if (btn) {
+                btn.disabled = false;
+                btn.textContent = 'Применить';
+            }
             return;
         }
 
-        // ── 4. Сохраняем кто пригласил (навсегда, без возможности перезаписать) ──
+        const inviterName = inviterData.displayName || inviterData.profile?.firstName || 'Пользователь';
+
+        // 5. ЕЩЁ РАЗ защита: если между кликами уже записали invitedBy
+        const mySnapAgain = await exp.getDoc(myRef);
+        const myDataAgain = mySnapAgain.exists() ? mySnapAgain.data() : {};
+        if (myDataAgain.invitedBy) {
+            footerShowToast('Реферальный код уже был использован ранее', 'error');
+            _renderInvitedByBlock(myDataAgain.invitedByName || myDataAgain.invitedBy);
+            return;
+        }
+
+        // 6. Записываем ТОЛЬКО ОДИН РАЗ кто пригласил
         await exp.setDoc(
-            exp.doc(db, 'users', user.uid),
+            myRef,
             {
-                invitedBy:     inviterId,
-                invitedByName: inviterData.displayName || inviterData.profile?.firstName || 'Пользователь',
-                reagents:      (myData.reagents || 0) + 25
+                invitedBy: inviterId,
+                invitedByName: inviterName,
+                reagents: (myDataAgain.reagents || 0) + 25
             },
             { merge: true }
         );
 
-        // ── 5. Начисляем бонус пригласившему ──
+        // 7. Начисляем пригласившему бонус
         await exp.setDoc(
             exp.doc(db, 'users', inviterId),
             {
-                reagents:     (inviterData.reagents || 0) + 50,
+                reagents: (inviterData.reagents || 0) + 50,
                 invitedCount: (inviterData.invitedCount || 0) + 1
             },
             { merge: true }
         );
 
-        footerShowToast('🧪 Код применён! +25 Reagents вам, +50 пригласившему!', 'success');
+        // 8. Обновляем локальные данные
+        window.userProfileData = Object.assign({}, window.userProfileData || {}, {
+            invitedBy: inviterId,
+            invitedByName: inviterName,
+            reagents: (myDataAgain.reagents || 0) + 25
+        });
 
-        // ── 6. Прячем блок ввода навсегда и показываем кто пригласил ──
-        const inputWrapper = document.getElementById('refCodeInputWrapper');
-        if (inputWrapper) {
-            inputWrapper.innerHTML = `
-                <div class="text-xs text-slate-500 flex items-center gap-1.5 bg-slate-800/30 rounded-lg px-3 py-2">
-                    <i class="fas fa-user-check text-emerald-400"></i>
-                    Вас пригласил:
-                    <span class="text-slate-300 font-medium">
-                        ${inviterData.displayName || inviterData.profile?.firstName || 'Пользователь'}
-                    </span>
-                </div>
-            `;
+        if (window._userRootData) {
+            window._userRootData.invitedBy = inviterId;
+            window._userRootData.invitedByName = inviterName;
+            window._userRootData.reagents = (myDataAgain.reagents || 0) + 25;
         }
 
-        // Обновляем баланс на экране
+        // 9. Обновляем баланс
         const balEl = document.getElementById('profileReagentBalance');
         if (balEl) {
-            const newBal = (myData.reagents || 0) + 25;
-            balEl.innerHTML = newBal + ' <span class="text-sm font-normal text-slate-400 ml-1">RGT</span>';
+            balEl.innerHTML = ((myDataAgain.reagents || 0) + 25) +
+                ' <span class="text-sm font-normal text-slate-400 ml-1">RGT</span>';
         }
+
+        // 10. Обновляем блок "кто пригласил"
+        _renderInvitedByBlock(inviterName);
+
+        footerShowToast('🧪 Код применён! +25 Reagents вам, +50 пригласившему!', 'success');
 
     } catch(err) {
         console.error('Referral error:', err);
         footerShowToast('Ошибка: ' + err.message, 'error');
-        if (btn) { btn.disabled = false; btn.textContent = 'Применить'; }
+        if (btn) {
+            btn.disabled = false;
+            btn.textContent = 'Применить';
+        }
+    }
+
+    function _renderInvitedByBlock(name) {
+        const wrapper = document.getElementById('refCodeInputWrapper');
+        if (!wrapper) return;
+
+        wrapper.innerHTML = `
+            <div class="text-xs text-slate-500 flex items-center gap-1.5 bg-slate-800/30 rounded-lg px-3 py-2">
+                <i class="fas fa-user-check text-emerald-400"></i>
+                Вас пригласил:
+                <span class="text-slate-300 font-medium">${name}</span>
+            </div>
+        `;
     }
 };
 // ============ COUNTRY PICKER FUNCTIONS ============
@@ -1692,58 +1790,6 @@ document.addEventListener('click', function(e) {
     // ────────────────────────────────────────────────────────────
 
     updatedAt: new Date().toISOString()
-};
-window.copyRefCode = function() {
-    const el = document.getElementById('profileRefCode');
-    if (!el) return;
-
-    const code = el.textContent.trim();
-    if (!code || code === 'Генерация...') {
-        footerShowToast('Код ещё не сгенерирован', 'error');
-        return;
-    }
-
-    // Пробуем clipboard API, fallback на execCommand
-    if (navigator.clipboard && navigator.clipboard.writeText) {
-        navigator.clipboard.writeText(code).then(function() {
-            _showCopySuccess();
-        }).catch(function() {
-            _fallbackCopy(code);
-        });
-    } else {
-        _fallbackCopy(code);
-    }
-
-    function _showCopySuccess() {
-        const btn = el.nextElementSibling; // кнопка рядом
-        if (btn) {
-            const orig = btn.innerHTML;
-            btn.innerHTML = '<i class="fas fa-check text-xs"></i>';
-            btn.classList.add('bg-emerald-600');
-            setTimeout(function() {
-                btn.innerHTML = orig;
-                btn.classList.remove('bg-emerald-600');
-            }, 2000);
-        }
-        footerShowToast('Реферальный код скопирован!', 'success');
-    }
-
-    function _fallbackCopy(text) {
-        const ta = document.createElement('textarea');
-        ta.value = text;
-        ta.style.position = 'fixed';
-        ta.style.opacity = '0';
-        document.body.appendChild(ta);
-        ta.focus();
-        ta.select();
-        try {
-            document.execCommand('copy');
-            _showCopySuccess();
-        } catch(e) {
-            footerShowToast('Не удалось скопировать', 'error');
-        }
-        document.body.removeChild(ta);
-    }
 };
     // Локальный бэкап
     window.userProfileData = profileData;
