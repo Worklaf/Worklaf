@@ -1039,22 +1039,29 @@
                         </div>
                     </div>
 
-                   <div class="grid grid-cols-2 gap-4">
-    <div>
-        <label class="block text-sm font-medium text-slate-300 mb-2">${lang('footer_account_username')}</label>
-        <div class="relative">
-            <span class="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500">@</span>
-            <input type="text" id="profileUsername" value="${userData.username || ''}"
-                   placeholder="nickname"
-                   class="w-full bg-slate-800 border border-slate-700 rounded-lg pl-8 pr-4 py-2.5 text-sm text-white focus:border-cyan-500 focus:outline-none">
-        </div>
-    </div>
-    <div>
-        <label class="block text-sm font-medium text-slate-300 mb-2">${lang('footer_account_birthdate')}</label>
-        <input type="date" id="profileBirthdate" value="${userData.birthdate || ''}"
-               class="w-full bg-slate-800 border border-slate-700 rounded-lg px-4 py-2.5 text-sm text-white focus:border-cyan-500 focus:outline-none">
-    </div>
-</div>
+                    <div class="grid grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-sm font-medium text-slate-300 mb-2">${lang('footer_account_username')}</label>
+                            <div class="relative">
+                                <span class="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500">@</span>
+                                <input type="text" id="profileUsername" value="${userData.username || ''}"
+                                       placeholder="nickname"
+                                       class="w-full bg-slate-800 border border-slate-700 rounded-lg pl-8 pr-4 py-2.5 text-sm text-white focus:border-cyan-500 focus:outline-none">
+                            </div>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-slate-300 mb-2">${lang('footer_account_telegram')}</label>
+                            <input type="text" id="profileTelegram" value="${userData.telegram || ''}"
+                                   placeholder="@username"
+                                   class="w-full bg-slate-800 border border-slate-700 rounded-lg px-4 py-2.5 text-sm text-white focus:border-cyan-500 focus:outline-none">
+                        </div>
+                    </div>
+
+                    <div>
+                        <label class="block text-sm font-medium text-slate-300 mb-2">${lang('footer_account_birthdate')}</label>
+                        <input type="date" id="profileBirthdate" value="${userData.birthdate || ''}"
+                               class="w-full bg-slate-800 border border-slate-700 rounded-lg px-4 py-2.5 text-sm text-white focus:border-cyan-500 focus:outline-none">
+                    </div>
 
                     <div>
                         <label class="block text-sm font-medium text-slate-300 mb-2">${lang('footer_account_gender')}</label>
@@ -1073,52 +1080,42 @@
                             </label>
                         </div>
                     </div>
-<div class="grid grid-cols-2 gap-4">
-    <!-- Страна -->
-    <div>
-        <label class="block text-sm font-medium text-slate-300 mb-2">${lang('footer_account_country')}</label>
-        <div class="relative" id="countryPickerWrapper">
-            <div class="relative">
-                <i class="fas fa-search absolute left-3 top-1/2 -translate-y-1/2 text-slate-500 text-xs"></i>
-                <input type="text"
-                       id="countrySearchInput"
-                       placeholder="${lang('account_select_country')}"
-                       autocomplete="off"
-                       class="w-full bg-slate-800 border border-slate-700 rounded-lg pl-9 pr-10 py-2.5 text-sm text-white focus:border-cyan-500 focus:outline-none"
-                       oninput="filterCountryList(this.value)"
-                       onfocus="showCountryDropdown()"
-                       value="${countries.find(c => c.code === savedCountry)?.name || savedCountry || ''}">
-                <button type="button" onclick="clearCountryInput()" class="absolute right-3 top-1/2 -translate-y-1/2 text-slate-500 hover:text-white transition-colors">
-                    <i class="fas fa-times text-xs"></i>
-                </button>
-            </div>
-            <input type="hidden" id="profileCountry" value="${savedCountry}">
-            <div id="countryDropdown"
-                 class="hidden absolute z-50 w-full mt-1 bg-slate-800 border border-slate-600 rounded-lg shadow-xl max-h-48 overflow-y-auto">
-                ${countries.map(c => `
-                    <div class="country-option px-4 py-2.5 text-sm text-slate-300 hover:bg-slate-700 hover:text-white cursor-pointer transition-colors"
-                         data-code="${c.code}"
-                         data-name="${c.name}"
-                         onclick="selectCountry('${c.code}', '${c.name}')">
-                        ${c.name}
-                    </div>
-                `).join('')}
-            </div>
-        </div>
-    </div>
-    <!-- Город -->
-    <div>
-        <label class="block text-sm font-medium text-slate-300 mb-2">
-            <i class="fas fa-city text-orange-400 mr-1"></i>Город
-        </label>
-        <input type="text" id="profileCity"
-               value="${userData.city || ''}"
-               placeholder="Ваш город"
-               class="w-full bg-slate-800 border border-slate-700 rounded-lg px-4 py-2.5 text-sm text-white focus:border-cyan-500 focus:outline-none transition-colors">
-    </div>
-</div>
 
-                   
+                    <!-- Country with searchable input -->
+                    <div>
+                        <label class="block text-sm font-medium text-slate-300 mb-2">${lang('footer_account_country')}</label>
+                        <div class="relative" id="countryPickerWrapper">
+                            <div class="relative">
+                                <i class="fas fa-search absolute left-3 top-1/2 -translate-y-1/2 text-slate-500 text-xs"></i>
+                                <input type="text"
+                                       id="countrySearchInput"
+                                       placeholder="${lang('account_select_country')}"
+                                       autocomplete="off"
+                                       class="w-full bg-slate-800 border border-slate-700 rounded-lg pl-9 pr-10 py-2.5 text-sm text-white focus:border-cyan-500 focus:outline-none"
+                                       oninput="filterCountryList(this.value)"
+                                       onfocus="showCountryDropdown()"
+                                       value="${countries.find(c => c.code === savedCountry)?.name || savedCountry || ''}">
+                                <button type="button" onclick="clearCountryInput()" class="absolute right-3 top-1/2 -translate-y-1/2 text-slate-500 hover:text-white transition-colors">
+                                    <i class="fas fa-times text-xs"></i>
+                                </button>
+                            </div>
+                            <input type="hidden" id="profileCountry" value="${savedCountry}">
+
+                            <!-- Dropdown list -->
+                            <div id="countryDropdown"
+                                 class="hidden absolute z-50 w-full mt-1 bg-slate-800 border border-slate-600 rounded-lg shadow-xl max-h-48 overflow-y-auto">
+                                ${countries.map(c => `
+                                    <div class="country-option px-4 py-2.5 text-sm text-slate-300 hover:bg-slate-700 hover:text-white cursor-pointer transition-colors flex items-center gap-2"
+                                         data-code="${c.code}"
+                                         data-name="${c.name}"
+                                         onclick="selectCountry('${c.code}', '${c.name}')">
+                                        ${c.name}
+                                    </div>
+                                `).join('')}
+                            </div>
+                        </div>
+                    </div>
+
                     <div>
                         <label class="block text-sm font-medium text-slate-300 mb-2">${lang('footer_account_bio')}</label>
                         <textarea id="profileBio" rows="3"
@@ -1162,18 +1159,7 @@
         <i class="fas fa-share-alt text-pink-400"></i>
         Социальные сети
     </h4>
-    <div class="grid grid-cols-3 gap-3">
-        <!-- Telegram -->
-        <div>
-            <label class="block text-xs font-medium text-slate-400 mb-1.5">
-                <i class="fab fa-telegram-plane text-blue-400 mr-1"></i>Telegram
-            </label>
-            <input type="text" id="profileTelegram"
-                   value="${userData.telegram || ''}"
-                   placeholder="@username"
-                   class="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2.5 text-sm text-white focus:border-cyan-500 focus:outline-none">
-        </div>
-        <!-- Twitter -->
+    <div class="grid grid-cols-2 gap-3">
         <div>
             <label class="block text-xs font-medium text-slate-400 mb-1.5">
                 <i class="fab fa-twitter text-sky-400 mr-1"></i>Twitter / X
@@ -1183,10 +1169,9 @@
                 <input type="text" id="profileTwitter"
                        value="${userData.twitter || ''}"
                        placeholder="username"
-                       class="w-full bg-slate-800 border border-slate-700 rounded-lg pl-7 pr-3 py-2.5 text-sm text-white focus:border-cyan-500 focus:outline-none">
+                       class="w-full bg-slate-800 border border-slate-700 rounded-lg pl-7 pr-4 py-2.5 text-sm text-white focus:border-cyan-500 focus:outline-none transition-colors">
             </div>
         </div>
-        <!-- Discord -->
         <div>
             <label class="block text-xs font-medium text-slate-400 mb-1.5">
                 <i class="fab fa-discord text-indigo-400 mr-1"></i>Discord
@@ -1194,7 +1179,16 @@
             <input type="text" id="profileDiscord"
                    value="${userData.discord || ''}"
                    placeholder="username"
-                   class="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2.5 text-sm text-white focus:border-cyan-500 focus:outline-none">
+                   class="w-full bg-slate-800 border border-slate-700 rounded-lg px-4 py-2.5 text-sm text-white focus:border-cyan-500 focus:outline-none transition-colors">
+        </div>
+        <div class="col-span-2">
+            <label class="block text-xs font-medium text-slate-400 mb-1.5">
+                <i class="fas fa-city text-orange-400 mr-1"></i>Город
+            </label>
+            <input type="text" id="profileCity"
+                   value="${userData.city || ''}"
+                   placeholder="Ваш город"
+                   class="w-full bg-slate-800 border border-slate-700 rounded-lg px-4 py-2.5 text-sm text-white focus:border-cyan-500 focus:outline-none transition-colors">
         </div>
     </div>
 </div>
@@ -1228,61 +1222,27 @@
         </div>
     </div>
 
-   ${(() => {
-    // Показываем поле ввода реф-кода только если:
-    // 1. Пользователь уже делал клейм (документ точно создан)
-    // 2. Ещё не использовал реф-код
-    const hasClaimedBefore =
-        userData.lastClaimDate ||
-        userData.lastClaimAt ||
-        (userData.reagents > 0);
-
-    if (userData.invitedBy) {
-        // Уже использовал код — показываем кто пригласил
-        return `
-        <div class="mb-3 text-xs text-slate-500 flex items-center gap-1.5 
-                    bg-slate-800/30 rounded-lg px-3 py-2">
-            <i class="fas fa-user-check text-emerald-400"></i>
-            Вас пригласил:
-            <span class="text-slate-300 font-medium">${userData.invitedByName || userData.invitedBy}</span>
-        </div>`;
-    } else if (hasClaimedBefore) {
-        // Делал клейм но не использовал код — показываем поле ввода
-        return `
-        <div class="mb-3" id="refCodeInputWrapper">
-            <label class="block text-xs font-medium text-slate-400 mb-1.5">
-                <i class="fas fa-ticket-alt text-yellow-400 mr-1"></i>
-                Ввести реферальный код
-            </label>
-            <div class="flex gap-2">
-                <input type="text" id="profileInviteCode"
-                       placeholder="AL-XXXXXX"
-                       class="flex-1 bg-slate-800 border border-slate-700 rounded-lg px-4 py-2 
-                              text-sm text-white font-mono focus:border-yellow-500 
-                              focus:outline-none transition-colors">
-                <button type="button" onclick="applyReferralCode()"
-                        class="px-4 py-2 bg-yellow-600 hover:bg-yellow-500 rounded-lg 
-                               text-sm font-medium text-white transition-colors whitespace-nowrap">
-                    Применить
-                </button>
-            </div>
-        </div>`;
-    } else {
-        // Ещё не делал клейм — подсказка
-        return `
-        <div class="mb-3 p-3 bg-slate-800/40 border border-slate-700/50 rounded-lg">
-            <div class="flex items-center gap-2 text-xs text-slate-400">
-                <i class="fas fa-lock text-slate-500"></i>
-                <span>Поле для реферального кода откроется после первого клейма Reagents</span>
-            </div>
-            <div class="mt-2 flex items-center gap-2">
-                <div class="w-2 h-2 rounded-full bg-cyan-400 animate-pulse"></div>
-                <span class="text-xs text-cyan-400">Нажмите "Получить Reagents" ниже</span>
-            </div>
-        </div>`;
-    }
-})()}
-
+    ${userData.invitedBy ? `
+    <div class="mb-3 text-xs text-slate-500 flex items-center gap-1.5 bg-slate-800/30 rounded-lg px-3 py-2">
+        <i class="fas fa-user-check text-emerald-400"></i>
+        Вас пригласил:
+        <span class="text-slate-300 font-medium">${userData.invitedByName || userData.invitedBy}</span>
+    </div>` : `
+    <div class="mb-3">
+        <label class="block text-xs font-medium text-slate-400 mb-1.5">
+            <i class="fas fa-ticket-alt text-yellow-400 mr-1"></i>
+            Ввести реферальный код
+        </label>
+        <div class="flex gap-2">
+            <input type="text" id="profileInviteCode"
+                   placeholder="AL-XXXXXX"
+                   class="flex-1 bg-slate-800 border border-slate-700 rounded-lg px-4 py-2 text-sm text-white font-mono focus:border-yellow-500 focus:outline-none transition-colors">
+            <button type="button" onclick="applyReferralCode()"
+                    class="px-4 py-2 bg-yellow-600 hover:bg-yellow-500 rounded-lg text-sm font-medium text-white transition-colors whitespace-nowrap">
+                Применить
+            </button>
+        </div>
+    </div>`}
 
     <div class="p-3 bg-emerald-900/20 border border-emerald-800/30 rounded-lg text-xs text-slate-400">
         <i class="fas fa-flask text-emerald-400 mr-1.5"></i>
@@ -1364,15 +1324,11 @@
 
             if (snap.exists()) {
                 rootData = snap.data();
-                window._userRootData = rootData;
                 profile  = rootData.profile || rootData || {};
             }
 
             const local  = JSON.parse(localStorage.getItem('userProfileData') || '{}');
-            const merged = Object.assign({}, local, profile, {
-    reagents: rootData.reagents || profile.reagents || 0,
-    streak:   rootData.streak   || profile.streak   || 0,
-});
+            const merged = Object.assign({}, local, profile);
 
             // ── Генерируем реф. код если нет ──────────────────────
             if (!merged.referralCode && !rootData.referralCode) {
@@ -1456,90 +1412,24 @@ function _fillAccountForm(profile) {
         if (hiddenInput) hiddenInput.value  = profile.country || '';
     }
 
-   // Reagents — берём из корня документа, не из profile
-const balEl = document.getElementById('profileReagentBalance');
-if (balEl) {
-    const reagents = window._userRootData?.reagents || profile.reagents || 0;
-    balEl.innerHTML = reagents + ' <span class="text-sm font-normal text-slate-400 ml-1">RGT</span>';
+    // Reagents
+    const balEl = document.getElementById('profileReagentBalance');
+    if (balEl) balEl.innerHTML = (profile.reagents || 0) + ' <span class="text-sm font-normal text-slate-400 ml-1">RGT</span>';
+
+    const streakEl = document.getElementById('profileStreak');
+    if (streakEl) streakEl.innerHTML = (profile.streak || 0) + ' <span class="text-xs font-normal text-slate-400">дней</span>';
 }
-
-const streakEl = document.getElementById('profileStreak');
-if (streakEl) {
-    const streak = window._userRootData?.streak || profile.streak || 0;
-    streakEl.innerHTML = streak + ' <span class="text-xs font-normal text-slate-400">дней</span>';
-}
-}
-window.copyRefCode = function() {
-    const el = document.getElementById('profileRefCode');
-    if (!el) return;
-
-    const code = el.textContent.trim();
-    if (!code || code === 'Генерация...') {
-        footerShowToast('Код ещё не сгенерирован', 'error');
-        return;
-    }
-
-    // Пробуем clipboard API, fallback на execCommand
-    if (navigator.clipboard && navigator.clipboard.writeText) {
-        navigator.clipboard.writeText(code).then(function() {
-            _showCopySuccess();
-        }).catch(function() {
-            _fallbackCopy(code);
-        });
-    } else {
-        _fallbackCopy(code);
-    }
-
-    function _showCopySuccess() {
-        const btn = el.nextElementSibling; // кнопка рядом
-        if (btn) {
-            const orig = btn.innerHTML;
-            btn.innerHTML = '<i class="fas fa-check text-xs"></i>';
-            btn.classList.add('bg-emerald-600');
-            setTimeout(function() {
-                btn.innerHTML = orig;
-                btn.classList.remove('bg-emerald-600');
-            }, 2000);
-        }
-        footerShowToast('Реферальный код скопирован!', 'success');
-    }
-
-    function _fallbackCopy(text) {
-        const ta = document.createElement('textarea');
-        ta.value = text;
-        ta.style.position = 'fixed';
-        ta.style.opacity = '0';
-        document.body.appendChild(ta);
-        ta.focus();
-        ta.select();
-        try {
-            document.execCommand('copy');
-            _showCopySuccess();
-        } catch(e) {
-            footerShowToast('Не удалось скопировать', 'error');
-        }
-        document.body.removeChild(ta);
-    }
-};
-    
     window.applyReferralCode = async function() {
     const input = document.getElementById('profileInviteCode');
     if (!input) return;
 
     const code = input.value.trim().toUpperCase();
-    if (!code) {
-        footerShowToast('Введите реферальный код', 'error');
-        return;
-    }
-    
-    if (!code.startsWith('AL-')) {
+    if (!code || !code.startsWith('AL-')) {
         footerShowToast('Неверный формат кода (AL-XXXXXX)', 'error');
         return;
     }
 
-    const user = typeof window.currentUser !== 'undefined' 
-                 ? window.currentUser 
-                 : (window.auth && window.auth.currentUser);
+    const user = typeof window.currentUser !== 'undefined' ? window.currentUser : null;
     if (!user) {
         footerShowToast('Войдите в аккаунт', 'error');
         return;
@@ -1547,43 +1437,10 @@ window.copyRefCode = function() {
 
     const db  = window.db;
     const exp = window.__firestoreExports;
-    if (!db || !exp) {
-        footerShowToast('Firebase не готов', 'error');
-        return;
-    }
-
-    const btn = input.parentElement 
-                ? input.parentElement.querySelector('button') 
-                : null;
-    if (btn) {
-        btn.disabled = true;
-        btn.textContent = 'Проверка...';
-    }
+    if (!db || !exp) return;
 
     try {
-        // ── 1. Читаем свой документ ─────────────────────────────
-        const myRef  = exp.doc(db, 'users', user.uid);
-        const mySnap = await exp.getDoc(myRef);
-        const myData = mySnap.exists() ? mySnap.data() : {};
-
-        // ── 2. Уже использовал реф-код? ─────────────────────────
-        if (myData.invitedBy) {
-            const alreadyName = myData.invitedByName || myData.invitedBy;
-            footerShowToast('Реферальный код уже был использован', 'error');
-            _renderInvitedByBlock(alreadyName);
-            if (btn) { btn.disabled = false; btn.textContent = 'Применить'; }
-            return;
-        }
-
-        // ── 3. Свой код? ─────────────────────────────────────────
-        const myRefCode = myData.referralCode || ('AL-' + user.uid.substring(0, 6).toUpperCase());
-        if (myRefCode.toUpperCase() === code) {
-            footerShowToast('Нельзя использовать свой код', 'error');
-            if (btn) { btn.disabled = false; btn.textContent = 'Применить'; }
-            return;
-        }
-
-        // ── 4. Ищем владельца кода ───────────────────────────────
+        // Ищем владельца кода
         const snap = await exp.getDocs(
             exp.query(
                 exp.collection(db, 'users'),
@@ -1592,8 +1449,7 @@ window.copyRefCode = function() {
         );
 
         if (snap.empty) {
-            footerShowToast('Код не найден. Проверьте правильность', 'error');
-            if (btn) { btn.disabled = false; btn.textContent = 'Применить'; }
+            footerShowToast('Код не найден', 'error');
             return;
         }
 
@@ -1601,132 +1457,51 @@ window.copyRefCode = function() {
         const inviterId   = inviterDoc.id;
         const inviterData = inviterDoc.data();
 
-        // Снова проверяем что это не сам пользователь
         if (inviterId === user.uid) {
             footerShowToast('Нельзя использовать свой код', 'error');
-            if (btn) { btn.disabled = false; btn.textContent = 'Применить'; }
             return;
         }
 
-        // ── 5. Получаем имя пригласившего ────────────────────────
-let inviterName = 'Пользователь';
-
-if (inviterData.displayName && inviterData.displayName.trim()) {
-    inviterName = inviterData.displayName.trim();
-} else if (inviterData.profile?.firstName || inviterData.profile?.lastName) {
-    inviterName = [
-        inviterData.profile?.firstName || '',
-        inviterData.profile?.lastName  || ''
-    ].filter(Boolean).join(' ').trim();
-} else if (inviterData.profile?.username) {
-    inviterName = inviterData.profile.username;
-} else if (inviterData.email) {
-    inviterName = inviterData.email.split('@')[0];
-}
-
-console.log('Inviter found:', {
-    id: inviterId,
-    name: inviterName,
-    rawData: {
-        displayName:      inviterData.displayName,
-        profileFirstName: inviterData.profile?.firstName,
-        profileLastName:  inviterData.profile?.lastName,
-        username:         inviterData.profile?.username,
-        email:            inviterData.email
-    }
-});
-
-        console.log('Inviter found:', {
-            id: inviterId,
-            name: inviterName,
-            rawData: {
-                displayName: inviterData.displayName,
-                profileFirstName: inviterData.profile?.firstName,
-                profileLastName: inviterData.profile?.lastName,
-                email: inviterData.email
-            }
-        });
-
-        // ── 6. Двойная проверка перед записью ────────────────────
-        const mySnapFinal = await exp.getDoc(myRef);
-        const myDataFinal = mySnapFinal.exists() ? mySnapFinal.data() : {};
-        if (myDataFinal.invitedBy) {
-            footerShowToast('Реферальный код уже был использован', 'error');
-            _renderInvitedByBlock(myDataFinal.invitedByName || myDataFinal.invitedBy);
-            if (btn) { btn.disabled = false; btn.textContent = 'Применить'; }
-            return;
-        }
-
-        // ── 7. Записываем данные себе ────────────────────────────
-        const myNewReagents = (myDataFinal.reagents || 0) + 25;
+        // Сохраняем кто пригласил
         await exp.setDoc(
-            myRef,
+            exp.doc(db, 'users', user.uid),
             {
-                invitedBy:     inviterId,
-                invitedByName: inviterName,
-                reagents:      myNewReagents
+                invitedBy:    inviterId,
+                invitedByName: inviterData.displayName || inviterData.profile?.firstName || 'Пользователь'
             },
             { merge: true }
         );
 
-        // ── 8. Начисляем бонус пригласившему ─────────────────────
-        const inviterNewReagents  = (inviterData.reagents  || 0) + 50;
-        const inviterNewInvited   = (inviterData.invitedCount || 0) + 1;
-        
+        // Начисляем бонус пригласившему
+        const inviterRef     = exp.doc(db, 'users', inviterId);
+        const currentReagents = inviterData.reagents || 0;
+        const currentInvited  = inviterData.invitedCount || 0;
+
+        await exp.setDoc(inviterRef, {
+            reagents:     currentReagents + 50,
+            invitedCount: currentInvited + 1
+        }, { merge: true });
+
+        // Начисляем бонус новому пользователю
+        const mySnap    = await exp.getDoc(exp.doc(db, 'users', user.uid));
+        const myData    = mySnap.exists() ? mySnap.data() : {};
+        const myReagents = myData.reagents || 0;
+
         await exp.setDoc(
-            exp.doc(db, 'users', inviterId),
-            {
-                reagents:     inviterNewReagents,
-                invitedCount: inviterNewInvited
-            },
+            exp.doc(db, 'users', user.uid),
+            { reagents: myReagents + 25 },
             { merge: true }
         );
 
-        // ── 9. Обновляем локальные данные ────────────────────────
-        if (window.userProfileData) {
-            window.userProfileData.invitedBy     = inviterId;
-            window.userProfileData.invitedByName = inviterName;
-            window.userProfileData.reagents      = myNewReagents;
-        }
-        if (window._userRootData) {
-            window._userRootData.invitedBy     = inviterId;
-            window._userRootData.invitedByName = inviterName;
-            window._userRootData.reagents      = myNewReagents;
-        }
+        footerShowToast('🧪 Код применён! +25 Reagents вам и +50 пригласившему!', 'success');
+        input.style.display = 'none';
 
-        // ── 10. Обновляем баланс в UI ─────────────────────────────
-        const balEl = document.getElementById('profileReagentBalance');
-        if (balEl) {
-            balEl.innerHTML = myNewReagents +
-                ' <span class="text-sm font-normal text-slate-400 ml-1">RGT</span>';
-        }
-
-        // ── 11. Обновляем блок "кто пригласил" ───────────────────
-        _renderInvitedByBlock(inviterName);
-
-        footerShowToast('🧪 Код принят! +25 Reagents вам, +50 пригласившему!', 'success');
+        // Обновляем форму
+        setTimeout(function() { initAccountPage(); }, 500);
 
     } catch(err) {
         console.error('Referral error:', err);
         footerShowToast('Ошибка: ' + err.message, 'error');
-        if (btn) { btn.disabled = false; btn.textContent = 'Применить'; }
-    }
-
-    // ── Вспомогательная функция рендера блока ────────────────────
-    function _renderInvitedByBlock(name) {
-        // Ищем враппер поля ввода кода
-        const wrapper = document.getElementById('refCodeInputWrapper');
-        if (!wrapper) return;
-
-        wrapper.innerHTML = `
-            <div class="flex items-center gap-2 text-xs text-slate-500 
-                        bg-slate-800/30 rounded-lg px-3 py-2.5 
-                        border border-emerald-800/30">
-                <i class="fas fa-user-check text-emerald-400 flex-shrink-0"></i>
-                <span>Вас пригласил:</span>
-                <span class="text-slate-200 font-semibold">${name}</span>
-            </div>
-        `;
     }
 };
 // ============ COUNTRY PICKER FUNCTIONS ============
@@ -1870,6 +1645,16 @@ document.addEventListener('click', function(e) {
     // ────────────────────────────────────────────────────────────
 
     updatedAt: new Date().toISOString()
+};
+window.copyRefCode = function() {
+    const el = document.getElementById('profileRefCode');
+    if (!el) return;
+    const code = el.textContent.trim();
+    if (code === 'Генерация...') return;
+
+    navigator.clipboard.writeText(code).then(function() {
+        footerShowToast('Реферальный код скопирован!', 'success');
+    });
 };
     // Локальный бэкап
     window.userProfileData = profileData;
@@ -2446,38 +2231,8 @@ window.copyAccountUID = function() {
             @keyframes statusPulse { 0%, 100% { transform: scale(1); opacity: 1; } 50% { transform: scale(1.2); opacity: 0.7; } }
             
             /* Page Modal */
-            .page-modal-content { 
-    max-width: 700px; 
-    width: 95%; 
-    max-height: 90vh; 
-    overflow: hidden; 
-    display: flex; 
-    flex-direction: column; 
-    border-radius: 1rem; 
-    background: rgba(15, 23, 42, 0.98); 
-    border: 1px solid rgba(255,255,255,0.1);
-    /* ДОБАВЬ: */
-    position: relative;
-    margin: auto;
-}
-            /* И убедись что сам .modal центрирует содержимое: */
-.modal {
-    display: none;
-    position: fixed;
-    inset: 0;
-    z-index: 1000;
-    background: rgba(0,0,0,0.7);
-    backdrop-filter: blur(4px);
-    /* ДОБАВЬ: */
-    align-items: center;
-    justify-content: center;
-    overflow-y: auto;
-    padding: 20px;
-}
-
-.modal.active {
-    display: flex;  /* ← flex а не block */
-}
+            .page-modal-content { max-width: 700px; width: 95%; max-height: 90vh; overflow: hidden; display: flex; flex-direction: column; border-radius: 1rem; background: rgba(15, 23, 42, 0.98); border: 1px solid rgba(255,255,255,0.1); }
+            
             /* FAQ Styles */
             .faq-question { border: none; background: none; width: 100%; cursor: pointer; }
             .faq-answer { border-top: none; }
@@ -2543,7 +2298,7 @@ window.copyAccountUID = function() {
     document.addEventListener('projectsLoaded', function() {
         setTimeout(updateFooterStats, 300);
     });
-    
+    _initHeaderAvatarClick();
     console.log('Footer v2.2 initialized successfully');
 }
 
@@ -3013,39 +2768,77 @@ document.addEventListener('DOMContentLoaded', function() {
 
 // Экспортируем для вызова из language.js
 window.updateFooterTranslations = updateFooterTranslations;
-    // ============ ОТКРЫТИЕ ПРОФИЛЯ С ПРОКРУТКОЙ ============
+    function _initHeaderAvatarClick() {
+    // Пробуем сразу и повторно — хедер может рендериться позже
+    function _attach() {
+        var avatar  = document.getElementById('userAvatar');
+        var nameEl  = document.getElementById('userName');
+        var loggedIn = document.getElementById('loggedInView');
 
-window.openMyAccountModal = function() {
-    window.openProfileAndScroll();
-};
-
-window.openProfileAndScroll = function() {
-    // Открываем модалку аккаунта
-    openPageModal('account');
-
-    // Ждём пока модалка отрисуется
-    setTimeout(function() {
-        const modal = document.getElementById('pageModal');
-        if (!modal) return;
-
-        // Прокручиваем модалку наверх сначала
-        const content = modal.querySelector('.page-modal-content');
-        if (content) {
-            content.scrollTop = 0;
+        if (!avatar && !nameEl) {
+            // Ещё не отрендерилось — повторяем
+            return false;
         }
 
-        // Если нужно прокрутить к конкретному блоку — например к форме
-        // (на случай если модалка большая)
-        const form = document.getElementById('accountForm');
-        if (form) {
-            // Небольшая задержка для рендера
+        function openProfile() {
+            // Открываем модалку аккаунта
+            if (typeof window.openPageModal === 'function') {
+                window.openPageModal('account');
+            }
+
+            // Прокручиваем модалку наверх
             setTimeout(function() {
-                form.scrollIntoView({ 
-                    behavior: 'smooth', 
-                    block: 'start' 
-                });
-            }, 200);
+                var modalBox = document.querySelector('.page-modal-content');
+                if (modalBox) modalBox.scrollTop = 0;
+            }, 150);
         }
-    }, 100);
+
+        // Вешаем на аватар
+        if (avatar) {
+            // Убираем старый onclick из HTML
+            avatar.style.cursor = 'pointer';
+            avatar.onclick = openProfile;
+        }
+
+        // Вешаем на блок с именем
+        if (nameEl) {
+            nameEl.style.cursor = 'pointer';
+            nameEl.onclick = openProfile;
+        }
+
+        // Вешаем на весь loggedInView — клик по аватару-обёртке
+        if (loggedIn) {
+            var avatarWrapper = loggedIn.querySelector('.relative.group');
+            if (avatarWrapper) {
+                avatarWrapper.style.cursor = 'pointer';
+                avatarWrapper.onclick = openProfile;
+            }
+        }
+
+        return true;
+    }
+
+    // Пробуем сразу
+    if (!_attach()) {
+        // Если не прикрепилось — повторяем каждые 500мс до 10 раз
+        var tries = 0;
+        var interval = setInterval(function() {
+            tries++;
+            if (_attach() || tries >= 10) {
+                clearInterval(interval);
+            }
+        }, 500);
+    }
+}
+
+// Также добавляем глобальный алиас
+window.openMyAccountModal = function() {
+    if (typeof window.openPageModal === 'function') {
+        window.openPageModal('account');
+        setTimeout(function() {
+            var modalBox = document.querySelector('.page-modal-content');
+            if (modalBox) modalBox.scrollTop = 0;
+        }, 150);
+    }
 };
 })();
