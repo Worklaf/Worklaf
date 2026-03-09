@@ -712,37 +712,35 @@ window.doClaim         = doClaim;
 console.log('🧪 Reagents System v1.0 loaded');
 // ── Автопроверка при загрузке ──────────────────────────────
 async function _checkClaimOnLoad() {
-    let attempts = 0;
-    while ((!window.auth || !window.auth.currentUser) && attempts < 30) {
+    var attempts = 0;
+    while ((!window.auth || !window.auth.currentUser) && attempts < 20) {
         await new Promise(function(r) { setTimeout(r, 500); });
         attempts++;
     }
 
-    const user = window.auth?.currentUser || window.currentUser;
+    var user = (window.auth && window.auth.currentUser) || window.currentUser;
     if (!user) return;
 
-    const status = await getClaimStatus(user);
+    var status = await getClaimStatus(user);
     if (!status) return;
 
-    _applyClaimBtnVisual(status.canClaim, status.lastClaim);
+    _applyClaimBtnVisual(status.canClaim);
 }
+// Интервал таймера — глобальный для возможности сброса
+var _claimCountdownInterval = null;
 
-// ── Обновляем внешний вид кнопки клейма ──────────────────────
-// ── Глобальный интервал таймера ───────────────────────────────
-let _claimCountdownInterval = null;
-
-function _applyClaimBtnVisual(canClaim, lastClaimDate) {
-    const btn = document.getElementById('headerClaimBtn');
+function _applyClaimBtnVisual(canClaim) {
+    var btn = document.getElementById('headerClaimBtn');
     if (!btn) return;
 
-    // Останавливаем старый таймер если был
+    // Останавливаем старый таймер
     if (_claimCountdownInterval) {
         clearInterval(_claimCountdownInterval);
         _claimCountdownInterval = null;
     }
 
     if (canClaim) {
-        // ── Клейм доступен ────────────────────────────────────
+        // ── Клейм доступен — зелёная точка ───────────────────
         btn.className = [
             'relative flex items-center gap-2 px-3 py-2',
             'bg-gradient-to-r from-cyan-600/20 to-blue-600/20',
@@ -759,31 +757,28 @@ function _applyClaimBtnVisual(canClaim, lastClaimDate) {
             'bg-emerald-400 rounded-full border-2 border-slate-900 animate-pulse"></span>';
 
     } else {
-        // ── Клейм уже сделан — показываем таймер ─────────────
+        // ── Клейм сделан — обратный отсчёт ───────────────────
 
-        // Вычисляем время до следующего сброса (00:00 UTC)
         function getMsToMidnightUTC() {
-            const now      = new Date();
-            const midnight = new Date();
+            var midnight = new Date();
             midnight.setUTCHours(24, 0, 0, 0);
-            return midnight - now;
+            return midnight - new Date();
         }
 
         function formatTime(ms) {
             if (ms <= 0) return '00:00:00';
-            const totalSec = Math.floor(ms / 1000);
-            const h = Math.floor(totalSec / 3600);
-            const m = Math.floor((totalSec % 3600) / 60);
-            const s = totalSec % 60;
-            return [h, m, s].map(function(v) {
+            var s = Math.floor(ms / 1000);
+            var h = Math.floor(s / 3600);
+            var m = Math.floor((s % 3600) / 60);
+            var sec = s % 60;
+            return [h, m, sec].map(function(v) {
                 return String(v).padStart(2, '0');
             }).join(':');
         }
 
         function renderCooldown() {
-            const remaining = getMsToMidnightUTC();
+            var remaining = getMsToMidnightUTC();
 
-            // Если время вышло — перезапускаем проверку
             if (remaining <= 0) {
                 clearInterval(_claimCountdownInterval);
                 _claimCountdownInterval = null;
@@ -791,7 +786,7 @@ function _applyClaimBtnVisual(canClaim, lastClaimDate) {
                 return;
             }
 
-            const timeStr = formatTime(remaining);
+            var timeStr = formatTime(remaining);
 
             btn.className = [
                 'relative flex items-center gap-2 px-3 py-2',
@@ -803,21 +798,20 @@ function _applyClaimBtnVisual(canClaim, lastClaimDate) {
             btn.innerHTML =
                 '<span class="text-base" style="opacity:0.4">🧪</span>' +
                 '<div class="hidden sm:flex flex-col items-start leading-none gap-0.5">' +
-                    '<span style="font-size:9px;color:#64748b;text-transform:uppercase;letter-spacing:0.05em">сброс через</span>' +
-                    '<span style="font-size:11px;font-family:monospace;font-weight:700;color:#fb923c">' + timeStr + '</span>' +
+                    '<span style="font-size:9px;color:#64748b;text-transform:uppercase;' +
+                           'letter-spacing:0.05em">сброс через</span>' +
+                    '<span style="font-size:11px;font-family:monospace;font-weight:700;' +
+                           'color:#fb923c">' + timeStr + '</span>' +
                 '</div>' +
-                '<span style="font-size:11px;font-family:monospace;font-weight:700;color:#fb923c" class="sm:hidden">' + timeStr + '</span>';
+                '<span style="font-size:11px;font-family:monospace;font-weight:700;' +
+                       'color:#fb923c" class="sm:hidden">' + timeStr + '</span>';
         }
 
-        // Рисуем сразу
         renderCooldown();
-
-        // Обновляем каждую секунду
         _claimCountdownInterval = setInterval(renderCooldown, 1000);
     }
 }
 
-// Экспортируем чтобы index.html мог вызывать
 window._applyClaimBtnVisual = _applyClaimBtnVisual;
 
 // Запускаем проверку
