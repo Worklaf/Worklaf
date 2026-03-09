@@ -751,27 +751,29 @@ window.reloadData = async function() {
 };
 
 async function loadAllData(user) {
-    setTableMsg('<i class="fas fa-spinner fa-spin mr-2"></i>Подключение к Firebase...', false);
+    setTableMsg('<i class="fas fa-spinner fa-spin mr-2 text-blue-400"></i>Загрузка данных...', false);
 
     try {
-        await Promise.all([
+        // Загружаем проекты и пользователей ПАРАЛЛЕЛЬНО
+        const [, usersOk] = await Promise.allSettled([
             loadProjects(),
             loadUsers()
         ]);
-        await Promise.all([
+
+        // Сразу показываем таблицу не дожидаясь статистики
+        await Promise.allSettled([
             buildProjectStats(),
             loadNotifStats(),
             loadBcastHistory()
         ]);
-        updateCount();
-    } catch (outerErr) {
-        console.error('[loadAllData] Critical error:', outerErr);
-        setTableMsg('Критическая ошибка: ' + outerErr.message, true);
 
-        // Показываем диагностику автоматически
+        updateCount();
+
+    } catch (outerErr) {
+        console.error('[loadAllData]', outerErr);
+        setTableMsg('Ошибка: ' + outerErr.message, true);
         var panel = document.getElementById('debugPanel');
         if (panel) panel.classList.remove('hidden');
-        debugLog('Критическая ошибка загрузки: ' + outerErr.message, 'err');
         window.runDiagnostics();
     }
 }
@@ -796,29 +798,35 @@ async function loadUsers() {
         return;
     }
 
-    console.log('[loadUsers] Начало...');
-    setTableMsg('<i class="fas fa-spinner fa-spin mr-2"></i>Загрузка пользователей...', false);
+    setTableMsg(
+        '<div class="flex flex-col items-center gap-3">' +
+        '<i class="fas fa-spinner fa-spin text-blue-400 text-2xl"></i>' +
+        '<span class="text-slate-400">Загрузка пользователей...</span>' +
+        '<div class="w-48 h-1.5 bg-slate-800 rounded-full overflow-hidden">' +
+        '<div class="h-full bg-blue-500 rounded-full loading-bar" style="width:0%;transition:width 8s linear"></div>' +
+        '</div></div>',
+        false
+    );
+
+    // Анимируем прогресс-бар
+    setTimeout(function() {
+        var bar = document.querySelector('.loading-bar');
+        if (bar) bar.style.width = '90%';
+    }, 50);
 
     var snap;
     try {
         snap = await fbGetDocs(fbCol(fbDb, "users"));
     } catch (err) {
-        console.error('[loadUsers] Ошибка getDocs:', err);
-        setTableMsg('Ошибка чтения users: ' + err.code + ' — ' + err.message, true);
+        console.error('[loadUsers] getDocs error:', err);
+        setTableMsg('Ошибка: ' + err.code + ' — ' + err.message, true);
         throw err;
     }
 
-    console.log('[loadUsers] Получено документов:', snap.size);
+    console.log('[loadUsers] Документов:', snap.size);
 
     if (snap.size === 0) {
-        // Показываем диагностику
-        var panel = document.getElementById('debugPanel');
-        if (panel) panel.classList.remove('hidden');
-        debugLog('Коллекция users пуста или нет доступа', 'warn');
-        debugLog('Проверьте правила Firestore: allow read: if request.auth != null', 'info');
-        setTableMsg('Пользователей не найдено. Проверьте права Firestore.', true);
-
-        // Всё равно продолжаем — обновляем счётчики нулями
+        setTableMsg('Нет пользователей или нет доступа', true);
         updateStatCards([], new Set());
         renderActivityChart([]);
         renderTopUsers([]);
@@ -826,10 +834,10 @@ async function loadUsers() {
         return;
     }
 
-    var now          = new Date();
-    var ms30min      = 30 * 60 * 1000;
-    var todayStart   = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-    var weekStart    = new Date(todayStart);
+    var now        = new Date();
+    var ms30min    = 30 * 60 * 1000;
+    var todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    var weekStart  = new Date(todayStart);
     weekStart.setDate(weekStart.getDate() - 7);
 
     var countriesSet = new Set();
@@ -839,10 +847,9 @@ async function loadUsers() {
         var raw = docSnap.data();
         var uid = docSnap.id;
 
-        // Конвертация Timestamp
         var toDate = function(val) {
             if (!val) return null;
-            if (val && typeof val.toDate === 'function') return val.toDate();
+            if (typeof val.toDate === 'function') return val.toDate();
             if (val instanceof Date) return val;
             var p = new Date(val);
             return isNaN(p.getTime()) ? null : p;
@@ -852,78 +859,72 @@ async function loadUsers() {
         var firstLogin = toDate(raw.firstLogin);
         var isOnline   = !!(lastLogin && (now - lastLogin) < ms30min);
 
-        // Клики
+        // Клики по гайдам
         var guideStats       = raw.arcGuideStats || {};
         var totalClicks      = 0;
         var topProjectId     = null;
         var topProjectClicks = 0;
 
         Object.keys(guideStats).forEach(function(pid) {
-            var st = guideStats[pid];
-            var cl = (st && st.totalClicks) ? Number(st.totalClicks) : 0;
+            var st = guideStats[pid] || {};
+            var cl = Number(st.totalClicks || 0);
             totalClicks += cl;
-            if (cl > topProjectClicks) { topProjectClicks = cl; topProjectId = pid; }
+            if (cl > topProjectClicks) {
+                topProjectClicks = cl;
+                topProjectId     = pid;
+            }
         });
 
-        // ─── Профиль: ищем во всех возможных местах ───────────────
-        // Вариант 1: raw.profile.{field}
-        // Вариант 2: raw.{field} напрямую
-        // Вариант 3: raw.userData.{field}
+        // Данные профиля — ищем в нескольких местах
+        var profile   = raw.profile   || {};
+        var userData  = raw.userData  || {};
 
-        var profile    = raw.profile    || {};
-        var userData   = raw.userData   || {};
+        var firstName = profile.firstName  || raw.firstName  || userData.firstName  || '';
+        var lastName  = profile.lastName   || raw.lastName   || userData.lastName   || '';
+        var username  = profile.username   || raw.username   || userData.username   || '';
+        var telegram  = profile.telegram   || raw.telegram   || userData.telegram   || '';
+        var birthdate = profile.birthdate  || raw.birthdate  || userData.birthdate  || '';
+        var gender    = profile.gender     || raw.gender     || userData.gender     || '';
+        var bio       = profile.bio        || raw.bio        || userData.bio        || '';
 
-        var firstName  = profile.firstName  || raw.firstName  || userData.firstName  || '';
-        var lastName   = profile.lastName   || raw.lastName   || userData.lastName   || '';
-        var username   = profile.username   || raw.username   || userData.username   || '';
-        var telegram   = profile.telegram   || raw.telegram   || userData.telegram   || '';
-        var birthdate  = profile.birthdate  || raw.birthdate  || userData.birthdate  || '';
-        var gender     = profile.gender     || raw.gender     || userData.gender     || '';
-        var bio        = profile.bio        || raw.bio        || userData.bio        || '';
-
-        // Страна: может быть code или name
         var countryCode = profile.country     || raw.country     || userData.country     || '';
         var countryName = profile.countryName || raw.countryName || userData.countryName || countryCode;
 
         if (countryName) countriesSet.add(countryName);
 
-        var displayName = raw.displayName || firstName + (lastName ? ' ' + lastName : '') || 'Аноним';
-        if (displayName === ' ') displayName = 'Аноним';
-
-        var profileFilled = !!(firstName || lastName || username || telegram || countryCode);
+        var displayName = raw.displayName
+            || [firstName, lastName].filter(Boolean).join(' ')
+            || 'Аноним';
 
         allUsers.push({
-            id:              uid,
-            email:           raw.email      || '—',
-            displayName:     displayName.trim(),
-            photoURL:        raw.photoURL   || '',
-            provider:        raw.provider   || 'unknown',
-            firstLogin:      firstLogin,
-            lastLogin:       lastLogin,
-            isOnline:        isOnline,
-            totalClicks:     totalClicks,
-            topProjectId:    topProjectId,
-            topProjectClicks:topProjectClicks,
-            completedCount:  raw.completed  ? raw.completed.length  : 0,
-            favoritesCount:  raw.favorites  ? raw.favorites.length  : 0,
-            profileFilled:   profileFilled,
-            firstName:       firstName,
-            lastName:        lastName,
-            username:        username,
-            telegram:        telegram,
-            birthdate:       birthdate,
-            gender:          gender,
-            country:         countryName,
-            countryCode:     countryCode,
-            bio:             bio,
-            raw:             raw
+            id:               uid,
+            email:            raw.email    || '—',
+            displayName:      displayName.trim() || 'Аноним',
+            photoURL:         raw.photoURL || '',
+            provider:         raw.provider || 'unknown',
+            firstLogin,
+            lastLogin,
+            isOnline,
+            totalClicks,
+            topProjectId,
+            topProjectClicks,
+            completedCount:   Array.isArray(raw.completed)  ? raw.completed.length  : 0,
+            favoritesCount:   Array.isArray(raw.favorites)  ? raw.favorites.length  : 0,
+            profileFilled:    !!(firstName || lastName || username || telegram || countryCode),
+            firstName,  lastName,  username,
+            telegram,   birthdate, gender,
+            country:    countryName,
+            countryCode,
+            bio,
+            raw
         });
     });
 
-    // Сортировка
+    // Сортировка по последнему входу
     allUsers.sort(function(a, b) { return (b.lastLogin || 0) - (a.lastLogin || 0); });
     filteredUsers = allUsers.slice();
 
+    // Рендерим всё
     updateStatCards(allUsers, countriesSet);
     renderActivityChart(allUsers);
     renderTopUsers(allUsers);
@@ -931,8 +932,9 @@ async function loadUsers() {
     renderTableHead();
     renderTable();
     updateTimestamp();
+    updateCount();
 
-    console.log('[loadUsers] Готово. Всего:', allUsers.length);
+    console.log('[loadUsers] Готово:', allUsers.length, 'пользователей');
 }
 
 // ── Статистика проектов ───────────────────────────────────────────
@@ -1333,24 +1335,73 @@ window.toggleAll = function() {
 };
 
 window.filterOnline = function() {
-    filteredUsers = allUsers.filter(function(u) { return u.isOnline; });
-    setText('usersCount', '(' + filteredUsers.length + ' онлайн из ' + allUsers.length + ')');
+    var btn = document.querySelector('button[onclick="window.filterOnline()"]');
+
+    // Переключатель: если уже фильтр онлайн — сбрасываем
+    if (window._onlineFilterActive) {
+        window._onlineFilterActive = false;
+        filteredUsers = allUsers.slice();
+        setText('usersCount', '(' + allUsers.length + ')');
+
+        if (btn) {
+            btn.className = 'text-xs bg-emerald-600/20 text-emerald-400 px-3 py-1.5 rounded-lg hover:bg-emerald-600/30';
+            btn.innerHTML = '<i class="fas fa-circle mr-1"></i>Онлайн';
+        }
+    } else {
+        window._onlineFilterActive = true;
+        filteredUsers = allUsers.filter(function(u) { return u.isOnline; });
+
+        var onlineCount = filteredUsers.length;
+        setText('usersCount', '(' + onlineCount + ' онлайн из ' + allUsers.length + ')');
+
+        if (btn) {
+            btn.className = 'text-xs bg-emerald-500 text-white px-3 py-1.5 rounded-lg';
+            btn.innerHTML = '<i class="fas fa-times mr-1"></i>Сбросить (' + onlineCount + ')';
+        }
+
+        // Если никого нет онлайн
+        if (onlineCount === 0) {
+            var tbody = document.getElementById('tBody');
+            if (tbody) {
+                tbody.innerHTML =
+                    '<tr><td colspan="9" class="py-8 text-center">' +
+                    '<div class="text-4xl mb-3">😴</div>' +
+                    '<p class="text-slate-400">Никого нет онлайн</p>' +
+                    '<p class="text-slate-500 text-xs mt-1">Онлайн = активность за последние 30 минут</p>' +
+                    '</td></tr>';
+            }
+            return;
+        }
+    }
+
+    // Сбрасываем сортировку поиска
+    var searchEl = document.getElementById('searchInput');
+    if (searchEl) searchEl.value = '';
+
     renderTable();
 };
 
 window.doSearch = function() {
+    // Сбрасываем онлайн-фильтр
+    window._onlineFilterActive = false;
+    var onlineBtn = document.querySelector('button[onclick="window.filterOnline()"]');
+    if (onlineBtn) {
+        onlineBtn.className = 'text-xs bg-emerald-600/20 text-emerald-400 px-3 py-1.5 rounded-lg hover:bg-emerald-600/30';
+        onlineBtn.innerHTML = '<i class="fas fa-circle mr-1"></i>Онлайн';
+    }
+
     var s = ((document.getElementById('searchInput') || {}).value || '').toLowerCase();
-    filteredUsers = allUsers.filter(function(u) {
+    filteredUsers = !s ? allUsers.slice() : allUsers.filter(function(u) {
         return u.displayName.toLowerCase().includes(s) ||
                u.email.toLowerCase().includes(s)       ||
                u.id.toLowerCase().includes(s)          ||
-               (u.firstName  && u.firstName.toLowerCase().includes(s))  ||
-               (u.lastName   && u.lastName.toLowerCase().includes(s))   ||
-               (u.username   && u.username.toLowerCase().includes(s))   ||
-               (u.telegram   && u.telegram.toLowerCase().includes(s))   ||
-               (u.country    && u.country.toLowerCase().includes(s));
+               (u.firstName && u.firstName.toLowerCase().includes(s)) ||
+               (u.lastName  && u.lastName.toLowerCase().includes(s))  ||
+               (u.username  && u.username.toLowerCase().includes(s))  ||
+               (u.telegram  && u.telegram.toLowerCase().includes(s))  ||
+               (u.country   && u.country.toLowerCase().includes(s));
     });
-    setText('usersCount', '(' + filteredUsers.length + ' из ' + allUsers.length + ')');
+    setText('usersCount', '(' + filteredUsers.length + (s ? ' из ' + allUsers.length : '') + ')');
     renderTable();
 };
 
