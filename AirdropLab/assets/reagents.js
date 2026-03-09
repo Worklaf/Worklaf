@@ -7,16 +7,7 @@
 
 (function() {
 'use strict';
-    // Хелпер перевода
-    const tr = (key, fallback) => {
-        if (typeof window.t === 'function') return window.t(key) || fallback || key;
-        return fallback || key;
-    };
-    const trf = (key, vars, fallback) => {
-        let s = tr(key, fallback);
-        if (vars) Object.keys(vars).forEach(k => { s = s.split('{' + k + '}').join(vars[k]); });
-        return s;
-    };
+
 // ─────────────────────────────────────────────────────────────────
 // КОНФИГ НАГРАД
 // ─────────────────────────────────────────────────────────────────
@@ -25,13 +16,13 @@ const REAGENTS_CONFIG = {
 
     // Бонусы за стрики (добавляются к базовой)
     streakBonuses: [
-        { days: 7,   bonus: 50,  labelKey: 'streak_week',     color: 'text-orange-400' },
-        { days: 30,  bonus: 100, labelKey: 'streak_month',    color: 'text-yellow-400' },
-        { days: 60,  bonus: 200, labelKey: 'streak_2months',  color: 'text-cyan-400'   },
-        { days: 90,  bonus: 300, labelKey: 'streak_quarter',  color: 'text-purple-400' },
-        { days: 120, bonus: 400, labelKey: 'streak_4months',  color: 'text-pink-400'   },
-        { days: 150, bonus: 500, labelKey: 'streak_5months',  color: 'text-emerald-400'},
-        { days: 180, bonus: 600, labelKey: 'streak_halfyear', color: 'text-amber-400'  },
+        { days: 7,   bonus: 50,  label: '🔥 Неделя!',    color: 'text-orange-400' },
+        { days: 30,  bonus: 100, label: '⚡ Месяц!',      color: 'text-yellow-400' },
+        { days: 60,  bonus: 200, label: '💎 2 месяца!',   color: 'text-cyan-400'   },
+        { days: 90,  bonus: 300, label: '👑 Квартал!',    color: 'text-purple-400' },
+        { days: 120, bonus: 400, label: '🌟 4 месяца!',   color: 'text-pink-400'   },
+        { days: 150, bonus: 500, label: '🚀 5 месяцев!',  color: 'text-emerald-400'},
+        { days: 180, bonus: 600, label: '🏆 Полгода!',    color: 'text-amber-400'  },
     ],
 
     // Бонус за реферала
@@ -62,19 +53,20 @@ function calcReward(newStreak) {
     let bonusLabel = '';
 
     // Проверяем все пороги стриков (берём максимальный подходящий)
-    or (let i = REAGENTS_CONFIG.streakBonuses.length - 1; i >= 0; i--) {
+    for (let i = REAGENTS_CONFIG.streakBonuses.length - 1; i >= 0; i--) {
         const sb = REAGENTS_CONFIG.streakBonuses[i];
         if (newStreak % sb.days === 0) {
             bonus      = sb.bonus;
-            bonusLabel = tr(sb.labelKey, sb.labelKey);
+            bonusLabel = sb.label;
             break;
         }
     }
 
+    // Для каждых следующих 30 дней после 60 — +100 от предыдущего
     if (!bonus && newStreak > 60 && newStreak % 30 === 0) {
         const months = Math.floor(newStreak / 30);
         bonus      = 100 * months;
-        bonusLabel = `🎯 ${months} ${tr('streak_month', 'Month')}`;
+        bonusLabel = `🎯 ${months} месяцев!`;
     }
 
     return {
@@ -255,7 +247,7 @@ window.doClaim = async function() {
     const btn = document.getElementById('claimBtn');
     if (btn) {
         btn.disabled = true;
-        btn.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i>' + tr('claim_claiming', 'Claiming...');
+        btn.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i>Получение...';
     }
 
     try {
@@ -292,37 +284,53 @@ function _renderLoading() {
     return `
         <div class="text-center py-12">
             <div class="text-4xl mb-3 animate-pulse">🧪</div>
-            <p class="text-slate-400 text-sm">${tr('claim_loading', 'Loading...')}</p>
+            <p class="text-slate-400 text-sm">Загрузка...</p>
         </div>
     `;
 }
-    // СТАЛО (полностью):
+
+function _renderError(msg) {
+    return `
+        <div class="text-center py-10">
+            <div class="text-4xl mb-3">⚠️</div>
+            <p class="text-red-400 text-sm mb-4">${msg}</p>
+            <button onclick="closeClaimModal()"
+                class="px-6 py-2 bg-slate-700 hover:bg-slate-600 rounded-lg text-sm text-white transition-colors">
+                Закрыть
+            </button>
+        </div>
+    `;
+}
+
 function _renderClaimUI(status) {
     const { canClaim, streak, newStreak, reagents, reward,
             streakBroken, nextMilestone } = status;
 
+    // Прогресс до следующего майлстона
     const prevMilestone = nextMilestone.days - 30 < 0 ? 0 : nextMilestone.days - 30;
     const progressPct   = Math.round(
         ((streak - prevMilestone) / (nextMilestone.days - prevMilestone)) * 100
     );
 
+    // Дни недели для визуализации
     const weekDays = _buildWeekDays(status);
 
     return `
     <div class="p-6">
+
         <!-- Заголовок с балансом -->
         <div class="flex items-center justify-between mb-6">
             <div>
-                <div class="text-xs text-slate-500 mb-1">${tr('claim_balance_label', 'Balance')}</div>
+                <div class="text-xs text-slate-500 mb-1">Ваш баланс</div>
                 <div class="text-3xl font-black">
                     <span class="bg-gradient-to-r from-cyan-400 to-blue-400 bg-clip-text text-transparent">
                         ${reagents}
                     </span>
-                    <span class="text-sm font-normal text-slate-400 ml-1">${tr('reagents_rgt_unit', 'RGT')}</span>
+                    <span class="text-sm font-normal text-slate-400 ml-1">RGT</span>
                 </div>
             </div>
             <div class="text-right">
-                <div class="text-xs text-slate-500 mb-1">${tr('claim_streak_label', 'Streak')}</div>
+                <div class="text-xs text-slate-500 mb-1">Стрик</div>
                 <div class="text-3xl font-black text-orange-400">
                     ${streak}
                     <span class="text-sm font-normal text-slate-400">🔥</span>
@@ -331,26 +339,27 @@ function _renderClaimUI(status) {
         </div>
 
         ${streakBroken ? `
+        <!-- Стрик сброшен -->
         <div class="mb-4 p-3 bg-red-900/30 border border-red-800/50 rounded-xl text-center">
             <div class="text-2xl mb-1">💔</div>
-            <div class="text-red-400 text-sm font-medium">${tr('claim_streak_broken_title', 'Streak reset!')}</div>
-            <div class="text-slate-400 text-xs mt-1">${tr('claim_streak_broken_desc', 'You missed a day. Starting over!')}</div>
+            <div class="text-red-400 text-sm font-medium">Стрик сброшен!</div>
+            <div class="text-slate-400 text-xs mt-1">Вы пропустили день. Начинаем заново!</div>
         </div>
         ` : ''}
 
         <!-- Дни недели -->
         <div class="mb-5">
-            <div class="text-xs text-slate-500 mb-2 text-center">${tr('claim_week_progress', 'Weekly progress')}</div>
+            <div class="text-xs text-slate-500 mb-2 text-center">Прогресс недели</div>
             <div class="flex justify-center gap-1.5">
                 ${weekDays}
             </div>
         </div>
 
-        <!-- Прогресс -->
+        <!-- Прогресс до следующего бонуса -->
         <div class="mb-5 bg-slate-800/50 rounded-xl p-3">
             <div class="flex items-center justify-between text-xs mb-2">
-                <span class="text-slate-400">${trf('claim_until_bonus', {days: nextMilestone.days}, 'Until bonus')}</span>
-                <span class="text-cyan-400 font-medium">${trf('claim_days_left', {days: nextMilestone.daysLeft}, nextMilestone.daysLeft + ' days')}</span>
+                <span class="text-slate-400">До бонуса за ${nextMilestone.days} дней</span>
+                <span class="text-cyan-400 font-medium">${nextMilestone.daysLeft} дн.</span>
             </div>
             <div class="h-2 bg-slate-700 rounded-full overflow-hidden">
                 <div class="h-full bg-gradient-to-r from-cyan-500 to-blue-500 rounded-full transition-all"
@@ -358,20 +367,22 @@ function _renderClaimUI(status) {
             </div>
         </div>
 
+        <!-- Кнопка клейма или "уже получено" -->
         ${canClaim ? `
+        <!-- Награда -->
         <div class="mb-4 text-center">
-            <div class="text-xs text-slate-500 mb-1">${tr('claim_today_reward', 'Today you will receive')}</div>
+            <div class="text-xs text-slate-500 mb-1">Сегодня вы получите</div>
             <div class="flex items-center justify-center gap-2">
                 <span class="text-2xl font-black text-cyan-400">+${reward.total}</span>
-                <span class="text-slate-400">${tr('reagents_rgt_unit', 'RGT')}</span>
+                <span class="text-slate-400">RGT</span>
                 ${reward.bonus > 0 ? `
                 <span class="text-xs px-2 py-0.5 bg-yellow-500/20 text-yellow-400 rounded-full border border-yellow-500/30">
-                    +${reward.bonus} ${tr('claim_credited', 'bonus')} ${reward.label}
+                    +${reward.bonus} бонус ${reward.label}
                 </span>` : ''}
             </div>
             ${newStreak > streak ? `
             <div class="text-xs text-slate-500 mt-1">
-                ${tr('claim_streak_will_be', 'Streak will become:')} <span class="text-orange-400 font-medium">${newStreak} 🔥</span>
+                Стрик станет: <span class="text-orange-400 font-medium">${newStreak} 🔥</span>
             </div>` : ''}
         </div>
 
@@ -383,17 +394,18 @@ function _renderClaimUI(status) {
                    hover:scale-[1.02] active:scale-[0.98]
                    flex items-center justify-center gap-3">
             <span class="text-xl">🧪</span>
-            ${tr('claim_get_btn', 'Claim Reagents')}
+            Получить Reagents
         </button>
         ` : `
+        <!-- Уже клеймил -->
         <div class="text-center py-4">
             <div class="w-16 h-16 rounded-full bg-emerald-500/20 border-2 border-emerald-500/40
                         flex items-center justify-center mx-auto mb-3">
                 <i class="fas fa-check text-2xl text-emerald-400"></i>
             </div>
-            <div class="text-emerald-400 font-bold text-lg mb-1">${tr('claim_already_title', 'Already claimed!')}</div>
+            <div class="text-emerald-400 font-bold text-lg mb-1">Уже получено!</div>
             <div class="text-slate-400 text-sm mb-4">
-                ${tr('claim_next_at', 'Next claim opens at')}
+                Следующий клейм откроется в
                 <span class="text-white font-medium">00:00 UTC</span>
             </div>
             <div class="text-xs text-slate-500">
@@ -404,38 +416,40 @@ function _renderClaimUI(status) {
 
         <!-- Таблица наград -->
         <div class="mt-5 border-t border-slate-700/50 pt-4">
-            <div class="text-xs text-slate-500 mb-3 text-center">${tr('claim_rewards_table', 'Streak reward table')}</div>
+            <div class="text-xs text-slate-500 mb-3 text-center">Таблица наград за стрики</div>
             <div class="grid grid-cols-2 gap-1.5">
                 ${REAGENTS_CONFIG.streakBonuses.map(sb => `
                 <div class="flex items-center justify-between px-3 py-1.5 rounded-lg
                             ${streak >= sb.days ? 'bg-emerald-900/20 border border-emerald-800/30' : 'bg-slate-800/30'}
                             text-xs">
                     <span class="${streak >= sb.days ? 'text-emerald-400' : 'text-slate-400'}">
-                        ${streak >= sb.days ? '✅' : '🔒'} ${sb.days} ${tr('account_days_short', 'days')}
+                        ${streak >= sb.days ? '✅' : '🔒'} ${sb.days} дн.
                     </span>
                     <span class="${streak >= sb.days ? 'text-yellow-400' : 'text-slate-500'} font-medium">
-                        +${sb.bonus} ${tr('reagents_rgt_unit', 'RGT')}
+                        +${sb.bonus} RGT
                     </span>
                 </div>`).join('')}
             </div>
             <div class="mt-2 text-center text-xs text-slate-600">
-                ${tr('claim_after_60', 'After 60 days: every 30 days +100 RGT bonus')}
+                После 60 дней: каждые 30 дней +100 RGT к бонусу
             </div>
         </div>
 
         <button onclick="closeClaimModal()"
             class="w-full mt-4 py-2.5 bg-slate-800 hover:bg-slate-700 rounded-xl text-sm text-slate-400 hover:text-white transition-colors">
-            ${tr('claim_close_btn', 'Close')}
+            Закрыть
         </button>
     </div>
     `;
-}// СТАЛО:
+}
+
 function _showClaimSuccess(result) {
     const body = document.getElementById('claimModalBody');
     if (!body) return;
 
     body.innerHTML = `
     <div class="p-6 text-center">
+        <!-- Анимация -->
         <div class="relative w-24 h-24 mx-auto mb-5">
             <div class="absolute inset-0 rounded-full bg-cyan-500/20 animate-ping"></div>
             <div class="relative w-24 h-24 rounded-full bg-gradient-to-br from-cyan-500/30 to-blue-500/30
@@ -444,44 +458,46 @@ function _showClaimSuccess(result) {
             </div>
         </div>
 
-        <h3 class="text-2xl font-black text-white mb-1">${tr('claim_success_title', 'Reagents claimed!')}</h3>
+        <h3 class="text-2xl font-black text-white mb-1">Reagents получены!</h3>
 
         ${result.streakBroken ? `
-        <div class="text-sm text-red-400 mb-3">${tr('claim_streak_reset', 'Streak reset — starting over!')}</div>
+        <div class="text-sm text-red-400 mb-3">Стрик сброшен — начинаем заново!</div>
         ` : ''}
 
+        <!-- Начислено -->
         <div class="bg-slate-800/50 rounded-xl p-4 mb-4">
-            <div class="text-xs text-slate-500 mb-1">${tr('claim_credited', 'Credited')}</div>
+            <div class="text-xs text-slate-500 mb-1">Начислено</div>
             <div class="text-4xl font-black bg-gradient-to-r from-cyan-400 to-blue-400 bg-clip-text text-transparent">
                 +${result.reward.total}
             </div>
-            <div class="text-slate-400 text-sm">${tr('claim_reagents_unit', 'Reagents')}</div>
+            <div class="text-slate-400 text-sm">Reagents</div>
 
             ${result.reward.bonus > 0 ? `
             <div class="mt-2 inline-flex items-center gap-2 px-3 py-1.5 rounded-full
                         bg-yellow-500/20 border border-yellow-500/30 text-yellow-400 text-sm">
                 <i class="fas fa-star"></i>
-                ${result.reward.label} — ${tr('claim_credited', 'bonus')} +${result.reward.bonus} ${tr('reagents_rgt_unit', 'RGT')}!
+                ${result.reward.label} — бонус +${result.reward.bonus} RGT!
             </div>` : ''}
         </div>
 
+        <!-- Статистика -->
         <div class="grid grid-cols-3 gap-3 mb-5">
             <div class="bg-slate-800/30 rounded-lg p-3">
                 <div class="text-lg font-bold text-cyan-400">${result.newReagents}</div>
-                <div class="text-xs text-slate-500">${tr('claim_balance_short', 'Balance')}</div>
+                <div class="text-xs text-slate-500">Баланс</div>
             </div>
             <div class="bg-slate-800/30 rounded-lg p-3">
                 <div class="text-lg font-bold text-orange-400">${result.newStreak}🔥</div>
-                <div class="text-xs text-slate-500">${tr('claim_streak_short', 'Streak')}</div>
+                <div class="text-xs text-slate-500">Стрик</div>
             </div>
             <div class="bg-slate-800/30 rounded-lg p-3">
                 <div class="text-lg font-bold text-emerald-400">${result.nextMilestone.daysLeft}</div>
-                <div class="text-xs text-slate-500">${tr('claim_to_bonus_short', 'To bonus')}</div>
+                <div class="text-xs text-slate-500">До бонуса</div>
             </div>
         </div>
 
         <div class="text-xs text-slate-500 mb-4">
-            ${tr('claim_next_claim', 'Next claim:')} <span class="text-white">00:00 UTC</span>
+            Следующий клейм: <span class="text-white">00:00 UTC</span>
             · ${_getTimeToMidnightUTC()}
         </div>
 
@@ -489,7 +505,7 @@ function _showClaimSuccess(result) {
             class="w-full py-3 bg-gradient-to-r from-cyan-600 to-blue-600
                    hover:from-cyan-500 hover:to-blue-500
                    rounded-xl text-sm font-bold text-white transition-all">
-            ${tr('claim_great_btn', 'Great!')}
+            Отлично!
         </button>
     </div>
     `;
@@ -497,15 +513,7 @@ function _showClaimSuccess(result) {
 
 function _buildWeekDays(status) {
     const { streak, canClaim, lastClaim } = status;
-    const days = [
-        tr('week_mon','Mon'),
-        tr('week_tue','Tue'),
-        tr('week_wed','Wed'),
-        tr('week_thu','Thu'),
-        tr('week_fri','Fri'),
-        tr('week_sat','Sat'),
-        tr('week_sun','Sun')
-    ];
+    const days = ['Пн','Вт','Ср','Чт','Пт','Сб','Вс'];
     const todayUTCDay = new Date().getUTCDay(); // 0=вс ... 6=сб
     // Приводим к Пн=0 ... Вс=6
     const todayIdx = (todayUTCDay + 6) % 7;
@@ -550,7 +558,7 @@ function _getTimeToMidnightUTC() {
 
     const h = Math.floor(diff / 3600000);
     const m = Math.floor((diff % 3600000) / 60000);
-    return trf('claim_time_left', { h: h, m: m }, `${h}h ${m}m`);
+    return `Осталось: ${h}ч ${m}мин`;
 }
 
 function _updateHeaderReagents(amount) {
@@ -578,8 +586,8 @@ function _ensureClaimModal() {
                         🧪
                     </div>
                     <div>
-                        <h3 class="font-bold text-white">${tr('claim_title', 'Daily Reagents')}</h3>
-                    <p class="text-xs text-slate-500">${tr('claim_updated_utc', 'Resets at 00:00 UTC')}</p>
+                        <h3 class="font-bold text-white">Ежедневные Reagents</h3>
+                        <p class="text-xs text-slate-500">Обновляется в 00:00 UTC</p>
                     </div>
                 </div>
                 <button onclick="closeClaimModal()"
@@ -709,10 +717,10 @@ function _applyClaimBtnVisual(canClaim) {
             'rounded-xl text-sm text-cyan-400 hover:text-white',
             'transition-all duration-300 cursor-pointer'
         ].join(' ');
-        btn.title = tr('claim_get_btn', 'Claim Reagents');
+        btn.title = 'Получить ежедневные Reagents';
         btn.innerHTML =
             '<span class="text-base">🧪</span>' +
-            '<span class="hidden sm:inline font-medium text-xs">' + tr('claim_get_btn', 'Claim') + '</span>' +
+            '<span class="hidden sm:inline font-medium text-xs">Клейм</span>' +
             '<span id="claimDot" class="absolute -top-1 -right-1 w-2.5 h-2.5 ' +
             'bg-emerald-400 rounded-full border-2 border-slate-900 animate-pulse"></span>';
 
@@ -754,12 +762,12 @@ function _applyClaimBtnVisual(canClaim) {
                 'rounded-xl text-sm',
                 'transition-all duration-300 cursor-default'
             ].join(' ');
-            btn.title = tr('claim_next_at', 'Next claim at 00:00 UTC');
+            btn.title = 'Следующий клейм в 00:00 UTC';
             btn.innerHTML =
                 '<span class="text-base" style="opacity:0.4">🧪</span>' +
                 '<div class="hidden sm:flex flex-col items-start leading-none gap-0.5">' +
                     '<span style="font-size:9px;color:#64748b;text-transform:uppercase;' +
-                           'letter-spacing:0.05em">' + tr('claim_reset_in', 'reset in') + '</span>' +
+                           'letter-spacing:0.05em">сброс через</span>' +
                     '<span style="font-size:11px;font-family:monospace;font-weight:700;' +
                            'color:#fb923c">' + timeStr + '</span>' +
                 '</div>' +
