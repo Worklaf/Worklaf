@@ -1493,12 +1493,19 @@ window.copyRefCode = function() {
     if (!input) return;
 
     const code = input.value.trim().toUpperCase();
-    if (!code || !code.startsWith('AL-')) {
+    if (!code) {
+        footerShowToast('Введите реферальный код', 'error');
+        return;
+    }
+    
+    if (!code.startsWith('AL-')) {
         footerShowToast('Неверный формат кода (AL-XXXXXX)', 'error');
         return;
     }
 
-    const user = typeof window.currentUser !== 'undefined' ? window.currentUser : null;
+    const user = typeof window.currentUser !== 'undefined' 
+                 ? window.currentUser 
+                 : (window.auth && window.auth.currentUser);
     if (!user) {
         footerShowToast('Войдите в аккаунт', 'error');
         return;
@@ -1506,41 +1513,43 @@ window.copyRefCode = function() {
 
     const db  = window.db;
     const exp = window.__firestoreExports;
-    if (!db || !exp || !exp.getDoc || !exp.getDocs || !exp.query || !exp.collection || !exp.where || !exp.setDoc) {
+    if (!db || !exp) {
         footerShowToast('Firebase не готов', 'error');
         return;
     }
 
-    const btn = input.parentElement ? input.parentElement.querySelector('button') : null;
+    const btn = input.parentElement 
+                ? input.parentElement.querySelector('button') 
+                : null;
     if (btn) {
         btn.disabled = true;
         btn.textContent = 'Проверка...';
     }
 
     try {
-        // 1. Читаем свой документ
+        // ── 1. Читаем свой документ ─────────────────────────────
         const myRef  = exp.doc(db, 'users', user.uid);
         const mySnap = await exp.getDoc(myRef);
         const myData = mySnap.exists() ? mySnap.data() : {};
 
-        // 2. Если уже есть invitedBy — второй раз НЕЛЬЗЯ
+        // ── 2. Уже использовал реф-код? ─────────────────────────
         if (myData.invitedBy) {
-            footerShowToast('Реферальный код уже был использован ранее', 'error');
-            _renderInvitedByBlock(myData.invitedByName || myData.invitedBy);
+            const alreadyName = myData.invitedByName || myData.invitedBy;
+            footerShowToast('Реферальный код уже был использован', 'error');
+            _renderInvitedByBlock(alreadyName);
+            if (btn) { btn.disabled = false; btn.textContent = 'Применить'; }
             return;
         }
 
-        // 3. Если это свой код — нельзя
-        if ((myData.referralCode || '').toUpperCase() === code) {
+        // ── 3. Свой код? ─────────────────────────────────────────
+        const myRefCode = myData.referralCode || ('AL-' + user.uid.substring(0, 6).toUpperCase());
+        if (myRefCode.toUpperCase() === code) {
             footerShowToast('Нельзя использовать свой код', 'error');
-            if (btn) {
-                btn.disabled = false;
-                btn.textContent = 'Применить';
-            }
+            if (btn) { btn.disabled = false; btn.textContent = 'Применить'; }
             return;
         }
 
-        // 4. Ищем владельца кода
+        // ── 4. Ищем владельца кода ───────────────────────────────
         const snap = await exp.getDocs(
             exp.query(
                 exp.collection(db, 'users'),
@@ -1549,11 +1558,8 @@ window.copyRefCode = function() {
         );
 
         if (snap.empty) {
-            footerShowToast('Код не найден', 'error');
-            if (btn) {
-                btn.disabled = false;
-                btn.textContent = 'Применить';
-            }
+            footerShowToast('Код не найден. Проверьте правильность', 'error');
+            if (btn) { btn.disabled = false; btn.textContent = 'Применить'; }
             return;
         }
 
@@ -1561,90 +1567,114 @@ window.copyRefCode = function() {
         const inviterId   = inviterDoc.id;
         const inviterData = inviterDoc.data();
 
+        // Снова проверяем что это не сам пользователь
         if (inviterId === user.uid) {
             footerShowToast('Нельзя использовать свой код', 'error');
-            if (btn) {
-                btn.disabled = false;
-                btn.textContent = 'Применить';
+            if (btn) { btn.disabled = false; btn.textContent = 'Применить'; }
+            return;
+        }
+
+        // ── 5. Получаем имя пригласившего ────────────────────────
+        // Перебираем все возможные поля где может быть имя
+        const inviterName = (
+            inviterData.displayName ||
+            inviterData.profile?.firstName && inviterData.profile?.lastName
+                ? ((inviterData.profile?.firstName || '') + ' ' + (inviterData.profile?.lastName || '')).trim()
+                : null
+        ) || inviterData.profile?.firstName 
+          || inviterData.profile?.username
+          || inviterData.email?.split('@')[0]
+          || 'Пользователь';
+
+        console.log('Inviter found:', {
+            id: inviterId,
+            name: inviterName,
+            rawData: {
+                displayName: inviterData.displayName,
+                profileFirstName: inviterData.profile?.firstName,
+                profileLastName: inviterData.profile?.lastName,
+                email: inviterData.email
             }
+        });
+
+        // ── 6. Двойная проверка перед записью ────────────────────
+        const mySnapFinal = await exp.getDoc(myRef);
+        const myDataFinal = mySnapFinal.exists() ? mySnapFinal.data() : {};
+        if (myDataFinal.invitedBy) {
+            footerShowToast('Реферальный код уже был использован', 'error');
+            _renderInvitedByBlock(myDataFinal.invitedByName || myDataFinal.invitedBy);
+            if (btn) { btn.disabled = false; btn.textContent = 'Применить'; }
             return;
         }
 
-        const inviterName = inviterData.displayName || inviterData.profile?.firstName || 'Пользователь';
-
-        // 5. ЕЩЁ РАЗ защита: если между кликами уже записали invitedBy
-        const mySnapAgain = await exp.getDoc(myRef);
-        const myDataAgain = mySnapAgain.exists() ? mySnapAgain.data() : {};
-        if (myDataAgain.invitedBy) {
-            footerShowToast('Реферальный код уже был использован ранее', 'error');
-            _renderInvitedByBlock(myDataAgain.invitedByName || myDataAgain.invitedBy);
-            return;
-        }
-
-        // 6. Записываем ТОЛЬКО ОДИН РАЗ кто пригласил
+        // ── 7. Записываем данные себе ────────────────────────────
+        const myNewReagents = (myDataFinal.reagents || 0) + 25;
         await exp.setDoc(
             myRef,
             {
-                invitedBy: inviterId,
+                invitedBy:     inviterId,
                 invitedByName: inviterName,
-                reagents: (myDataAgain.reagents || 0) + 25
+                reagents:      myNewReagents
             },
             { merge: true }
         );
 
-        // 7. Начисляем пригласившему бонус
+        // ── 8. Начисляем бонус пригласившему ─────────────────────
+        const inviterNewReagents  = (inviterData.reagents  || 0) + 50;
+        const inviterNewInvited   = (inviterData.invitedCount || 0) + 1;
+        
         await exp.setDoc(
             exp.doc(db, 'users', inviterId),
             {
-                reagents: (inviterData.reagents || 0) + 50,
-                invitedCount: (inviterData.invitedCount || 0) + 1
+                reagents:     inviterNewReagents,
+                invitedCount: inviterNewInvited
             },
             { merge: true }
         );
 
-        // 8. Обновляем локальные данные
-        window.userProfileData = Object.assign({}, window.userProfileData || {}, {
-            invitedBy: inviterId,
-            invitedByName: inviterName,
-            reagents: (myDataAgain.reagents || 0) + 25
-        });
-
+        // ── 9. Обновляем локальные данные ────────────────────────
+        if (window.userProfileData) {
+            window.userProfileData.invitedBy     = inviterId;
+            window.userProfileData.invitedByName = inviterName;
+            window.userProfileData.reagents      = myNewReagents;
+        }
         if (window._userRootData) {
-            window._userRootData.invitedBy = inviterId;
+            window._userRootData.invitedBy     = inviterId;
             window._userRootData.invitedByName = inviterName;
-            window._userRootData.reagents = (myDataAgain.reagents || 0) + 25;
+            window._userRootData.reagents      = myNewReagents;
         }
 
-        // 9. Обновляем баланс
+        // ── 10. Обновляем баланс в UI ─────────────────────────────
         const balEl = document.getElementById('profileReagentBalance');
         if (balEl) {
-            balEl.innerHTML = ((myDataAgain.reagents || 0) + 25) +
+            balEl.innerHTML = myNewReagents +
                 ' <span class="text-sm font-normal text-slate-400 ml-1">RGT</span>';
         }
 
-        // 10. Обновляем блок "кто пригласил"
+        // ── 11. Обновляем блок "кто пригласил" ───────────────────
         _renderInvitedByBlock(inviterName);
 
-        footerShowToast('🧪 Код применён! +25 Reagents вам, +50 пригласившему!', 'success');
+        footerShowToast('🧪 Код принят! +25 Reagents вам, +50 пригласившему!', 'success');
 
     } catch(err) {
         console.error('Referral error:', err);
         footerShowToast('Ошибка: ' + err.message, 'error');
-        if (btn) {
-            btn.disabled = false;
-            btn.textContent = 'Применить';
-        }
+        if (btn) { btn.disabled = false; btn.textContent = 'Применить'; }
     }
 
+    // ── Вспомогательная функция рендера блока ────────────────────
     function _renderInvitedByBlock(name) {
+        // Ищем враппер поля ввода кода
         const wrapper = document.getElementById('refCodeInputWrapper');
         if (!wrapper) return;
 
         wrapper.innerHTML = `
-            <div class="text-xs text-slate-500 flex items-center gap-1.5 bg-slate-800/30 rounded-lg px-3 py-2">
-                <i class="fas fa-user-check text-emerald-400"></i>
-                Вас пригласил:
-                <span class="text-slate-300 font-medium">${name}</span>
+            <div class="flex items-center gap-2 text-xs text-slate-500 
+                        bg-slate-800/30 rounded-lg px-3 py-2.5 
+                        border border-emerald-800/30">
+                <i class="fas fa-user-check text-emerald-400 flex-shrink-0"></i>
+                <span>Вас пригласил:</span>
+                <span class="text-slate-200 font-semibold">${name}</span>
             </div>
         `;
     }
