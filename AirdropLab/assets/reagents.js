@@ -253,7 +253,40 @@ window.doClaim = async function() {
     try {
         const result = await performClaim(user);
         _showClaimSuccess(result);
+// Запускаем таймер обратного отсчёта на кнопке
+_applyClaimBtnVisual(false, result.todayUTC);
 
+// Показываем поле реф-кода если оно было скрыто
+window._hasClaimedOnce = true;
+
+// Если профиль открыт — обновляем секцию реф-кода
+const refLockEl = document.querySelector('#pageModalContent .fa-lock');
+if (refLockEl) {
+    // Перерисовываем только блок реф-кода
+    const refBlock = refLockEl.closest('.p-3');
+    if (refBlock) {
+        refBlock.outerHTML = `
+            <div class="mb-3" id="refCodeInputWrapper">
+                <label class="block text-xs font-medium text-slate-400 mb-1.5">
+                    <i class="fas fa-ticket-alt text-yellow-400 mr-1"></i>
+                    Ввести реферальный код
+                </label>
+                <div class="flex gap-2">
+                    <input type="text" id="profileInviteCode"
+                           placeholder="AL-XXXXXX"
+                           class="flex-1 bg-slate-800 border border-slate-700 rounded-lg px-4 py-2 
+                                  text-sm text-white font-mono focus:border-yellow-500 
+                                  focus:outline-none transition-colors">
+                    <button type="button" onclick="applyReferralCode()"
+                            class="px-4 py-2 bg-yellow-600 hover:bg-yellow-500 rounded-lg 
+                                   text-sm font-medium text-white transition-colors whitespace-nowrap">
+                        Применить
+                    </button>
+                </div>
+            </div>
+        `;
+    }
+}
         // Обновляем баланс в профиле если открыт
         const balEl = document.getElementById('profileReagentBalance');
         if (balEl) {
@@ -679,10 +712,9 @@ window.doClaim         = doClaim;
 console.log('🧪 Reagents System v1.0 loaded');
 // ── Автопроверка при загрузке ──────────────────────────────
 async function _checkClaimOnLoad() {
-    // Ждём Firebase — до 15 секунд
     let attempts = 0;
     while ((!window.auth || !window.auth.currentUser) && attempts < 30) {
-        await new Promise(r => setTimeout(r, 500));
+        await new Promise(function(r) { setTimeout(r, 500); });
         attempts++;
     }
 
@@ -692,15 +724,25 @@ async function _checkClaimOnLoad() {
     const status = await getClaimStatus(user);
     if (!status) return;
 
-    _applyClaimBtnVisual(status.canClaim);
+    _applyClaimBtnVisual(status.canClaim, status.lastClaim);
 }
 
 // ── Обновляем внешний вид кнопки клейма ──────────────────────
-function _applyClaimBtnVisual(canClaim) {
+// ── Глобальный интервал таймера ───────────────────────────────
+let _claimCountdownInterval = null;
+
+function _applyClaimBtnVisual(canClaim, lastClaimDate) {
     const btn = document.getElementById('headerClaimBtn');
     if (!btn) return;
 
+    // Останавливаем старый таймер если был
+    if (_claimCountdownInterval) {
+        clearInterval(_claimCountdownInterval);
+        _claimCountdownInterval = null;
+    }
+
     if (canClaim) {
+        // ── Клейм доступен ────────────────────────────────────
         btn.className = [
             'relative flex items-center gap-2 px-3 py-2',
             'bg-gradient-to-r from-cyan-600/20 to-blue-600/20',
@@ -713,19 +755,65 @@ function _applyClaimBtnVisual(canClaim) {
         btn.innerHTML =
             '<span class="text-base">🧪</span>' +
             '<span class="hidden sm:inline font-medium text-xs">Клейм</span>' +
-            '<span class="absolute -top-1 -right-1 w-2.5 h-2.5 ' +
+            '<span id="claimDot" class="absolute -top-1 -right-1 w-2.5 h-2.5 ' +
             'bg-emerald-400 rounded-full border-2 border-slate-900 animate-pulse"></span>';
+
     } else {
-        btn.className = [
-            'relative flex items-center gap-2 px-3 py-2',
-            'bg-slate-800/30 border border-slate-700/30',
-            'rounded-xl text-sm text-slate-500',
-            'transition-all duration-300 cursor-default'
-        ].join(' ');
-        btn.title = 'Следующий клейм в 00:00 UTC';
-        btn.innerHTML =
-            '<span class="text-base">✅</span>' +
-            '<span class="hidden sm:inline font-medium text-xs">Готово</span>';
+        // ── Клейм уже сделан — показываем таймер ─────────────
+
+        // Вычисляем время до следующего сброса (00:00 UTC)
+        function getMsToMidnightUTC() {
+            const now      = new Date();
+            const midnight = new Date();
+            midnight.setUTCHours(24, 0, 0, 0);
+            return midnight - now;
+        }
+
+        function formatTime(ms) {
+            if (ms <= 0) return '00:00:00';
+            const totalSec = Math.floor(ms / 1000);
+            const h = Math.floor(totalSec / 3600);
+            const m = Math.floor((totalSec % 3600) / 60);
+            const s = totalSec % 60;
+            return [h, m, s].map(function(v) {
+                return String(v).padStart(2, '0');
+            }).join(':');
+        }
+
+        function renderCooldown() {
+            const remaining = getMsToMidnightUTC();
+
+            // Если время вышло — перезапускаем проверку
+            if (remaining <= 0) {
+                clearInterval(_claimCountdownInterval);
+                _claimCountdownInterval = null;
+                _applyClaimBtnVisual(true);
+                return;
+            }
+
+            const timeStr = formatTime(remaining);
+
+            btn.className = [
+                'relative flex items-center gap-2 px-3 py-2',
+                'bg-slate-800/40 border border-slate-700/40',
+                'rounded-xl text-sm',
+                'transition-all duration-300 cursor-default'
+            ].join(' ');
+            btn.title = 'Следующий клейм в 00:00 UTC';
+            btn.innerHTML =
+                '<span class="text-base" style="opacity:0.4">🧪</span>' +
+                '<div class="hidden sm:flex flex-col items-start leading-none gap-0.5">' +
+                    '<span style="font-size:9px;color:#64748b;text-transform:uppercase;letter-spacing:0.05em">сброс через</span>' +
+                    '<span style="font-size:11px;font-family:monospace;font-weight:700;color:#fb923c">' + timeStr + '</span>' +
+                '</div>' +
+                '<span style="font-size:11px;font-family:monospace;font-weight:700;color:#fb923c" class="sm:hidden">' + timeStr + '</span>';
+        }
+
+        // Рисуем сразу
+        renderCooldown();
+
+        // Обновляем каждую секунду
+        _claimCountdownInterval = setInterval(renderCooldown, 1000);
     }
 }
 
