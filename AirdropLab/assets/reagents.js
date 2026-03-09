@@ -254,39 +254,7 @@ window.doClaim = async function() {
         const result = await performClaim(user);
         _showClaimSuccess(result);
 // Запускаем таймер обратного отсчёта на кнопке
-_applyClaimBtnVisual(false, result.todayUTC);
-
-// Показываем поле реф-кода если оно было скрыто
-window._hasClaimedOnce = true;
-
-// Если профиль открыт — обновляем секцию реф-кода
-const refLockEl = document.querySelector('#pageModalContent .fa-lock');
-if (refLockEl) {
-    // Перерисовываем только блок реф-кода
-    const refBlock = refLockEl.closest('.p-3');
-    if (refBlock) {
-        refBlock.outerHTML = `
-            <div class="mb-3" id="refCodeInputWrapper">
-                <label class="block text-xs font-medium text-slate-400 mb-1.5">
-                    <i class="fas fa-ticket-alt text-yellow-400 mr-1"></i>
-                    Ввести реферальный код
-                </label>
-                <div class="flex gap-2">
-                    <input type="text" id="profileInviteCode"
-                           placeholder="AL-XXXXXX"
-                           class="flex-1 bg-slate-800 border border-slate-700 rounded-lg px-4 py-2 
-                                  text-sm text-white font-mono focus:border-yellow-500 
-                                  focus:outline-none transition-colors">
-                    <button type="button" onclick="applyReferralCode()"
-                            class="px-4 py-2 bg-yellow-600 hover:bg-yellow-500 rounded-lg 
-                                   text-sm font-medium text-white transition-colors whitespace-nowrap">
-                        Применить
-                    </button>
-                </div>
-            </div>
-        `;
-    }
-}
+_applyClaimBtnVisual(false);
         // Обновляем баланс в профиле если открыт
         const balEl = document.getElementById('profileReagentBalance');
         if (balEl) {
