@@ -767,6 +767,56 @@ function _openAccountOverlay() {
     // для кнопок внутри контента
     window._closeAccountOverlay = closeOverlay;
 }
+    window.copyRefCode = function() {
+        const el = document.getElementById('profileRefCode');
+        if (!el) return;
+        
+        const code = el.textContent.trim();
+        if (!code || code === 'Генерация...') return;
+
+        const btn = document.querySelector('#profileRefCode + button');
+
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+            navigator.clipboard.writeText(code).then(function() {
+                _showCopySuccess(btn);
+                footerShowToast('Реферальный код скопирован!', 'success');
+            }).catch(function() {
+                _copyFallback(code, btn);
+            });
+        } else {
+            _copyFallback(code, btn);
+        }
+    };
+
+    function _showCopySuccess(btn) {
+        if (!btn) return;
+        const orig = btn.innerHTML;
+        btn.innerHTML = '<i class="fas fa-check text-xs"></i>';
+        btn.style.background = 'rgba(16,185,129,0.3)';
+        btn.style.color = '#10b981';
+        setTimeout(function() {
+            btn.innerHTML = orig;
+            btn.style.background = '';
+            btn.style.color = '';
+        }, 2000);
+    }
+
+    function _copyFallback(text, btn) {
+        try {
+            const ta = document.createElement('textarea');
+            ta.value = text;
+            ta.style.cssText = 'position:fixed;top:-9999px;left:-9999px;opacity:0;';
+            document.body.appendChild(ta);
+            ta.select();
+            ta.setSelectionRange(0, 99999);
+            document.execCommand('copy');
+            document.body.removeChild(ta);
+            _showCopySuccess(btn);
+            footerShowToast('Реферальный код скопирован!', 'success');
+        } catch(e) {
+            footerShowToast('Не удалось скопировать', 'error');
+        }
+    }
     window.openPageModal = function(page) {
     // Для аккаунта открываем отдельную всплывающую модалку
     if (page === 'account') {
@@ -1766,56 +1816,7 @@ document.addEventListener('click', function(e) {
 
     updatedAt: new Date().toISOString()
 };
-window.copyRefCode = function() {
-        const el = document.getElementById('profileRefCode');
-        if (!el) return;
-        
-        const code = el.textContent.trim();
-        if (!code || code === 'Генерация...') return;
 
-        const btn = document.querySelector('#profileRefCode + button');
-
-        if (navigator.clipboard && navigator.clipboard.writeText) {
-            navigator.clipboard.writeText(code).then(function() {
-                _showCopySuccess(btn);
-                footerShowToast('Реферальный код скопирован!', 'success');
-            }).catch(function() {
-                _copyFallback(code, btn);
-            });
-        } else {
-            _copyFallback(code, btn);
-        }
-    };
-
-    function _showCopySuccess(btn) {
-        if (!btn) return;
-        const orig = btn.innerHTML;
-        btn.innerHTML = '<i class="fas fa-check text-xs"></i>';
-        btn.style.background = 'rgba(16,185,129,0.3)';
-        btn.style.color = '#10b981';
-        setTimeout(function() {
-            btn.innerHTML = orig;
-            btn.style.background = '';
-            btn.style.color = '';
-        }, 2000);
-    }
-
-    function _copyFallback(text, btn) {
-        try {
-            const ta = document.createElement('textarea');
-            ta.value = text;
-            ta.style.cssText = 'position:fixed;top:-9999px;left:-9999px;opacity:0;';
-            document.body.appendChild(ta);
-            ta.select();
-            ta.setSelectionRange(0, 99999);
-            document.execCommand('copy');
-            document.body.removeChild(ta);
-            _showCopySuccess(btn);
-            footerShowToast('Реферальный код скопирован!', 'success');
-        } catch(e) {
-            footerShowToast('Не удалось скопировать', 'error');
-        }
-    }
     // Локальный бэкап
     window.userProfileData = profileData;
     localStorage.setItem('userProfileData', JSON.stringify(profileData));
