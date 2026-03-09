@@ -9,7 +9,6 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
-
         body {
             font-family: 'Inter', sans-serif;
             background: #0b0f19;
@@ -19,33 +18,26 @@
                 radial-gradient(circle at 80% 80%, rgba(16,185,129,0.1) 0%, transparent 50%);
             min-height: 100vh;
         }
-
         .glass-card {
             background: rgba(30,37,56,0.6);
             backdrop-filter: blur(12px);
             border: 1px solid rgba(255,255,255,0.08);
         }
-
         .stat-value {
             background: linear-gradient(135deg,#3b82f6,#8b5cf6);
             -webkit-background-clip: text;
             -webkit-text-fill-color: transparent;
             background-clip: text;
         }
-
         .back-btn {
             background: linear-gradient(135deg,rgba(59,130,246,0.2),rgba(139,92,246,0.1));
             border: 1px solid rgba(59,130,246,0.3);
         }
-
         ::-webkit-scrollbar { width: 6px; height: 6px; }
         ::-webkit-scrollbar-track { background: rgba(255,255,255,0.02); }
         ::-webkit-scrollbar-thumb { background: #334155; border-radius: 3px; }
-
         .pulse-dot { animation: pulse-anim 2s infinite; }
         @keyframes pulse-anim { 0%,100%{opacity:1} 50%{opacity:0.5} }
-
-        /* Таблица */
         .admin-table { border-collapse: collapse; width: 100%; }
         .admin-table th {
             background: rgba(15,23,42,0.9);
@@ -69,11 +61,8 @@
             border-bottom: 1px solid rgba(255,255,255,0.04);
             vertical-align: middle;
         }
-
         .user-row:hover { background: rgba(59,130,246,0.08); cursor:pointer; }
         .user-row.selected-row { background: rgba(59,130,246,0.12); }
-
-        /* Badges */
         .badge {
             display: inline-flex;
             align-items: center;
@@ -88,8 +77,6 @@
         .badge-purple { background: rgba(139,92,246,0.2); color:#a78bfa; }
         .badge-yellow { background: rgba(245,158,11,0.2); color:#fbbf24; }
         .badge-gray   { background: rgba(100,116,139,0.2);color:#94a3b8; }
-
-        /* Табы */
         .tab-btn {
             padding: 7px 14px;
             border-radius: 8px;
@@ -97,18 +84,16 @@
             font-weight: 500;
             color: #64748b;
             cursor: pointer;
-            border: none;
+            border: 1px solid transparent;
             background: transparent;
             transition: all 0.2s;
         }
         .tab-btn.active {
             background: rgba(59,130,246,0.2);
             color: #60a5fa;
-            border: 1px solid rgba(59,130,246,0.3);
+            border-color: rgba(59,130,246,0.3);
         }
         .tab-btn:hover:not(.active) { color:#94a3b8; background:rgba(255,255,255,0.04); }
-
-        /* Профиль модалка */
         .modal-overlay {
             position:fixed; inset:0;
             background:rgba(0,0,0,0.75);
@@ -128,8 +113,23 @@
             max-height:88vh;
             overflow-y:auto;
         }
-
         mark { background:rgba(59,130,246,0.3); color:#93c5fd; border-radius:2px; }
+
+        /* Диагностическая панель */
+        .debug-panel {
+            background: rgba(15,23,42,0.9);
+            border: 1px solid rgba(239,68,68,0.3);
+            border-radius: 12px;
+            padding: 16px;
+            margin-bottom: 16px;
+            font-family: monospace;
+            font-size: 12px;
+        }
+        .debug-line { margin: 2px 0; }
+        .debug-ok   { color: #34d399; }
+        .debug-err  { color: #f87171; }
+        .debug-warn { color: #fbbf24; }
+        .debug-info { color: #60a5fa; }
     </style>
 </head>
 <body class="antialiased">
@@ -137,7 +137,7 @@
 <div class="max-w-[1400px] mx-auto px-4 py-6">
 
     <!-- Header -->
-    <header class="mb-8">
+    <header class="mb-6">
         <div class="flex items-center justify-between flex-wrap gap-4">
             <div class="flex items-center gap-4">
                 <a href="../index.html" class="back-btn px-4 py-2 rounded-lg text-blue-400 hover:text-white transition-colors flex items-center gap-2">
@@ -154,11 +154,11 @@
             </div>
             <div class="flex items-center gap-3">
                 <span id="lastUpdate" class="text-xs text-slate-500"></span>
-                <button onclick="window.exportUsersCSV()"
+                <button onclick="window.exportCSV()"
                     class="bg-emerald-700 hover:bg-emerald-600 px-4 py-2 rounded-lg text-sm flex items-center gap-2">
                     <i class="fas fa-file-csv"></i> CSV
                 </button>
-                <button onclick="window.loadStats()"
+                <button onclick="window.reloadData()"
                     class="bg-blue-600 hover:bg-blue-500 px-4 py-2 rounded-lg text-sm flex items-center gap-2">
                     <i class="fas fa-sync-alt"></i> Обновить
                 </button>
@@ -170,8 +170,33 @@
     <div id="accessDenied" class="hidden text-center py-20">
         <div class="text-6xl mb-4">🚫</div>
         <h2 class="text-2xl font-bold mb-4">Доступ запрещён</h2>
-        <p class="text-slate-400">Нет прав администратора</p>
-        <a href="../index.html" class="inline-block mt-6 bg-blue-600 px-6 py-3 rounded-lg text-sm">На главную</a>
+        <a href="../index.html" class="inline-block mt-4 bg-blue-600 px-6 py-3 rounded-lg text-sm">На главную</a>
+    </div>
+
+    <!-- Loading -->
+    <div id="loadingScreen" class="text-center py-20">
+        <div class="text-4xl mb-4 animate-pulse">🔐</div>
+        <p class="text-slate-400" id="loadingText">Проверка авторизации...</p>
+    </div>
+
+    <!-- Debug Panel (скрыт по умолчанию) -->
+    <div id="debugPanel" class="debug-panel hidden">
+        <div class="flex items-center justify-between mb-3">
+            <span class="text-yellow-400 font-bold">🔧 Диагностика подключения</span>
+            <button onclick="document.getElementById('debugPanel').classList.add('hidden')"
+                class="text-slate-500 hover:text-white text-xs">Скрыть</button>
+        </div>
+        <div id="debugLog"></div>
+        <div class="mt-3 flex gap-2">
+            <button onclick="window.runDiagnostics()"
+                class="bg-blue-700 hover:bg-blue-600 px-3 py-1.5 rounded text-xs text-white">
+                🔄 Повторить диагностику
+            </button>
+            <button onclick="window.forceReconnect()"
+                class="bg-yellow-700 hover:bg-yellow-600 px-3 py-1.5 rounded text-xs text-white">
+                ⚡ Принудительное переподключение
+            </button>
+        </div>
     </div>
 
     <!-- Admin Content -->
@@ -205,7 +230,7 @@
                     <i class="fas fa-circle text-emerald-400 pulse-dot"></i>
                 </div>
                 <div class="stat-value text-2xl font-bold" id="st-online">—</div>
-                <div class="text-slate-400 text-xs mt-1">Онлайн</div>
+                <div class="text-slate-400 text-xs mt-1">Онлайн (30мин)</div>
             </div>
             <div class="glass-card rounded-2xl p-4">
                 <div class="w-10 h-10 rounded-xl bg-purple-600/20 flex items-center justify-center mb-3">
@@ -225,17 +250,13 @@
 
         <!-- Charts + Broadcast -->
         <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
-
             <div class="lg:col-span-2 space-y-6">
-                <!-- Activity Chart -->
                 <div class="glass-card rounded-2xl p-5">
                     <h3 class="font-semibold text-base mb-4 flex items-center gap-2">
                         <i class="fas fa-chart-line text-blue-400"></i> Активность (7 дней)
                     </h3>
                     <div id="activityChart" class="space-y-2"></div>
                 </div>
-
-                <!-- Top Projects -->
                 <div class="glass-card rounded-2xl p-5">
                     <h3 class="font-semibold text-base mb-4 flex items-center gap-2">
                         <i class="fas fa-star text-yellow-400"></i> Топ проектов
@@ -244,13 +265,13 @@
                         <p class="text-slate-500 text-sm col-span-3">Загрузка...</p>
                     </div>
                 </div>
-
-                <!-- Countries -->
                 <div class="glass-card rounded-2xl p-5">
                     <h3 class="font-semibold text-base mb-4 flex items-center gap-2">
                         <i class="fas fa-globe text-pink-400"></i> География
                     </h3>
-                    <div id="countriesChart" class="space-y-2"></div>
+                    <div id="countriesChart" class="space-y-2">
+                        <p class="text-slate-500 text-sm">Нет данных о странах</p>
+                    </div>
                 </div>
             </div>
 
@@ -262,29 +283,29 @@
                     </h3>
                     <div class="mb-3 space-y-1.5">
                         <label class="flex items-center gap-2 cursor-pointer text-sm">
-                            <input type="radio" name="bTarget" value="all" checked onchange="window.updateSelectedCount()">
-                            Все <span id="countAll" class="text-xs text-blue-400"></span>
+                            <input type="radio" name="bTarget" value="all" checked onchange="window.updateCount()">
+                            Все <span id="cnt-all" class="text-xs text-blue-400"></span>
                         </label>
                         <label class="flex items-center gap-2 cursor-pointer text-sm">
-                            <input type="radio" name="bTarget" value="online" onchange="window.updateSelectedCount()">
-                            Онлайн <span id="countOnline" class="text-xs text-emerald-400"></span>
+                            <input type="radio" name="bTarget" value="online" onchange="window.updateCount()">
+                            Онлайн <span id="cnt-online" class="text-xs text-emerald-400"></span>
                         </label>
                         <label class="flex items-center gap-2 cursor-pointer text-sm">
-                            <input type="radio" name="bTarget" value="selected" onchange="window.toggleSelectedUsers()">
-                            Выбранные <span id="countSelected" class="text-xs text-yellow-400">0</span>
+                            <input type="radio" name="bTarget" value="selected" onchange="window.updateCount()">
+                            Выбранные <span id="cnt-selected" class="text-xs text-yellow-400">0</span>
                         </label>
                     </div>
-                    <div id="selectedUsersList" class="hidden mb-3 max-h-24 overflow-y-auto bg-slate-800/50 rounded-lg p-2">
-                        <div id="selectedNames" class="space-y-1 text-xs text-slate-300"></div>
+                    <div id="selectedNamesList" class="hidden mb-3 max-h-20 overflow-y-auto bg-slate-800/50 rounded-lg p-2">
+                        <div id="selectedNamesContent" class="space-y-1 text-xs text-slate-300"></div>
                     </div>
-                    <textarea id="broadcastMessage" rows="3"
+                    <textarea id="bcastMsg" rows="3"
                         class="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-sm outline-none resize-none mb-2"
                         placeholder="Текст уведомления..."></textarea>
                     <div class="flex justify-between text-xs text-slate-500 mb-2">
-                        <span>Поддерживаются ссылки</span>
-                        <span id="msgLength">0/500</span>
+                        <span>До 500 символов</span>
+                        <span id="bcastLen">0/500</span>
                     </div>
-                    <select id="broadcastType"
+                    <select id="bcastType"
                         class="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-sm outline-none mb-3">
                         <option value="info">ℹ️ Информация</option>
                         <option value="success">✅ Успех</option>
@@ -292,11 +313,11 @@
                         <option value="promo">🎁 Акция</option>
                         <option value="referral">🔗 Реферальная</option>
                     </select>
-                    <button onclick="window.sendBroadcast()" id="sendBtn"
+                    <button onclick="window.sendBcast()" id="sendBtn"
                         class="w-full bg-gradient-to-r from-pink-600 to-purple-600 hover:from-pink-500 hover:to-purple-500 py-2.5 rounded-lg text-sm font-medium flex items-center justify-center gap-2">
                         <i class="fas fa-paper-plane"></i> Отправить
                     </button>
-                    <div id="broadcastStatus" class="mt-2 text-center text-sm hidden"></div>
+                    <div id="bcastStatus" class="mt-2 text-center text-sm hidden"></div>
                 </div>
 
                 <!-- Top Users -->
@@ -316,15 +337,15 @@
                     </h3>
                     <div class="grid grid-cols-3 gap-2">
                         <div class="text-center p-2 bg-slate-800/50 rounded-lg">
-                            <div class="text-xl font-bold text-blue-400" id="totalNotifications">—</div>
+                            <div class="text-xl font-bold text-blue-400" id="notif-total">—</div>
                             <div class="text-[10px] text-slate-500">Отправлено</div>
                         </div>
                         <div class="text-center p-2 bg-slate-800/50 rounded-lg">
-                            <div class="text-xl font-bold text-green-400" id="viewedNotifications">—</div>
+                            <div class="text-xl font-bold text-green-400" id="notif-viewed">—</div>
                             <div class="text-[10px] text-slate-500">Просмотрено</div>
                         </div>
                         <div class="text-center p-2 bg-slate-800/50 rounded-lg">
-                            <div class="text-xl font-bold text-purple-400" id="viewRate">—</div>
+                            <div class="text-xl font-bold text-purple-400" id="notif-rate">—</div>
                             <div class="text-[10px] text-slate-500">%</div>
                         </div>
                     </div>
@@ -340,20 +361,19 @@
                     Пользователи <span id="usersCount" class="text-sm text-slate-400 font-normal"></span>
                 </h3>
                 <div class="flex items-center gap-2 flex-wrap">
-                    <!-- Табы -->
                     <div class="flex gap-1 bg-slate-800/50 p-1 rounded-lg">
-                        <button onclick="window.switchTab('main')"    id="tab-main"     class="tab-btn active">Основное</button>
-                        <button onclick="window.switchTab('profile')" id="tab-profile"  class="tab-btn">Профиль</button>
+                        <button onclick="window.switchTab('main')"     id="tab-main"     class="tab-btn active">Основное</button>
+                        <button onclick="window.switchTab('profile')"  id="tab-profile"  class="tab-btn">Профиль</button>
                         <button onclick="window.switchTab('activity')" id="tab-activity" class="tab-btn">Активность</button>
                     </div>
-                    <button onclick="window.selectOnlineOnly()"
+                    <button onclick="window.filterOnline()"
                         class="text-xs bg-emerald-600/20 text-emerald-400 px-3 py-1.5 rounded-lg hover:bg-emerald-600/30">
                         <i class="fas fa-circle mr-1"></i>Онлайн
                     </button>
-                    <input type="text" id="searchUser" placeholder="Поиск..."
+                    <input type="text" id="searchInput" placeholder="Поиск..."
                         class="bg-slate-800 border border-slate-700 rounded-lg px-3 py-1.5 text-sm outline-none"
-                        oninput="window.filterUsers()">
-                    <select id="sortUsers" onchange="window.sortUsersList()"
+                        oninput="window.doSearch()">
+                    <select id="sortSel" onchange="window.doSort()"
                         class="bg-slate-800 border border-slate-700 rounded-lg px-3 py-1.5 text-sm outline-none">
                         <option value="lastLogin">По посл. входу</option>
                         <option value="firstLogin">По перв. входу</option>
@@ -366,8 +386,8 @@
 
             <div style="max-height:600px; overflow:auto;">
                 <table class="admin-table">
-                    <thead id="tableHead"></thead>
-                    <tbody id="usersTableBody">
+                    <thead id="tHead"></thead>
+                    <tbody id="tBody">
                         <tr><td colspan="9" class="py-8 text-center text-slate-400">
                             <i class="fas fa-spinner fa-spin mr-2"></i>Загрузка...
                         </td></tr>
@@ -381,347 +401,478 @@
             <h3 class="font-semibold text-lg mb-4 flex items-center gap-2">
                 <i class="fas fa-history text-slate-400"></i> История рассылок
             </h3>
-            <div id="broadcastHistory"><p class="text-slate-500 text-sm">Загрузка...</p></div>
+            <div id="bcastHistory"><p class="text-slate-500 text-sm">Загрузка...</p></div>
         </div>
-    </div>
-
-    <!-- Loading -->
-    <div id="loading" class="text-center py-20">
-        <div class="text-4xl mb-4 animate-pulse">📊</div>
-        <p class="text-slate-400">Проверка доступа...</p>
     </div>
 </div>
 
 <!-- Profile Modal -->
-<div id="profileModal" class="modal-overlay hidden" onclick="if(event.target===this) window.closeProfileModal()">
+<div id="profileModal" class="modal-overlay hidden" onclick="if(event.target===this)window.closeModal()">
     <div class="modal-box">
         <div class="flex items-center justify-between mb-5">
             <h3 class="text-lg font-bold flex items-center gap-2">
                 <i class="fas fa-user text-blue-400"></i> Профиль
             </h3>
-            <button onclick="window.closeProfileModal()" class="text-slate-400 hover:text-white text-xl">
+            <button onclick="window.closeModal()" class="text-slate-400 hover:text-white text-xl">
                 <i class="fas fa-times"></i>
             </button>
         </div>
-        <div id="profileModalContent"></div>
+        <div id="modalBody"></div>
     </div>
 </div>
 
 <script type="module">
-// ─────────────────────────────────────────────────────────────────────────────
-// ИМПОРТЫ Firebase
-// ─────────────────────────────────────────────────────────────────────────────
-import { initializeApp }
+// ─────────────────────────────────────────────────────────────────
+// ИМПОРТЫ — каждый именован уникально, нет конфликтов
+// ─────────────────────────────────────────────────────────────────
+import { initializeApp as fbInitApp }
     from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
 
-import { getAuth, signInWithPopup, GoogleAuthProvider, onAuthStateChanged }
-    from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
+import {
+    getAuth as fbGetAuth,
+    signInWithPopup as fbSignIn,
+    GoogleAuthProvider as fbGoogleProvider,
+    onAuthStateChanged as fbOnAuth
+} from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
 
 import {
-    getFirestore, enableNetwork,
-    collection, doc,
-    getDocs, getDoc, setDoc, updateDoc, deleteDoc,
-    query, orderBy, limit,
-    writeBatch, serverTimestamp
+    getFirestore         as fbGetFirestore,
+    initializeFirestore  as fbInitFirestore,
+    collection           as fbCol,
+    doc                  as fbDoc,
+    getDocs              as fbGetDocs,
+    getDoc               as fbGetDoc,
+    setDoc               as fbSetDoc,
+    deleteDoc            as fbDelDoc,
+    writeBatch           as fbBatch,
+    serverTimestamp      as fbServerTs,
+    query                as fbQuery,
+    orderBy              as fbOrderBy,
+    limit                as fbLimit,
+    CACHE_SIZE_UNLIMITED,
+    persistentLocalCache,
+    persistentSingleTabManager
 } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
-// ─────────────────────────────────────────────────────────────────────────────
-// CONFIG
-// ─────────────────────────────────────────────────────────────────────────────
-const FIREBASE_CONFIG = {
-    apiKey: "AIzaSyBdXGYg2t8DJBrQHCC80-pFerZU9PWmSCk",
-    authDomain: "testnet-hub.firebaseapp.com",
-    projectId: "testnet-hub",
-    storageBucket: "testnet-hub.firebasestorage.app",
-    messagingSenderId: "497813176653",
-    appId: "1:497813176653:web:089188fdd1555d76cd7704"
-};
-
+// ─────────────────────────────────────────────────────────────────
+// КОНФИГ
+// ─────────────────────────────────────────────────────────────────
 const ADMIN_UID = "SAkz4mdW9reDaIsvqigCNZhEKJR2";
 
-// ─────────────────────────────────────────────────────────────────────────────
-// ИНИЦИАЛИЗАЦИЯ — все переменные через let, никаких const для изменяемых
-// ─────────────────────────────────────────────────────────────────────────────
-const fbApp  = initializeApp(FIREBASE_CONFIG);
-const fbAuth = getAuth(fbApp);
-const fbDb   = getFirestore(fbApp);
+const FB_CONFIG = {
+    apiKey:            "AIzaSyBdXGYg2t8DJBrQHCC80-pFerZU9PWmSCk",
+    authDomain:        "testnet-hub.firebaseapp.com",
+    projectId:         "testnet-hub",
+    storageBucket:     "testnet-hub.firebasestorage.app",
+    messagingSenderId: "497813176653",
+    appId:             "1:497813176653:web:089188fdd1555d76cd7704"
+};
 
-enableNetwork(fbDb).catch(err => console.warn('[Firestore] enableNetwork:', err));
+// ─────────────────────────────────────────────────────────────────
+// ИНИЦИАЛИЗАЦИЯ FIREBASE
+// ─────────────────────────────────────────────────────────────────
+function debugLog(msg, type) {
+    type = type || 'info';
+    const panel = document.getElementById('debugLog');
+    if (!panel) return;
+    const line = document.createElement('div');
+    line.className = 'debug-line debug-' + type;
+    const icons = { ok:'✅', err:'❌', warn:'⚠️', info:'ℹ️' };
+    line.textContent = (icons[type] || '•') + ' ' + msg;
+    panel.appendChild(line);
+    console.log('[ADMIN DEBUG]', msg);
+}
 
-// Состояние приложения
-let allUsers        = [];
-let filteredUsers   = [];
-let selectedIds     = new Set();
-let projectStatsMap = {};
-let projectsMap     = new Map();
-let currentTab      = 'main';
+let fbApp, fbAuth, fbDb;
 
-// ─────────────────────────────────────────────────────────────────────────────
+function initFirebase() {
+    try {
+        fbApp  = fbInitApp(FB_CONFIG);
+        fbAuth = fbGetAuth(fbApp);
+
+        // Инициализируем Firestore БЕЗ persistence (чтобы избежать кеш-конфликтов)
+        fbDb = fbGetFirestore(fbApp);
+
+        debugLog('Firebase App инициализирован', 'ok');
+        debugLog('Auth готов', 'ok');
+        debugLog('Firestore готов (без persistence)', 'ok');
+        return true;
+    } catch (err) {
+        debugLog('Ошибка инициализации Firebase: ' + err.message, 'err');
+        return false;
+    }
+}
+
+// Если Firebase уже инициализирован в родительском app.js — берём оттуда
+function getOrInitFirebase() {
+    // Проверяем window.db (из app.js)
+    if (window.db) {
+        fbDb   = window.db;
+        fbAuth = window.auth || fbGetAuth(fbInitApp(FB_CONFIG));
+        debugLog('Используем Firebase из window.db (app.js)', 'ok');
+        return true;
+    }
+    return initFirebase();
+}
+
+// ─────────────────────────────────────────────────────────────────
+// СОСТОЯНИЕ
+// ─────────────────────────────────────────────────────────────────
+let allUsers      = [];
+let filteredUsers = [];
+let selectedIds   = new Set();
+let projectsMap   = new Map();
+let projStats     = {};
+let currentTab    = 'main';
+
+// ─────────────────────────────────────────────────────────────────
 // AUTH
-// ─────────────────────────────────────────────────────────────────────────────
-onAuthStateChanged(fbAuth, async (user) => {
-    document.getElementById('loading').classList.add('hidden');
-
-    if (!user) {
-        showLoginScreen();
+// ─────────────────────────────────────────────────────────────────
+function startAuth() {
+    const ok = getOrInitFirebase();
+    if (!ok) {
+        setLoading(false, 'Ошибка инициализации Firebase');
         return;
     }
 
-    if (user.uid !== ADMIN_UID) {
-        document.getElementById('accessDenied').classList.remove('hidden');
-        return;
-    }
+    setLoading(true, 'Проверка авторизации...');
 
-    document.getElementById('adminContent').classList.remove('hidden');
-    renderTableHead(); // рисуем шапку сразу
-    await loadAllData();
-});
+    fbOnAuth(fbAuth, function(user) {
+        setLoading(false);
+
+        if (!user) {
+            showLoginScreen();
+            return;
+        }
+
+        debugLog('Авторизован: ' + user.uid, 'ok');
+
+        if (user.uid !== ADMIN_UID) {
+            document.getElementById('accessDenied').classList.remove('hidden');
+            return;
+        }
+
+        document.getElementById('adminContent').classList.remove('hidden');
+        renderTableHead();
+        loadAllData(user);
+    });
+}
 
 function showLoginScreen() {
-    const el = document.getElementById('loading');
-    el.innerHTML = `
-        <div class="text-6xl mb-4">🔐</div>
-        <h2 class="text-2xl font-bold mb-4">Требуется вход</h2>
-        <p class="text-slate-400 mb-6">Только для администратора</p>
-        <button onclick="window.adminLogin()"
-            class="bg-blue-600 hover:bg-blue-500 px-6 py-3 rounded-lg text-sm font-medium flex items-center gap-2 mx-auto">
-            <i class="fab fa-google"></i> Войти через Google
-        </button>`;
+    const el = document.getElementById('loadingScreen');
+    el.innerHTML = '<div class="text-6xl mb-4">🔐</div>' +
+        '<h2 class="text-2xl font-bold mb-4">Требуется вход</h2>' +
+        '<p class="text-slate-400 mb-6">Только для администратора</p>' +
+        '<button onclick="window.adminLogin()" ' +
+        'class="bg-blue-600 hover:bg-blue-500 px-6 py-3 rounded-lg text-sm font-medium flex items-center gap-2 mx-auto">' +
+        '<i class="fab fa-google"></i> Войти через Google</button>';
     el.classList.remove('hidden');
 }
 
-window.adminLogin = async function() {
-    try {
-        await signInWithPopup(fbAuth, new GoogleAuthProvider());
-    } catch (err) {
+window.adminLogin = function() {
+    var provider = new fbGoogleProvider();
+    fbSignIn(fbAuth, provider).catch(function(err) {
         alert('Ошибка входа: ' + err.message);
+    });
+};
+
+function setLoading(show, text) {
+    var el = document.getElementById('loadingScreen');
+    if (!el) return;
+    if (show) {
+        el.classList.remove('hidden');
+        var textEl = document.getElementById('loadingText');
+        if (textEl) textEl.textContent = text || 'Загрузка...';
+    } else {
+        el.classList.add('hidden');
+    }
+}
+
+// ─────────────────────────────────────────────────────────────────
+// ДИАГНОСТИКА
+// ─────────────────────────────────────────────────────────────────
+window.runDiagnostics = async function() {
+    var panel = document.getElementById('debugPanel');
+    var log   = document.getElementById('debugLog');
+    if (panel) panel.classList.remove('hidden');
+    if (log)   log.innerHTML = '';
+
+    debugLog('=== Диагностика ===', 'info');
+    debugLog('Navigator online: ' + navigator.onLine, navigator.onLine ? 'ok' : 'err');
+    debugLog('window.db: ' + (window.db ? 'есть' : 'нет'), window.db ? 'ok' : 'warn');
+    debugLog('window.auth: ' + (window.auth ? 'есть' : 'нет'), window.auth ? 'ok' : 'warn');
+    debugLog('fbDb: ' + (fbDb ? 'есть' : 'нет'), fbDb ? 'ok' : 'err');
+
+    if (!fbDb) {
+        debugLog('Firestore не инициализирован', 'err');
+        return;
+    }
+
+    try {
+        debugLog('Тест: чтение users...', 'info');
+        var snap = await fbGetDocs(fbCol(fbDb, "users"));
+        debugLog('users: получено ' + snap.size + ' документов', snap.size > 0 ? 'ok' : 'warn');
+    } catch (err) {
+        debugLog('users: ОШИБКА — ' + err.code + ': ' + err.message, 'err');
+    }
+
+    try {
+        debugLog('Тест: чтение projects...', 'info');
+        var snap2 = await fbGetDocs(fbCol(fbDb, "projects"));
+        debugLog('projects: получено ' + snap2.size + ' документов', snap2.size > 0 ? 'ok' : 'warn');
+    } catch (err2) {
+        debugLog('projects: ОШИБКА — ' + err2.code + ': ' + err2.message, 'err');
     }
 };
 
-// ─────────────────────────────────────────────────────────────────────────────
+window.forceReconnect = function() {
+    var log = document.getElementById('debugLog');
+    if (log) log.innerHTML = '';
+    debugLog('Принудительное переподключение...', 'info');
+    debugLog('Перезагрузка страницы...', 'warn');
+    setTimeout(function() { location.reload(true); }, 1000);
+};
+
+// ─────────────────────────────────────────────────────────────────
 // ЗАГРУЗКА ДАННЫХ
-// ─────────────────────────────────────────────────────────────────────────────
-window.loadStats = async function() {
-    await loadAllData();
+// ─────────────────────────────────────────────────────────────────
+window.reloadData = async function() {
+    if (!fbDb) {
+        var ok = getOrInitFirebase();
+        if (!ok) { alert('Firebase не инициализирован'); return; }
+    }
+    setTableMsg('Загрузка...', false);
+    await loadAllData(null);
 };
 
-async function loadAllData() {
-    setTableLoading(true);
+async function loadAllData(user) {
+    setTableMsg('<i class="fas fa-spinner fa-spin mr-2"></i>Подключение к Firebase...', false);
+
     try {
-        await loadProjects();
-        await loadUsers();
-        await loadProjectStats();
-        await loadNotifStats();
-        await loadBroadcastHistory();
-        updateSelectedCount();
-    } catch (err) {
-        console.error('[loadAllData]', err);
-        setTableLoading(false, 'Ошибка: ' + err.message);
+        await Promise.all([
+            loadProjects(),
+            loadUsers()
+        ]);
+        await Promise.all([
+            buildProjectStats(),
+            loadNotifStats(),
+            loadBcastHistory()
+        ]);
+        updateCount();
+    } catch (outerErr) {
+        console.error('[loadAllData] Critical error:', outerErr);
+        setTableMsg('Критическая ошибка: ' + outerErr.message, true);
+
+        // Показываем диагностику автоматически
+        var panel = document.getElementById('debugPanel');
+        if (panel) panel.classList.remove('hidden');
+        debugLog('Критическая ошибка загрузки: ' + outerErr.message, 'err');
+        window.runDiagnostics();
     }
 }
 
-// ── Проекты ─────────────────────────────────────────────────────────────────
+// ── Проекты ──────────────────────────────────────────────────────
 async function loadProjects() {
+    if (!fbDb) return;
     try {
-        const snap = await getDocs(collection(fbDb, "projects"));
+        var snap = await fbGetDocs(fbCol(fbDb, "projects"));
         projectsMap.clear();
-        snap.forEach(d => projectsMap.set(d.id, d.data()));
-        console.log('[loadProjects] Загружено проектов:', projectsMap.size);
+        snap.forEach(function(d) { projectsMap.set(d.id, d.data()); });
+        console.log('[loadProjects] Загружено:', projectsMap.size);
     } catch (err) {
-        console.warn('[loadProjects] Ошибка:', err.message);
+        console.warn('[loadProjects]', err.code, err.message);
     }
 }
 
-// ── Пользователи ─────────────────────────────────────────────────────────────
+// ── Пользователи ─────────────────────────────────────────────────
 async function loadUsers() {
-    console.log('[loadUsers] Начало загрузки...');
-    const snap = await getDocs(collection(fbDb, "users"));
+    if (!fbDb) {
+        setTableMsg('Firebase не инициализирован', true);
+        return;
+    }
+
+    console.log('[loadUsers] Начало...');
+    setTableMsg('<i class="fas fa-spinner fa-spin mr-2"></i>Загрузка пользователей...', false);
+
+    var snap;
+    try {
+        snap = await fbGetDocs(fbCol(fbDb, "users"));
+    } catch (err) {
+        console.error('[loadUsers] Ошибка getDocs:', err);
+        setTableMsg('Ошибка чтения users: ' + err.code + ' — ' + err.message, true);
+        throw err;
+    }
+
     console.log('[loadUsers] Получено документов:', snap.size);
 
-    const now       = new Date();
-    const ms30min   = 30 * 60 * 1000;
-    const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-    const weekStart  = new Date(todayStart);
+    if (snap.size === 0) {
+        // Показываем диагностику
+        var panel = document.getElementById('debugPanel');
+        if (panel) panel.classList.remove('hidden');
+        debugLog('Коллекция users пуста или нет доступа', 'warn');
+        debugLog('Проверьте правила Firestore: allow read: if request.auth != null', 'info');
+        setTableMsg('Пользователей не найдено. Проверьте права Firestore.', true);
+
+        // Всё равно продолжаем — обновляем счётчики нулями
+        updateStatCards([], new Set());
+        renderActivityChart([]);
+        renderTopUsers([]);
+        renderCountriesChart([]);
+        return;
+    }
+
+    var now          = new Date();
+    var ms30min      = 30 * 60 * 1000;
+    var todayStart   = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    var weekStart    = new Date(todayStart);
     weekStart.setDate(weekStart.getDate() - 7);
 
-    const countriesSet = new Set();
+    var countriesSet = new Set();
     allUsers = [];
 
-    snap.forEach(docSnap => {
-        const raw = docSnap.data();
-        const uid = docSnap.id;
+    snap.forEach(function(docSnap) {
+        var raw = docSnap.data();
+        var uid = docSnap.id;
 
-        // Конвертация Timestamp → Date
-        const toDate = function(val) {
+        // Конвертация Timestamp
+        var toDate = function(val) {
             if (!val) return null;
-            if (typeof val.toDate === 'function') return val.toDate();
+            if (val && typeof val.toDate === 'function') return val.toDate();
             if (val instanceof Date) return val;
-            const parsed = new Date(val);
-            return isNaN(parsed.getTime()) ? null : parsed;
+            var p = new Date(val);
+            return isNaN(p.getTime()) ? null : p;
         };
 
-        const lastLogin  = toDate(raw.lastLogin);
-        const firstLogin = toDate(raw.firstLogin);
-        const isOnline   = !!(lastLogin && (now - lastLogin) < ms30min);
+        var lastLogin  = toDate(raw.lastLogin);
+        var firstLogin = toDate(raw.firstLogin);
+        var isOnline   = !!(lastLogin && (now - lastLogin) < ms30min);
 
-        // ── Клики по гайдам ──────────────────────────────────────────────────
-        const guideStats = raw.arcGuideStats || {};
-        let totalClicks = 0;
-        let topProjectId = null;
-        let topProjectClicks = 0;
+        // Клики
+        var guideStats       = raw.arcGuideStats || {};
+        var totalClicks      = 0;
+        var topProjectId     = null;
+        var topProjectClicks = 0;
 
-        Object.entries(guideStats).forEach(function(entry) {
-            const pid   = entry[0];
-            const stats = entry[1];
-            const clicks = (stats && stats.totalClicks) ? stats.totalClicks : 0;
-            totalClicks += clicks;
-            if (clicks > topProjectClicks) {
-                topProjectClicks = clicks;
-                topProjectId = pid;
-            }
+        Object.keys(guideStats).forEach(function(pid) {
+            var st = guideStats[pid];
+            var cl = (st && st.totalClicks) ? Number(st.totalClicks) : 0;
+            totalClicks += cl;
+            if (cl > topProjectClicks) { topProjectClicks = cl; topProjectId = pid; }
         });
 
-        // ── Данные профиля ────────────────────────────────────────────────────
-        // Ищем в нескольких возможных местах
-        const profile = raw.profile || {};
+        // ─── Профиль: ищем во всех возможных местах ───────────────
+        // Вариант 1: raw.profile.{field}
+        // Вариант 2: raw.{field} напрямую
+        // Вариант 3: raw.userData.{field}
 
-        const firstName = profile.firstName  || raw.firstName  || '';
-        const lastName  = profile.lastName   || raw.lastName   || '';
-        const username  = profile.username   || raw.username   || '';
-        const telegram  = profile.telegram   || raw.telegram   || '';
-        const birthdate = profile.birthdate  || raw.birthdate  || '';
-        const gender    = profile.gender     || raw.gender     || '';
-        const country   = profile.countryName || profile.country || raw.countryName || raw.country || '';
-        const bio       = profile.bio        || raw.bio        || '';
+        var profile    = raw.profile    || {};
+        var userData   = raw.userData   || {};
 
-        if (country) countriesSet.add(country);
+        var firstName  = profile.firstName  || raw.firstName  || userData.firstName  || '';
+        var lastName   = profile.lastName   || raw.lastName   || userData.lastName   || '';
+        var username   = profile.username   || raw.username   || userData.username   || '';
+        var telegram   = profile.telegram   || raw.telegram   || userData.telegram   || '';
+        var birthdate  = profile.birthdate  || raw.birthdate  || userData.birthdate  || '';
+        var gender     = profile.gender     || raw.gender     || userData.gender     || '';
+        var bio        = profile.bio        || raw.bio        || userData.bio        || '';
 
-        const profileFilled = !!(firstName || lastName || username || telegram || country);
+        // Страна: может быть code или name
+        var countryCode = profile.country     || raw.country     || userData.country     || '';
+        var countryName = profile.countryName || raw.countryName || userData.countryName || countryCode;
+
+        if (countryName) countriesSet.add(countryName);
+
+        var displayName = raw.displayName || firstName + (lastName ? ' ' + lastName : '') || 'Аноним';
+        if (displayName === ' ') displayName = 'Аноним';
+
+        var profileFilled = !!(firstName || lastName || username || telegram || countryCode);
 
         allUsers.push({
             id:              uid,
-            email:           raw.email       || '—',
-            displayName:     raw.displayName || firstName || 'Аноним',
-            photoURL:        raw.photoURL    || '',
-            provider:        raw.provider    || 'unknown',
-            firstLogin,
-            lastLogin,
-            isOnline,
-            totalClicks,
-            topProjectId,
-            topProjectClicks,
-            completedCount:  raw.completed   ? raw.completed.length  : 0,
-            favoritesCount:  raw.favorites   ? raw.favorites.length  : 0,
-            profileFilled,
-            // Профиль
-            firstName, lastName, username,
-            telegram, birthdate, gender,
-            country, bio,
-            // Сырые данные (для модалки)
-            rawData: raw
+            email:           raw.email      || '—',
+            displayName:     displayName.trim(),
+            photoURL:        raw.photoURL   || '',
+            provider:        raw.provider   || 'unknown',
+            firstLogin:      firstLogin,
+            lastLogin:       lastLogin,
+            isOnline:        isOnline,
+            totalClicks:     totalClicks,
+            topProjectId:    topProjectId,
+            topProjectClicks:topProjectClicks,
+            completedCount:  raw.completed  ? raw.completed.length  : 0,
+            favoritesCount:  raw.favorites  ? raw.favorites.length  : 0,
+            profileFilled:   profileFilled,
+            firstName:       firstName,
+            lastName:        lastName,
+            username:        username,
+            telegram:        telegram,
+            birthdate:       birthdate,
+            gender:          gender,
+            country:         countryName,
+            countryCode:     countryCode,
+            bio:             bio,
+            raw:             raw
         });
     });
 
-    // Сортировка по умолчанию
-    allUsers.sort(function(a, b) {
-        return (b.lastLogin || 0) - (a.lastLogin || 0);
-    });
+    // Сортировка
+    allUsers.sort(function(a, b) { return (b.lastLogin || 0) - (a.lastLogin || 0); });
     filteredUsers = allUsers.slice();
 
-    // Обновляем счётчики
-    const newToday    = allUsers.filter(function(u) { return u.firstLogin && u.firstLogin >= todayStart; }).length;
-    const activeWeek  = allUsers.filter(function(u) { return u.lastLogin  && u.lastLogin  >= weekStart;  }).length;
-    const onlineCount = allUsers.filter(function(u) { return u.isOnline; }).length;
-    const filledCount = allUsers.filter(function(u) { return u.profileFilled; }).length;
-
-    document.getElementById('st-total').textContent    = allUsers.length;
-    document.getElementById('st-today').textContent    = newToday;
-    document.getElementById('st-week').textContent     = activeWeek;
-    document.getElementById('st-online').textContent   = onlineCount;
-    document.getElementById('st-profiles').textContent = filledCount;
-    document.getElementById('st-countries').textContent = countriesSet.size;
-    document.getElementById('usersCount').textContent  = '(' + allUsers.length + ')';
-
-    renderActivityChart();
-    renderTopUsers();
-    renderCountriesChart(countriesSet);
+    updateStatCards(allUsers, countriesSet);
+    renderActivityChart(allUsers);
+    renderTopUsers(allUsers);
+    renderCountriesChart(allUsers);
     renderTableHead();
     renderTable();
-    updateLastUpdate();
+    updateTimestamp();
 
-    console.log('[loadUsers] Готово. Пользователей:', allUsers.length);
+    console.log('[loadUsers] Готово. Всего:', allUsers.length);
 }
 
-// ── Статистика проектов ───────────────────────────────────────────────────────
-async function loadProjectStats() {
-    projectStatsMap = {};
-    try {
-        const snap = await getDocs(collection(fbDb, "users"));
-        // ДИАГНОСТИКА — удалить после проверки
-console.log('=== ДИАГНОСТИКА ПОЛЬЗОВАТЕЛЕЙ ===');
-console.log('Количество документов:', snap.size);
-snap.forEach(function(d) {
-    const raw = d.data();
-    console.log('UID:', d.id);
-    console.log('  email:', raw.email);
-    console.log('  displayName:', raw.displayName);
-    console.log('  profile:', raw.profile);
-    console.log('  firstName (корень):', raw.firstName);
-    console.log('  arcGuideStats:', raw.arcGuideStats);
-    console.log('  favorites:', raw.favorites);
-    console.log('  completed:', raw.completed);
-    console.log('  ---');
-});
-        snap.forEach(function(docSnap) {
-            const guideStats = docSnap.data().arcGuideStats || {};
-            Object.entries(guideStats).forEach(function(entry) {
-                const pid    = entry[0];
-                const stats  = entry[1];
-                if (!projectsMap.has(pid)) return; // только известные проекты
-                if (!projectStatsMap[pid]) {
-                    projectStatsMap[pid] = { clicks: 0, userSet: new Set() };
-                }
-                projectStatsMap[pid].clicks += (stats.totalClicks || 0);
-                projectStatsMap[pid].userSet.add(docSnap.id);
-            });
+// ── Статистика проектов ───────────────────────────────────────────
+async function buildProjectStats() {
+    projStats = {};
+    allUsers.forEach(function(user) {
+        var gs = user.raw.arcGuideStats || {};
+        Object.keys(gs).forEach(function(pid) {
+            if (!projectsMap.has(pid)) return;
+            if (!projStats[pid]) projStats[pid] = { clicks: 0, userCount: 0 };
+            projStats[pid].clicks += (gs[pid].totalClicks || 0);
+            projStats[pid].userCount++;
         });
-    } catch (err) {
-        console.warn('[loadProjectStats]', err.message);
-    }
+    });
     renderTopProjects();
 }
 
-// ── Уведомления ───────────────────────────────────────────────────────────────
+// ── Уведомления ───────────────────────────────────────────────────
 async function loadNotifStats() {
+    if (!fbDb) return;
     try {
-        const snap = await getDocs(collection(fbDb, "notifications"));
-        let total = 0;
-        let viewed = 0;
+        var snap = await fbGetDocs(fbCol(fbDb, "notifications"));
+        var total = snap.size;
+        var viewed = 0;
         snap.forEach(function(d) {
-            total++;
-            const data = d.data();
+            var data = d.data();
             if (data.read || data.viewedAt) viewed++;
         });
-        document.getElementById('totalNotifications').textContent  = total;
-        document.getElementById('viewedNotifications').textContent = viewed;
-        document.getElementById('viewRate').textContent            = total > 0 ? Math.round(viewed / total * 100) + '%' : '0%';
+        setText('notif-total',  total);
+        setText('notif-viewed', viewed);
+        setText('notif-rate',   total > 0 ? Math.round(viewed / total * 100) + '%' : '0%');
     } catch (err) {
         console.warn('[loadNotifStats]', err.message);
     }
 }
 
-// ── История рассылок ──────────────────────────────────────────────────────────
-async function loadBroadcastHistory() {
-    const container = document.getElementById('broadcastHistory');
+// ── История рассылок ──────────────────────────────────────────────
+async function loadBcastHistory() {
+    var container = document.getElementById('bcastHistory');
+    if (!fbDb || !container) return;
     try {
-        const snap = await getDocs(
-            query(collection(fbDb, "broadcasts"), orderBy("createdAt", "desc"), limit(10))
-        );
-        if (snap.empty) {
-            container.innerHTML = '<p class="text-slate-500 text-sm">Нет рассылок</p>';
-            return;
-        }
-        const colorMap = {
+        var qry  = fbQuery(fbCol(fbDb, "broadcasts"), fbOrderBy("createdAt", "desc"), fbLimit(10));
+        var snap = await fbGetDocs(qry);
+        if (snap.empty) { container.innerHTML = '<p class="text-slate-500 text-sm">Нет рассылок</p>'; return; }
+        var colorMap = {
             info:     'bg-blue-600/20 text-blue-400',
             success:  'bg-green-600/20 text-green-400',
             warning:  'bg-yellow-600/20 text-yellow-400',
@@ -729,196 +880,150 @@ async function loadBroadcastHistory() {
             referral: 'bg-purple-600/20 text-purple-400'
         };
         container.innerHTML = snap.docs.map(function(d) {
-            const data  = d.data();
-            const date  = data.createdAt ? data.createdAt.toDate() : new Date();
-            const color = colorMap[data.type] || colorMap.info;
+            var data  = d.data();
+            var date  = data.createdAt ? data.createdAt.toDate() : new Date();
+            var color = colorMap[data.type] || colorMap.info;
             return '<div class="flex items-start gap-3 p-3 bg-slate-800/50 rounded-lg">' +
                 '<div class="w-9 h-9 rounded-lg ' + color + ' flex items-center justify-center flex-shrink-0">' +
-                    '<i class="fas fa-bell text-sm"></i></div>' +
+                '<i class="fas fa-bell text-sm"></i></div>' +
                 '<div class="flex-1 min-w-0">' +
-                    '<div class="flex items-center gap-2 mb-1">' +
-                        '<span class="text-xs px-2 py-0.5 rounded ' + color + '">' + (data.type || 'info') + '</span>' +
-                        '<span class="text-xs text-slate-500">' + date.toLocaleString('ru-RU') + '</span>' +
-                    '</div>' +
-                    '<p class="text-sm text-slate-300 line-clamp-2">' + (data.message || '') + '</p>' +
-                    '<div class="flex gap-3 mt-1 text-xs text-slate-500">' +
-                        '<span>📤 ' + (data.recipientCount || 0) + '</span>' +
-                        '<span>👁️ ' + (data.viewCount || 0) + '</span>' +
-                    '</div>' +
+                '<div class="flex items-center gap-2 mb-1">' +
+                '<span class="text-xs px-2 py-0.5 rounded ' + color + '">' + (data.type || 'info') + '</span>' +
+                '<span class="text-xs text-slate-500">' + date.toLocaleString('ru-RU') + '</span>' +
                 '</div>' +
-                '<button onclick="window.deleteBroadcast(\'' + d.id + '\')" class="text-red-400 hover:text-red-300 p-1 flex-shrink-0">' +
-                    '<i class="fas fa-trash text-xs"></i></button>' +
-            '</div>';
+                '<p class="text-sm text-slate-300 line-clamp-2">' + esc(data.message || '') + '</p>' +
+                '<div class="flex gap-3 mt-1 text-xs text-slate-500">' +
+                '<span>📤 ' + (data.recipientCount || 0) + '</span>' +
+                '<span>👁️ ' + (data.viewCount || 0) + '</span>' +
+                '</div></div>' +
+                '<button onclick="window.delBcast(\'' + d.id + '\')" class="text-red-400 hover:text-red-300 p-1 flex-shrink-0">' +
+                '<i class="fas fa-trash text-xs"></i></button></div>';
         }).join('');
     } catch (err) {
-        console.warn('[loadBroadcastHistory]', err.message);
-        container.innerHTML = '<p class="text-red-400 text-sm">Ошибка загрузки истории</p>';
+        console.warn('[loadBcastHistory]', err.message);
+        container.innerHTML = '<p class="text-red-400 text-sm">Ошибка: ' + err.message + '</p>';
     }
 }
 
-window.deleteBroadcast = async function(broadcastId) {
-    if (!confirm('Удалить рассылку?')) return;
-    try {
-        await deleteDoc(doc(fbDb, "broadcasts", broadcastId));
-        await loadBroadcastHistory();
-    } catch (err) {
-        alert('Ошибка: ' + err.message);
-    }
+window.delBcast = async function(id) {
+    if (!confirm('Удалить?')) return;
+    await fbDelDoc(fbDoc(fbDb, "broadcasts", id));
+    loadBcastHistory();
 };
 
-// ─────────────────────────────────────────────────────────────────────────────
-// РЕНДЕР ГРАФИКОВ
-// ─────────────────────────────────────────────────────────────────────────────
-function renderActivityChart() {
-    const container = document.getElementById('activityChart');
-    const now = new Date();
-    const days = [];
+// ─────────────────────────────────────────────────────────────────
+// РЕНДЕР
+// ─────────────────────────────────────────────────────────────────
+function updateStatCards(users, countriesSet) {
+    var now       = new Date();
+    var today     = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    var weekAgo   = new Date(today); weekAgo.setDate(weekAgo.getDate() - 7);
 
-    for (let i = 6; i >= 0; i--) {
-        const d = new Date(now);
-        d.setDate(d.getDate() - i);
-        const ds = new Date(d.getFullYear(), d.getMonth(), d.getDate());
-        const de = new Date(ds); de.setDate(de.getDate() + 1);
-        const count = allUsers.filter(function(u) {
-            return u.lastLogin && u.lastLogin >= ds && u.lastLogin < de;
-        }).length;
-        days.push({
-            label:   d.toLocaleDateString('ru-RU', { weekday: 'short', day: 'numeric' }),
-            count:   count,
-            isToday: d.toDateString() === now.toDateString()
-        });
+    setText('st-total',     users.length);
+    setText('st-today',     users.filter(function(u) { return u.firstLogin && u.firstLogin >= today; }).length);
+    setText('st-week',      users.filter(function(u) { return u.lastLogin  && u.lastLogin  >= weekAgo; }).length);
+    setText('st-online',    users.filter(function(u) { return u.isOnline; }).length);
+    setText('st-profiles',  users.filter(function(u) { return u.profileFilled; }).length);
+    setText('st-countries', countriesSet ? countriesSet.size : new Set(users.map(function(u){ return u.country; }).filter(Boolean)).size);
+    setText('usersCount',   '(' + users.length + ')');
+}
+
+function renderActivityChart(users) {
+    var container = document.getElementById('activityChart');
+    if (!container) return;
+    var now  = new Date();
+    var days = [];
+    for (var i = 6; i >= 0; i--) {
+        var d  = new Date(now); d.setDate(d.getDate() - i);
+        var ds = new Date(d.getFullYear(), d.getMonth(), d.getDate());
+        var de = new Date(ds); de.setDate(de.getDate() + 1);
+        var cnt = users.filter(function(u) { return u.lastLogin && u.lastLogin >= ds && u.lastLogin < de; }).length;
+        days.push({ label: d.toLocaleDateString('ru-RU', {weekday:'short', day:'numeric'}), count: cnt, isToday: d.toDateString() === now.toDateString() });
     }
-
-    const maxVal = Math.max.apply(null, days.map(function(d) { return d.count; }).concat([1]));
-
+    var maxVal = Math.max.apply(null, days.map(function(d){ return d.count; }).concat([1]));
     container.innerHTML = days.map(function(day) {
-        const pct = Math.round(day.count / maxVal * 100);
-        const barClass = day.isToday
-            ? 'bg-gradient-to-r from-blue-500 to-purple-500'
-            : 'bg-gradient-to-r from-blue-600/40 to-purple-600/40';
+        var pct = Math.round(day.count / maxVal * 100);
+        var cls = day.isToday ? 'bg-gradient-to-r from-blue-500 to-purple-500' : 'bg-gradient-to-r from-blue-600/40 to-purple-600/40';
         return '<div class="flex items-center gap-3">' +
             '<span class="text-xs text-slate-400 w-14">' + day.label + '</span>' +
             '<div class="flex-1 h-6 bg-slate-800 rounded-lg overflow-hidden">' +
-                '<div class="h-full rounded-lg ' + barClass + '" style="width:' + pct + '%"></div>' +
-            '</div>' +
-            '<span class="text-sm text-slate-300 w-6 text-right">' + day.count + '</span>' +
-        '</div>';
+            '<div class="h-full rounded-lg ' + cls + '" style="width:' + pct + '%"></div></div>' +
+            '<span class="text-sm text-slate-300 w-5 text-right">' + day.count + '</span></div>';
     }).join('');
 }
 
 function renderTopProjects() {
-    const container = document.getElementById('topProjects');
-    const sorted = Object.entries(projectStatsMap)
-        .map(function(entry) {
-            return { id: entry[0], clicks: entry[1].clicks, users: entry[1].userSet.size };
-        })
-        .sort(function(a, b) { return b.clicks - a.clicks; })
-        .slice(0, 6);
-
-    if (!sorted.length) {
-        container.innerHTML = '<p class="text-slate-500 text-sm col-span-3">Нет данных о кликах</p>';
-        return;
-    }
-
-    const maxClicks = sorted[0].clicks || 1;
-    const colors    = ['bg-yellow-500','bg-slate-400','bg-orange-500','bg-blue-500','bg-purple-500','bg-green-500'];
-    const medals    = ['🥇','🥈','🥉','4️⃣','5️⃣','6️⃣'];
-
+    var container = document.getElementById('topProjects');
+    if (!container) return;
+    var sorted = Object.keys(projStats).map(function(pid) {
+        return { id: pid, clicks: projStats[pid].clicks, userCount: projStats[pid].userCount };
+    }).sort(function(a, b) { return b.clicks - a.clicks; }).slice(0, 6);
+    if (!sorted.length) { container.innerHTML = '<p class="text-slate-500 text-sm col-span-3">Нет данных</p>'; return; }
+    var maxC   = sorted[0].clicks || 1;
+    var colors = ['bg-yellow-500','bg-slate-400','bg-orange-500','bg-blue-500','bg-purple-500','bg-green-500'];
+    var medals = ['🥇','🥈','🥉','4️⃣','5️⃣','6️⃣'];
     container.innerHTML = sorted.map(function(ps, idx) {
-        const proj = projectsMap.get(ps.id);
-        const name = proj ? (proj.name || ps.id) : ps.id;
-        const img  = proj && proj.image
-            ? proj.image
-            : 'https://ui-avatars.com/api/?name=' + encodeURIComponent(name[0] || '?') + '&background=334155&color=fff';
-        const pct  = Math.round(ps.clicks / maxClicks * 100);
-
+        var proj = projectsMap.get(ps.id);
+        var name = proj ? (proj.name || ps.id) : ps.id;
+        var img  = proj && proj.image ? proj.image : '';
+        var pct  = Math.round(ps.clicks / maxC * 100);
         return '<div class="bg-slate-800/50 rounded-lg p-3">' +
             '<div class="flex items-center justify-between mb-2">' +
-                '<span>' + medals[idx] + '</span>' +
-                '<span class="text-xs text-slate-500">' + ps.users + ' чел.</span>' +
-            '</div>' +
+            '<span>' + medals[idx] + '</span>' +
+            '<span class="text-xs text-slate-500">' + ps.userCount + ' чел.</span></div>' +
             '<div class="flex items-center gap-2 mb-2">' +
-                '<img src="' + img + '" class="w-7 h-7 rounded-full object-cover" onerror="this.style.display=\'none\'">' +
-                '<span class="text-xs font-medium truncate flex-1" title="' + name + '">' + name + '</span>' +
-            '</div>' +
+            (img ? '<img src="' + img + '" class="w-7 h-7 rounded-full object-cover" onerror="this.style.display=\'none\'">' : '') +
+            '<span class="text-xs font-medium truncate flex-1">' + esc(name) + '</span></div>' +
             '<div class="text-xs text-slate-400 mb-1">' + ps.clicks + ' кликов</div>' +
-            '<div class="h-1.5 bg-slate-700 rounded-full">' +
-                '<div class="h-full ' + colors[idx] + ' rounded-full" style="width:' + pct + '%"></div>' +
-            '</div>' +
-        '</div>';
+            '<div class="h-1.5 bg-slate-700 rounded-full"><div class="h-full ' + colors[idx] + ' rounded-full" style="width:' + pct + '%"></div></div></div>';
     }).join('');
 }
 
-function renderCountriesChart(countriesSet) {
-    const container = document.getElementById('countriesChart');
-    const counts = {};
-
-    allUsers.forEach(function(u) {
-        if (!u.country) return;
-        counts[u.country] = (counts[u.country] || 0) + 1;
-    });
-
-    const sorted = Object.entries(counts)
-        .sort(function(a, b) { return b[1] - a[1]; })
-        .slice(0, 10);
-
-    if (!sorted.length) {
-        container.innerHTML = '<p class="text-slate-500 text-sm">Страны не указаны</p>';
-        return;
-    }
-
-    const maxCount = sorted[0][1] || 1;
+function renderCountriesChart(users) {
+    var container = document.getElementById('countriesChart');
+    if (!container) return;
+    var counts = {};
+    users.forEach(function(u) { if (u.country) counts[u.country] = (counts[u.country] || 0) + 1; });
+    var sorted = Object.entries(counts).sort(function(a, b) { return b[1] - a[1]; }).slice(0, 10);
+    if (!sorted.length) { container.innerHTML = '<p class="text-slate-500 text-sm">Страны не указаны</p>'; return; }
+    var maxC = sorted[0][1] || 1;
     container.innerHTML = sorted.map(function(entry) {
-        const country = entry[0];
-        const count   = entry[1];
-        const pct = Math.round(count / maxCount * 100);
+        var pct = Math.round(entry[1] / maxC * 100);
         return '<div class="flex items-center gap-3">' +
-            '<span class="text-xs text-slate-300 w-28 truncate">' + country + '</span>' +
+            '<span class="text-xs text-slate-300 w-28 truncate">' + esc(entry[0]) + '</span>' +
             '<div class="flex-1 h-5 bg-slate-800 rounded overflow-hidden">' +
-                '<div class="h-full bg-gradient-to-r from-pink-600/60 to-purple-600/60 rounded" style="width:' + pct + '%"></div>' +
-            '</div>' +
-            '<span class="text-xs text-slate-400 w-5 text-right">' + count + '</span>' +
-        '</div>';
+            '<div class="h-full bg-gradient-to-r from-pink-600/60 to-purple-600/60 rounded" style="width:' + pct + '%"></div></div>' +
+            '<span class="text-xs text-slate-400 w-5 text-right">' + entry[1] + '</span></div>';
     }).join('');
 }
 
-function renderTopUsers() {
-    const container = document.getElementById('topUsers');
-    const top5   = allUsers.slice().sort(function(a, b) { return b.totalClicks - a.totalClicks; }).slice(0, 5);
-    const medals = ['🥇','🥈','🥉','4️⃣','5️⃣'];
-
-    if (!top5.length) {
-        container.innerHTML = '<p class="text-slate-500 text-sm">Нет данных</p>';
-        return;
-    }
-
+function renderTopUsers(users) {
+    var container = document.getElementById('topUsers');
+    if (!container) return;
+    var arr    = users || allUsers;
+    var top5   = arr.slice().sort(function(a, b) { return b.totalClicks - a.totalClicks; }).slice(0, 5);
+    var medals = ['🥇','🥈','🥉','4️⃣','5️⃣'];
+    if (!top5.length) { container.innerHTML = '<p class="text-slate-500 text-sm">Нет данных</p>'; return; }
     container.innerHTML = top5.map(function(u, i) {
-        const avatar = u.photoURL
-            ? u.photoURL
-            : 'https://ui-avatars.com/api/?name=' + encodeURIComponent(u.displayName) + '&background=3b82f6&color=fff';
-        return '<div class="flex items-center gap-2 p-2.5 bg-slate-800/50 rounded-lg cursor-pointer hover:bg-slate-700/50" onclick="window.openProfileModal(\'' + u.id + '\')">' +
+        var av = u.photoURL ? u.photoURL : 'https://ui-avatars.com/api/?name=' + encodeURIComponent(u.displayName) + '&background=3b82f6&color=fff';
+        return '<div class="flex items-center gap-2 p-2.5 bg-slate-800/50 rounded-lg cursor-pointer hover:bg-slate-700/50" onclick="window.openProfile(\'' + u.id + '\')">' +
             '<span class="text-base w-7">' + medals[i] + '</span>' +
-            '<img src="' + avatar + '" class="w-8 h-8 rounded-full object-cover" onerror="this.style.display=\'none\'">' +
+            '<img src="' + av + '" class="w-8 h-8 rounded-full object-cover" onerror="this.style.display=\'none\'">' +
             '<div class="flex-1 min-w-0">' +
-                '<div class="text-sm font-medium truncate">' + escHtml(u.displayName) + '</div>' +
-                '<div class="text-xs text-slate-500">' + escHtml(u.country || u.email) + '</div>' +
-            '</div>' +
-            '<div class="text-right">' +
-                '<div class="text-base font-bold text-blue-400">' + u.totalClicks + '</div>' +
-                '<div class="text-[10px] text-slate-500">кликов</div>' +
-            '</div>' +
-        '</div>';
+            '<div class="text-sm font-medium truncate">' + esc(u.displayName) + '</div>' +
+            '<div class="text-xs text-slate-500">' + esc(u.country || u.email) + '</div></div>' +
+            '<div class="text-right"><div class="text-base font-bold text-blue-400">' + u.totalClicks + '</div>' +
+            '<div class="text-[10px] text-slate-500">кликов</div></div></div>';
     }).join('');
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
+// ─────────────────────────────────────────────────────────────────
 // ТАБЛИЦА
-// ─────────────────────────────────────────────────────────────────────────────
+// ─────────────────────────────────────────────────────────────────
 window.switchTab = function(tab) {
     currentTab = tab;
-    // Обновляем кнопки
     ['main','profile','activity'].forEach(function(t) {
-        const btn = document.getElementById('tab-' + t);
+        var btn = document.getElementById('tab-' + t);
         if (btn) btn.classList.toggle('active', t === tab);
     });
     renderTableHead();
@@ -926,330 +1031,226 @@ window.switchTab = function(tab) {
 };
 
 function renderTableHead() {
-    const head = document.getElementById('tableHead');
+    var head = document.getElementById('tHead');
     if (!head) return;
-
-    const checkboxTh = '<th class="w-10"><input type="checkbox" onchange="window.toggleSelectAll()" class="w-4 h-4 rounded"></th>';
-
-    const heads = {
+    var cb = '<th class="w-10"><input type="checkbox" onchange="window.toggleAll()" class="w-4 h-4 rounded"></th>';
+    var heads = {
         main:
-            '<tr>' + checkboxTh +
-            '<th>Пользователь / Email</th>' +
-            '<th>UID</th>' +
-            '<th>Первый вход</th>' +
-            '<th>Последний вход</th>' +
-            '<th>Способ входа</th>' +
-            '<th>Статус</th>' +
-            '</tr>',
-
+            '<tr>' + cb +
+            '<th>Пользователь</th><th>UID</th><th>Первый вход</th>' +
+            '<th>Последний вход</th><th>Способ входа</th><th>Статус</th></tr>',
         profile:
-            '<tr>' + checkboxTh +
-            '<th>Пользователь</th>' +
-            '<th>Имя</th>' +
-            '<th>Фамилия</th>' +
-            '<th>Никнейм</th>' +
-            '<th>Telegram</th>' +
-            '<th>Страна</th>' +
-            '<th>Пол</th>' +
-            '<th>Дата рождения</th>' +
-            '</tr>',
-
+            '<tr>' + cb +
+            '<th>Пользователь</th><th>Имя</th><th>Фамилия</th>' +
+            '<th>Никнейм</th><th>Telegram</th><th>Страна</th><th>Пол</th><th>Дата рожд.</th></tr>',
         activity:
-            '<tr>' + checkboxTh +
-            '<th>Пользователь</th>' +
-            '<th class="text-center">Кликов</th>' +
-            '<th class="text-center">Завершено</th>' +
-            '<th class="text-center">Избранное ❤️</th>' +
-            '<th>Топ проект</th>' +
-            '</tr>'
+            '<tr>' + cb +
+            '<th>Пользователь</th><th class="text-center">Кликов</th>' +
+            '<th class="text-center">Завершено</th><th class="text-center">Избранное ❤️</th>' +
+            '<th>Топ проект</th></tr>'
     };
-
     head.innerHTML = heads[currentTab] || heads.main;
 }
 
 function renderTable() {
-    const tbody = document.getElementById('usersTableBody');
+    var tbody  = document.getElementById('tBody');
     if (!tbody) return;
-
     if (!filteredUsers.length) {
         tbody.innerHTML = '<tr><td colspan="9" class="py-8 text-center text-slate-500">Нет пользователей</td></tr>';
         return;
     }
-
-    const search = (document.getElementById('searchUser') ? document.getElementById('searchUser').value : '').toLowerCase();
-
+    var srch = ((document.getElementById('searchInput') || {}).value || '').toLowerCase();
     tbody.innerHTML = filteredUsers.map(function(user) {
-        const isSel   = selectedIds.has(user.id);
-        const rowClass = 'user-row' + (isSel ? ' selected-row' : '');
-        const checkbox = '<td class="w-10">' +
-            '<input type="checkbox"' + (isSel ? ' checked' : '') +
-            ' onchange="window.toggleUserSelect(\'' + user.id + '\')" class="w-4 h-4 rounded">' +
-            '</td>';
+        var sel   = selectedIds.has(user.id);
+        var rowCl = 'user-row border-b border-slate-800/30' + (sel ? ' selected-row' : '');
+        var cb    = '<td class="w-10"><input type="checkbox"' + (sel ? ' checked' : '') +
+                    ' onchange="window.toggleSel(\'' + user.id + '\')" class="w-4 h-4 rounded"></td>';
 
-        const avatar = user.photoURL
-            ? '<img src="' + user.photoURL + '" class="w-8 h-8 rounded-full object-cover mr-2 flex-shrink-0" onerror="this.style.display=\'none\'">'
-            : '<div class="w-8 h-8 rounded-full bg-blue-600/30 flex items-center justify-center mr-2 flex-shrink-0 text-sm font-bold text-blue-300">' + (user.displayName[0] || '?').toUpperCase() + '</div>';
+        var avSrc = user.photoURL
+            ? user.photoURL
+            : 'https://ui-avatars.com/api/?name=' + encodeURIComponent(user.displayName[0] || '?') + '&background=334155&color=fff';
 
-        const userCell = '<td>' +
-            '<div class="flex items-center cursor-pointer hover:opacity-80" onclick="window.openProfileModal(\'' + user.id + '\')">' +
-                avatar +
-                '<div class="min-w-0">' +
-                    '<div class="text-sm font-medium flex items-center gap-1.5">' +
-                        escHtml(hlSearch(user.displayName, search)) +
-                        (user.isOnline ? '<span class="w-1.5 h-1.5 bg-emerald-400 rounded-full flex-shrink-0"></span>' : '') +
-                    '</div>' +
-                    '<div class="text-xs text-slate-500 truncate max-w-[150px]">' + escHtml(hlSearch(user.email, search)) + '</div>' +
-                '</div>' +
+        var av    = '<img src="' + avSrc + '" class="w-8 h-8 rounded-full object-cover mr-2 flex-shrink-0" ' +
+                    'onerror="this.src=\'https://ui-avatars.com/api/?name=?&background=334155&color=fff\'">';
+
+        var userCell = '<td><div class="flex items-center cursor-pointer hover:opacity-80" onclick="window.openProfile(\'' + user.id + '\')">' +
+            av + '<div class="min-w-0">' +
+            '<div class="text-sm font-medium flex items-center gap-1.5">' +
+            hlText(user.displayName, srch) +
+            (user.isOnline ? '<span class="w-1.5 h-1.5 bg-emerald-400 rounded-full flex-shrink-0"></span>' : '') +
             '</div>' +
-        '</td>';
+            '<div class="text-xs text-slate-500 truncate max-w-[150px]">' + hlText(user.email, srch) + '</div>' +
+            '</div></div></td>';
 
-        // ── Вкладка Основное ──────────────────────────────────────────────
         if (currentTab === 'main') {
-            return '<tr class="' + rowClass + '">' +
-                checkbox + userCell +
-                '<td><span class="text-xs font-mono text-slate-500" title="' + user.id + '">' + user.id.substring(0, 10) + '…</span></td>' +
+            return '<tr class="' + rowCl + '">' + cb + userCell +
+                '<td><span class="text-xs font-mono text-slate-500" title="' + user.id + '">' + user.id.substring(0,10) + '…</span></td>' +
                 '<td class="text-xs text-slate-300">' + fmtDate(user.firstLogin) + '</td>' +
                 '<td class="text-xs ' + (isRecent(user.lastLogin) ? 'text-emerald-400' : 'text-slate-300') + '">' + fmtDate(user.lastLogin) + '</td>' +
-                '<td>' + providerBadge(user.provider) + '</td>' +
-                '<td>' + (user.isOnline ? '<span class="badge badge-green">Online</span>' : '<span class="text-slate-600 text-xs">Офлайн</span>') + '</td>' +
-            '</tr>';
+                '<td>' + provBadge(user.provider) + '</td>' +
+                '<td>' + (user.isOnline ? '<span class="badge badge-green">Online</span>' : '<span class="text-slate-600 text-xs">—</span>') + '</td>' +
+                '</tr>';
         }
-
-        // ── Вкладка Профиль ───────────────────────────────────────────────
         if (currentTab === 'profile') {
-            const tgLink = user.telegram
-                ? '<a href="https://t.me/' + user.telegram.replace('@','') + '" target="_blank" class="text-blue-400 hover:underline text-xs">@' + escHtml(user.telegram.replace('@','')) + '</a>'
-                : dash();
-
-            return '<tr class="' + rowClass + '">' +
-                checkbox + userCell +
-                '<td class="text-sm text-slate-200">' + (user.firstName ? escHtml(user.firstName) : dash()) + '</td>' +
-                '<td class="text-sm text-slate-200">' + (user.lastName  ? escHtml(user.lastName)  : dash()) + '</td>' +
-                '<td>' + (user.username ? '<span class="badge badge-blue">@' + escHtml(user.username) + '</span>' : dash()) + '</td>' +
-                '<td>' + tgLink + '</td>' +
-                '<td>' + (user.country  ? '<span class="badge badge-purple">' + escHtml(user.country) + '</span>' : dash()) + '</td>' +
-                '<td>' + genderBadge(user.gender) + '</td>' +
-                '<td class="text-xs text-slate-300">' + (user.birthdate || dash()) + '</td>' +
-            '</tr>';
+            var tg = user.telegram
+                ? '<a href="https://t.me/' + user.telegram.replace('@','') + '" target="_blank" class="text-blue-400 hover:underline text-xs">@' + esc(user.telegram.replace('@','')) + '</a>'
+                : '<span class="text-slate-600 text-xs">—</span>';
+            return '<tr class="' + rowCl + '">' + cb + userCell +
+                '<td class="text-sm">' + (user.firstName ? esc(user.firstName) : dsh()) + '</td>' +
+                '<td class="text-sm">' + (user.lastName  ? esc(user.lastName)  : dsh()) + '</td>' +
+                '<td>' + (user.username ? '<span class="badge badge-blue">@' + esc(user.username) + '</span>' : dsh()) + '</td>' +
+                '<td>' + tg + '</td>' +
+                '<td>' + (user.country  ? '<span class="badge badge-purple">' + esc(user.country) + '</span>' : dsh()) + '</td>' +
+                '<td>' + genderBdg(user.gender) + '</td>' +
+                '<td class="text-xs text-slate-300">' + (user.birthdate || dsh()) + '</td>' +
+                '</tr>';
         }
-
-        // ── Вкладка Активность ────────────────────────────────────────────
         if (currentTab === 'activity') {
-            const topProj = user.topProjectId ? projectsMap.get(user.topProjectId) : null;
-            const topName = topProj ? (topProj.name || user.topProjectId) : '—';
-            const topImg  = topProj && topProj.image
-                ? '<img src="' + topProj.image + '" class="w-5 h-5 rounded-full object-cover mr-1.5" onerror="this.style.display=\'none\'">'
-                : '';
-
-            const topCell = user.topProjectId
-                ? '<div class="flex items-center">' + topImg + '<span class="text-xs truncate max-w-[110px]">' + escHtml(topName) + '</span>' +
+            var topProj = user.topProjectId ? projectsMap.get(user.topProjectId) : null;
+            var topName = topProj ? (topProj.name || user.topProjectId) : '—';
+            var topImg  = topProj && topProj.image ? '<img src="' + topProj.image + '" class="w-5 h-5 rounded-full object-cover mr-1.5" onerror="this.style.display=\'none\'">' : '';
+            var topCell = user.topProjectId
+                ? '<div class="flex items-center">' + topImg + '<span class="text-xs truncate max-w-[100px]">' + esc(topName) + '</span>' +
                   '<span class="text-xs text-slate-500 ml-1">(' + user.topProjectClicks + ')</span></div>'
-                : dash();
-
-            return '<tr class="' + rowClass + '">' +
-                checkbox + userCell +
+                : dsh();
+            return '<tr class="' + rowCl + '">' + cb + userCell +
                 '<td class="text-center"><span class="badge badge-blue">' + user.totalClicks + '</span></td>' +
                 '<td class="text-center"><span class="badge badge-green">' + user.completedCount + '</span></td>' +
                 '<td class="text-center"><span class="badge badge-red">' + user.favoritesCount + '</span></td>' +
                 '<td>' + topCell + '</td>' +
-            '</tr>';
+                '</tr>';
         }
-
         return '';
     }).join('');
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
+// ─────────────────────────────────────────────────────────────────
 // ПРОФИЛЬ МОДАЛКА
-// ─────────────────────────────────────────────────────────────────────────────
-window.openProfileModal = function(userId) {
-    const user = allUsers.find(function(u) { return u.id === userId; });
+// ─────────────────────────────────────────────────────────────────
+window.openProfile = function(userId) {
+    var user = allUsers.find(function(u) { return u.id === userId; });
     if (!user) return;
+    var topProj = user.topProjectId ? projectsMap.get(user.topProjectId) : null;
+    var avSrc   = user.photoURL
+        ? user.photoURL
+        : 'https://ui-avatars.com/api/?name=' + encodeURIComponent(user.displayName) + '&background=3b82f6&color=fff&size=80';
 
-    const topProj = user.topProjectId ? projectsMap.get(user.topProjectId) : null;
-    const avatar  = user.photoURL
-        ? '<img src="' + user.photoURL + '" class="w-16 h-16 rounded-full border-2 border-blue-500/40 object-cover">'
-        : '<div class="w-16 h-16 rounded-full bg-blue-600/30 flex items-center justify-center text-2xl font-bold text-blue-300">' + (user.displayName[0] || '?').toUpperCase() + '</div>';
+    var pf = function(label, val) {
+        return '<div class="bg-slate-800/50 rounded-lg p-2.5">' +
+            '<div class="text-xs text-slate-500 mb-0.5">' + label + '</div>' +
+            '<div class="text-sm text-slate-200">' + (val || '<span class="text-slate-600">—</span>') + '</div></div>';
+    };
 
-    const content =
+    document.getElementById('modalBody').innerHTML =
         '<div class="flex items-center gap-4 mb-5 pb-5 border-b border-slate-700">' +
-            avatar +
-            '<div>' +
-                '<div class="text-xl font-bold">' + escHtml(user.displayName) + '</div>' +
-                '<div class="text-sm text-slate-400">' + escHtml(user.email) + '</div>' +
-                '<div class="flex items-center gap-2 mt-2 flex-wrap">' +
-                    (user.isOnline ? '<span class="badge badge-green"><i class="fas fa-circle text-[8px] mr-1"></i>Online</span>' : '') +
-                    providerBadge(user.provider) +
-                '</div>' +
-            '</div>' +
+        '<img src="' + avSrc + '" class="w-16 h-16 rounded-full border-2 border-blue-500/40 object-cover">' +
+        '<div>' +
+        '<div class="text-xl font-bold">' + esc(user.displayName) + '</div>' +
+        '<div class="text-sm text-slate-400">' + esc(user.email) + '</div>' +
+        '<div class="flex items-center gap-2 mt-2 flex-wrap">' +
+        (user.isOnline ? '<span class="badge badge-green">Online</span>' : '') +
+        provBadge(user.provider) +
+        '</div></div></div>' +
+
+        '<div class="grid grid-cols-1 gap-2 mb-4">' +
+        pf('UID', '<span class="font-mono text-xs break-all">' + user.id + '</span>') +
+        pf('Первый вход',    fmtDate(user.firstLogin)) +
+        pf('Последний вход', '<span class="' + (isRecent(user.lastLogin) ? 'text-emerald-400' : '') + '">' + fmtDate(user.lastLogin) + '</span>') +
         '</div>' +
 
-        // UID + Даты
-        '<div class="grid grid-cols-1 gap-3 mb-4">' +
-            pRow('UID', '<span class="font-mono text-xs break-all text-slate-300">' + user.id + '</span>') +
-            pRow('Первый вход',   fmtDate(user.firstLogin)) +
-            pRow('Последний вход', '<span class="' + (isRecent(user.lastLogin) ? 'text-emerald-400' : '') + '">' + fmtDate(user.lastLogin) + '</span>') +
-        '</div>' +
-
-        // Профиль
         '<h4 class="text-sm font-semibold text-slate-300 mb-2 flex items-center gap-2">' +
-            '<i class="fas fa-id-card text-blue-400"></i> Данные профиля' +
-        '</h4>' +
+        '<i class="fas fa-id-card text-blue-400"></i> Данные профиля</h4>' +
         '<div class="grid grid-cols-2 gap-2 mb-4">' +
-            pRow('Имя',           user.firstName  || '—') +
-            pRow('Фамилия',       user.lastName   || '—') +
-            pRow('Никнейм',       user.username   ? '@' + user.username : '—') +
-            pRow('Telegram',      user.telegram
-                ? '<a href="https://t.me/' + user.telegram.replace('@','') + '" target="_blank" class="text-blue-400 hover:underline">@' + escHtml(user.telegram.replace('@','')) + '</a>'
-                : '—') +
-            pRow('Страна',        user.country    || '—') +
-            pRow('Пол',           user.gender === 'male' ? '👨 Мужской' : user.gender === 'female' ? '👩 Женский' : (user.gender || '—')) +
-            pRow('Дата рождения', user.birthdate  || '—') +
-            pRow('Bio',           user.bio        || '—') +
+        pf('Имя',           esc(user.firstName)) +
+        pf('Фамилия',       esc(user.lastName)) +
+        pf('Никнейм',       user.username ? '@' + esc(user.username) : '') +
+        pf('Telegram',      user.telegram
+            ? '<a href="https://t.me/' + user.telegram.replace('@','') + '" target="_blank" class="text-blue-400 hover:underline">@' + esc(user.telegram.replace('@','')) + '</a>'
+            : '') +
+        pf('Страна',        esc(user.country)) +
+        pf('Пол',           user.gender === 'male' ? '👨 Мужской' : user.gender === 'female' ? '👩 Женский' : esc(user.gender)) +
+        pf('Дата рождения', esc(user.birthdate)) +
+        pf('Bio',           esc(user.bio)) +
         '</div>' +
 
-        // Активность
         '<h4 class="text-sm font-semibold text-slate-300 mb-2 flex items-center gap-2">' +
-            '<i class="fas fa-chart-bar text-purple-400"></i> Активность' +
-        '</h4>' +
+        '<i class="fas fa-chart-bar text-purple-400"></i> Активность</h4>' +
         '<div class="grid grid-cols-3 gap-2 mb-4">' +
-            '<div class="bg-slate-800/50 rounded-lg p-2.5 text-center">' +
-                '<div class="text-xl font-bold text-blue-400">'   + user.totalClicks    + '</div>' +
-                '<div class="text-xs text-slate-500">Кликов</div>' +
-            '</div>' +
-            '<div class="bg-slate-800/50 rounded-lg p-2.5 text-center">' +
-                '<div class="text-xl font-bold text-green-400">'  + user.completedCount + '</div>' +
-                '<div class="text-xs text-slate-500">Завершено</div>' +
-            '</div>' +
-            '<div class="bg-slate-800/50 rounded-lg p-2.5 text-center">' +
-                '<div class="text-xl font-bold text-red-400">'    + user.favoritesCount + '</div>' +
-                '<div class="text-xs text-slate-500">Избранное</div>' +
-            '</div>' +
+        '<div class="bg-slate-800/50 rounded-lg p-2.5 text-center">' +
+        '<div class="text-xl font-bold text-blue-400">'  + user.totalClicks    + '</div><div class="text-xs text-slate-500">Кликов</div></div>' +
+        '<div class="bg-slate-800/50 rounded-lg p-2.5 text-center">' +
+        '<div class="text-xl font-bold text-green-400">' + user.completedCount + '</div><div class="text-xs text-slate-500">Завершено</div></div>' +
+        '<div class="bg-slate-800/50 rounded-lg p-2.5 text-center">' +
+        '<div class="text-xl font-bold text-red-400">'   + user.favoritesCount + '</div><div class="text-xs text-slate-500">Избранное</div></div>' +
         '</div>' +
-
-        // Топ проект
-        (topProj ?
-        '<div class="bg-slate-800/50 rounded-lg p-3 flex items-center gap-3 mb-4">' +
+        (topProj ? '<div class="bg-slate-800/50 rounded-lg p-3 flex items-center gap-3 mb-4">' +
             (topProj.image ? '<img src="' + topProj.image + '" class="w-8 h-8 rounded-full object-cover">' : '') +
-            '<div>' +
-                '<div class="text-xs text-slate-500">Любимый проект</div>' +
-                '<div class="text-sm font-medium">' + escHtml(topProj.name || user.topProjectId) +
-                    ' <span class="text-slate-500">(' + user.topProjectClicks + ' кликов)</span></div>' +
-            '</div>' +
-        '</div>' : '') +
+            '<div><div class="text-xs text-slate-500">Любимый проект</div>' +
+            '<div class="text-sm font-medium">' + esc(topProj.name || user.topProjectId) +
+            ' <span class="text-slate-500">(' + user.topProjectClicks + ' кл.)</span></div></div></div>' : '') +
 
-        // Кнопки
-        '<div class="flex gap-2 justify-end pt-4 border-t border-slate-700">' +
-            '<button onclick="window.closeProfileModal()" class="bg-slate-700 hover:bg-slate-600 px-4 py-2 rounded-lg text-sm">Закрыть</button>' +
-            '<button onclick="window.sendNotifToUser(\'' + user.id + '\')" class="bg-blue-600 hover:bg-blue-500 px-4 py-2 rounded-lg text-sm flex items-center gap-2">' +
-                '<i class="fas fa-bell"></i> Уведомление' +
-            '</button>' +
-        '</div>';
+        '<div class="flex gap-2 pt-4 border-t border-slate-700">' +
+        '<button onclick="window.closeModal()" class="flex-1 bg-slate-700 hover:bg-slate-600 px-4 py-2 rounded-lg text-sm">Закрыть</button>' +
+        '<button onclick="window.sendToUser(\'' + user.id + '\')" class="flex-1 bg-blue-600 hover:bg-blue-500 px-4 py-2 rounded-lg text-sm flex items-center justify-center gap-2">' +
+        '<i class="fas fa-bell"></i> Уведомление</button></div>';
 
-    document.getElementById('profileModalContent').innerHTML = content;
     document.getElementById('profileModal').classList.remove('hidden');
 };
 
-window.closeProfileModal = function() {
+window.closeModal = function() {
     document.getElementById('profileModal').classList.add('hidden');
 };
 
-window.sendNotifToUser = function(userId) {
-    window.closeProfileModal();
+window.sendToUser = function(userId) {
+    window.closeModal();
     selectedIds = new Set([userId]);
-    const radioEl = document.querySelector('input[name="bTarget"][value="selected"]');
-    if (radioEl) radioEl.checked = true;
-    window.toggleSelectedUsers();
-    window.updateSelectedCount();
-    const ta = document.getElementById('broadcastMessage');
+    var radio = document.querySelector('input[name="bTarget"][value="selected"]');
+    if (radio) radio.checked = true;
+    updateCount();
+    var ta = document.getElementById('bcastMsg');
     if (ta) ta.focus();
 };
 
-// ─────────────────────────────────────────────────────────────────────────────
-// ВЫБОР ПОЛЬЗОВАТЕЛЕЙ
-// ─────────────────────────────────────────────────────────────────────────────
-window.toggleUserSelect = function(userId) {
-    if (selectedIds.has(userId)) {
-        selectedIds.delete(userId);
-    } else {
-        selectedIds.add(userId);
-    }
-    if (selectedIds.size > 0) {
-        const radio = document.querySelector('input[name="bTarget"][value="selected"]');
-        if (radio) radio.checked = true;
-        window.toggleSelectedUsers();
-    }
+// ─────────────────────────────────────────────────────────────────
+// ВЫБОР И ФИЛЬТРАЦИЯ
+// ─────────────────────────────────────────────────────────────────
+window.toggleSel = function(userId) {
+    selectedIds.has(userId) ? selectedIds.delete(userId) : selectedIds.add(userId);
+    updateCount();
     renderTable();
-    window.updateSelectedCount();
 };
 
-window.toggleSelectAll = function() {
-    const allSelected = filteredUsers.every(function(u) { return selectedIds.has(u.id); });
-    filteredUsers.forEach(function(u) {
-        allSelected ? selectedIds.delete(u.id) : selectedIds.add(u.id);
-    });
+window.toggleAll = function() {
+    var allSel = filteredUsers.every(function(u) { return selectedIds.has(u.id); });
+    filteredUsers.forEach(function(u) { allSel ? selectedIds.delete(u.id) : selectedIds.add(u.id); });
+    updateCount();
     renderTable();
-    window.updateSelectedCount();
 };
 
-window.selectOnlineOnly = function() {
-    selectedIds = new Set(filteredUsers.filter(function(u) { return u.isOnline; }).map(function(u) { return u.id; }));
-    const radio = document.querySelector('input[name="bTarget"][value="online"]');
-    if (radio) radio.checked = true;
-    window.toggleSelectedUsers();
+window.filterOnline = function() {
+    filteredUsers = allUsers.filter(function(u) { return u.isOnline; });
+    setText('usersCount', '(' + filteredUsers.length + ' онлайн из ' + allUsers.length + ')');
     renderTable();
-    window.updateSelectedCount();
 };
 
-window.toggleSelectedUsers = function() {
-    const listEl  = document.getElementById('selectedUsersList');
-    const namesEl = document.getElementById('selectedNames');
-    const radio   = document.querySelector('input[name="bTarget"]:checked');
-    const target  = radio ? radio.value : 'all';
-
-    if (target === 'selected' && selectedIds.size > 0) {
-        listEl.classList.remove('hidden');
-        const names = filteredUsers
-            .filter(function(u) { return selectedIds.has(u.id); })
-            .slice(0, 5)
-            .map(function(u) { return u.displayName; });
-        if (selectedIds.size > 5) names.push('... и ещё ' + (selectedIds.size - 5));
-        namesEl.innerHTML = names.map(function(n) { return '<div>• ' + escHtml(n) + '</div>'; }).join('');
-    } else {
-        listEl.classList.add('hidden');
-    }
-};
-
-window.updateSelectedCount = function() {
-    const onlineCount = allUsers.filter(function(u) { return u.isOnline; }).length;
-    const countAllEl  = document.getElementById('countAll');
-    const countOnlEl  = document.getElementById('countOnline');
-    const countSelEl  = document.getElementById('countSelected');
-    if (countAllEl) countAllEl.textContent = '(' + allUsers.length + ')';
-    if (countOnlEl) countOnlEl.textContent = '(' + onlineCount + ')';
-    if (countSelEl) countSelEl.textContent = selectedIds.size;
-    const radio = document.querySelector('input[name="bTarget"]:checked');
-    if (radio && radio.value === 'selected') window.toggleSelectedUsers();
-};
-
-window.filterUsers = function() {
-    const s = (document.getElementById('searchUser').value || '').toLowerCase();
+window.doSearch = function() {
+    var s = ((document.getElementById('searchInput') || {}).value || '').toLowerCase();
     filteredUsers = allUsers.filter(function(u) {
-        return  u.displayName.toLowerCase().includes(s) ||
-                u.email.toLowerCase().includes(s)       ||
-                u.id.toLowerCase().includes(s)          ||
-                (u.firstName && u.firstName.toLowerCase().includes(s)) ||
-                (u.lastName  && u.lastName.toLowerCase().includes(s))  ||
-                (u.username  && u.username.toLowerCase().includes(s))  ||
-                (u.telegram  && u.telegram.toLowerCase().includes(s))  ||
-                (u.country   && u.country.toLowerCase().includes(s));
+        return u.displayName.toLowerCase().includes(s) ||
+               u.email.toLowerCase().includes(s)       ||
+               u.id.toLowerCase().includes(s)          ||
+               (u.firstName  && u.firstName.toLowerCase().includes(s))  ||
+               (u.lastName   && u.lastName.toLowerCase().includes(s))   ||
+               (u.username   && u.username.toLowerCase().includes(s))   ||
+               (u.telegram   && u.telegram.toLowerCase().includes(s))   ||
+               (u.country    && u.country.toLowerCase().includes(s));
     });
-    document.getElementById('usersCount').textContent = '(' + filteredUsers.length + ' из ' + allUsers.length + ')';
+    setText('usersCount', '(' + filteredUsers.length + ' из ' + allUsers.length + ')');
     renderTable();
 };
 
-window.sortUsersList = function() {
-    const by = document.getElementById('sortUsers').value;
+window.doSort = function() {
+    var by = (document.getElementById('sortSel') || {}).value || 'lastLogin';
     filteredUsers.sort(function(a, b) {
         if (by === 'lastLogin')  return (b.lastLogin  || 0) - (a.lastLogin  || 0);
         if (by === 'firstLogin') return (b.firstLogin || 0) - (a.firstLogin || 0);
@@ -1261,93 +1262,99 @@ window.sortUsersList = function() {
     renderTable();
 };
 
-// ─────────────────────────────────────────────────────────────────────────────
+window.updateCount = function() {
+    var online = allUsers.filter(function(u) { return u.isOnline; }).length;
+    setText('cnt-all',      '(' + allUsers.length + ')');
+    setText('cnt-online',   '(' + online + ')');
+    setText('cnt-selected', String(selectedIds.size));
+
+    var radio  = document.querySelector('input[name="bTarget"]:checked');
+    var target = radio ? radio.value : 'all';
+    var list   = document.getElementById('selectedNamesList');
+    var names  = document.getElementById('selectedNamesContent');
+    if (target === 'selected' && selectedIds.size > 0 && list && names) {
+        list.classList.remove('hidden');
+        var arr = allUsers.filter(function(u) { return selectedIds.has(u.id); }).slice(0, 5);
+        var html = arr.map(function(u) { return '<div>• ' + esc(u.displayName) + '</div>'; }).join('');
+        if (selectedIds.size > 5) html += '<div>... и ещё ' + (selectedIds.size - 5) + '</div>';
+        names.innerHTML = html;
+    } else if (list) {
+        list.classList.add('hidden');
+    }
+};
+
+// ─────────────────────────────────────────────────────────────────
 // РАССЫЛКА
-// ─────────────────────────────────────────────────────────────────────────────
-window.sendBroadcast = async function() {
-    const msgEl  = document.getElementById('broadcastMessage');
-    const typeEl = document.getElementById('broadcastType');
-    const message = msgEl.value.trim();
-    const type    = typeEl.value;
+// ─────────────────────────────────────────────────────────────────
+window.sendBcast = async function() {
+    var msgEl  = document.getElementById('bcastMsg');
+    var typeEl = document.getElementById('bcastType');
+    var msg    = msgEl.value.trim();
+    var type   = typeEl.value;
 
-    if (!message)            { showBroadcastStatus('Введите сообщение', false); return; }
-    if (message.length > 500){ showBroadcastStatus('Макс. 500 символов', false); return; }
+    if (!msg)          { bcastStatus('Введите сообщение', false); return; }
+    if (msg.length>500){ bcastStatus('Макс. 500 символов', false); return; }
+    if (!fbDb)         { bcastStatus('Firebase не готов', false); return; }
 
-    const radio = document.querySelector('input[name="bTarget"]:checked');
-    const target = radio ? radio.value : 'all';
+    var radio  = document.querySelector('input[name="bTarget"]:checked');
+    var target = radio ? radio.value : 'all';
+    var ids    = target === 'all'    ? allUsers.map(function(u){ return u.id; })
+               : target === 'online' ? allUsers.filter(function(u){ return u.isOnline; }).map(function(u){ return u.id; })
+               : Array.from(selectedIds);
 
-    let recipients = [];
-    if (target === 'all')    recipients = allUsers.map(function(u) { return u.id; });
-    else if (target === 'online') recipients = allUsers.filter(function(u) { return u.isOnline; }).map(function(u) { return u.id; });
-    else recipients = Array.from(selectedIds);
+    if (!ids.length) { bcastStatus('Нет получателей', false); return; }
 
-    if (!recipients.length) { showBroadcastStatus('Нет получателей', false); return; }
-
-    const btn = document.getElementById('sendBtn');
+    var btn = document.getElementById('sendBtn');
     btn.disabled = true;
     btn.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i>Отправка...';
 
     try {
-        const batch = writeBatch(fbDb);
-        const bRef  = doc(collection(fbDb, "broadcasts"));
-
-        batch.set(bRef, {
-            message, type,
-            createdAt:      serverTimestamp(),
-            recipientCount: recipients.length,
-            viewCount:      0,
-            status:         'sent'
+        var batch = fbBatch(fbDb);
+        var bRef  = fbDoc(fbCol(fbDb, "broadcasts"));
+        batch.set(bRef, { message: msg, type: type, createdAt: fbServerTs(), recipientCount: ids.length, viewCount: 0, status: 'sent' });
+        ids.forEach(function(uid) {
+            var nRef = fbDoc(fbCol(fbDb, "notifications"));
+            batch.set(nRef, { userId: uid, broadcastId: bRef.id, message: msg, type: type, read: false, createdAt: fbServerTs() });
         });
-
-        recipients.forEach(function(uid) {
-            const nRef = doc(collection(fbDb, "notifications"));
-            batch.set(nRef, {
-                userId:      uid,
-                broadcastId: bRef.id,
-                message, type,
-                read:        false,
-                createdAt:   serverTimestamp()
-            });
-        });
-
         await batch.commit();
-        showBroadcastStatus('Отправлено ' + recipients.length + ' пользователям ✅', true);
+        bcastStatus('Отправлено ' + ids.length + ' пользователям ✅', true);
         msgEl.value = '';
-        document.getElementById('msgLength').textContent = '0/500';
-        await loadBroadcastHistory();
-        await loadNotifStats();
+        setText('bcastLen', '0/500');
+        loadBcastHistory();
+        loadNotifStats();
     } catch (err) {
-        showBroadcastStatus('Ошибка: ' + err.message, false);
+        bcastStatus('Ошибка: ' + err.message, false);
     } finally {
         btn.disabled = false;
         btn.innerHTML = '<i class="fas fa-paper-plane mr-2"></i>Отправить';
     }
 };
 
-function showBroadcastStatus(text, isOk) {
-    const el = document.getElementById('broadcastStatus');
-    el.textContent  = text;
-    el.className    = 'mt-2 text-center text-sm ' + (isOk ? 'text-green-400' : 'text-red-400');
+function bcastStatus(text, ok) {
+    var el = document.getElementById('bcastStatus');
+    if (!el) return;
+    el.textContent = text;
+    el.className   = 'mt-2 text-center text-sm ' + (ok ? 'text-green-400' : 'text-red-400');
     el.classList.remove('hidden');
     setTimeout(function() { el.classList.add('hidden'); }, 5000);
 }
 
-document.getElementById('broadcastMessage').addEventListener('input', function() {
-    document.getElementById('msgLength').textContent = this.value.length + '/500';
-});
+var bcastMsgEl = document.getElementById('bcastMsg');
+if (bcastMsgEl) {
+    bcastMsgEl.addEventListener('input', function() {
+        setText('bcastLen', this.value.length + '/500');
+    });
+}
 
-// ─────────────────────────────────────────────────────────────────────────────
+// ─────────────────────────────────────────────────────────────────
 // CSV ЭКСПОРТ
-// ─────────────────────────────────────────────────────────────────────────────
-window.exportUsersCSV = function() {
-    const headers = [
-        'UID','Email','DisplayName','FirstName','LastName',
-        'Username','Telegram','Country','Gender','Birthdate',
-        'Provider','FirstLogin','LastLogin',
-        'TotalClicks','Completed','Favorites'
-    ];
-
-    const rows = allUsers.map(function(u) {
+// ─────────────────────────────────────────────────────────────────
+window.exportCSV = function() {
+    var headers = ['UID','Email','DisplayName','FirstName','LastName',
+                   'Username','Telegram','Country','Gender','Birthdate',
+                   'Provider','FirstLogin','LastLogin',
+                   'TotalClicks','Completed','Favorites'];
+    var rows = allUsers.map(function(u) {
         return [
             u.id, u.email, u.displayName,
             u.firstName, u.lastName, u.username, u.telegram,
@@ -1358,34 +1365,34 @@ window.exportUsersCSV = function() {
             u.totalClicks, u.completedCount, u.favoritesCount
         ].map(function(v) { return '"' + String(v || '').replace(/"/g, '""') + '"'; });
     });
-
-    const csv  = [headers.join(',')].concat(rows.map(function(r) { return r.join(','); })).join('\n');
-    const blob = new Blob(['\uFEFF' + csv], { type: 'text/csv;charset=utf-8;' });
-    const url  = URL.createObjectURL(blob);
-    const a    = document.createElement('a');
-    a.href     = url;
+    var csv  = [headers.join(',')].concat(rows.map(function(r){ return r.join(','); })).join('\n');
+    var blob = new Blob(['\uFEFF' + csv], { type: 'text/csv;charset=utf-8;' });
+    var url  = URL.createObjectURL(blob);
+    var a    = document.createElement('a');
+    a.href = url;
     a.download = 'users_' + new Date().toISOString().slice(0,10) + '.csv';
-    document.body.appendChild(a);
-    a.click();
+    document.body.appendChild(a); a.click();
     document.body.removeChild(a);
     URL.revokeObjectURL(url);
 };
 
-// ─────────────────────────────────────────────────────────────────────────────
-// ВСПОМОГАТЕЛЬНЫЕ ФУНКЦИИ
-// ─────────────────────────────────────────────────────────────────────────────
-function setTableLoading(isLoading, errorMsg) {
-    const tbody = document.getElementById('usersTableBody');
-    if (!tbody) return;
-    if (isLoading) {
-        tbody.innerHTML = '<tr><td colspan="9" class="py-8 text-center text-slate-400"><i class="fas fa-spinner fa-spin mr-2"></i>Загрузка данных...</td></tr>';
-    } else if (errorMsg) {
-        tbody.innerHTML = '<tr><td colspan="9" class="py-8 text-center text-red-400"><i class="fas fa-exclamation-circle mr-2"></i>' + escHtml(errorMsg) + '</td></tr>';
-    }
+// ─────────────────────────────────────────────────────────────────
+// ВСПОМОГАТЕЛЬНЫЕ
+// ─────────────────────────────────────────────────────────────────
+function setText(id, val) {
+    var el = document.getElementById(id);
+    if (el) el.textContent = String(val);
 }
 
-function updateLastUpdate() {
-    const el = document.getElementById('lastUpdate');
+function setTableMsg(html, isError) {
+    var tbody = document.getElementById('tBody');
+    if (!tbody) return;
+    var color = isError ? 'text-red-400' : 'text-slate-400';
+    tbody.innerHTML = '<tr><td colspan="9" class="py-8 text-center ' + color + '">' + html + '</td></tr>';
+}
+
+function updateTimestamp() {
+    var el = document.getElementById('lastUpdate');
     if (el) el.textContent = 'Обновлено: ' + new Date().toLocaleTimeString('ru-RU');
 }
 
@@ -1398,8 +1405,8 @@ function isRecent(date) {
     return !!(date && (new Date() - date) < 30 * 60 * 1000);
 }
 
-function providerBadge(provider) {
-    const map = {
+function provBadge(provider) {
+    var map = {
         'google.com':  '<span class="badge badge-red"><i class="fab fa-google mr-1"></i>Google</span>',
         'twitter.com': '<span class="badge badge-blue"><i class="fab fa-twitter mr-1"></i>Twitter</span>',
         'password':    '<span class="badge badge-yellow"><i class="fas fa-envelope mr-1"></i>Email</span>',
@@ -1408,39 +1415,38 @@ function providerBadge(provider) {
     return map[provider] || '<span class="badge badge-gray">—</span>';
 }
 
-function genderBadge(gender) {
-    if (!gender) return dash();
+function genderBdg(gender) {
+    if (!gender) return dsh();
     if (gender === 'male')   return '<span class="badge badge-blue">👨 М</span>';
     if (gender === 'female') return '<span class="badge" style="background:rgba(236,72,153,0.2);color:#f9a8d4">👩 Ж</span>';
-    return '<span class="badge badge-gray">' + escHtml(gender) + '</span>';
+    return '<span class="badge badge-gray">' + esc(gender) + '</span>';
 }
 
-function dash() { return '<span class="text-slate-600 text-xs">—</span>'; }
+function dsh() { return '<span class="text-slate-600 text-xs">—</span>'; }
 
-function pRow(label, value) {
-    return '<div class="bg-slate-800/50 rounded-lg p-2.5">' +
-        '<div class="text-xs text-slate-500 mb-0.5">' + label + '</div>' +
-        '<div class="text-sm text-slate-200">' + value + '</div>' +
-    '</div>';
-}
-
-function escHtml(str) {
+function esc(str) {
     if (!str) return '';
     return String(str)
-        .replace(/&/g, '&amp;')
-        .replace(/</g, '&lt;')
-        .replace(/>/g, '&gt;')
-        .replace(/"/g, '&quot;');
+        .replace(/&/g,'&amp;').replace(/</g,'&lt;')
+        .replace(/>/g,'&gt;').replace(/"/g,'&quot;');
 }
 
-function hlSearch(text, search) {
-    if (!search || !text) return escHtml(text || '');
-    const idx = text.toLowerCase().indexOf(search);
-    if (idx === -1) return escHtml(text);
-    return escHtml(text.substring(0, idx)) +
-        '<mark>' + escHtml(text.substring(idx, idx + search.length)) + '</mark>' +
-        escHtml(text.substring(idx + search.length));
+function hlText(text, search) {
+    if (!search || !text) return esc(text || '');
+    var idx = text.toLowerCase().indexOf(search);
+    if (idx === -1) return esc(text);
+    return esc(text.substring(0, idx)) +
+        '<mark>' + esc(text.substring(idx, idx + search.length)) + '</mark>' +
+        esc(text.substring(idx + search.length));
 }
+
+// ─────────────────────────────────────────────────────────────────
+// СТАРТ
+// ─────────────────────────────────────────────────────────────────
+// Ждём небольшой паузы чтобы app.js успел инициализировать window.db
+setTimeout(function() {
+    startAuth();
+}, 300);
 
 </script>
 </body>
