@@ -1329,18 +1329,17 @@ document.addEventListener('click', function(e) {
         updatedAt:   new Date().toISOString()
     };
 
-    // Всегда сохраняем локально
+    // Сохраняем локально
     window.userProfileData = profileData;
     localStorage.setItem('userProfileData', JSON.stringify(profileData));
 
-    const user = typeof window.currentUser !== 'undefined' ? window.currentUser : null;
+    const user = window.currentUser;
     const db   = window.db;
     const exp  = window.__firestoreExports;
 
     if (user && db && exp && exp.doc && exp.setDoc) {
         try {
-            // Сохраняем в users/{uid}
-            // Структура: корень документа содержит email/uid + вложенный profile
+            // Сохраняем в Firestore
             await exp.setDoc(
                 exp.doc(db, 'users', user.uid),
                 {
@@ -1354,13 +1353,13 @@ document.addEventListener('click', function(e) {
                 { merge: true }
             );
 
-            // Обновляем displayName в Firebase Auth если изменилось имя
+            // Обновляем displayName в Firebase Auth
             const newDisplayName = [profileData.firstName, profileData.lastName].filter(Boolean).join(' ');
             if (newDisplayName && newDisplayName !== user.displayName) {
                 const authExp = window.__authExports;
                 if (authExp && authExp.updateProfile && window.auth) {
                     await authExp.updateProfile(user, { displayName: newDisplayName });
-                    // Обновляем в UI
+
                     const nameEl = document.getElementById('accountDisplayName');
                     if (nameEl) nameEl.textContent = newDisplayName;
                 }
@@ -1374,6 +1373,7 @@ document.addEventListener('click', function(e) {
 
         } catch(err) {
             console.error('Error saving profile to Firebase:', err);
+
             if (submitBtn) {
                 submitBtn.disabled = false;
                 submitBtn.innerHTML = originalHTML;
@@ -1389,22 +1389,6 @@ document.addEventListener('click', function(e) {
     }
 };
 
-    window.userProfileData = profileData;
-    localStorage.setItem('userProfileData', JSON.stringify(profileData));
-
-    if (typeof currentUser !== 'undefined' && currentUser && typeof db !== 'undefined') {
-        try {
-            const userRef = doc(db, "users", currentUser.uid);
-            await setDoc(userRef, { profile: profileData }, { merge: true });
-            footerShowToast(lang('footer_account_saved'));
-        } catch(err) {
-            console.error('Error saving profile:', err);
-            footerShowToast(lang('footer_account_saved_local'));
-        }
-    } else {
-        footerShowToast(lang('footer_account_saved_local'));
-    }
-};
     window.uploadAvatar = async function(e) {
     const file = e.target.files[0];
     if (!file) return;
