@@ -1122,7 +1122,166 @@
                                   placeholder="${lang('footer_account_bio_placeholder')}"
                                   class="w-full bg-slate-800 border border-slate-700 rounded-lg px-4 py-2.5 text-sm text-white focus:border-cyan-500 focus:outline-none resize-none">${userData.bio || ''}</textarea>
                     </div>
+<!-- Crypto & Social Section -->
+<div class="border-t border-slate-700/50 pt-5">
+    <h4 class="text-sm font-semibold text-slate-300 mb-4 flex items-center gap-2">
+        <i class="fas fa-wallet text-cyan-400"></i>
+        Крипто-адреса
+    </h4>
+    <div class="space-y-3">
+        <div>
+            <label class="block text-xs font-medium text-slate-400 mb-1.5 flex items-center gap-1.5">
+                <span class="w-5 h-5 rounded-full bg-blue-500/20 flex items-center justify-center text-xs font-bold text-blue-400">Ξ</span>
+                EVM адрес
+                <span class="text-slate-600">(Ethereum, BSC, Polygon...)</span>
+            </label>
+            <input type="text" id="profileEvmAddress"
+                   value="${userData.evmAddress || ''}"
+                   placeholder="0x..."
+                   class="w-full bg-slate-800 border border-slate-700 rounded-lg px-4 py-2.5 text-sm text-white font-mono focus:border-cyan-500 focus:outline-none transition-colors">
+        </div>
+        <div>
+            <label class="block text-xs font-medium text-slate-400 mb-1.5 flex items-center gap-1.5">
+                <span class="w-5 h-5 rounded-full bg-purple-500/20 flex items-center justify-center text-xs font-bold text-purple-400">◎</span>
+                Solana адрес
+            </label>
+            <input type="text" id="profileSolAddress"
+                   value="${userData.solAddress || ''}"
+                   placeholder="Ваш Solana адрес..."
+                   class="w-full bg-slate-800 border border-slate-700 rounded-lg px-4 py-2.5 text-sm text-white font-mono focus:border-cyan-500 focus:outline-none transition-colors">
+        </div>
+    </div>
+</div>
 
+<!-- Social Links -->
+<div class="border-t border-slate-700/50 pt-5">
+    <h4 class="text-sm font-semibold text-slate-300 mb-4 flex items-center gap-2">
+        <i class="fas fa-share-alt text-pink-400"></i>
+        Социальные сети
+    </h4>
+    <div class="grid grid-cols-2 gap-3">
+        <div>
+            <label class="block text-xs font-medium text-slate-400 mb-1.5">
+                <i class="fab fa-twitter text-sky-400 mr-1"></i>Twitter / X
+            </label>
+            <div class="relative">
+                <span class="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500 text-xs">@</span>
+                <input type="text" id="profileTwitter"
+                       value="${userData.twitter || ''}"
+                       placeholder="username"
+                       class="w-full bg-slate-800 border border-slate-700 rounded-lg pl-7 pr-4 py-2.5 text-sm text-white focus:border-cyan-500 focus:outline-none transition-colors">
+            </div>
+        </div>
+        <div>
+            <label class="block text-xs font-medium text-slate-400 mb-1.5">
+                <i class="fab fa-discord text-indigo-400 mr-1"></i>Discord
+            </label>
+            <input type="text" id="profileDiscord"
+                   value="${userData.discord || ''}"
+                   placeholder="username"
+                   class="w-full bg-slate-800 border border-slate-700 rounded-lg px-4 py-2.5 text-sm text-white focus:border-cyan-500 focus:outline-none transition-colors">
+        </div>
+        <div class="col-span-2">
+            <label class="block text-xs font-medium text-slate-400 mb-1.5">
+                <i class="fas fa-city text-orange-400 mr-1"></i>Город
+            </label>
+            <input type="text" id="profileCity"
+                   value="${userData.city || ''}"
+                   placeholder="Ваш город"
+                   class="w-full bg-slate-800 border border-slate-700 rounded-lg px-4 py-2.5 text-sm text-white focus:border-cyan-500 focus:outline-none transition-colors">
+        </div>
+    </div>
+</div>
+
+<!-- Referral Block -->
+<div class="border-t border-slate-700/50 pt-5">
+    <h4 class="text-sm font-semibold text-slate-300 mb-4 flex items-center gap-2">
+        <i class="fas fa-user-plus text-emerald-400"></i>
+        Реферальная программа
+    </h4>
+    <div class="grid grid-cols-2 gap-3 mb-3">
+        <div class="bg-slate-800/50 rounded-xl p-3 border border-slate-700/50">
+            <div class="text-xs text-slate-500 mb-1.5">Ваш реф. код</div>
+            <div class="flex items-center gap-2">
+                <code id="profileRefCode"
+                      class="text-sm font-mono text-cyan-400 font-bold tracking-wider">
+                    ${userData.referralCode || 'Генерация...'}
+                </code>
+                <button type="button" onclick="copyRefCode()"
+                    class="w-6 h-6 flex items-center justify-center rounded-lg bg-slate-700 hover:bg-cyan-600 text-slate-400 hover:text-white transition-all">
+                    <i class="fas fa-copy text-xs"></i>
+                </button>
+            </div>
+        </div>
+        <div class="bg-slate-800/50 rounded-xl p-3 border border-slate-700/50">
+            <div class="text-xs text-slate-500 mb-1.5">Приглашено</div>
+            <div class="text-lg font-bold text-emerald-400" id="profileInvitedCount">
+                ${userData.invitedCount || 0}
+                <span class="text-xs font-normal text-slate-500">чел.</span>
+            </div>
+        </div>
+    </div>
+
+    ${userData.invitedBy ? `
+    <div class="mb-3 text-xs text-slate-500 flex items-center gap-1.5 bg-slate-800/30 rounded-lg px-3 py-2">
+        <i class="fas fa-user-check text-emerald-400"></i>
+        Вас пригласил:
+        <span class="text-slate-300 font-medium">${userData.invitedByName || userData.invitedBy}</span>
+    </div>` : `
+    <div class="mb-3">
+        <label class="block text-xs font-medium text-slate-400 mb-1.5">
+            <i class="fas fa-ticket-alt text-yellow-400 mr-1"></i>
+            Ввести реферальный код
+        </label>
+        <div class="flex gap-2">
+            <input type="text" id="profileInviteCode"
+                   placeholder="AL-XXXXXX"
+                   class="flex-1 bg-slate-800 border border-slate-700 rounded-lg px-4 py-2 text-sm text-white font-mono focus:border-yellow-500 focus:outline-none transition-colors">
+            <button type="button" onclick="applyReferralCode()"
+                    class="px-4 py-2 bg-yellow-600 hover:bg-yellow-500 rounded-lg text-sm font-medium text-white transition-colors whitespace-nowrap">
+                Применить
+            </button>
+        </div>
+    </div>`}
+
+    <div class="p-3 bg-emerald-900/20 border border-emerald-800/30 rounded-lg text-xs text-slate-400">
+        <i class="fas fa-flask text-emerald-400 mr-1.5"></i>
+        За каждого приглашённого вы получите
+        <span class="text-emerald-400 font-bold">+50 Reagents</span>!
+    </div>
+</div>
+
+<!-- Reagents Balance (только чтение) -->
+<div class="border-t border-slate-700/50 pt-5">
+    <h4 class="text-sm font-semibold text-slate-300 mb-4 flex items-center gap-2">
+        <span class="text-lg">🧪</span>
+        Reagents
+    </h4>
+    <div class="bg-gradient-to-br from-cyan-900/30 to-blue-900/30 border border-cyan-500/20 rounded-xl p-4">
+        <div class="flex items-center justify-between mb-3">
+            <div>
+                <div class="text-xs text-slate-400 mb-1">Ваш баланс</div>
+                <div class="text-2xl font-black text-cyan-400" id="profileReagentBalance">
+                    ${userData.reagents || 0}
+                    <span class="text-sm font-normal text-slate-400 ml-1">RGT</span>
+                </div>
+            </div>
+            <div class="text-right">
+                <div class="text-xs text-slate-400 mb-1">Стрик</div>
+                <div class="text-xl font-bold text-orange-400" id="profileStreak">
+                    ${userData.streak || 0}
+                    <span class="text-xs font-normal text-slate-400">дней</span>
+                </div>
+            </div>
+        </div>
+        <button type="button" onclick="openClaimModal()"
+            id="profileClaimBtn"
+            class="w-full py-2.5 rounded-lg text-sm font-bold transition-all
+                   bg-gradient-to-r from-cyan-600 to-blue-600 hover:from-cyan-500 hover:to-blue-500 text-white">
+            <i class="fas fa-flask mr-2"></i>Получить Reagents
+        </button>
+    </div>
+</div>
                     <div class="flex gap-3 pt-4">
                         <button type="button" onclick="closePageModal()"
                                 class="flex-1 bg-slate-700 hover:bg-slate-600 py-3 rounded-lg text-sm font-medium text-white transition-colors">
@@ -1155,42 +1314,59 @@
     const user = typeof window.currentUser !== 'undefined' ? window.currentUser : null;
     if (!user) return;
 
-    const db = window.db;
+    const db  = window.db;
     const exp = window.__firestoreExports;
 
-    // Пробуем загрузить из Firebase
-    if (db && exp && exp.doc && exp.getDoc) {
-        exp.getDoc(exp.doc(db, 'users', user.uid)).then(function(snap) {
+    if (db && exp && exp.doc && exp.getDoc && exp.setDoc) {
+        exp.getDoc(exp.doc(db, 'users', user.uid)).then(async function(snap) {
             let profile = {};
+            let rootData = {};
 
             if (snap.exists()) {
-                const data = snap.data();
-                // Профиль может лежать в profile.profile или прямо в корне
-                profile = data.profile || data || {};
+                rootData = snap.data();
+                profile  = rootData.profile || rootData || {};
             }
 
-            // Также смотрим localStorage как запасной вариант
-            const local = JSON.parse(localStorage.getItem('userProfileData') || '{}');
-
-            // Firebase приоритетнее localStorage
+            const local  = JSON.parse(localStorage.getItem('userProfileData') || '{}');
             const merged = Object.assign({}, local, profile);
 
-            // Обновляем window.userProfileData
-            window.userProfileData = merged;
+            // ── Генерируем реф. код если нет ──────────────────────
+            if (!merged.referralCode && !rootData.referralCode) {
+                const code = 'AL-' + user.uid.substring(0, 6).toUpperCase();
+                merged.referralCode = code;
 
-            // Заполняем форму
+                // Сохраняем код в Firestore
+                try {
+                    await exp.setDoc(
+                        exp.doc(db, 'users', user.uid),
+                        { referralCode: code },
+                        { merge: true }
+                    );
+                } catch(e) { console.warn('Ref code save error:', e); }
+            } else {
+                merged.referralCode = merged.referralCode || rootData.referralCode;
+            }
+
+            // ── Считаем приглашённых ───────────────────────────────
+            merged.invitedCount = rootData.invitedCount || 0;
+            merged.invitedBy    = rootData.invitedBy    || '';
+            merged.invitedByName = rootData.invitedByName || '';
+
+            window.userProfileData = merged;
             _fillAccountForm(merged);
 
+            // Обновляем UI реф. кода
+            const refEl = document.getElementById('profileRefCode');
+            if (refEl) refEl.textContent = merged.referralCode || 'AL-' + user.uid.substring(0,6).toUpperCase();
+
+            const invEl = document.getElementById('profileInvitedCount');
+            if (invEl) invEl.textContent = (merged.invitedCount || 0) + ' чел.';
+
         }).catch(function(err) {
-            console.warn('Error loading profile from Firebase:', err);
-            // Fallback — localStorage
+            console.warn('Profile load error:', err);
             const local = JSON.parse(localStorage.getItem('userProfileData') || '{}');
             _fillAccountForm(local);
         });
-    } else {
-        // Firebase недоступен — только localStorage
-        const local = JSON.parse(localStorage.getItem('userProfileData') || '{}');
-        _fillAccountForm(local);
     }
 }
 
@@ -1202,6 +1378,7 @@ function _fillAccountForm(profile) {
         if (el && val !== undefined && val !== null) el.value = val;
     };
 
+    // Существующие поля
     set('profileFirstName', profile.firstName);
     set('profileLastName',  profile.lastName);
     set('profileUsername',  profile.username);
@@ -1209,20 +1386,124 @@ function _fillAccountForm(profile) {
     set('profileBirthdate', profile.birthdate);
     set('profileBio',       profile.bio);
 
+    // ── Новые поля ─────────────────────────────────────────────
+    set('profileEvmAddress', profile.evmAddress);
+    set('profileSolAddress', profile.solAddress);
+    set('profileDiscord',    profile.discord);
+    set('profileCity',       profile.city);
+
+    // Twitter — убираем @ если есть
+    const twEl = document.getElementById('profileTwitter');
+    if (twEl && profile.twitter) {
+        twEl.value = profile.twitter.replace('@', '');
+    }
+
     // Пол
     if (profile.gender) {
         const radio = document.querySelector(`input[name="gender"][value="${profile.gender}"]`);
         if (radio) radio.checked = true;
     }
 
-    // Страна — заполняем search input и hidden input
+    // Страна
     if (profile.countryName || profile.country) {
         const searchInput = document.getElementById('countrySearchInput');
         const hiddenInput = document.getElementById('profileCountry');
         if (searchInput) searchInput.value = profile.countryName || profile.country;
-        if (hiddenInput) hiddenInput.value = profile.country || '';
+        if (hiddenInput) hiddenInput.value  = profile.country || '';
     }
+
+    // Reagents
+    const balEl = document.getElementById('profileReagentBalance');
+    if (balEl) balEl.innerHTML = (profile.reagents || 0) + ' <span class="text-sm font-normal text-slate-400 ml-1">RGT</span>';
+
+    const streakEl = document.getElementById('profileStreak');
+    if (streakEl) streakEl.innerHTML = (profile.streak || 0) + ' <span class="text-xs font-normal text-slate-400">дней</span>';
 }
+    window.applyReferralCode = async function() {
+    const input = document.getElementById('profileInviteCode');
+    if (!input) return;
+
+    const code = input.value.trim().toUpperCase();
+    if (!code || !code.startsWith('AL-')) {
+        footerShowToast('Неверный формат кода (AL-XXXXXX)', 'error');
+        return;
+    }
+
+    const user = typeof window.currentUser !== 'undefined' ? window.currentUser : null;
+    if (!user) {
+        footerShowToast('Войдите в аккаунт', 'error');
+        return;
+    }
+
+    const db  = window.db;
+    const exp = window.__firestoreExports;
+    if (!db || !exp) return;
+
+    try {
+        // Ищем владельца кода
+        const snap = await exp.getDocs(
+            exp.query(
+                exp.collection(db, 'users'),
+                exp.where('referralCode', '==', code)
+            )
+        );
+
+        if (snap.empty) {
+            footerShowToast('Код не найден', 'error');
+            return;
+        }
+
+        const inviterDoc  = snap.docs[0];
+        const inviterId   = inviterDoc.id;
+        const inviterData = inviterDoc.data();
+
+        if (inviterId === user.uid) {
+            footerShowToast('Нельзя использовать свой код', 'error');
+            return;
+        }
+
+        // Сохраняем кто пригласил
+        await exp.setDoc(
+            exp.doc(db, 'users', user.uid),
+            {
+                invitedBy:    inviterId,
+                invitedByName: inviterData.displayName || inviterData.profile?.firstName || 'Пользователь'
+            },
+            { merge: true }
+        );
+
+        // Начисляем бонус пригласившему
+        const inviterRef     = exp.doc(db, 'users', inviterId);
+        const currentReagents = inviterData.reagents || 0;
+        const currentInvited  = inviterData.invitedCount || 0;
+
+        await exp.setDoc(inviterRef, {
+            reagents:     currentReagents + 50,
+            invitedCount: currentInvited + 1
+        }, { merge: true });
+
+        // Начисляем бонус новому пользователю
+        const mySnap    = await exp.getDoc(exp.doc(db, 'users', user.uid));
+        const myData    = mySnap.exists() ? mySnap.data() : {};
+        const myReagents = myData.reagents || 0;
+
+        await exp.setDoc(
+            exp.doc(db, 'users', user.uid),
+            { reagents: myReagents + 25 },
+            { merge: true }
+        );
+
+        footerShowToast('🧪 Код применён! +25 Reagents вам и +50 пригласившему!', 'success');
+        input.style.display = 'none';
+
+        // Обновляем форму
+        setTimeout(function() { initAccountPage(); }, 500);
+
+    } catch(err) {
+        console.error('Referral error:', err);
+        footerShowToast('Ошибка: ' + err.message, 'error');
+    }
+};
 // ============ COUNTRY PICKER FUNCTIONS ============
 
 window.filterCountryList = function(query) {
@@ -1345,18 +1626,36 @@ document.addEventListener('click', function(e) {
     const countryName = document.getElementById('countrySearchInput')?.value || countryCode;
 
     const profileData = {
-        firstName:   (document.getElementById('profileFirstName')?.value || '').trim(),
-        lastName:    (document.getElementById('profileLastName')?.value || '').trim(),
-        username:    (document.getElementById('profileUsername')?.value || '').trim(),
-        telegram:    (document.getElementById('profileTelegram')?.value || '').trim(),
-        birthdate:   document.getElementById('profileBirthdate')?.value || '',
-        gender:      document.querySelector('input[name="gender"]:checked')?.value || '',
-        country:     countryCode,
-        countryName: countryName,
-        bio:         (document.getElementById('profileBio')?.value || '').trim(),
-        updatedAt:   new Date().toISOString()
-    };
+    firstName:   (document.getElementById('profileFirstName')?.value || '').trim(),
+    lastName:    (document.getElementById('profileLastName')?.value || '').trim(),
+    username:    (document.getElementById('profileUsername')?.value || '').trim(),
+    telegram:    (document.getElementById('profileTelegram')?.value || '').trim(),
+    birthdate:   document.getElementById('profileBirthdate')?.value || '',
+    gender:      document.querySelector('input[name="gender"]:checked')?.value || '',
+    country:     countryCode,
+    countryName: countryName,
+    bio:         (document.getElementById('profileBio')?.value || '').trim(),
 
+    // ── НОВЫЕ ПОЛЯ ──────────────────────────────────────────────
+    evmAddress:  (document.getElementById('profileEvmAddress')?.value || '').trim(),
+    solAddress:  (document.getElementById('profileSolAddress')?.value || '').trim(),
+    twitter:     (document.getElementById('profileTwitter')?.value || '').replace('@','').trim(),
+    discord:     (document.getElementById('profileDiscord')?.value || '').trim(),
+    city:        (document.getElementById('profileCity')?.value || '').trim(),
+    // ────────────────────────────────────────────────────────────
+
+    updatedAt: new Date().toISOString()
+};
+window.copyRefCode = function() {
+    const el = document.getElementById('profileRefCode');
+    if (!el) return;
+    const code = el.textContent.trim();
+    if (code === 'Генерация...') return;
+
+    navigator.clipboard.writeText(code).then(function() {
+        footerShowToast('Реферальный код скопирован!', 'success');
+    });
+};
     // Локальный бэкап
     window.userProfileData = profileData;
     localStorage.setItem('userProfileData', JSON.stringify(profileData));
