@@ -770,16 +770,16 @@ function _openAccountOverlay() {
     window.copyRefCode = function() {
         const el = document.getElementById('profileRefCode');
         if (!el) return;
-        const tr = typeof window.t === 'function' ? window.t : (k) => k;
+        
         const code = el.textContent.trim();
-        if (!code || code === tr('account_generating')) return;
+        if (!code || code === 'Генерация...') return;
 
         const btn = document.querySelector('#profileRefCode + button');
 
         if (navigator.clipboard && navigator.clipboard.writeText) {
             navigator.clipboard.writeText(code).then(function() {
                 _showCopySuccess(btn);
-                footerShowToast(tr('ref_code_copied'), 'success');
+                footerShowToast('Реферальный код скопирован!', 'success');
             }).catch(function() {
                 _copyFallback(code, btn);
             });
@@ -802,7 +802,6 @@ function _openAccountOverlay() {
     }
 
     function _copyFallback(text, btn) {
-        const tr = typeof window.t === 'function' ? window.t : (k) => k;
         try {
             const ta = document.createElement('textarea');
             ta.value = text;
@@ -813,9 +812,9 @@ function _openAccountOverlay() {
             document.execCommand('copy');
             document.body.removeChild(ta);
             _showCopySuccess(btn);
-            footerShowToast(tr('ref_code_copied'), 'success');
+            footerShowToast('Реферальный код скопирован!', 'success');
         } catch(e) {
-            footerShowToast(tr('copy_failed'), 'error');
+            footerShowToast('Не удалось скопировать', 'error');
         }
     }
     window.openPageModal = function(page) {
@@ -1194,37 +1193,46 @@ window.closeAccountOverlay = function() {
                 </div>
 
                 <!-- Profile Form -->
-<form id="accountForm" onsubmit="saveAccountProfile(event)" class="space-y-6">
-    <div class="grid grid-cols-2 gap-4">
-        <div>
-            <label class="block text-sm font-medium text-slate-300 mb-2">${lang('footer_account_firstname')}</label>
-            <input type="text" id="profileFirstName" value="${userData.firstName || ''}"
-                   placeholder="${lang('footer_account_firstname')}"
-                   class="w-full bg-slate-800 border border-slate-700 rounded-lg px-4 py-2.5 text-sm text-white focus:border-cyan-500 focus:outline-none">
-        </div>
-        <div>
-            <label class="block text-sm font-medium text-slate-300 mb-2">${lang('footer_account_lastname')}</label>
-            <input type="text" id="profileLastName" value="${userData.lastName || ''}"
-                   placeholder="${lang('footer_account_lastname')}"
-                   class="w-full bg-slate-800 border border-slate-700 rounded-lg px-4 py-2.5 text-sm text-white focus:border-cyan-500 focus:outline-none">
-        </div>
-    </div>
+                <form id="accountForm" onsubmit="saveAccountProfile(event)" class="space-y-6">
+                    <div class="grid grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-sm font-medium text-slate-300 mb-2">${lang('footer_account_firstname')}</label>
+                            <input type="text" id="profileFirstName" value="${userData.firstName || ''}"
+                                   placeholder="${lang('footer_account_firstname')}"
+                                   class="w-full bg-slate-800 border border-slate-700 rounded-lg px-4 py-2.5 text-sm text-white focus:border-cyan-500 focus:outline-none">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-slate-300 mb-2">${lang('footer_account_lastname')}</label>
+                            <input type="text" id="profileLastName" value="${userData.lastName || ''}"
+                                   placeholder="${lang('footer_account_lastname')}"
+                                   class="w-full bg-slate-800 border border-slate-700 rounded-lg px-4 py-2.5 text-sm text-white focus:border-cyan-500 focus:outline-none">
+                        </div>
+                    </div>
 
-    <div class="grid grid-cols-2 gap-4">
-        <div>
-            <label class="block text-sm font-medium text-slate-300 mb-2">${lang('footer_account_username')}</label>
-            <div class="relative">
-                <span class="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500">@</span>
-                <input type="text" id="profileUsername" value="${userData.username || ''}"
-                       placeholder="nickname"
-                       class="w-full bg-slate-800 border border-slate-700 rounded-lg pl-8 pr-4 py-2.5 text-sm text-white focus:border-cyan-500 focus:outline-none">
-            </div>
-        </div>
-        <div>
-            <label class="block text-sm font-medium text-slate-300 mb-2">${lang('footer_account_birthdate')}</label>
-            <input type="date" id="profileBirthdate" value="${userData.birthdate || ''}"
-                   class="w-full bg-slate-800 border border-slate-700 rounded-lg px-4 py-2.5 text-sm text-white focus:border-cyan-500 focus:outline-none">
-        </div>
+                    <div class="grid grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-sm font-medium text-slate-300 mb-2">${lang('footer_account_username')}</label>
+                            <div class="relative">
+                                <span class="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500">@</span>
+                                <input type="text" id="profileUsername" value="${userData.username || ''}"
+                                       placeholder="nickname"
+                                       class="w-full bg-slate-800 border border-slate-700 rounded-lg pl-8 pr-4 py-2.5 text-sm text-white focus:border-cyan-500 focus:outline-none">
+                            </div>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-slate-300 mb-2">${lang('footer_account_telegram')}</label>
+                            <input type="text" id="profileTelegram" value="${userData.telegram || ''}"
+                                   placeholder="@username"
+                                   class="w-full bg-slate-800 border border-slate-700 rounded-lg px-4 py-2.5 text-sm text-white focus:border-cyan-500 focus:outline-none">
+                        </div>
+                    </div>
+
+                    <div>
+                        <label class="block text-sm font-medium text-slate-300 mb-2">${lang('footer_account_birthdate')}</label>
+                        <input type="date" id="profileBirthdate" value="${userData.birthdate || ''}"
+                               class="w-full bg-slate-800 border border-slate-700 rounded-lg px-4 py-2.5 text-sm text-white focus:border-cyan-500 focus:outline-none">
+                    </div>
+
                     <div>
                         <label class="block text-sm font-medium text-slate-300 mb-2">${lang('footer_account_gender')}</label>
                         <div class="flex gap-4">
@@ -1287,15 +1295,15 @@ window.closeAccountOverlay = function() {
 <!-- Crypto & Social Section -->
 <div class="border-t border-slate-700/50 pt-5">
     <h4 class="text-sm font-semibold text-slate-300 mb-4 flex items-center gap-2">
-    <i class="fas fa-wallet text-cyan-400"></i>
-    ${lang('account_crypto_addresses')}
-</h4>
+        <i class="fas fa-wallet text-cyan-400"></i>
+        Крипто-адреса
+    </h4>
     <div class="space-y-3">
         <div>
             <label class="block text-xs font-medium text-slate-400 mb-1.5 flex items-center gap-1.5">
                 <span class="w-5 h-5 rounded-full bg-blue-500/20 flex items-center justify-center text-xs font-bold text-blue-400">Ξ</span>
-                ${lang('account_evm_address')}
-                <span class="text-slate-600">${lang('account_evm_hint')}</span>
+                EVM адрес
+                <span class="text-slate-600">(Ethereum, BSC, Polygon...)</span>
             </label>
             <input type="text" id="profileEvmAddress"
                    value="${userData.evmAddress || ''}"
@@ -1305,11 +1313,11 @@ window.closeAccountOverlay = function() {
         <div>
             <label class="block text-xs font-medium text-slate-400 mb-1.5 flex items-center gap-1.5">
                 <span class="w-5 h-5 rounded-full bg-purple-500/20 flex items-center justify-center text-xs font-bold text-purple-400">◎</span>
-                ${lang('account_sol_address')}
+                Solana адрес
             </label>
             <input type="text" id="profileSolAddress"
                    value="${userData.solAddress || ''}"
-                   placeholder="${lang('account_sol_placeholder')}"
+                   placeholder="Ваш Solana адрес..."
                    class="w-full bg-slate-800 border border-slate-700 rounded-lg px-4 py-2.5 text-sm text-white font-mono focus:border-cyan-500 focus:outline-none transition-colors">
         </div>
     </div>
@@ -1319,9 +1327,9 @@ window.closeAccountOverlay = function() {
 <div class="border-t border-slate-700/50 pt-5">
     <h4 class="text-sm font-semibold text-slate-300 mb-4 flex items-center gap-2">
         <i class="fas fa-share-alt text-pink-400"></i>
-        ${lang('account_social_networks')}
+        Социальные сети
     </h4>
-    <div class="grid grid-cols-3 gap-3">
+    <div class="grid grid-cols-2 gap-3">
         <div>
             <label class="block text-xs font-medium text-slate-400 mb-1.5">
                 <i class="fab fa-twitter text-sky-400 mr-1"></i>Twitter / X
@@ -1343,75 +1351,31 @@ window.closeAccountOverlay = function() {
                    placeholder="username"
                    class="w-full bg-slate-800 border border-slate-700 rounded-lg px-4 py-2.5 text-sm text-white focus:border-cyan-500 focus:outline-none transition-colors">
         </div>
-        <div>
+        <div class="col-span-2">
             <label class="block text-xs font-medium text-slate-400 mb-1.5">
-                <i class="fab fa-telegram-plane text-blue-400 mr-1"></i>Telegram
-            </label>
-            <input type="text" id="profileTelegram"
-                   value="${userData.telegram || ''}"
-                   placeholder="@username"
-                   class="w-full bg-slate-800 border border-slate-700 rounded-lg px-4 py-2.5 text-sm text-white focus:border-cyan-500 focus:outline-none transition-colors">
-        </div>
-    </div>
-
-    <div class="grid grid-cols-2 gap-3 mt-3">
-        <div>
-            <label class="block text-xs font-medium text-slate-400 mb-1.5">
-                <i class="fas fa-globe text-green-400 mr-1"></i>${lang('footer_account_country')}
-            </label>
-            <div class="relative" id="countryPickerWrapper">
-                <div class="relative">
-                    <i class="fas fa-search absolute left-3 top-1/2 -translate-y-1/2 text-slate-500 text-xs"></i>
-                    <input type="text"
-                           id="countrySearchInput"
-                           placeholder="${lang('account_select_country')}"
-                           autocomplete="off"
-                           class="w-full bg-slate-800 border border-slate-700 rounded-lg pl-9 pr-10 py-2.5 text-sm text-white focus:border-cyan-500 focus:outline-none"
-                           oninput="filterCountryList(this.value)"
-                           onfocus="showCountryDropdown()"
-                           value="${countries.find(c => c.code === savedCountry)?.name || savedCountry || ''}">
-                    <button type="button" onclick="clearCountryInput()" class="absolute right-3 top-1/2 -translate-y-1/2 text-slate-500 hover:text-white transition-colors">
-                        <i class="fas fa-times text-xs"></i>
-                    </button>
-                </div>
-                <input type="hidden" id="profileCountry" value="${savedCountry}">
-                <div id="countryDropdown"
-                     class="hidden absolute z-50 w-full mt-1 bg-slate-800 border border-slate-600 rounded-lg shadow-xl max-h-48 overflow-y-auto">
-                    ${countries.map(c => `
-                        <div class="country-option px-4 py-2.5 text-sm text-slate-300 hover:bg-slate-700 hover:text-white cursor-pointer transition-colors flex items-center gap-2"
-                             data-code="${c.code}"
-                             data-name="${c.name}"
-                             onclick="selectCountry('${c.code}', '${c.name}')">
-                            ${c.name}
-                        </div>
-                    `).join('')}
-                </div>
-            </div>
-        </div>
-        <div>
-            <label class="block text-xs font-medium text-slate-400 mb-1.5">
-                <i class="fas fa-city text-orange-400 mr-1"></i>${lang('account_city')}
+                <i class="fas fa-city text-orange-400 mr-1"></i>Город
             </label>
             <input type="text" id="profileCity"
                    value="${userData.city || ''}"
-                   placeholder="${lang('account_city_placeholder')}"
+                   placeholder="Ваш город"
                    class="w-full bg-slate-800 border border-slate-700 rounded-lg px-4 py-2.5 text-sm text-white focus:border-cyan-500 focus:outline-none transition-colors">
         </div>
     </div>
 </div>
+
 <!-- Referral Block -->
 <div class="border-t border-slate-700/50 pt-5">
     <h4 class="text-sm font-semibold text-slate-300 mb-4 flex items-center gap-2">
         <i class="fas fa-user-plus text-emerald-400"></i>
-    ${lang('account_ref_program')}
+        Реферальная программа
     </h4>
     <div class="grid grid-cols-2 gap-3 mb-3">
         <div class="bg-slate-800/50 rounded-xl p-3 border border-slate-700/50">
-            <div class="text-xs text-slate-500 mb-1.5">${lang('account_your_ref_code')}</div>
+            <div class="text-xs text-slate-500 mb-1.5">Ваш реф. код</div>
             <div class="flex items-center gap-2">
                 <code id="profileRefCode"
                       class="text-sm font-mono text-cyan-400 font-bold tracking-wider">
-                    ${userData.referralCode || lang('account_generating')}
+                    ${userData.referralCode || 'Генерация...'}
                 </code>
                 <button type="button" onclick="copyRefCode()"
                     class="w-6 h-6 flex items-center justify-center rounded-lg bg-slate-700 hover:bg-cyan-600 text-slate-400 hover:text-white transition-all">
@@ -1420,10 +1384,10 @@ window.closeAccountOverlay = function() {
             </div>
         </div>
         <div class="bg-slate-800/50 rounded-xl p-3 border border-slate-700/50">
-            <div class="text-xs text-slate-500 mb-1.5">${lang('account_invited_count')}</div>
+            <div class="text-xs text-slate-500 mb-1.5">Приглашено</div>
             <div class="text-lg font-bold text-emerald-400" id="profileInvitedCount">
                 ${userData.invitedCount || 0}
-                <span class="text-xs font-normal text-slate-500">${lang('account_people_short')}</span>
+                <span class="text-xs font-normal text-slate-500">чел.</span>
             </div>
         </div>
     </div>
@@ -1431,29 +1395,29 @@ window.closeAccountOverlay = function() {
     ${userData.invitedBy ? `
     <div class="mb-3 text-xs text-slate-500 flex items-center gap-1.5 bg-slate-800/30 rounded-lg px-3 py-2">
         <i class="fas fa-user-check text-emerald-400"></i>
-        ${lang('account_invited_by')}
+        Вас пригласил:
         <span class="text-slate-300 font-medium">${userData.invitedByName || userData.invitedBy}</span>
     </div>` : `
     <div class="mb-3">
         <label class="block text-xs font-medium text-slate-400 mb-1.5">
             <i class="fas fa-ticket-alt text-yellow-400 mr-1"></i>
-            ${lang('account_enter_ref_code')}
+            Ввести реферальный код
         </label>
         <div class="flex gap-2">
             <input type="text" id="profileInviteCode"
-                   placeholder="${lang('ref_code_input_placeholder')}"
+                   placeholder="AL-XXXXXX"
                    class="flex-1 bg-slate-800 border border-slate-700 rounded-lg px-4 py-2 text-sm text-white font-mono focus:border-yellow-500 focus:outline-none transition-colors">
             <button type="button" onclick="applyReferralCode()"
                     class="px-4 py-2 bg-yellow-600 hover:bg-yellow-500 rounded-lg text-sm font-medium text-white transition-colors whitespace-nowrap">
-                ${lang('account_apply')}
+                Применить
             </button>
         </div>
     </div>`}
 
     <div class="p-3 bg-emerald-900/20 border border-emerald-800/30 rounded-lg text-xs text-slate-400">
         <i class="fas fa-flask text-emerald-400 mr-1.5"></i>
-        ${lang('account_ref_bonus_text')}
-        <span class="text-emerald-400 font-bold">${lang('account_ref_bonus_amount')}</span>!
+        За каждого приглашённого вы получите
+        <span class="text-emerald-400 font-bold">+50 Reagents</span>!
     </div>
 </div>
 
@@ -1461,22 +1425,22 @@ window.closeAccountOverlay = function() {
 <div class="border-t border-slate-700/50 pt-5">
     <h4 class="text-sm font-semibold text-slate-300 mb-4 flex items-center gap-2">
         <span class="text-lg">🧪</span>
-        ${lang('reagents_section_title')}
+        Reagents
     </h4>
     <div class="bg-gradient-to-br from-cyan-900/30 to-blue-900/30 border border-cyan-500/20 rounded-xl p-4">
         <div class="flex items-center justify-between mb-3">
             <div>
-               <div class="text-xs text-slate-400 mb-1">${lang('account_balance_label')}</div>
+                <div class="text-xs text-slate-400 mb-1">Ваш баланс</div>
                 <div class="text-2xl font-black text-cyan-400" id="profileReagentBalance">
                     ${userData.reagents || 0}
                     <span class="text-sm font-normal text-slate-400 ml-1">RGT</span>
                 </div>
             </div>
             <div class="text-right">
-                <div class="text-xs text-slate-400 mb-1">${lang('account_streak_label')}</div>
+                <div class="text-xs text-slate-400 mb-1">Стрик</div>
                 <div class="text-xl font-bold text-orange-400" id="profileStreak">
                     ${userData.streak || 0}
-                    <span class="text-xs font-normal text-slate-400">${lang('account_days_short')}</span>
+                    <span class="text-xs font-normal text-slate-400">дней</span>
                 </div>
             </div>
         </div>
@@ -1484,7 +1448,7 @@ window.closeAccountOverlay = function() {
             id="profileClaimBtn"
             class="w-full py-2.5 rounded-lg text-sm font-bold transition-all
                    bg-gradient-to-r from-cyan-600 to-blue-600 hover:from-cyan-500 hover:to-blue-500 text-white">
-           <i class="fas fa-flask mr-2"></i>${lang('account_get_reagents')}
+            <i class="fas fa-flask mr-2"></i>Получить Reagents
         </button>
     </div>
 </div>
@@ -1566,11 +1530,7 @@ window.closeAccountOverlay = function() {
             if (refEl) refEl.textContent = merged.referralCode || 'AL-' + user.uid.substring(0,6).toUpperCase();
 
             const invEl = document.getElementById('profileInvitedCount');
-    if (invEl) {
-        const tr = typeof window.t === 'function' ? window.t : (k) => k;
-        invEl.innerHTML = (merged.invitedCount || 0) +
-            ' <span class="text-xs font-normal text-slate-500">' + tr('account_people_short') + '</span>';
-    }
+            if (invEl) invEl.textContent = (merged.invitedCount || 0) + ' чел.';
 
         }).catch(function(err) {
             console.warn('Profile load error:', err);
@@ -1623,29 +1583,25 @@ function _fillAccountForm(profile) {
     }
 
     // Reagents
-    const tr2 = typeof window.t === 'function' ? window.t : (k) => k;
     const balEl = document.getElementById('profileReagentBalance');
-    if (balEl) balEl.innerHTML = (profile.reagents || 0) +
-        ' <span class="text-sm font-normal text-slate-400 ml-1">' + tr2('reagents_rgt_unit') + '</span>';
+    if (balEl) balEl.innerHTML = (profile.reagents || 0) + ' <span class="text-sm font-normal text-slate-400 ml-1">RGT</span>';
 
     const streakEl = document.getElementById('profileStreak');
-    if (streakEl) streakEl.innerHTML = (profile.streak || 0) +
-        ' <span class="text-xs font-normal text-slate-400">' + tr2('account_days_short') + '</span>';
+    if (streakEl) streakEl.innerHTML = (profile.streak || 0) + ' <span class="text-xs font-normal text-slate-400">дней</span>';
 }
     window.applyReferralCode = async function() {
-    const tr = typeof window.t === 'function' ? window.t : (k) => k;
     const input = document.getElementById('profileInviteCode');
     if (!input) return;
 
     const code = input.value.trim().toUpperCase();
     if (!code || !code.startsWith('AL-')) {
-        footerShowToast(tr('ref_wrong_format'), 'error');
+        footerShowToast('Неверный формат кода (AL-XXXXXX)', 'error');
         return;
     }
 
     const user = typeof window.currentUser !== 'undefined' ? window.currentUser : null;
     if (!user) {
-        footerShowToast(tr('ref_login_required'), 'error');
+        footerShowToast('Войдите в аккаунт', 'error');
         return;
     }
 
@@ -1663,7 +1619,7 @@ function _fillAccountForm(profile) {
         );
 
         if (snap.empty) {
-            footerShowToast(tr('ref_not_found'), 'error');
+            footerShowToast('Код не найден', 'error');
             return;
         }
 
@@ -1672,7 +1628,7 @@ function _fillAccountForm(profile) {
         const inviterData = inviterDoc.data();
 
         if (inviterId === user.uid) {
-            footerShowToast(tr('ref_own_code'), 'error');
+            footerShowToast('Нельзя использовать свой код', 'error');
             return;
         }
 
@@ -1707,7 +1663,7 @@ function _fillAccountForm(profile) {
             { merge: true }
         );
 
-        footerShowToast(tr('ref_applied'), 'success');
+        footerShowToast('🧪 Код применён! +25 Reagents вам и +50 пригласившему!', 'success');
         input.style.display = 'none';
 
         // Обновляем форму
@@ -1715,7 +1671,7 @@ function _fillAccountForm(profile) {
 
     } catch(err) {
         console.error('Referral error:', err);
-        footerShowToast(tr('ref_error') + err.message, 'error');
+        footerShowToast('Ошибка: ' + err.message, 'error');
     }
 };
 // ============ COUNTRY PICKER FUNCTIONS ============
@@ -1921,8 +1877,8 @@ document.addEventListener('click', function(e) {
     const user = typeof window.currentUser !== 'undefined' ? window.currentUser : null;
 
     // Проверяем размер (макс 2MB)
-    f (file.size > 2 * 1024 * 1024) {
-        footerShowToast(lang('avatar_too_large'), 'error');
+    if (file.size > 2 * 1024 * 1024) {
+        footerShowToast('Файл слишком большой (макс 2MB)', 'error');
         return;
     }
 
@@ -1944,7 +1900,7 @@ document.addEventListener('click', function(e) {
 
         if (storageExp && storage && storageExp.ref && storageExp.uploadBytes && storageExp.getDownloadURL) {
             try {
-                footerShowToast(lang('avatar_uploading'), 'info');
+                footerShowToast('Загрузка фото...', 'info');
 
                 const storageRef = storageExp.ref(storage, `avatars/${user.uid}`);
                 const snapshot   = await storageExp.uploadBytes(storageRef, file);
@@ -2007,7 +1963,6 @@ async function _saveAvatarAsBase64(base64, user, lang) {
 }
 
  
-// БЫЛО:
 function _showSupportForm() {
     const modal = document.getElementById('pageModal');
     const content = document.getElementById('pageModalContent');
@@ -2016,17 +1971,21 @@ function _showSupportForm() {
     content.innerHTML = `
         <div class="bg-gradient-to-r from-slate-900 to-slate-800 p-6 border-b border-slate-700">
             <div class="flex items-center gap-3">
-                ...
+                <div class="w-12 h-12 rounded-xl bg-gradient-to-br from-purple-500/20 to-blue-500/20 border border-purple-500/30 flex items-center justify-center">
+                    <i class="fas fa-headset text-purple-400 text-xl"></i>
+                </div>
+                <div>
                     <h2 class="text-xl font-bold text-white">Служба поддержки</h2>
                     <p class="text-sm text-slate-400">Мы ответим в течение 24 часов</p>
-                ...
+                </div>
             </div>
         </div>
         <div class="p-6 max-h-[75vh] overflow-y-auto">
             <form id="footerSupportForm" onsubmit="footerSubmitSupport(event)" class="space-y-4">
                 <div>
-                    <label ...>Тема обращения *</label>
-                    <select ...>
+                    <label class="block text-xs font-medium text-slate-400 mb-1.5">Тема обращения *</label>
+                    <select id="fsSupportCategory" required 
+                            class="w-full bg-slate-800 border border-slate-700 rounded-lg px-4 py-2.5 text-sm text-white focus:border-purple-500 focus:outline-none">
                         <option value="">Выберите категорию</option>
                         <option value="technical">🔧 Техническая проблема</option>
                         <option value="account">👤 Проблема с аккаунтом</option>
@@ -2038,77 +1997,14 @@ function _showSupportForm() {
                 </div>
                 <div class="grid grid-cols-2 gap-4">
                     <div>
-                        <label ...>Ваше имя</label>
-                        ...
-                    </div>
-                    ...
-                </div>
-                <div>
-                    <label ...>Заголовок *</label>
-                    <input ... placeholder="Краткое описание" ...>
-                </div>
-                <div>
-                    <label ...>Описание *</label>
-                    <textarea ... placeholder="Опишите вашу проблему подробно..." ...></textarea>
-                </div>
-                <div class="flex gap-3 pt-2">
-                    <button type="button" onclick="closePageModal()" ...>
-                        Отмена
-                    </button>
-                    <button type="submit" id="fsSupportSubmitBtn" ...>
-                        <i class="fas fa-paper-plane mr-2"></i>Отправить
-                    </button>
-                </div>
-            </form>
-        </div>
-    `;
-    modal.classList.add('active');
-}
-
-// СТАЛО:
-function _showSupportForm() {
-    const modal = document.getElementById('pageModal');
-    const content = document.getElementById('pageModalContent');
-    if (!modal || !content) return;
-    const lang = typeof window.t === 'function' ? window.t : (k) => k;
-
-    content.innerHTML = `
-        <div class="bg-gradient-to-r from-slate-900 to-slate-800 p-6 border-b border-slate-700">
-            <div class="flex items-center gap-3">
-                <div class="w-12 h-12 rounded-xl bg-gradient-to-br from-purple-500/20 to-blue-500/20 border border-purple-500/30 flex items-center justify-center">
-                    <i class="fas fa-headset text-purple-400 text-xl"></i>
-                </div>
-                <div>
-                    <h2 class="text-xl font-bold text-white">${lang('support_form_title')}</h2>
-                    <p class="text-sm text-slate-400">${lang('support_form_subtitle')}</p>
-                </div>
-            </div>
-        </div>
-        <div class="p-6 max-h-[75vh] overflow-y-auto">
-            <form id="footerSupportForm" onsubmit="footerSubmitSupport(event)" class="space-y-4">
-                <div>
-                    <label class="block text-xs font-medium text-slate-400 mb-1.5">${lang('footer_support_category')}</label>
-                    <select id="fsSupportCategory" required 
-                            class="w-full bg-slate-800 border border-slate-700 rounded-lg px-4 py-2.5 text-sm text-white focus:border-purple-500 focus:outline-none">
-                        <option value="">${lang('support_select_category')}</option>
-                        <option value="technical">${lang('support_cat_technical')}</option>
-                        <option value="account">${lang('support_cat_account')}</option>
-                        <option value="project">${lang('support_cat_project')}</option>
-                        <option value="suggestion">${lang('support_cat_suggestion')}</option>
-                        <option value="partnership">${lang('support_cat_partnership')}</option>
-                        <option value="other">${lang('support_cat_other')}</option>
-                    </select>
-                </div>
-                <div class="grid grid-cols-2 gap-4">
-                    <div>
-                        <label class="block text-xs font-medium text-slate-400 mb-1.5">${lang('support_your_name')}</label>
+                        <label class="block text-xs font-medium text-slate-400 mb-1.5">Ваше имя</label>
                         <input type="text" id="fsSupportName" 
                                value="${_getSupportUserName()}"
-                               placeholder="${lang('footer_account_firstname')}" 
+                               placeholder="Иван" 
                                class="w-full bg-slate-800 border border-slate-700 rounded-lg px-4 py-2.5 text-sm text-white focus:border-purple-500 focus:outline-none">
                     </div>
                     <div>
-                        <label class="block text-xs font-medium text-slate-400 mb-1.5">${lang('footer_support_email')}</label>
+                        <label class="block text-xs font-medium text-slate-400 mb-1.5">Email *</label>
                         <input type="email" id="fsSupportEmail" required 
                                value="${_getSupportUserEmail()}"
                                placeholder="example@mail.com" 
@@ -2116,25 +2012,25 @@ function _showSupportForm() {
                     </div>
                 </div>
                 <div>
-                    <label class="block text-xs font-medium text-slate-400 mb-1.5">${lang('support_subject_label')} *</label>
+                    <label class="block text-xs font-medium text-slate-400 mb-1.5">Заголовок *</label>
                     <input type="text" id="fsSupportSubject" required 
-                           placeholder="${lang('support_subject_placeholder')}" 
+                           placeholder="Краткое описание" 
                            class="w-full bg-slate-800 border border-slate-700 rounded-lg px-4 py-2.5 text-sm text-white focus:border-purple-500 focus:outline-none">
                 </div>
                 <div>
-                    <label class="block text-xs font-medium text-slate-400 mb-1.5">${lang('support_desc_label')} *</label>
+                    <label class="block text-xs font-medium text-slate-400 mb-1.5">Описание *</label>
                     <textarea id="fsSupportMessage" required rows="5" 
-                              placeholder="${lang('support_desc_placeholder')}" 
+                              placeholder="Опишите вашу проблему подробно..." 
                               class="w-full bg-slate-800 border border-slate-700 rounded-lg px-4 py-2.5 text-sm text-white focus:border-purple-500 focus:outline-none resize-none"></textarea>
                 </div>
                 <div class="flex gap-3 pt-2">
                     <button type="button" onclick="closePageModal()" 
                             class="flex-1 bg-slate-700 hover:bg-slate-600 py-3 rounded-lg text-sm font-medium text-white transition-colors">
-                        ${lang('support_cancel')}
+                        Отмена
                     </button>
                     <button type="submit" id="fsSupportSubmitBtn" 
                             class="flex-1 bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-500 hover:to-blue-500 py-3 rounded-lg text-sm font-bold text-white transition-all">
-                        <i class="fas fa-paper-plane mr-2"></i>${lang('support_submit')}
+                        <i class="fas fa-paper-plane mr-2"></i>Отправить
                     </button>
                 </div>
             </form>
@@ -2158,12 +2054,12 @@ function _getSupportUserEmail() {
 
 window.footerSubmitSupport = async function(e) {
     e.preventDefault();
-    const lang = typeof window.t === 'function' ? window.t : (k) => k;
+
     const btn = document.getElementById('fsSupportSubmitBtn');
     if (!btn) return;
 
     const originalHTML = btn.innerHTML;
-    btn.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i>' + lang('support_sending_text');
+    btn.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i>Отправка...';
     btn.disabled = true;
 
     const user = (typeof window.currentUser !== 'undefined') ? window.currentUser : null;
@@ -2172,7 +2068,7 @@ window.footerSubmitSupport = async function(e) {
     if (!user) {
         btn.innerHTML = originalHTML;
         btn.disabled = false;
-        footerShowToast(lang('support_need_login'));
+        footerShowToast('Войдите в аккаунт для отправки обращения');
         closePageModal();
         // Открываем окно входа если оно есть
         if (typeof window.openLoginModal === 'function') {
@@ -2190,7 +2086,7 @@ window.footerSubmitSupport = async function(e) {
     if (!category) {
         btn.innerHTML = originalHTML;
         btn.disabled = false;
-        footerShowToast(lang('support_select_cat_warn'));
+        footerShowToast('Выберите категорию обращения');
         return;
     }
 
@@ -2233,7 +2129,7 @@ window.footerSubmitSupport = async function(e) {
 
             btn.innerHTML = originalHTML;
             btn.disabled = false;
-            footerShowToast(lang('support_sent_ok'));
+            footerShowToast('Обращение отправлено! Ответим в течение 24 часов.');
             setTimeout(function() { closePageModal(); }, 1200);
 
         } else {
@@ -2244,7 +2140,7 @@ window.footerSubmitSupport = async function(e) {
         console.error('Support submit error:', err);
         btn.innerHTML = originalHTML;
         btn.disabled = false;
-        footerShowToast(lang('support_send_error'), 'error');
+        footerShowToast('Ошибка отправки. Попробуйте позже.');
     }
 };
     window.closeSupportModal = function() {
@@ -2263,7 +2159,7 @@ window.footerSubmitSupport = async function(e) {
         }
 
         btn.disabled = true;
-        btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> ' + (typeof window.t === 'function' ? window.t('ticket_sending') : 'Sending...');
+        btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Отправка...';
 
         try {
             const { collection, addDoc } = window.__firestoreExports;
@@ -2285,14 +2181,14 @@ window.footerSubmitSupport = async function(e) {
                 }]
             });
 
-            footerShowToast(typeof window.t === 'function' ? window.t('ticket_sent') : 'Submitted!');
+            footerShowToast('Обращение отправлено!');
             closeSupportModal(); // Это закроет модалку поддержки
             document.getElementById('supportForm').reset();
         } catch (err) {
-            footerShowToast(typeof window.t === 'function' ? window.t('ticket_error') : 'Error', 'error');
+            footerShowToast('Ошибка отправки');
         } finally {
             btn.disabled = false;
-            btn.innerHTML = typeof window.t === 'function' ? window.t('ticket_submit_btn') : 'Submit';
+            btn.innerHTML = 'Отправить обращение';
         }
     };
 window.copyAccountUID = function() {
@@ -2329,7 +2225,6 @@ window.copyAccountUID = function() {
     // ============ NOTIFICATIONS MODAL ============
 
     window.openNotificationsModal = function() {
-        const lang = typeof window.t === 'function' ? window.t : (k) => k;
         const modal = document.getElementById('pageModal');
         const content = document.getElementById('pageModalContent');
         
@@ -2348,11 +2243,11 @@ window.copyAccountUID = function() {
                     <div>
                         <h2 class="text-2xl font-bold text-white flex items-center gap-3">
                             <i class="fas fa-bell text-yellow-400"></i>
-                            ${lang('notif_title')}
+                            Уведомления
                         </h2>
-                        <p class="text-slate-400 mt-2">${notificationsList.length} ${lang('notif_title').toLowerCase()}</p>
+                        <p class="text-slate-400 mt-2">${notificationsList.length} уведомлений</p>
                     </div>
-                   ${notificationsList.length > 0 ? `<button onclick="clearAllNotifications()" class="text-xs text-slate-400 hover:text-white transition-colors">${lang('notif_clear_all')}</button>` : ''}
+                    ${notificationsList.length > 0 ? '<button onclick="clearAllNotifications()" class="text-xs text-slate-400 hover:text-white transition-colors">Очистить все</button>' : ''}
                 </div>
             </div>
             <div class="p-6 max-h-[70vh] overflow-y-auto">
@@ -2366,7 +2261,7 @@ window.copyAccountUID = function() {
                                 <p class="text-sm text-white">${notif.message}</p>
                                 <p class="text-xs text-slate-500 mt-1">${formatTimeAgo(notif.createdAt)}</p>
                             </div>
-                           ${!notif.read ? `<button onclick="markNotificationRead('${notif.id}')" class="text-xs text-cyan-400 hover:text-cyan-300">${lang('notif_mark_read')}</button>` : ''}
+                            ${!notif.read ? '<button onclick="markNotificationRead(\'' + notif.id + '\')" class="text-xs text-cyan-400 hover:text-cyan-300">Прочитано</button>' : ''}
                         </div>
                     </div>
                 `).join('') : `
@@ -2374,8 +2269,8 @@ window.copyAccountUID = function() {
                         <div class="w-16 h-16 bg-slate-800 rounded-full flex items-center justify-center mx-auto mb-4">
                             <i class="fas fa-bell-slash text-3xl text-slate-500"></i>
                         </div>
-                        <h3 class="text-lg font-bold text-white mb-2">${lang('notif_empty_title')}</h3>
-                        <p class="text-slate-400 text-sm">${lang('notif_empty_desc')}</p>
+                        <h3 class="text-lg font-bold text-white mb-2">Нет уведомлений</h3>
+                        <p class="text-slate-400 text-sm">Уведомления о новых аирдропах появятся здесь</p>
                     </div>
                 `}
             </div>
@@ -2400,13 +2295,12 @@ window.copyAccountUID = function() {
 
     function formatTimeAgo(date) {
         if (!date) return '';
-        const tr = typeof window.t === 'function' ? window.t : (k) => k;
         const now = new Date();
         const diff = now - new Date(date);
-        if (diff < 60000) return tr('time_just_now');
-        if (diff < 3600000) return Math.floor(diff/60000) + ' ' + tr('time_min_ago');
-        if (diff < 86400000) return Math.floor(diff/3600000) + ' ' + tr('time_hour_ago');
-        return Math.floor(diff/86400000) + ' ' + tr('time_day_ago');
+        if (diff < 60000) return 'только что';
+        if (diff < 3600000) return Math.floor(diff/60000) + ' мин назад';
+        if (diff < 86400000) return Math.floor(diff/3600000) + ' ч назад';
+        return Math.floor(diff/86400000) + ' дн назад';
     }
 
     // ============ LEGAL MODALS ============
@@ -2444,7 +2338,7 @@ window.copyAccountUID = function() {
             </div>
             <div class="p-4 border-t border-slate-700/50 bg-slate-900/50">
                 <button onclick="closePageModal()" class="w-full bg-slate-700 hover:bg-slate-600 py-3 rounded-lg text-sm font-medium text-white transition-colors">
-                    ${typeof window.t === 'function' ? window.t('legal_close_btn') : 'Close'}
+                    Закрыть
                 </button>
             </div>
         `;
@@ -2455,7 +2349,7 @@ window.copyAccountUID = function() {
     // ============ TUTORIALS ============
 
     window.openTutorialsPage = function() {
-        footerShowToast(typeof window.t === 'function' ? window.t('tutorials_toast') : 'Tutorials available in projects');
+        footerShowToast('Туториалы доступны в разделе проектов');
         const projectsSection = document.getElementById('projects');
         if (projectsSection) {
             projectsSection.scrollIntoView({ behavior: 'smooth' });
@@ -2587,9 +2481,9 @@ window.copyAccountUID = function() {
     }
 
     window.footerScrollToTop = function() {
-    window.scrollTo({ top: 0, behavior: 'smooth' });
-    footerShowToast(typeof window.t === 'function' ? window.t('footer_scroll_top_toast') : 'Наверх');
-};
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+        footerShowToast('Наверх');
+    };
 
     function initNewsletterForm() {
         const form = document.querySelector('.newsletter-form');
@@ -2929,7 +2823,7 @@ function _updateUserStatusFallback(userEl) {
         }
         
         setTimeout(updateFooterLanguageButton, 100);
-        footerShowToast(typeof window.t === 'function' ? window.t('footer_language_changed') : 'Язык изменён');
+        footerShowToast('Язык изменён');
     };
 
     function footerShowToast(message, type = 'success') {
