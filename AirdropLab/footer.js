@@ -1330,11 +1330,15 @@
 
             if (snap.exists()) {
                 rootData = snap.data();
+                window._userRootData = rootData;
                 profile  = rootData.profile || rootData || {};
             }
 
             const local  = JSON.parse(localStorage.getItem('userProfileData') || '{}');
-            const merged = Object.assign({}, local, profile);
+            const merged = Object.assign({}, local, profile, {
+    reagents: rootData.reagents || profile.reagents || 0,
+    streak:   rootData.streak   || profile.streak   || 0,
+});
 
             // ── Генерируем реф. код если нет ──────────────────────
             if (!merged.referralCode && !rootData.referralCode) {
@@ -1418,12 +1422,18 @@ function _fillAccountForm(profile) {
         if (hiddenInput) hiddenInput.value  = profile.country || '';
     }
 
-    // Reagents
-    const balEl = document.getElementById('profileReagentBalance');
-    if (balEl) balEl.innerHTML = (profile.reagents || 0) + ' <span class="text-sm font-normal text-slate-400 ml-1">RGT</span>';
+   // Reagents — берём из корня документа, не из profile
+const balEl = document.getElementById('profileReagentBalance');
+if (balEl) {
+    const reagents = window._userRootData?.reagents || profile.reagents || 0;
+    balEl.innerHTML = reagents + ' <span class="text-sm font-normal text-slate-400 ml-1">RGT</span>';
+}
 
-    const streakEl = document.getElementById('profileStreak');
-    if (streakEl) streakEl.innerHTML = (profile.streak || 0) + ' <span class="text-xs font-normal text-slate-400">дней</span>';
+const streakEl = document.getElementById('profileStreak');
+if (streakEl) {
+    const streak = window._userRootData?.streak || profile.streak || 0;
+    streakEl.innerHTML = streak + ' <span class="text-xs font-normal text-slate-400">дней</span>';
+}
 }
     window.applyReferralCode = async function() {
     const input = document.getElementById('profileInviteCode');
