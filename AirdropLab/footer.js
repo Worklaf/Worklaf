@@ -650,42 +650,162 @@
 }
 
     // ============ MODAL FUNCTIONS ============
+function _openAccountOverlay() {
+    // Удаляем старую если есть
+    const old = document.getElementById('accountOverlayModal');
+    if (old) old.remove();
 
-    window.openPageModal = function(page) {
-        const modal = document.getElementById('pageModal');
-        const content = document.getElementById('pageModalContent');
-        
-        if (!modal || !content) return;
-        
-        let html = '';
-        
-        switch(page) {
-            case 'faq':
-                html = getFAQContent();
-                break;
-            case 'guides':
-                html = getGuidesContent();
-                break;
-            case 'account':
-                html = getAccountContent();
-                break;
-            default:
-                html = '<p class="text-center text-slate-400 p-8">Страница в разработке</p>';
-        }
-        
-        content.innerHTML = html;
-        modal.classList.add('active');
-        
-        // Инициализируем функционал страницы
-        if (page === 'faq') initFAQ();
-        if (page === 'account') initAccountPage();
+    // Создаём оверлей
+    const overlay = document.createElement('div');
+    overlay.id = 'accountOverlayModal';
+    overlay.style.cssText = `
+        position: fixed;
+        inset: 0;
+        z-index: 9999;
+        background: rgba(0,0,0,0.75);
+        backdrop-filter: blur(4px);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 16px;
+        opacity: 0;
+        transition: opacity 0.2s ease;
+    `;
+
+    // Контент
+    const box = document.createElement('div');
+    box.style.cssText = `
+        background: #1e2538;
+        border: 1px solid rgba(71,85,105,0.5);
+        border-radius: 20px;
+        width: 100%;
+        max-width: 680px;
+        max-height: 90vh;
+        overflow: hidden;
+        display: flex;
+        flex-direction: column;
+        position: relative;
+        transform: scale(0.95);
+        transition: transform 0.2s ease;
+        box-shadow: 0 25px 60px rgba(0,0,0,0.5);
+    `;
+
+    // Кнопка закрытия
+    const closeBtn = document.createElement('button');
+    closeBtn.innerHTML = '<i class="fas fa-times"></i>';
+    closeBtn.style.cssText = `
+        position: absolute;
+        top: 16px;
+        right: 16px;
+        z-index: 10;
+        width: 32px;
+        height: 32px;
+        border-radius: 50%;
+        background: rgba(71,85,105,0.5);
+        border: none;
+        color: #94a3b8;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 14px;
+        transition: all 0.2s;
+    `;
+    closeBtn.onmouseover = () => {
+        closeBtn.style.background = 'rgba(239,68,68,0.3)';
+        closeBtn.style.color = '#f87171';
     };
+    closeBtn.onmouseout = () => {
+        closeBtn.style.background = 'rgba(71,85,105,0.5)';
+        closeBtn.style.color = '#94a3b8';
+    };
+
+    function closeOverlay() {
+        overlay.style.opacity = '0';
+        box.style.transform = 'scale(0.95)';
+        setTimeout(() => overlay.remove(), 200);
+    }
+
+    closeBtn.onclick = closeOverlay;
+
+    // Клик по фону — закрыть
+    overlay.addEventListener('mousedown', function(e) {
+        if (e.target === overlay) closeOverlay();
+    });
+
+    // ESC — закрыть
+    function onKeyDown(e) {
+        if (e.key === 'Escape') {
+            closeOverlay();
+            document.removeEventListener('keydown', onKeyDown);
+        }
+    }
+    document.addEventListener('keydown', onKeyDown);
+
+    // Контент аккаунта
+    const contentWrap = document.createElement('div');
+    contentWrap.style.cssText = 'overflow-y: auto; flex: 1;';
+    contentWrap.innerHTML = getAccountContent();
+
+    box.appendChild(closeBtn);
+    box.appendChild(contentWrap);
+    overlay.appendChild(box);
+    document.body.appendChild(overlay);
+
+    // Анимация появления
+    requestAnimationFrame(() => {
+        requestAnimationFrame(() => {
+            overlay.style.opacity = '1';
+            box.style.transform = 'scale(1)';
+        });
+    });
+
+    // Инициализируем логику аккаунта
+    setTimeout(() => initAccountPage(), 100);
+
+    // Делаем closeOverlay доступной глобально
+    // для кнопок внутри контента
+    window._closeAccountOverlay = closeOverlay;
+}
+    window.openPageModal = function(page) {
+    // Для аккаунта открываем отдельную всплывающую модалку
+    if (page === 'account') {
+        _openAccountOverlay();
+        return;
+    }
+
+    // Для остальных страниц — старая логика (в футере)
+    const modal = document.getElementById('pageModal');
+    const content = document.getElementById('pageModalContent');
+    if (!modal || !content) return;
+
+    let html = '';
+    switch(page) {
+        case 'faq':
+            html = getFAQContent();
+            break;
+        case 'guides':
+            html = getGuidesContent();
+            break;
+        default:
+            html = '<p class="text-center text-slate-400 p-8">Страница в разработке</p>';
+    }
+
+    content.innerHTML = html;
+    modal.classList.add('active');
+
+    if (page === 'faq') initFAQ();
+};
 
     window.closePageModal = function() {
         const modal = document.getElementById('pageModal');
         if (modal) modal.classList.remove('active');
     };
-
+window.closeAccountOverlay = function() {
+    if (typeof window._closeAccountOverlay === 'function') {
+        window._closeAccountOverlay();
+    }
+};
     function getFAQContent() {
     const lang = typeof window.t === 'function' ? window.t : (k) => k;
     
@@ -1283,7 +1403,7 @@
     </div>
 </div>
                     <div class="flex gap-3 pt-4">
-                        <button type="button" onclick="closePageModal()"
+                        <button type="button" onclick="window._closeAccountOverlay ? window._closeAccountOverlay() : closePageModal()"
                                 class="flex-1 bg-slate-700 hover:bg-slate-600 py-3 rounded-lg text-sm font-medium text-white transition-colors">
                             ${lang('footer_account_cancel')}
                         </button>
@@ -1300,7 +1420,7 @@
                     </div>
                     <h3 class="text-xl font-bold text-white mb-2">${lang('footer_account_not_logged')}</h3>
                     <p class="text-slate-400 mb-6">${lang('footer_account_login_desc')}</p>
-                    <button onclick="closePageModal(); setTimeout(() => { if(typeof openLoginModal==='function') openLoginModal(); }, 300);"
+                    onclick="(window._closeAccountOverlay ? window._closeAccountOverlay() : closePageModal()); setTimeout(() => { if(typeof openLoginModal==='function') openLoginModal(); }, 300);"
                             class="bg-gradient-to-r from-cyan-600 to-blue-600 hover:from-cyan-500 hover:to-blue-500 px-6 py-3 rounded-lg text-sm font-bold text-white transition-all">
                         <i class="fas fa-sign-in-alt mr-2"></i>${lang('login_btn')}
                     </button>
@@ -2769,15 +2889,11 @@ document.addEventListener('DOMContentLoaded', function() {
 // Экспортируем для вызова из language.js
 window.updateFooterTranslations = updateFooterTranslations;
     function _initHeaderAvatarClick() {
-    function openProfile() {
-        if (typeof window.openPageModal === 'function') {
-            window.openPageModal('account');
-            setTimeout(function() {
-                var modalBox = document.querySelector('.page-modal-content');
-                if (modalBox) modalBox.scrollTop = 0;
-            }, 150);
-        }
+function openProfile() {
+    if (typeof window.openPageModal === 'function') {
+        window.openPageModal('account');
     }
+}
 
     function _attach() {
         // Аватар
@@ -2827,13 +2943,10 @@ window.updateFooterTranslations = updateFooterTranslations;
     });
 }
 
+// СТАЛО:
 window.openMyAccountModal = function() {
     if (typeof window.openPageModal === 'function') {
         window.openPageModal('account');
-        setTimeout(function() {
-            var modalBox = document.querySelector('.page-modal-content');
-            if (modalBox) modalBox.scrollTop = 0;
-        }, 150);
     }
 };
 })();
