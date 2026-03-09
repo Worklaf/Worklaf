@@ -661,6 +661,7 @@ function _addClaimStyles() {
 // ─────────────────────────────────────────────────────────────────
 // ЭКСПОРТ ПУБЛИЧНОГО API
 // ─────────────────────────────────────────────────────────────────
+// ── ГЛОБАЛЬНЫЙ ЭКСПОРТ ──
 window.ReagentsSystem = {
     getClaimStatus,
     performClaim,
@@ -670,6 +671,33 @@ window.ReagentsSystem = {
     CONFIG: REAGENTS_CONFIG
 };
 
-console.log('🧪 Reagents System v1.0 loaded');
+// Эти функции ОБЯЗАТЕЛЬНО должны быть на window
+window.openClaimModal  = openClaimModal;
+window.closeClaimModal = closeClaimModal;
+window.doClaim         = doClaim;
 
+console.log('🧪 Reagents System v1.0 loaded');
+// ── Автопроверка при загрузке ──────────────────────────────
+async function _checkClaimOnLoad() {
+    // Ждём Firebase
+    let attempts = 0;
+    while ((!window.auth || !window.auth.currentUser) && attempts < 20) {
+        await new Promise(r => setTimeout(r, 500));
+        attempts++;
+    }
+
+    const user = window.auth?.currentUser || window.currentUser;
+    if (!user) return;
+
+    const status = await getClaimStatus(user);
+    if (!status) return;
+
+    const dot = document.getElementById('claimDot');
+    if (dot && status.canClaim) {
+        dot.classList.remove('hidden');
+    }
+}
+
+// Запускаем через 2 секунды после загрузки
+setTimeout(_checkClaimOnLoad, 2000);
 })();
