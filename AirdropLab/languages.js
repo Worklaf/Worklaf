@@ -333,7 +333,157 @@ guide_difficulty_hard: 'Сложно',
 
 // Account modal - country select
 account_select_country: 'Выберите страну или введите...',
-account_country_other_input: 'Введите название страны'
+account_country_other_input: 'Введите название страны',
+        // ============ НОВЫЕ КЛЮЧИ ============
+    // Account extra
+    account_crypto_addresses: 'Крипто-адреса',
+    account_evm_address: 'EVM адрес',
+    account_evm_hint: '(Ethereum, BSC, Polygon...)',
+    account_sol_address: 'Solana адрес',
+    account_sol_placeholder: 'Ваш Solana адрес...',
+    account_social_networks: 'Социальные сети',
+    account_city: 'Город',
+    account_city_placeholder: 'Ваш город',
+    account_ref_program: 'Реферальная программа',
+    account_your_ref_code: 'Ваш реф. код',
+    account_invited_count: 'Приглашено',
+    account_people_short: 'чел.',
+    account_invited_by: 'Вас пригласил:',
+    account_enter_ref_code: 'Ввести реферальный код',
+    account_apply: 'Применить',
+    account_ref_bonus_text: 'За каждого приглашённого вы получите',
+    account_ref_bonus_amount: '+50 Reagents',
+    account_balance_label: 'Ваш баланс',
+    account_streak_label: 'Стрик',
+    account_days_short: 'дней',
+    account_get_reagents: 'Получить Reagents',
+    account_generating: 'Генерация...',
+    account_invited_label: 'чел.',
+
+    // Footer toasts
+    footer_scroll_top_toast: 'Наверх',
+    footer_language_changed: 'Язык изменён',
+    ref_code_copied: 'Реферальный код скопирован!',
+    copy_failed: 'Не удалось скопировать',
+
+    // Referral errors
+    ref_wrong_format: 'Неверный формат кода (AL-XXXXXX)',
+    ref_login_required: 'Войдите в аккаунт',
+    ref_not_found: 'Код не найден',
+    ref_own_code: 'Нельзя использовать свой код',
+    ref_applied: '🧪 Код применён! +25 Reagents вам и +50 пригласившему!',
+    ref_error: 'Ошибка: ',
+
+    // Support form (внутри footer)
+    support_form_title: 'Служба поддержки',
+    support_form_subtitle: 'Мы ответим в течение 24 часов',
+    support_select_category: 'Выберите категорию',
+    support_cat_technical: '🔧 Техническая проблема',
+    support_cat_account: '👤 Проблема с аккаунтом',
+    support_cat_project: '📋 Вопрос о проекте',
+    support_cat_suggestion: '💡 Предложение',
+    support_cat_partnership: '🤝 Партнёрство',
+    support_cat_other: '💬 Другое',
+    support_your_name: 'Ваше имя',
+    support_subject_label: 'Заголовок',
+    support_subject_placeholder: 'Краткое описание',
+    support_desc_label: 'Описание',
+    support_desc_placeholder: 'Опишите вашу проблему подробно...',
+    support_cancel: 'Отмена',
+    support_submit: 'Отправить',
+    support_sending_text: 'Отправка...',
+    support_sent_ok: 'Обращение отправлено! Ответим в течение 24 часов.',
+    support_need_login: 'Войдите в аккаунт для отправки обращения',
+    support_select_cat_warn: 'Выберите категорию обращения',
+    support_send_error: 'Ошибка отправки. Попробуйте позже.',
+
+    // Submit support ticket
+    ticket_sending: 'Отправка...',
+    ticket_sent: 'Обращение отправлено!',
+    ticket_error: 'Ошибка отправки',
+    ticket_submit_btn: 'Отправить обращение',
+
+    // Notifications page
+    notif_title: 'Уведомления',
+    notif_clear_all: 'Очистить все',
+    notif_empty_title: 'Нет уведомлений',
+    notif_empty_desc: 'Уведомления о новых аирдропах появятся здесь',
+    notif_mark_read: 'Прочитано',
+    time_just_now: 'только что',
+    time_min_ago: 'мин назад',
+    time_hour_ago: 'ч назад',
+    time_day_ago: 'дн назад',
+
+    // Legal modal close
+    legal_close_btn: 'Закрыть',
+
+    // Tutorials
+    tutorials_toast: 'Туториалы доступны в разделе проектов',
+
+    // Avatar upload
+    avatar_too_large: 'Файл слишком большой (макс 2MB)',
+    avatar_uploading: 'Загрузка фото...',
+    avatar_local_only: 'Фото (только локально)',
+
+    // Claim modal
+    claim_title: 'Ежедневные Reagents',
+    claim_updated_utc: 'Обновляется в 00:00 UTC',
+    claim_loading: 'Загрузка...',
+    claim_error_close: 'Закрыть',
+    claim_balance_label: 'Ваш баланс',
+    claim_streak_label: 'Стрик',
+    claim_streak_broken_title: 'Стрик сброшен!',
+    claim_streak_broken_desc: 'Вы пропустили день. Начинаем заново!',
+    claim_week_progress: 'Прогресс недели',
+    claim_until_bonus: 'До бонуса за {days} дней',
+    claim_days_left: '{days} дн.',
+    claim_today_reward: 'Сегодня вы получите',
+    claim_streak_will_be: 'Стрик станет:',
+    claim_get_btn: 'Получить Reagents',
+    claim_claiming: 'Получение...',
+    claim_already_title: 'Уже получено!',
+    claim_next_at: 'Следующий клейм откроется в',
+    claim_rewards_table: 'Таблица наград за стрики',
+    claim_after_60: 'После 60 дней: каждые 30 дней +100 RGT к бонусу',
+    claim_close_btn: 'Закрыть',
+    claim_success_title: 'Reagents получены!',
+    claim_streak_reset: 'Стрик сброшен — начинаем заново!',
+    claim_credited: 'Начислено',
+    claim_reagents_unit: 'Reagents',
+    claim_next_claim: 'Следующий клейм:',
+    claim_great_btn: 'Отлично!',
+    claim_time_left: 'Осталось: {h}ч {m}мин',
+    claim_reset_in: 'сброс через',
+    claim_balance_short: 'Баланс',
+    claim_streak_short: 'Стрик',
+    claim_to_bonus_short: 'До бонуса',
+
+    // Week days
+    week_mon: 'Пн',
+    week_tue: 'Вт',
+    week_wed: 'Ср',
+    week_thu: 'Чт',
+    week_fri: 'Пт',
+    week_sat: 'Сб',
+    week_sun: 'Вс',
+
+    // Streak bonus labels
+    streak_week: '🔥 Неделя!',
+    streak_month: '⚡ Месяц!',
+    streak_2months: '💎 2 месяца!',
+    streak_quarter: '👑 Квартал!',
+    streak_4months: '🌟 4 месяца!',
+    streak_5months: '🚀 5 месяцев!',
+    streak_halfyear: '🏆 Полгода!',
+
+    // Country picker
+    country_manual_input: 'Введите название страны',
+
+    // Referral invite section
+    invited_by_label: 'Вас пригласил:',
+    ref_code_input_placeholder: 'AL-XXXXXX',
+    reagents_section_title: 'Reagents',
+    reagents_rgt_unit: 'RGT',
   },
   
   en: {
@@ -669,7 +819,157 @@ guide_difficulty_hard: 'Hard',
 
 // Account modal - country select
 account_select_country: 'Select or type country...',
-account_country_other_input: 'Enter country name'
+account_country_other_input: 'Enter country name',
+        // ============ NEW KEYS ============
+    // Account extra
+    account_crypto_addresses: 'Crypto Addresses',
+    account_evm_address: 'EVM Address',
+    account_evm_hint: '(Ethereum, BSC, Polygon...)',
+    account_sol_address: 'Solana Address',
+    account_sol_placeholder: 'Your Solana address...',
+    account_social_networks: 'Social Networks',
+    account_city: 'City',
+    account_city_placeholder: 'Your city',
+    account_ref_program: 'Referral Program',
+    account_your_ref_code: 'Your referral code',
+    account_invited_count: 'Invited',
+    account_people_short: 'people',
+    account_invited_by: 'Invited by:',
+    account_enter_ref_code: 'Enter referral code',
+    account_apply: 'Apply',
+    account_ref_bonus_text: 'You get',
+    account_ref_bonus_amount: '+50 Reagents',
+    account_balance_label: 'Your balance',
+    account_streak_label: 'Streak',
+    account_days_short: 'days',
+    account_get_reagents: 'Claim Reagents',
+    account_generating: 'Generating...',
+    account_invited_label: 'people',
+
+    // Footer toasts
+    footer_scroll_top_toast: 'Back to top',
+    footer_language_changed: 'Language changed',
+    ref_code_copied: 'Referral code copied!',
+    copy_failed: 'Copy failed',
+
+    // Referral errors
+    ref_wrong_format: 'Invalid code format (AL-XXXXXX)',
+    ref_login_required: 'Please log in',
+    ref_not_found: 'Code not found',
+    ref_own_code: 'Cannot use your own code',
+    ref_applied: '🧪 Code applied! +25 Reagents for you and +50 for referrer!',
+    ref_error: 'Error: ',
+
+    // Support form (inside footer)
+    support_form_title: 'Support Center',
+    support_form_subtitle: 'We will respond within 24 hours',
+    support_select_category: 'Select category',
+    support_cat_technical: '🔧 Technical Issue',
+    support_cat_account: '👤 Account Problem',
+    support_cat_project: '📋 Project Question',
+    support_cat_suggestion: '💡 Suggestion',
+    support_cat_partnership: '🤝 Partnership',
+    support_cat_other: '💬 Other',
+    support_your_name: 'Your Name',
+    support_subject_label: 'Subject',
+    support_subject_placeholder: 'Brief description',
+    support_desc_label: 'Description',
+    support_desc_placeholder: 'Describe your issue in detail...',
+    support_cancel: 'Cancel',
+    support_submit: 'Send',
+    support_sending_text: 'Sending...',
+    support_sent_ok: 'Request submitted! We will respond within 24 hours.',
+    support_need_login: 'Please log in to submit a request',
+    support_select_cat_warn: 'Please select a category',
+    support_send_error: 'Submission error. Please try again.',
+
+    // Submit support ticket
+    ticket_sending: 'Sending...',
+    ticket_sent: 'Request submitted!',
+    ticket_error: 'Submission error',
+    ticket_submit_btn: 'Submit Request',
+
+    // Notifications page
+    notif_title: 'Notifications',
+    notif_clear_all: 'Clear all',
+    notif_empty_title: 'No notifications',
+    notif_empty_desc: 'Notifications about new airdrops will appear here',
+    notif_mark_read: 'Mark as read',
+    time_just_now: 'just now',
+    time_min_ago: 'min ago',
+    time_hour_ago: 'h ago',
+    time_day_ago: 'd ago',
+
+    // Legal modal close
+    legal_close_btn: 'Close',
+
+    // Tutorials
+    tutorials_toast: 'Tutorials are available in the projects section',
+
+    // Avatar upload
+    avatar_too_large: 'File too large (max 2MB)',
+    avatar_uploading: 'Uploading photo...',
+    avatar_local_only: 'Photo (local only)',
+
+    // Claim modal
+    claim_title: 'Daily Reagents',
+    claim_updated_utc: 'Resets at 00:00 UTC',
+    claim_loading: 'Loading...',
+    claim_error_close: 'Close',
+    claim_balance_label: 'Your balance',
+    claim_streak_label: 'Streak',
+    claim_streak_broken_title: 'Streak reset!',
+    claim_streak_broken_desc: 'You missed a day. Starting over!',
+    claim_week_progress: 'Weekly progress',
+    claim_until_bonus: 'Until {days}-day bonus',
+    claim_days_left: '{days} days',
+    claim_today_reward: 'Today you will receive',
+    claim_streak_will_be: 'Streak will become:',
+    claim_get_btn: 'Claim Reagents',
+    claim_claiming: 'Claiming...',
+    claim_already_title: 'Already claimed!',
+    claim_next_at: 'Next claim opens at',
+    claim_rewards_table: 'Streak reward table',
+    claim_after_60: 'After 60 days: every 30 days +100 RGT bonus',
+    claim_close_btn: 'Close',
+    claim_success_title: 'Reagents claimed!',
+    claim_streak_reset: 'Streak reset — starting over!',
+    claim_credited: 'Credited',
+    claim_reagents_unit: 'Reagents',
+    claim_next_claim: 'Next claim:',
+    claim_great_btn: 'Great!',
+    claim_time_left: 'Left: {h}h {m}m',
+    claim_reset_in: 'reset in',
+    claim_balance_short: 'Balance',
+    claim_streak_short: 'Streak',
+    claim_to_bonus_short: 'To bonus',
+
+    // Week days
+    week_mon: 'Mon',
+    week_tue: 'Tue',
+    week_wed: 'Wed',
+    week_thu: 'Thu',
+    week_fri: 'Fri',
+    week_sat: 'Sat',
+    week_sun: 'Sun',
+
+    // Streak bonus labels
+    streak_week: '🔥 One Week!',
+    streak_month: '⚡ One Month!',
+    streak_2months: '💎 2 Months!',
+    streak_quarter: '👑 Quarter!',
+    streak_4months: '🌟 4 Months!',
+    streak_5months: '🚀 5 Months!',
+    streak_halfyear: '🏆 Half Year!',
+
+    // Country picker
+    country_manual_input: 'Enter country name',
+
+    // Referral invite section
+    invited_by_label: 'Invited by:',
+    ref_code_input_placeholder: 'AL-XXXXXX',
+    reagents_section_title: 'Reagents',
+    reagents_rgt_unit: 'RGT',
   }
 };
 
