@@ -3330,16 +3330,30 @@ console.log('App initialized');
 // ОТКРЫТЬ МОЙ АККАУНТ
 // ============================================================
 window.openMyAccountModal = function() {
+    // Синхронизируем currentUser перед открытием
+    if (window.auth && window.auth.currentUser) {
+        window.currentUser = window.auth.currentUser;
+    }
+    
+    // openPageModal из footer.js
     if (typeof window.openPageModal === 'function') {
         window.openPageModal('account');
         return;
     }
-    const btn = document.querySelector('[data-page="account"]');
-    if (btn) { btn.click(); return; }
-    showToast('Открываем профиль...');
-    setTimeout(function() {
-        if (typeof window.openPageModal === 'function') window.openPageModal('account');
-    }, 400);
+    
+    // Если футер ещё не загрузился — ждём
+    let attempts = 0;
+    const tryOpen = setInterval(function() {
+        attempts++;
+        if (typeof window.openPageModal === 'function') {
+            clearInterval(tryOpen);
+            window.openPageModal('account');
+        }
+        if (attempts > 20) {
+            clearInterval(tryOpen);
+            showToast('Профиль недоступен');
+        }
+    }, 100);
 };
 
 // ============================================================
@@ -3380,14 +3394,29 @@ function _updateClaimBtn() {
 
 // Обновляем кнопку когда пользователь залогинился
 document.addEventListener('userAuthChanged', function() {
-    setTimeout(_updateClaimBtn, 1000);
+    if (window.currentUser && window.ReagentsSystem) {
+        setTimeout(function() {
+            window.ReagentsSystem.getClaimStatus(window.currentUser)
+                .then(function(status) {
+                    if (status && typeof window._applyClaimBtnVisual === 'function') {
+                        window._applyClaimBtnVisual(status.canClaim);
+                    }
+                })
+                .catch(function() {});
+        }, 1500);
+    }
 });
 
+// Обновляем кнопку после успешного клейма
 // Обновляем кнопку после успешного клейма
 const _origDoClaim = window.doClaim;
 window.doClaim = async function() {
     await _origDoClaim();
-    setTimeout(_updateClaimBtn, 500);
+    setTimeout(function() {
+        if (typeof window._applyClaimBtnVisual === 'function') {
+            window._applyClaimBtnVisual(false); // после клейма — серая
+        }
+    }, 300);
 };
 
 // ============================================================
@@ -3599,7 +3628,8 @@ async function _checkShowReferralModal(user) {
             ? (new Date() - firstLogin) / 60000
             : 999;
 
-        if (minutesSinceReg > 10) return;
+        // Убрали ограничение 10 минут — показываем всем у кого нет кода
+// if (minutesSinceReg > 10) return;
 
         // Показываем с задержкой после загрузки
         setTimeout(_showReferralModal, 2000);
