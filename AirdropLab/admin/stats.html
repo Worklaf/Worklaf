@@ -1237,73 +1237,192 @@ function renderTable() {
 window.openProfile = function(userId) {
     var user = allUsers.find(function(u) { return u.id === userId; });
     if (!user) return;
+
     var topProj = user.topProjectId ? projectsMap.get(user.topProjectId) : null;
-    var avSrc   = user.photoURL
+
+    var avSrc = user.photoURL
         ? user.photoURL
-        : 'https://ui-avatars.com/api/?name=' + encodeURIComponent(user.displayName) + '&background=3b82f6&color=fff&size=80';
+        : 'https://ui-avatars.com/api/?name=' + encodeURIComponent(user.displayName) +
+          '&background=3b82f6&color=fff&size=80';
 
     var pf = function(label, val) {
         return '<div class="bg-slate-800/50 rounded-lg p-2.5">' +
             '<div class="text-xs text-slate-500 mb-0.5">' + label + '</div>' +
-            '<div class="text-sm text-slate-200">' + (val || '<span class="text-slate-600">—</span>') + '</div></div>';
+            '<div class="text-sm text-slate-200">' + (val || '<span class="text-slate-600">—</span>') + '</div>' +
+        '</div>';
     };
 
     document.getElementById('modalBody').innerHTML =
+        // HEADER
         '<div class="flex items-center gap-4 mb-5 pb-5 border-b border-slate-700">' +
-        '<img src="' + avSrc + '" class="w-16 h-16 rounded-full border-2 border-blue-500/40 object-cover">' +
-        '<div>' +
-        '<div class="text-xl font-bold">' + esc(user.displayName) + '</div>' +
-        '<div class="text-sm text-slate-400">' + esc(user.email) + '</div>' +
-        '<div class="flex items-center gap-2 mt-2 flex-wrap">' +
-        (user.isOnline ? '<span class="badge badge-green">Online</span>' : '') +
-        provBadge(user.provider) +
-        '</div></div></div>' +
+            '<img src="' + avSrc + '" class="w-16 h-16 rounded-full border-2 border-blue-500/40 object-cover">' +
+            '<div>' +
+                '<div class="text-xl font-bold">' + esc(user.displayName) + '</div>' +
+                '<div class="text-sm text-slate-400">' + esc(user.email) + '</div>' +
+                '<div class="flex items-center gap-2 mt-2 flex-wrap">' +
+                    (user.isOnline ? '<span class="badge badge-green">Online</span>' : '') +
+                    provBadge(user.provider) +
+                '</div>' +
+            '</div>' +
+        '</div>' +
 
+        // UID + LOGIN INFO
         '<div class="grid grid-cols-1 gap-2 mb-4">' +
-        pf('UID', '<span class="font-mono text-xs break-all">' + user.id + '</span>') +
-        pf('Первый вход',    fmtDate(user.firstLogin)) +
-        pf('Последний вход', '<span class="' + (isRecent(user.lastLogin) ? 'text-emerald-400' : '') + '">' + fmtDate(user.lastLogin) + '</span>') +
+            pf('UID', '<span class="font-mono text-xs break-all">' + user.id + '</span>') +
+            pf('Первый вход', fmtDate(user.firstLogin)) +
+            pf('Последний вход',
+                '<span class="' + (isRecent(user.lastLogin) ? 'text-emerald-400' : '') + '">' +
+                fmtDate(user.lastLogin) + '</span>'
+            ) +
         '</div>' +
 
+        // PROFILE DATA
         '<h4 class="text-sm font-semibold text-slate-300 mb-2 flex items-center gap-2">' +
-        '<i class="fas fa-id-card text-blue-400"></i> Данные профиля</h4>' +
+            '<i class="fas fa-id-card text-blue-400"></i> Данные профиля</h4>' +
         '<div class="grid grid-cols-2 gap-2 mb-4">' +
-        pf('Имя',           esc(user.firstName)) +
-        pf('Фамилия',       esc(user.lastName)) +
-        pf('Никнейм',       user.username ? '@' + esc(user.username) : '') +
-        pf('Telegram',      user.telegram
-            ? '<a href="https://t.me/' + user.telegram.replace('@','') + '" target="_blank" class="text-blue-400 hover:underline">@' + esc(user.telegram.replace('@','')) + '</a>'
-            : '') +
-        pf('Страна',        esc(user.country)) +
-        pf('Пол',           user.gender === 'male' ? '👨 Мужской' : user.gender === 'female' ? '👩 Женский' : esc(user.gender)) +
-        pf('Дата рождения', esc(user.birthdate)) +
-        pf('Bio',           esc(user.bio)) +
+            pf('Имя', esc(user.firstName)) +
+            pf('Фамилия', esc(user.lastName)) +
+            pf('Никнейм', user.username ? '@' + esc(user.username) : '') +
+            pf('Telegram', user.telegram
+                ? '<a href="https://t.me/' + user.telegram.replace('@','') +
+                  '" target="_blank" class="text-blue-400 hover:underline">@' +
+                  esc(user.telegram.replace('@','')) + '</a>'
+                : ''
+            ) +
+            pf('Страна', esc(user.country)) +
+            pf('Пол', user.gender === 'male' ? '👨 Мужской'
+                : user.gender === 'female' ? '👩 Женский'
+                : esc(user.gender)
+            ) +
+            pf('Дата рождения', esc(user.birthdate)) +
+            pf('Bio', esc(user.bio)) +
         '</div>' +
 
+        // ============================
+        // КРИПТО & СОЦСЕТИ
+        // ============================
         '<h4 class="text-sm font-semibold text-slate-300 mb-2 flex items-center gap-2">' +
-        '<i class="fas fa-chart-bar text-purple-400"></i> Активность</h4>' +
-        '<div class="grid grid-cols-3 gap-2 mb-4">' +
-        '<div class="bg-slate-800/50 rounded-lg p-2.5 text-center">' +
-        '<div class="text-xl font-bold text-blue-400">'  + user.totalClicks    + '</div><div class="text-xs text-slate-500">Кликов</div></div>' +
-        '<div class="bg-slate-800/50 rounded-lg p-2.5 text-center">' +
-        '<div class="text-xl font-bold text-green-400">' + user.completedCount + '</div><div class="text-xs text-slate-500">Завершено</div></div>' +
-        '<div class="bg-slate-800/50 rounded-lg p-2.5 text-center">' +
-        '<div class="text-xl font-bold text-red-400">'   + user.favoritesCount + '</div><div class="text-xs text-slate-500">Избранное</div></div>' +
-        '</div>' +
-        (topProj ? '<div class="bg-slate-800/50 rounded-lg p-3 flex items-center gap-3 mb-4">' +
-            (topProj.image ? '<img src="' + topProj.image + '" class="w-8 h-8 rounded-full object-cover">' : '') +
-            '<div><div class="text-xs text-slate-500">Любимый проект</div>' +
-            '<div class="text-sm font-medium">' + esc(topProj.name || user.topProjectId) +
-            ' <span class="text-slate-500">(' + user.topProjectClicks + ' кл.)</span></div></div></div>' : '') +
+            '<i class="fas fa-wallet text-cyan-400"></i> Крипто & Соцсети</h4>' +
+        '<div class="grid grid-cols-1 gap-2 mb-4">' +
 
+            (user.raw?.profile?.evmAddress
+                ? pf('EVM адрес',
+                    '<span class="font-mono text-xs break-all text-cyan-300">' +
+                    esc(user.raw.profile.evmAddress) + '</span>')
+                : '') +
+
+            (user.raw?.profile?.solAddress
+                ? pf('Solana адрес',
+                    '<span class="font-mono text-xs break-all text-purple-300">' +
+                    esc(user.raw.profile.solAddress) + '</span>')
+                : '') +
+
+            (user.raw?.profile?.twitter
+                ? pf('Twitter/X',
+                    '<a href="https://x.com/' + esc(user.raw.profile.twitter) +
+                    '" target="_blank" class="text-sky-400 hover:underline">@' +
+                    esc(user.raw.profile.twitter) + '</a>')
+                : '') +
+
+            (user.raw?.profile?.discord
+                ? pf('Discord',
+                    '<span class="text-indigo-400">' + esc(user.raw.profile.discord) + '</span>')
+                : '') +
+
+            (user.raw?.profile?.city
+                ? pf('Город', esc(user.raw.profile.city))
+                : '') +
+
+        '</div>' +
+
+        // ============================
+        // REAGENTS / STREAK / REFERRALS
+        // ============================
+        '<h4 class="text-sm font-semibold text-slate-300 mb-2 flex items-center gap-2">' +
+            '<span>🧪</span> Reagents</h4>' +
+        '<div class="grid grid-cols-3 gap-2 mb-4">' +
+
+            '<div class="bg-slate-800/50 rounded-lg p-2.5 text-center">' +
+                '<div class="text-xl font-bold text-cyan-400">' + (user.raw?.reagents || 0) + '</div>' +
+                '<div class="text-xs text-slate-500">RGT</div>' +
+            '</div>' +
+
+            '<div class="bg-slate-800/50 rounded-lg p-2.5 text-center">' +
+                '<div class="text-xl font-bold text-orange-400">' + (user.raw?.streak || 0) + '🔥</div>' +
+                '<div class="text-xs text-slate-500">Стрик</div>' +
+            '</div>' +
+
+            '<div class="bg-slate-800/50 rounded-lg p-2.5 text-center">' +
+                '<div class="text-xl font-bold text-emerald-400">' + (user.raw?.invitedCount || 0) + '</div>' +
+                '<div class="text-xs text-slate-500">Рефералов</div>' +
+            '</div>' +
+
+        '</div>' +
+
+        // ============================
+        // DAYS WITH US
+        // ============================
+        pf('С нами',
+            _daysWithUs(user.firstLogin) + ' дней' +
+            (user.raw?.referralCode
+                ? ' · <span class="text-xs text-slate-500">Реф. код: </span>' +
+                  '<span class="font-mono text-cyan-400">' + esc(user.raw.referralCode) + '</span>'
+                : '') +
+            (user.raw?.invitedBy
+                ? ' · <span class="text-xs text-slate-500">Приглашён: </span>' +
+                  '<span class="text-slate-300">' + esc(user.raw.invitedByName || user.raw.invitedBy) + '</span>'
+                : '')
+        ) +
+
+        // ============================
+        // ACTIVITY
+        // ============================
+        '<h4 class="text-sm font-semibold text-slate-300 mb-2 flex items-center gap-2">' +
+            '<i class="fas fa-chart-bar text-purple-400"></i> Активность</h4>' +
+        '<div class="grid grid-cols-3 gap-2 mb-4">' +
+            '<div class="bg-slate-800/50 rounded-lg p-2.5 text-center">' +
+                '<div class="text-xl font-bold text-blue-400">' + user.totalClicks + '</div>' +
+                '<div class="text-xs text-slate-500">Кликов</div>' +
+            '</div>' +
+            '<div class="bg-slate-800/50 rounded-lg p-2.5 text-center">' +
+                '<div class="text-xl font-bold text-green-400">' + user.completedCount + '</div>' +
+                '<div class="text-xs text-slate-500">Завершено</div>' +
+            '</div>' +
+            '<div class="bg-slate-800/50 rounded-lg p-2.5 text-center">' +
+                '<div class="text-xl font-bold text-red-400">' + user.favoritesCount + '</div>' +
+                '<div class="text-xs text-slate-500">Избранное</div>' +
+            '</div>' +
+        '</div>' +
+
+        (topProj
+            ? '<div class="bg-slate-800/50 rounded-lg p-3 flex items-center gap-3 mb-4">' +
+                (topProj.image
+                    ? '<img src="' + topProj.image + '" class="w-8 h-8 rounded-full object-cover">'
+                    : '') +
+                '<div>' +
+                    '<div class="text-xs text-slate-500">Любимый проект</div>' +
+                    '<div class="text-sm font-medium">' + esc(topProj.name || user.topProjectId) +
+                    ' <span class="text-slate-500">(' + user.topProjectClicks + ' кл.)</span></div>' +
+                '</div>' +
+              '</div>'
+            : ''
+        ) +
+
+        // FOOTER BUTTONS
         '<div class="flex gap-2 pt-4 border-t border-slate-700">' +
-        '<button onclick="window.closeModal()" class="flex-1 bg-slate-700 hover:bg-slate-600 px-4 py-2 rounded-lg text-sm">Закрыть</button>' +
-        '<button onclick="window.sendToUser(\'' + user.id + '\')" class="flex-1 bg-blue-600 hover:bg-blue-500 px-4 py-2 rounded-lg text-sm flex items-center justify-center gap-2">' +
-        '<i class="fas fa-bell"></i> Уведомление</button></div>';
+            '<button onclick="window.closeModal()" class="flex-1 bg-slate-700 hover:bg-slate-600 px-4 py-2 rounded-lg text-sm">Закрыть</button>' +
+            '<button onclick="window.sendToUser(\'' + user.id + '\')" class="flex-1 bg-blue-600 hover:bg-blue-500 px-4 py-2 rounded-lg text-sm flex items-center justify-center gap-2">' +
+                '<i class="fas fa-bell"></i> Уведомление</button>' +
+        '</div>';
 
     document.getElementById('profileModal').classList.remove('hidden');
 };
 
+function _daysWithUs(firstLogin) {
+    if (!firstLogin) return '—';
+    const diff = new Date() - firstLogin;
+    return Math.max(1, Math.floor(diff / 86400000));
+}
 window.closeModal = function() {
     document.getElementById('profileModal').classList.add('hidden');
 };
