@@ -998,11 +998,28 @@
                         </label>
                         <input type="file" id="avatarUpload" accept="image/*" class="hidden" onchange="uploadAvatar(event)">
                     </div>
-                    <div>
-                        <h3 class="text-xl font-bold text-white">${user.displayName || lang('user')}</h3>
-                        <p class="text-slate-400">${user.email}</p>
-                        <p class="text-xs text-slate-500 mt-1">ID: ${user.uid.substring(0, 8)}...</p>
-                    </div>
+                   <div class="flex-1 min-w-0">
+    <h3 class="text-xl font-bold text-white" id="accountDisplayName">${user.displayName || lang('user')}</h3>
+    <p class="text-slate-400 text-sm">${user.email}</p>
+    
+    <!-- Full UID with copy button -->
+    <div class="mt-2 flex items-center gap-2">
+        <span class="text-xs text-slate-500">ID:</span>
+        <code id="accountUID" class="text-xs text-slate-400 font-mono bg-slate-800 px-2 py-0.5 rounded select-all break-all">${user.uid}</code>
+        <button onclick="copyAccountUID()" 
+                id="copyUIDBtn"
+                title="Copy ID"
+                class="flex-shrink-0 w-7 h-7 flex items-center justify-center rounded-lg bg-slate-700 hover:bg-cyan-600 text-slate-400 hover:text-white transition-all">
+            <i class="fas fa-copy text-xs"></i>
+        </button>
+    </div>
+    
+    <!-- Registration date -->
+    <p class="text-xs text-slate-600 mt-1">
+        <i class="fas fa-calendar-alt mr-1"></i>
+        ${user.metadata?.creationTime ? new Date(user.metadata.creationTime).toLocaleDateString() : ''}
+    </p>
+</div>
                 </div>
 
                 <!-- Profile Form -->
@@ -1135,8 +1152,77 @@
 }
 
     function initAccountPage() {
-        console.log('Account page initialized');
+    const user = typeof window.currentUser !== 'undefined' ? window.currentUser : null;
+    if (!user) return;
+
+    const db = window.db;
+    const exp = window.__firestoreExports;
+
+    // Пробуем загрузить из Firebase
+    if (db && exp && exp.doc && exp.getDoc) {
+        exp.getDoc(exp.doc(db, 'users', user.uid)).then(function(snap) {
+            let profile = {};
+
+            if (snap.exists()) {
+                const data = snap.data();
+                // Профиль может лежать в profile.profile или прямо в корне
+                profile = data.profile || data || {};
+            }
+
+            // Также смотрим localStorage как запасной вариант
+            const local = JSON.parse(localStorage.getItem('userProfileData') || '{}');
+
+            // Firebase приоритетнее localStorage
+            const merged = Object.assign({}, local, profile);
+
+            // Обновляем window.userProfileData
+            window.userProfileData = merged;
+
+            // Заполняем форму
+            _fillAccountForm(merged);
+
+        }).catch(function(err) {
+            console.warn('Error loading profile from Firebase:', err);
+            // Fallback — localStorage
+            const local = JSON.parse(localStorage.getItem('userProfileData') || '{}');
+            _fillAccountForm(local);
+        });
+    } else {
+        // Firebase недоступен — только localStorage
+        const local = JSON.parse(localStorage.getItem('userProfileData') || '{}');
+        _fillAccountForm(local);
     }
+}
+
+function _fillAccountForm(profile) {
+    if (!profile) return;
+
+    const set = function(id, val) {
+        const el = document.getElementById(id);
+        if (el && val !== undefined && val !== null) el.value = val;
+    };
+
+    set('profileFirstName', profile.firstName);
+    set('profileLastName',  profile.lastName);
+    set('profileUsername',  profile.username);
+    set('profileTelegram',  profile.telegram);
+    set('profileBirthdate', profile.birthdate);
+    set('profileBio',       profile.bio);
+
+    // Пол
+    if (profile.gender) {
+        const radio = document.querySelector(`input[name="gender"][value="${profile.gender}"]`);
+        if (radio) radio.checked = true;
+    }
+
+    // Страна — заполняем search input и hidden input
+    if (profile.countryName || profile.country) {
+        const searchInput = document.getElementById('countrySearchInput');
+        const hiddenInput = document.getElementById('profileCountry');
+        if (searchInput) searchInput.value = profile.countryName || profile.country;
+        if (hiddenInput) hiddenInput.value = profile.country || '';
+    }
+}
 // ============ COUNTRY PICKER FUNCTIONS ============
 
 window.filterCountryList = function(query) {
@@ -1220,22 +1306,88 @@ document.addEventListener('click', function(e) {
     e.preventDefault();
     const lang = typeof window.t === 'function' ? window.t : (k) => k;
 
-    // Берём и код страны (hidden input) и текстовое название (visible input)
+    const submitBtn = e.target.querySelector('button[type="submit"]');
+    const originalHTML = submitBtn ? submitBtn.innerHTML : '';
+    if (submitBtn) {
+        submitBtn.disabled = true;
+        submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i>...';
+    }
+
     const countryCode = document.getElementById('profileCountry').value;
     const countryName = document.getElementById('countrySearchInput')?.value || countryCode;
 
     const profileData = {
-        firstName: document.getElementById('profileFirstName').value,
-        lastName: document.getElementById('profileLastName').value,
-        username: document.getElementById('profileUsername').value,
-        telegram: document.getElementById('profileTelegram').value,
-        birthdate: document.getElementById('profileBirthdate').value,
-        gender: document.querySelector('input[name="gender"]:checked')?.value || '',
-        country: countryCode,
+        firstName:   document.getElementById('profileFirstName').value.trim(),
+        lastName:    document.getElementById('profileLastName').value.trim(),
+        username:    document.getElementById('profileUsername').value.trim(),
+        telegram:    document.getElementById('profileTelegram').value.trim(),
+        birthdate:   document.getElementById('profileBirthdate').value,
+        gender:      document.querySelector('input[name="gender"]:checked')?.value || '',
+        country:     countryCode,
         countryName: countryName,
-        bio: document.getElementById('profileBio').value,
-        updatedAt: new Date().toISOString()
+        bio:         document.getElementById('profileBio').value.trim(),
+        updatedAt:   new Date().toISOString()
     };
+
+    // Всегда сохраняем локально
+    window.userProfileData = profileData;
+    localStorage.setItem('userProfileData', JSON.stringify(profileData));
+
+    const user = typeof window.currentUser !== 'undefined' ? window.currentUser : null;
+    const db   = window.db;
+    const exp  = window.__firestoreExports;
+
+    if (user && db && exp && exp.doc && exp.setDoc) {
+        try {
+            // Сохраняем в users/{uid}
+            // Структура: корень документа содержит email/uid + вложенный profile
+            await exp.setDoc(
+                exp.doc(db, 'users', user.uid),
+                {
+                    uid:         user.uid,
+                    email:       user.email,
+                    displayName: user.displayName || '',
+                    photoURL:    user.photoURL || '',
+                    profile:     profileData,
+                    lastSeen:    new Date().toISOString()
+                },
+                { merge: true }
+            );
+
+            // Обновляем displayName в Firebase Auth если изменилось имя
+            const newDisplayName = [profileData.firstName, profileData.lastName].filter(Boolean).join(' ');
+            if (newDisplayName && newDisplayName !== user.displayName) {
+                const authExp = window.__authExports;
+                if (authExp && authExp.updateProfile && window.auth) {
+                    await authExp.updateProfile(user, { displayName: newDisplayName });
+                    // Обновляем в UI
+                    const nameEl = document.getElementById('accountDisplayName');
+                    if (nameEl) nameEl.textContent = newDisplayName;
+                }
+            }
+
+            if (submitBtn) {
+                submitBtn.disabled = false;
+                submitBtn.innerHTML = originalHTML;
+            }
+            footerShowToast(lang('footer_account_saved'));
+
+        } catch(err) {
+            console.error('Error saving profile to Firebase:', err);
+            if (submitBtn) {
+                submitBtn.disabled = false;
+                submitBtn.innerHTML = originalHTML;
+            }
+            footerShowToast(lang('footer_account_saved_local') + ' (Firebase error)');
+        }
+    } else {
+        if (submitBtn) {
+            submitBtn.disabled = false;
+            submitBtn.innerHTML = originalHTML;
+        }
+        footerShowToast(lang('footer_account_saved_local'));
+    }
+};
 
     window.userProfileData = profileData;
     localStorage.setItem('userProfileData', JSON.stringify(profileData));
@@ -1254,21 +1406,97 @@ document.addEventListener('click', function(e) {
     }
 };
     window.uploadAvatar = async function(e) {
-        const file = e.target.files[0];
-        if (!file) return;
-        
-        const reader = new FileReader();
-        reader.onload = async function(event) {
-            const img = document.getElementById('accountAvatar');
-            img.src = event.target.result;
-            
-            // Если авторизован, загружаем в Firebase
-            if (typeof currentUser !== 'undefined' && currentUser) {
-                footerShowToast('Фото обновлено!');
+    const file = e.target.files[0];
+    if (!file) return;
+
+    const lang = typeof window.t === 'function' ? window.t : (k) => k;
+    const user = typeof window.currentUser !== 'undefined' ? window.currentUser : null;
+
+    // Проверяем размер (макс 2MB)
+    if (file.size > 2 * 1024 * 1024) {
+        footerShowToast('Файл слишком большой (макс 2MB)', 'error');
+        return;
+    }
+
+    const img = document.getElementById('accountAvatar');
+
+    // Сразу показываем превью
+    const reader = new FileReader();
+    reader.onload = async function(event) {
+        if (img) img.src = event.target.result;
+
+        if (!user) {
+            footerShowToast(lang('footer_account_photo'));
+            return;
+        }
+
+        // Пробуем загрузить в Firebase Storage
+        const storageExp = window.__storageExports;
+        const storage    = window.storage; // должен быть инициализирован в app.js
+
+        if (storageExp && storage && storageExp.ref && storageExp.uploadBytes && storageExp.getDownloadURL) {
+            try {
+                footerShowToast('Загрузка фото...', 'info');
+
+                const storageRef = storageExp.ref(storage, `avatars/${user.uid}`);
+                const snapshot   = await storageExp.uploadBytes(storageRef, file);
+                const downloadURL = await storageExp.getDownloadURL(snapshot.ref);
+
+                // Обновляем photoURL в Auth
+                const authExp = window.__authExports;
+                if (authExp && authExp.updateProfile && window.auth) {
+                    await authExp.updateProfile(user, { photoURL: downloadURL });
+                }
+
+                // Сохраняем в Firestore
+                const db  = window.db;
+                const exp = window.__firestoreExports;
+                if (db && exp && exp.doc && exp.setDoc) {
+                    await exp.setDoc(
+                        exp.doc(db, 'users', user.uid),
+                        { photoURL: downloadURL },
+                        { merge: true }
+                    );
+                }
+
+                if (img) img.src = downloadURL;
+                footerShowToast(lang('footer_account_photo'));
+
+            } catch(err) {
+                console.error('Avatar upload error:', err);
+                // Если Storage недоступен — сохраняем base64 в Firestore (только для маленьких фото)
+                await _saveAvatarAsBase64(event.target.result, user, lang);
             }
-        };
-        reader.readAsDataURL(file);
+        } else {
+            // Storage не настроен — сохраняем base64
+            await _saveAvatarAsBase64(event.target.result, user, lang);
+        }
     };
+    reader.readAsDataURL(file);
+};
+
+async function _saveAvatarAsBase64(base64, user, lang) {
+    // Base64 аватар — только если файл не слишком большой
+    // Сохраняем в Firestore как строку
+    const db  = window.db;
+    const exp = window.__firestoreExports;
+
+    if (db && exp && exp.doc && exp.setDoc) {
+        try {
+            await exp.setDoc(
+                exp.doc(db, 'users', user.uid),
+                { photoURL: base64 },
+                { merge: true }
+            );
+            footerShowToast(lang('footer_account_photo'));
+        } catch(err) {
+            console.error('Base64 save error:', err);
+            footerShowToast(lang('footer_account_photo') + ' (local only)');
+        }
+    } else {
+        footerShowToast(lang('footer_account_photo') + ' (local only)');
+    }
+}
 
  
 function _showSupportForm() {
@@ -1499,7 +1727,37 @@ window.footerSubmitSupport = async function(e) {
             btn.innerHTML = 'Отправить обращение';
         }
     };
+window.copyAccountUID = function() {
+    const uidEl = document.getElementById('accountUID');
+    if (!uidEl) return;
 
+    const uid = uidEl.textContent;
+    const btn = document.getElementById('copyUIDBtn');
+
+    navigator.clipboard.writeText(uid).then(function() {
+        // Визуальная обратная связь
+        if (btn) {
+            btn.innerHTML = '<i class="fas fa-check text-xs"></i>';
+            btn.classList.add('bg-emerald-600');
+            btn.classList.remove('bg-slate-700');
+            setTimeout(function() {
+                btn.innerHTML = '<i class="fas fa-copy text-xs"></i>';
+                btn.classList.remove('bg-emerald-600');
+                btn.classList.add('bg-slate-700');
+            }, 2000);
+        }
+        footerShowToast(typeof window.t === 'function' ? window.t('copied') : 'Copied!');
+    }).catch(function() {
+        // Fallback для старых браузеров
+        const range = document.createRange();
+        range.selectNode(uidEl);
+        window.getSelection().removeAllRanges();
+        window.getSelection().addRange(range);
+        document.execCommand('copy');
+        window.getSelection().removeAllRanges();
+        footerShowToast(typeof window.t === 'function' ? window.t('copied') : 'Copied!');
+    });
+};
     // ============ NOTIFICATIONS MODAL ============
 
     window.openNotificationsModal = function() {
