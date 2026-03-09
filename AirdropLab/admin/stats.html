@@ -425,7 +425,7 @@
 // ─────────────────────────────────────────────────────────────────
 // ИМПОРТЫ — каждый именован уникально, нет конфликтов
 // ─────────────────────────────────────────────────────────────────
-import { initializeApp as fbInitApp }
+import { initializeApp as fbInitApp, getApps as fbGetApps, getApp as fbGetApp }
     from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
 
 import {
@@ -483,24 +483,106 @@ function debugLog(msg, type) {
     console.log('[ADMIN DEBUG]', msg);
 }
 
-let fbApp, fbAuth, fbDb;
+let fbApp  = null;
+let fbAuth = null;
+let fbDb   = null;
 
 function initFirebase() {
     try {
-        fbApp  = fbInitApp(FB_CONFIG);
+        // ✅ Проверяем: уже есть инициализированный app?
+        const apps = fbGetApps();
+
+        if (apps.length > 0) {
+            // Берём существующий app (из index.html / app.js)
+            fbApp = fbGetApp();
+            debugLog('Используем существующий Firebase App (' + apps.length + ' apps)', 'ok');
+        } else {
+            // Создаём новый
+            fbApp = fbInitApp(FB_CONFIG);
+            debugLog('Создан новый Firebase App', 'ok');
+        }
+
         fbAuth = fbGetAuth(fbApp);
+        fbDb   = fbGetFirestore(fbApp);
 
-        // Инициализируем Firestore БЕЗ persistence (чтобы избежать кеш-конфликтов)
-        fbDb = fbGetFirestore(fbApp);
+        debugLog('Auth: ' + (fbAuth ? 'OK' : 'нет'), fbAuth ? 'ok' : 'err');
+        debugLog('Firestore: ' + (fbDb ? 'OK' : 'нет'), fbDb ? 'ok' : 'err');
 
-        debugLog('Firebase App инициализирован', 'ok');
-        debugLog('Auth готов', 'ok');
-        debugLog('Firestore готов (без persistence)', 'ok');
         return true;
     } catch (err) {
-        debugLog('Ошибка инициализации Firebase: ' + err.message, 'err');
-        return false;
+        debugLog('Ошибка initFirebase: ' + err.message, 'err');
+
+        // Попытка с именованным app
+        try {
+            fbApp  = fbInitApp(FB_CONFIG, 'stats-app-' + Date.now());
+            fbAuth = fbGetAuth(fbApp);
+            fbDb   = fbGetFirestore(fbApp);
+            debugLog('Создан именованный Firebase App', 'ok');
+            return true;
+        } catch (err2) {
+            debugLog('Критическая ошибка: ' + err2.message, 'err');
+            return false;
+        }
     }
+}
+
+function startAuth() {
+    // Пытаемся взять из window (если открыто как iframe или shared context)
+    if (window.db && window.auth) {
+        fbDb   = window.db;
+        fbAuth = window.auth;
+        debugLog('Взяли Firebase из window.db + window.auth', 'ok');
+    } else {
+        const ok = initFirebase();
+        if (!ok) {
+            setLoading(false);
+            setTableMsg('Ошибка инициализации Firebase', true);
+            return;
+        }
+    }
+
+    setLoading(true, 'Проверка авторизации...');
+
+    fbOnAuth(fbAuth, async function(user) {
+        setLoading(false);
+
+        if (!user) {
+            debugLog('Не авторизован', 'warn');
+            showLoginScreen();
+            return;
+        }
+
+        debugLog('Авторизован: ' + user.email, 'ok');
+        debugLog('UID: ' + user.uid, 'info');
+
+        // ✅ Проверяем isAdmin в Firestore (не только по UID)
+        const isAdminByUID = user.uid === ADMIN_UID;
+
+        let isAdminByField = false;
+        try {
+            const userDoc = await fbGetDoc(fbDoc(fbDb, 'users', user.uid));
+            if (userDoc.exists()) {
+                isAdminByField = userDoc.data().isAdmin === true;
+                debugLog('isAdmin field: ' + isAdminByField, isAdminByField ? 'ok' : 'warn');
+            } else {
+                debugLog('Документ пользователя не найден', 'warn');
+            }
+        } catch (err) {
+            debugLog('Ошибка чтения своего документа: ' + err.message, 'err');
+        }
+
+        const isAdmin = isAdminByUID || isAdminByField;
+        debugLog('Итог isAdmin: ' + isAdmin, isAdmin ? 'ok' : 'err');
+
+        if (!isAdmin) {
+            document.getElementById('accessDenied').classList.remove('hidden');
+            return;
+        }
+
+        document.getElementById('adminContent').classList.remove('hidden');
+        renderTableHead();
+        loadAllData(user);
+    });
 }
 
 // Если Firebase уже инициализирован в родительском app.js — берём оттуда
@@ -525,38 +607,6 @@ let projectsMap   = new Map();
 let projStats     = {};
 let currentTab    = 'main';
 
-// ─────────────────────────────────────────────────────────────────
-// AUTH
-// ─────────────────────────────────────────────────────────────────
-function startAuth() {
-    const ok = getOrInitFirebase();
-    if (!ok) {
-        setLoading(false, 'Ошибка инициализации Firebase');
-        return;
-    }
-
-    setLoading(true, 'Проверка авторизации...');
-
-    fbOnAuth(fbAuth, function(user) {
-        setLoading(false);
-
-        if (!user) {
-            showLoginScreen();
-            return;
-        }
-
-        debugLog('Авторизован: ' + user.uid, 'ok');
-
-        if (user.uid !== ADMIN_UID) {
-            document.getElementById('accessDenied').classList.remove('hidden');
-            return;
-        }
-
-        document.getElementById('adminContent').classList.remove('hidden');
-        renderTableHead();
-        loadAllData(user);
-    });
-}
 
 function showLoginScreen() {
     const el = document.getElementById('loadingScreen');
@@ -588,9 +638,6 @@ function setLoading(show, text) {
     }
 }
 
-// ─────────────────────────────────────────────────────────────────
-// ДИАГНОСТИКА
-// ─────────────────────────────────────────────────────────────────
 window.runDiagnostics = async function() {
     var panel = document.getElementById('debugPanel');
     var log   = document.getElementById('debugLog');
@@ -599,29 +646,87 @@ window.runDiagnostics = async function() {
 
     debugLog('=== Диагностика ===', 'info');
     debugLog('Navigator online: ' + navigator.onLine, navigator.onLine ? 'ok' : 'err');
-    debugLog('window.db: ' + (window.db ? 'есть' : 'нет'), window.db ? 'ok' : 'warn');
-    debugLog('window.auth: ' + (window.auth ? 'есть' : 'нет'), window.auth ? 'ok' : 'warn');
-    debugLog('fbDb: ' + (fbDb ? 'есть' : 'нет'), fbDb ? 'ok' : 'err');
+
+    // Firebase Apps
+    try {
+        const apps = fbGetApps();
+        debugLog('Firebase Apps инициализировано: ' + apps.length, apps.length > 0 ? 'ok' : 'warn');
+    } catch(e) {
+        debugLog('fbGetApps error: ' + e.message, 'err');
+    }
+
+    debugLog('window.db:   ' + (window.db   ? '✓' : '✗'), window.db   ? 'ok' : 'warn');
+    debugLog('window.auth: ' + (window.auth ? '✓' : '✗'), window.auth ? 'ok' : 'warn');
+    debugLog('fbDb:        ' + (fbDb        ? '✓' : '✗'), fbDb        ? 'ok' : 'err');
+    debugLog('fbAuth:      ' + (fbAuth      ? '✓' : '✗'), fbAuth      ? 'ok' : 'err');
+
+    // Текущий пользователь
+    const currentUser = fbAuth ? fbAuth.currentUser : null;
+    debugLog('Текущий user: ' + (currentUser ? currentUser.email : 'НЕТ'), currentUser ? 'ok' : 'err');
+
+    if (!currentUser) {
+        debugLog('→ ПРИЧИНА: нет авторизации → нет доступа к users', 'err');
+        debugLog('→ Войдите через Google', 'info');
+        return;
+    }
+
+    debugLog('UID: ' + currentUser.uid, 'info');
+    debugLog('UID совпадает с ADMIN_UID: ' + (currentUser.uid === ADMIN_UID), currentUser.uid === ADMIN_UID ? 'ok' : 'warn');
 
     if (!fbDb) {
         debugLog('Firestore не инициализирован', 'err');
         return;
     }
 
+    // Читаем свой документ
     try {
-        debugLog('Тест: чтение users...', 'info');
-        var snap = await fbGetDocs(fbCol(fbDb, "users"));
-        debugLog('users: получено ' + snap.size + ' документов', snap.size > 0 ? 'ok' : 'warn');
+        debugLog('Чтение своего документа users/' + currentUser.uid + '...', 'info');
+        const myDoc = await fbGetDoc(fbDoc(fbDb, 'users', currentUser.uid));
+        if (myDoc.exists()) {
+            const data = myDoc.data();
+            debugLog('Документ найден ✓', 'ok');
+            debugLog('  isAdmin: ' + data.isAdmin, data.isAdmin ? 'ok' : 'err');
+            debugLog('  email: ' + (data.email || '—'), 'info');
+
+            if (!data.isAdmin) {
+                debugLog('→ ДОБАВЬТЕ isAdmin: true в Firebase Console!', 'err');
+                debugLog('→ Firestore → users → ' + currentUser.uid + ' → Add field: isAdmin (boolean) = true', 'warn');
+            }
+        } else {
+            debugLog('Документ НЕ найден в Firestore', 'err');
+        }
     } catch (err) {
-        debugLog('users: ОШИБКА — ' + err.code + ': ' + err.message, 'err');
+        debugLog('Ошибка чтения своего документа: ' + err.code, 'err');
     }
 
+    // Тест чтения всех users
     try {
-        debugLog('Тест: чтение projects...', 'info');
-        var snap2 = await fbGetDocs(fbCol(fbDb, "projects"));
-        debugLog('projects: получено ' + snap2.size + ' документов', snap2.size > 0 ? 'ok' : 'warn');
+        debugLog('Тест: чтение коллекции users...', 'info');
+        const snap = await fbGetDocs(fbCol(fbDb, "users"));
+        debugLog('users: ' + snap.size + ' документов', snap.size > 0 ? 'ok' : 'warn');
+
+        if (snap.size > 0) {
+            const firstData = snap.docs[0].data();
+            debugLog('Пример структуры документа:', 'info');
+            debugLog('  email: '        + (firstData.email        || '—'), 'info');
+            debugLog('  displayName: '  + (firstData.displayName  || '—'), 'info');
+            debugLog('  profile: '      + (firstData.profile      ? 'объект' : 'нет'), 'info');
+            debugLog('  arcGuideStats: '+ (firstData.arcGuideStats ? 'объект' : 'нет'), 'info');
+            debugLog('  isAdmin: '      + (firstData.isAdmin       || 'нет'),  'info');
+        }
+    } catch (err) {
+        debugLog('users ERROR: ' + err.code + ' — ' + err.message, 'err');
+        if (err.code === 'permission-denied') {
+            debugLog('→ Нет поля isAdmin: true в вашем документе', 'err');
+        }
+    }
+
+    // Тест projects
+    try {
+        const snap2 = await fbGetDocs(fbCol(fbDb, "projects"));
+        debugLog('projects: ' + snap2.size + ' документов', snap2.size > 0 ? 'ok' : 'warn');
     } catch (err2) {
-        debugLog('projects: ОШИБКА — ' + err2.code + ': ' + err2.message, 'err');
+        debugLog('projects ERROR: ' + err2.code, 'err');
     }
 };
 
