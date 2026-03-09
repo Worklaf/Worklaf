@@ -1420,7 +1420,7 @@ window.closeAccountOverlay = function() {
                     </div>
                     <h3 class="text-xl font-bold text-white mb-2">${lang('footer_account_not_logged')}</h3>
                     <p class="text-slate-400 mb-6">${lang('footer_account_login_desc')}</p>
-                    onclick="(window._closeAccountOverlay ? window._closeAccountOverlay() : closePageModal()); setTimeout(() => { if(typeof openLoginModal==='function') openLoginModal(); }, 300);"
+                    <button onclick="(window._closeAccountOverlay ? window._closeAccountOverlay() : closePageModal()); setTimeout(() => { if(typeof openLoginModal==='function') openLoginModal(); }, 300);"
                             class="bg-gradient-to-r from-cyan-600 to-blue-600 hover:from-cyan-500 hover:to-blue-500 px-6 py-3 rounded-lg text-sm font-bold text-white transition-all">
                         <i class="fas fa-sign-in-alt mr-2"></i>${lang('login_btn')}
                     </button>
@@ -1767,15 +1767,55 @@ document.addEventListener('click', function(e) {
     updatedAt: new Date().toISOString()
 };
 window.copyRefCode = function() {
-    const el = document.getElementById('profileRefCode');
-    if (!el) return;
-    const code = el.textContent.trim();
-    if (code === 'Генерация...') return;
+        const el = document.getElementById('profileRefCode');
+        if (!el) return;
+        
+        const code = el.textContent.trim();
+        if (!code || code === 'Генерация...') return;
 
-    navigator.clipboard.writeText(code).then(function() {
-        footerShowToast('Реферальный код скопирован!', 'success');
-    });
-};
+        const btn = document.querySelector('#profileRefCode + button');
+
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+            navigator.clipboard.writeText(code).then(function() {
+                _showCopySuccess(btn);
+                footerShowToast('Реферальный код скопирован!', 'success');
+            }).catch(function() {
+                _copyFallback(code, btn);
+            });
+        } else {
+            _copyFallback(code, btn);
+        }
+    };
+
+    function _showCopySuccess(btn) {
+        if (!btn) return;
+        const orig = btn.innerHTML;
+        btn.innerHTML = '<i class="fas fa-check text-xs"></i>';
+        btn.style.background = 'rgba(16,185,129,0.3)';
+        btn.style.color = '#10b981';
+        setTimeout(function() {
+            btn.innerHTML = orig;
+            btn.style.background = '';
+            btn.style.color = '';
+        }, 2000);
+    }
+
+    function _copyFallback(text, btn) {
+        try {
+            const ta = document.createElement('textarea');
+            ta.value = text;
+            ta.style.cssText = 'position:fixed;top:-9999px;left:-9999px;opacity:0;';
+            document.body.appendChild(ta);
+            ta.select();
+            ta.setSelectionRange(0, 99999);
+            document.execCommand('copy');
+            document.body.removeChild(ta);
+            _showCopySuccess(btn);
+            footerShowToast('Реферальный код скопирован!', 'success');
+        } catch(e) {
+            footerShowToast('Не удалось скопировать', 'error');
+        }
+    }
     // Локальный бэкап
     window.userProfileData = profileData;
     localStorage.setItem('userProfileData', JSON.stringify(profileData));
