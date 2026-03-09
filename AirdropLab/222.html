@@ -318,26 +318,22 @@
       </div>
       <div class="flex gap-2 items-center">
           <!-- КНОПКА КЛЕЙМА — добавь рядом с уведомлениями -->
-<button 
-    onclick="window.openClaimModal()" 
+<!-- КНОПКА КЛЕЙМА -->
+<button
+    onclick="window.openClaimModal()"
     id="headerClaimBtn"
     title="Ежедневные Reagents"
-    class="relative flex items-center gap-2 px-3 py-2 
-           bg-gradient-to-r from-cyan-600/20 to-blue-600/20 
+    class="relative flex items-center gap-2 px-3 py-2
+           bg-gradient-to-r from-cyan-600/20 to-blue-600/20
            hover:from-cyan-600/40 hover:to-blue-600/40
            border border-cyan-500/30 hover:border-cyan-400/60
-           rounded-xl text-sm text-cyan-400 hover:text-white 
-           transition-all group">
-    
-    <!-- Иконка колбы -->
+           rounded-xl text-sm text-cyan-400 hover:text-white
+           transition-all duration-300">
     <span class="text-base">🧪</span>
-    
-    <!-- Надпись (скрывается на мобиле) -->
     <span class="hidden sm:inline font-medium text-xs">Клейм</span>
-    
-    <!-- Индикатор "доступен клейм" — зелёная точка -->
-    <span id="claimDot" 
-          class="absolute -top-1 -right-1 w-2.5 h-2.5 
+    <!-- Зелёная точка — клейм доступен -->
+    <span id="claimDot"
+          class="absolute -top-1 -right-1 w-2.5 h-2.5
                  bg-emerald-400 rounded-full border-2 border-slate-900
                  hidden animate-pulse">
     </span>
@@ -374,14 +370,39 @@
             <button onclick="openLoginModal()" class="px-4 py-2 bg-gradient-to-r from-cyan-600 to-blue-600 hover:from-cyan-500 hover:to-blue-500 rounded-xl text-sm font-bold flex items-center gap-2"><i class="fas fa-sign-in-alt"></i><span data-translate="login">Вход</span></button>
           </div>
           <div id="loggedInView" class="hidden flex items-center gap-3">
-            <div class="text-right hidden sm:block">
-              <div id="userName" class="text-xs font-bold text-white">Researcher</div>
-              <div class="text-[10px] text-emerald-400 flex items-center justify-end gap-1.5" data-translate="in_system">
-                <span class="relative flex h-1.5 w-1.5"><span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span><span class="relative inline-flex rounded-full h-1.5 w-1.5 bg-emerald-400"></span></span>В системе</div>
-            </div>
-            <div class="relative group"><div class="absolute -inset-1 bg-gradient-to-r from-cyan-500 to-blue-500 rounded-full blur opacity-50 group-hover:opacity-75"></div><img id="userAvatar" src="" class="relative w-10 h-10 rounded-full object-cover border-2 border-cyan-500/50"></div>
-            <button onclick="logout()" class="p-2 text-slate-400 hover:text-red-400 rounded-lg hover:bg-red-500/10"><i class="fas fa-sign-out-alt"></i></button>
-          </div>
+    <!-- Имя — кликабельно -->
+    <div class="text-right hidden sm:block cursor-pointer group"
+         onclick="window.openMyAccountModal()"
+         title="Редактировать профиль">
+        <div id="userName"
+             class="text-xs font-bold text-white group-hover:text-cyan-400 transition-colors">
+            Researcher
+        </div>
+        <div class="text-[10px] text-emerald-400 flex items-center justify-end gap-1.5">
+            <span class="relative flex h-1.5 w-1.5">
+                <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                <span class="relative inline-flex rounded-full h-1.5 w-1.5 bg-emerald-400"></span>
+            </span>
+            <span data-translate="in_system">В системе</span>
+        </div>
+    </div>
+    <!-- Аватар — кликабельный -->
+    <div class="relative group cursor-pointer"
+         onclick="window.openMyAccountModal()"
+         title="Редактировать профиль">
+        <div class="absolute -inset-1 bg-gradient-to-r from-cyan-500 to-blue-500 rounded-full blur opacity-50 group-hover:opacity-75 transition-opacity"></div>
+        <img id="userAvatar" src=""
+             class="relative w-10 h-10 rounded-full object-cover border-2 border-cyan-500/50 group-hover:border-cyan-400 transition-all">
+        <div class="absolute inset-0 rounded-full bg-slate-900/60 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center pointer-events-none">
+            <i class="fas fa-pen text-white text-[9px]"></i>
+        </div>
+    </div>
+    <button onclick="logout()"
+            class="p-2 text-slate-400 hover:text-red-400 rounded-lg hover:bg-red-500/10 transition-all"
+            title="Выйти">
+        <i class="fas fa-sign-out-alt"></i>
+    </button>
+</div>
         </div>
       </div>
     </div>
@@ -3304,6 +3325,299 @@ window.toggleLang = function() {
 };
 
 console.log('App initialized');
+
+    // ============================================================
+// ОТКРЫТЬ МОЙ АККАУНТ
+// ============================================================
+window.openMyAccountModal = function() {
+    if (typeof window.openPageModal === 'function') {
+        window.openPageModal('account');
+        return;
+    }
+    const btn = document.querySelector('[data-page="account"]');
+    if (btn) { btn.click(); return; }
+    showToast('Открываем профиль...');
+    setTimeout(function() {
+        if (typeof window.openPageModal === 'function') window.openPageModal('account');
+    }, 400);
+};
+
+// ============================================================
+// КНОПКА КЛЕЙМА — обновление внешнего вида
+// ============================================================
+function _updateClaimBtn() {
+    const btn = document.getElementById('headerClaimBtn');
+    if (!btn) return;
+    const user = window.auth && window.auth.currentUser;
+    if (!user || !window.ReagentsSystem) return;
+
+    window.ReagentsSystem.getClaimStatus(user).then(function(status) {
+        if (!status) return;
+        if (status.canClaim) {
+            // Доступен — яркий + зелёная точка
+            btn.className = 'relative flex items-center gap-2 px-3 py-2 ' +
+                'bg-gradient-to-r from-cyan-600/20 to-blue-600/20 ' +
+                'hover:from-cyan-600/40 hover:to-blue-600/40 ' +
+                'border border-cyan-500/30 hover:border-cyan-400/60 ' +
+                'rounded-xl text-sm text-cyan-400 hover:text-white transition-all duration-300';
+            btn.title = 'Получить ежедневные Reagents';
+            btn.innerHTML = '<span class="text-base">🧪</span>' +
+                '<span class="hidden sm:inline font-medium text-xs">Клейм</span>' +
+                '<span class="absolute -top-1 -right-1 w-2.5 h-2.5 ' +
+                'bg-emerald-400 rounded-full border-2 border-slate-900 animate-pulse"></span>';
+        } else {
+            // Уже клеймил — серый + галочка
+            btn.className = 'relative flex items-center gap-2 px-3 py-2 ' +
+                'bg-slate-800/30 border border-slate-700/30 ' +
+                'rounded-xl text-sm text-slate-500 ' +
+                'transition-all duration-300 cursor-default';
+            btn.title = 'Следующий клейм в 00:00 UTC';
+            btn.innerHTML = '<span class="text-base">✅</span>' +
+                '<span class="hidden sm:inline font-medium text-xs">Готово</span>';
+        }
+    }).catch(function() {});
+}
+
+// Обновляем кнопку когда пользователь залогинился
+document.addEventListener('userAuthChanged', function() {
+    setTimeout(_updateClaimBtn, 1000);
+});
+
+// Обновляем кнопку после успешного клейма
+const _origDoClaim = window.doClaim;
+window.doClaim = async function() {
+    await _origDoClaim();
+    setTimeout(_updateClaimBtn, 500);
+};
+
+// ============================================================
+// REFERRAL WELCOME MODAL
+// ============================================================
+
+// Вставить код разработчика
+window._fillDevCode = function() {
+    const inp = document.getElementById('welcomeRefInput');
+    if (!inp) return;
+    inp.value = 'AL-SAKZ4M';
+    inp.dispatchEvent(new Event('input'));
+    inp.focus();
+};
+
+// Валидация при вводе
+window._onRefInput = function(inp) {
+    const val = inp.value.trim();
+    const btn = document.getElementById('welcomeRefApplyBtn');
+    const status = document.getElementById('refInputStatus');
+
+    // Формат AL-XXXXXX — 9 символов
+    const valid = /^AL-[A-Z0-9]{6}$/.test(val);
+
+    if (val.length === 0) {
+        status.innerHTML = '';
+        btn.disabled = true;
+        btn.style.opacity = '0.45';
+        btn.style.cursor = 'not-allowed';
+        return;
+    }
+
+    if (valid) {
+        status.innerHTML = '<span style="color:#34d399;">✓ Код выглядит верно</span>';
+        btn.disabled = false;
+        btn.style.opacity = '1';
+        btn.style.cursor = 'pointer';
+    } else {
+        status.innerHTML = val.length < 9
+            ? '<span style="color:#64748b;">Введите 9 символов (AL-XXXXXX)</span>'
+            : '<span style="color:#f87171;">✗ Неверный формат кода</span>';
+        btn.disabled = true;
+        btn.style.opacity = '0.45';
+        btn.style.cursor = 'not-allowed';
+    }
+};
+
+window._onRefBlur = function(inp) {
+    inp.style.borderColor = 'rgba(71,85,105,0.5)';
+    inp.style.boxShadow = 'none';
+};
+
+// Показать модалку
+function _showReferralModal() {
+    const modal = document.getElementById('referralWelcomeModal');
+    const box   = document.getElementById('referralWelcomeBox');
+    if (!modal || !box) return;
+    modal.style.opacity = '1';
+    modal.style.pointerEvents = 'all';
+    box.style.transform = 'translateY(0) scale(1)';
+    // Закрытие по фону
+    modal.onclick = function(e) {
+        if (e.target === modal) window.skipReferralModal();
+    };
+}
+
+// Скрыть модалку
+window.skipReferralModal = async function() {
+    const modal = document.getElementById('referralWelcomeModal');
+    const box   = document.getElementById('referralWelcomeBox');
+    if (!modal) return;
+    modal.style.opacity = '0';
+    modal.style.pointerEvents = 'none';
+    if (box) box.style.transform = 'translateY(40px) scale(0.95)';
+
+    // Помечаем что пропустил
+    if (currentUser) {
+        try {
+            const userRef = doc(db, "users", currentUser.uid);
+            await setDoc(userRef, { referralModalShown: true }, { merge: true });
+        } catch(e) {}
+    }
+};
+
+// Применить код
+window.applyWelcomeRefCode = async function() {
+    const inp = document.getElementById('welcomeRefInput');
+    const code = inp ? inp.value.trim().toUpperCase() : '';
+    const status = document.getElementById('refInputStatus');
+    const btn = document.getElementById('welcomeRefApplyBtn');
+
+    if (!code || !/^AL-[A-Z0-9]{6}$/.test(code)) {
+        if (status) status.innerHTML = '<span style="color:#f87171;">Введите корректный код</span>';
+        return;
+    }
+    if (!currentUser) { showToast('Войдите в аккаунт'); return; }
+
+    // Блокируем кнопку на время запроса
+    btn.disabled = true;
+    btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Проверяем...';
+
+    try {
+        // Ищем пользователя с таким рефкодом
+        const usersSnap = await getDocs(
+            query(collection(db, "users"), where("referralCode", "==", code))
+        );
+
+        if (usersSnap.empty) {
+            if (status) status.innerHTML = '<span style="color:#f87171;">✗ Код не найден</span>';
+            btn.disabled = false;
+            btn.innerHTML = '<i class="fas fa-rocket"></i> Применить код и получить +25 RGT';
+            btn.style.opacity = '1';
+            btn.style.cursor = 'pointer';
+            return;
+        }
+
+        // Проверяем что это не свой код
+        const refOwnerDoc = usersSnap.docs[0];
+        if (refOwnerDoc.id === currentUser.uid) {
+            if (status) status.innerHTML = '<span style="color:#f87171;">✗ Нельзя использовать свой код</span>';
+            btn.disabled = false;
+            btn.innerHTML = '<i class="fas fa-rocket"></i> Применить код и получить +25 RGT';
+            btn.style.opacity = '1';
+            btn.style.cursor = 'pointer';
+            return;
+        }
+
+        // Проверяем что у текущего юзера нет уже invitedBy
+        const mySnap = await getDoc(doc(db, "users", currentUser.uid));
+        const myData = mySnap.exists() ? mySnap.data() : {};
+        if (myData.invitedBy) {
+            if (status) status.innerHTML = '<span style="color:#f87171;">✗ Вы уже использовали код</span>';
+            btn.disabled = false;
+            btn.innerHTML = '<i class="fas fa-rocket"></i> Применить код и получить +25 RGT';
+            btn.style.opacity = '1';
+            btn.style.cursor = 'pointer';
+            return;
+        }
+
+        // Начисляем бонусы
+        const myRef     = doc(db, "users", currentUser.uid);
+        const ownerRef  = doc(db, "users", refOwnerDoc.id);
+        const ownerData = refOwnerDoc.data();
+
+        const myReagents    = (myData.reagents    || 0) + 25;
+        const ownerReagents = (ownerData.reagents || 0) + 50;
+
+        // Обновляем текущего пользователя
+        await setDoc(myRef, {
+            invitedBy:         code,
+            invitedByUid:      refOwnerDoc.id,
+            reagents:          myReagents,
+            referralModalShown: true
+        }, { merge: true });
+
+        // Обновляем владельца кода
+        await setDoc(ownerRef, {
+            reagents: ownerReagents,
+            referrals: (ownerData.referrals || 0) + 1
+        }, { merge: true });
+
+        // Успех!
+        if (status) status.innerHTML = '<span style="color:#34d399;">✓ Бонус начислен!</span>';
+
+        // Показываем красивое сообщение внутри модалки
+        const box = document.getElementById('referralWelcomeBox');
+        if (box) {
+            box.innerHTML = '<div style="text-align:center;padding:20px 0;">' +
+                '<div style="font-size:56px;margin-bottom:16px;">🎉</div>' +
+                '<h2 style="color:#f1f5f9;font-size:22px;font-weight:800;margin:0 0 10px;">+25 Reagents начислено!</h2>' +
+                '<p style="color:#94a3b8;font-size:14px;margin:0 0 8px;">Код <code style="color:#22d3ee;font-family:monospace;">' + code + '</code> применён успешно</p>' +
+                '<p style="color:#64748b;font-size:13px;margin:0 0 24px;">Вашему другу начислено +50 RGT</p>' +
+                '<button onclick="window.skipReferralModal()" ' +
+                'style="background:linear-gradient(135deg,#0891b2,#2563eb);border:none;' +
+                'color:#fff;padding:14px 40px;border-radius:12px;font-size:14px;' +
+                'font-weight:700;cursor:pointer;">Отлично!</button></div>';
+        }
+
+        setTimeout(function() { window.skipReferralModal(); }, 3000);
+
+    } catch(e) {
+        console.error('Ref code error:', e);
+        if (status) status.innerHTML = '<span style="color:#f87171;">Ошибка: ' + e.message + '</span>';
+        btn.disabled = false;
+        btn.innerHTML = '<i class="fas fa-rocket"></i> Применить код и получить +25 RGT';
+        btn.style.opacity = '1';
+        btn.style.cursor = 'pointer';
+    }
+};
+
+// Проверяем нужно ли показать модалку новому пользователю
+async function _checkShowReferralModal(user) {
+    if (!user) return;
+    try {
+        const userRef  = doc(db, "users", user.uid);
+        const userSnap = await getDoc(userRef);
+        if (!userSnap.exists()) return;
+        const data = userSnap.data();
+
+        // Не показываем если: уже видел, уже использовал код
+        if (data.referralModalShown) return;
+        if (data.invitedBy) return;
+
+        // Показываем только новым (зарегались не более 10 минут назад)
+        const firstLogin = data.firstLogin
+            ? (data.firstLogin.toDate ? data.firstLogin.toDate() : new Date(data.firstLogin))
+            : null;
+        const minutesSinceReg = firstLogin
+            ? (new Date() - firstLogin) / 60000
+            : 999;
+
+        if (minutesSinceReg > 10) return;
+
+        // Показываем с задержкой после загрузки
+        setTimeout(_showReferralModal, 2000);
+
+    } catch(e) {
+        console.log('Ref modal check error:', e);
+    }
+}
+
+// Вызываем проверку при смене авторизации
+document.addEventListener('userAuthChanged', function() {
+    if (currentUser) {
+        setTimeout(function() {
+            _checkShowReferralModal(currentUser);
+            _updateClaimBtn();
+        }, 1500);
+    }
+});
     // Добавь эту функцию для определения новых активностей по датам
 function detectNewActivities() {
   const now = new Date();
@@ -3353,5 +3667,149 @@ setTimeout(() => {
   detectNewActivities();
 }, 1000);
 </script>
+    <!-- ===== REFERRAL WELCOME MODAL ===== -->
+<div id="referralWelcomeModal"
+     style="position:fixed;inset:0;background:rgba(0,0,0,0.85);
+            backdrop-filter:blur(10px);z-index:99999;
+            display:flex;align-items:center;justify-content:center;
+            opacity:0;pointer-events:none;transition:opacity 0.4s ease;">
+    <div id="referralWelcomeBox"
+         style="background:linear-gradient(145deg,#1a2235 0%,#0f172a 100%);
+                border:1px solid rgba(255,255,255,0.08);border-radius:24px;
+                padding:32px 28px;max-width:420px;width:92%;position:relative;
+                transform:translateY(40px) scale(0.95);
+                transition:transform 0.4s cubic-bezier(0.34,1.56,0.64,1);">
+
+        <!-- Кнопка закрыть -->
+        <button onclick="window.skipReferralModal()"
+                style="position:absolute;top:14px;right:14px;width:30px;height:30px;
+                       background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.1);
+                       border-radius:8px;color:#64748b;cursor:pointer;font-size:14px;
+                       display:flex;align-items:center;justify-content:center;
+                       transition:all 0.2s;line-height:1;"
+                onmouseover="this.style.color='#fff';this.style.background='rgba(255,255,255,0.12)'"
+                onmouseout="this.style.color='#64748b';this.style.background='rgba(255,255,255,0.05)'">✕</button>
+
+        <!-- Шапка -->
+        <div style="text-align:center;margin-bottom:24px;">
+            <div style="width:68px;height:68px;border-radius:18px;margin:0 auto 14px;
+                        background:linear-gradient(135deg,rgba(6,182,212,0.15),rgba(59,130,246,0.1));
+                        border:1px solid rgba(6,182,212,0.25);
+                        display:flex;align-items:center;justify-content:center;font-size:30px;">
+                🧪
+            </div>
+            <h2 style="color:#f1f5f9;font-size:20px;font-weight:800;margin:0 0 8px;
+                       letter-spacing:-0.3px;">
+                Добро пожаловать в AirdropLab!
+            </h2>
+            <p style="color:#64748b;font-size:13px;line-height:1.6;margin:0;">
+                Есть реферальный код? Введи и получи<br>
+                <span style="color:#22d3ee;font-weight:700;">+25 Reagents</span> на старт!
+            </p>
+        </div>
+
+        <!-- Бонус блоки -->
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:20px;">
+            <div style="background:rgba(6,182,212,0.07);border:1px solid rgba(6,182,212,0.18);
+                        border-radius:14px;padding:14px 10px;text-align:center;">
+                <div style="font-size:26px;font-weight:900;color:#22d3ee;line-height:1;">+25</div>
+                <div style="font-size:11px;color:#475569;margin-top:4px;">🧪 Вам</div>
+            </div>
+            <div style="background:rgba(139,92,246,0.07);border:1px solid rgba(139,92,246,0.18);
+                        border-radius:14px;padding:14px 10px;text-align:center;">
+                <div style="font-size:26px;font-weight:900;color:#a78bfa;line-height:1;">+50</div>
+                <div style="font-size:11px;color:#475569;margin-top:4px;">🎁 Другу</div>
+            </div>
+        </div>
+
+        <!-- Поле ввода -->
+        <div style="margin-bottom:14px;">
+            <label style="display:block;font-size:12px;font-weight:600;
+                          color:#94a3b8;margin-bottom:8px;letter-spacing:0.3px;">
+                Реферальный код
+            </label>
+            <input type="text"
+                   id="welcomeRefInput"
+                   placeholder="AL-XXXXXX"
+                   maxlength="9"
+                   autocomplete="off"
+                   style="width:100%;background:rgba(15,23,42,0.9);
+                          border:1.5px solid rgba(71,85,105,0.5);
+                          border-radius:12px;padding:13px 16px;
+                          color:#f1f5f9;font-size:20px;font-weight:700;
+                          text-align:center;letter-spacing:4px;
+                          font-family:'Courier New',monospace;
+                          text-transform:uppercase;outline:none;
+                          transition:all 0.25s;box-sizing:border-box;"
+                   oninput="this.value=this.value.toUpperCase().replace(/[^A-Z0-9-]/g,'');window._onRefInput(this)"
+                   onfocus="this.style.borderColor='rgba(6,182,212,0.7)';this.style.boxShadow='0 0 0 3px rgba(6,182,212,0.12)'"
+                   onblur="window._onRefBlur(this)">
+
+            <!-- Статус под полем -->
+            <div id="refInputStatus" style="min-height:22px;margin-top:8px;text-align:center;font-size:12px;"></div>
+        </div>
+
+        <!-- Совет с кодом разработчика -->
+        <div style="background:rgba(245,158,11,0.06);border:1px solid rgba(245,158,11,0.2);
+                    border-radius:12px;padding:12px 14px;margin-bottom:18px;">
+            <div style="display:flex;align-items:flex-start;gap:10px;">
+                <span style="font-size:16px;line-height:1.3;flex-shrink:0;">💡</span>
+                <div>
+                    <div style="color:#fbbf24;font-size:12px;font-weight:700;margin-bottom:4px;">
+                        Нет чужого кода?
+                    </div>
+                    <div style="color:#94a3b8;font-size:12px;line-height:1.5;">
+                        Введи код разработчика и всё равно получи бонус:
+                    </div>
+                    <div style="display:flex;align-items:center;gap:8px;margin-top:8px;">
+                        <code style="background:rgba(6,182,212,0.12);border:1px solid rgba(6,182,212,0.3);
+                                     color:#22d3ee;padding:5px 12px;border-radius:8px;
+                                     font-size:16px;font-weight:800;letter-spacing:2px;
+                                     font-family:'Courier New',monospace;">AL-SAKZ4M</code>
+                        <button onclick="window._fillDevCode()"
+                                style="background:rgba(6,182,212,0.15);border:1px solid rgba(6,182,212,0.3);
+                                       color:#22d3ee;padding:5px 12px;border-radius:8px;
+                                       font-size:11px;font-weight:700;cursor:pointer;
+                                       transition:all 0.2s;white-space:nowrap;"
+                                onmouseover="this.style.background='rgba(6,182,212,0.3)'"
+                                onmouseout="this.style.background='rgba(6,182,212,0.15)'">
+                            Вставить ↑
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Кнопка Применить -->
+        <button id="welcomeRefApplyBtn"
+                onclick="window.applyWelcomeRefCode()"
+                disabled
+                style="width:100%;padding:14px;border-radius:12px;
+                       border:none;font-size:14px;font-weight:700;
+                       color:#fff;cursor:not-allowed;opacity:0.45;
+                       background:linear-gradient(135deg,#0891b2,#2563eb);
+                       transition:all 0.25s;display:flex;
+                       align-items:center;justify-content:center;
+                       gap:8px;margin-bottom:10px;box-sizing:border-box;">
+            <i class="fas fa-rocket"></i>
+            Применить код и получить +25 RGT
+        </button>
+
+        <!-- Пропустить -->
+        <button onclick="window.skipReferralModal()"
+                style="width:100%;padding:11px;border-radius:12px;
+                       background:transparent;border:1px solid rgba(71,85,105,0.3);
+                       color:#475569;font-size:13px;cursor:pointer;
+                       transition:all 0.2s;box-sizing:border-box;"
+                onmouseover="this.style.color='#94a3b8';this.style.borderColor='rgba(100,116,139,0.5)'"
+                onmouseout="this.style.color='#475569';this.style.borderColor='rgba(71,85,105,0.3)'">
+            Пропустить — введу позже в профиле
+        </button>
+
+        <p style="text-align:center;font-size:11px;color:#1e293b;margin:12px 0 0;">
+            Код применяется только один раз
+        </p>
+    </div>
+</div>
 </body>
 </html>
