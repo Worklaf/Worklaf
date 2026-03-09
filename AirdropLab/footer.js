@@ -1302,11 +1302,11 @@ document.addEventListener('click', function(e) {
         if (dropdown) dropdown.classList.add('hidden');
     }
 });
-        window.saveAccountProfile = async function(e) {
+            window.saveAccountProfile = async function(e) {
         e.preventDefault();
         const lang = typeof window.t === 'function' ? window.t : (k) => k;
 
-        // 1. Проверяем авторизацию через Firebase напрямую, если глобальная переменная пуста
+        // Получаем пользователя напрямую из auth, если глобальная переменная пуста
         const auth = window.auth;
         const user = auth ? auth.currentUser : (window.currentUser || null);
 
@@ -1323,7 +1323,7 @@ document.addEventListener('click', function(e) {
             submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i>...';
         }
 
-        // 2. Собираем данные
+        // Собираем данные формы
         const countryCode = document.getElementById('profileCountry').value;
         const countryName = document.getElementById('countrySearchInput')?.value || countryCode;
 
@@ -1340,30 +1340,32 @@ document.addEventListener('click', function(e) {
             updatedAt:   new Date().toISOString()
         };
 
-        // 3. Сохраняем локально (как бэкап)
+        // Сохраняем локально (бэкап)
         window.userProfileData = profileData;
         localStorage.setItem('userProfileData', JSON.stringify(profileData));
 
-        // 4. Сохраняем в Firebase
+        // Пробуем сохранить в Firebase
         const db = window.db;
         const exp = window.__firestoreExports;
 
         if (db && exp && exp.doc && exp.setDoc) {
             try {
-                // Путь: users / {ID_ПОЛЬЗОВАТЕЛЯ}
-                const userRef = exp.doc(db, 'users', user.uid);
+                console.log('Сохранение в Firebase для пользователя:', user.uid);
                 
-                await exp.setDoc(userRef, {
-                    uid: user.uid,
-                    email: user.email,
-                    displayName: [profileData.firstName, profileData.lastName].filter(Boolean).join(' ') || user.displayName,
-                    photoURL: user.photoURL || '',
-                    profile: profileData, // вкладываем профиль внутрь
-                    lastSeen: new Date().toISOString(),
-                    updatedAt: exp.serverTimestamp ? exp.serverTimestamp() : new Date().toISOString()
-                }, { merge: true });
+                await exp.setDoc(
+                    exp.doc(db, 'users', user.uid),
+                    {
+                        uid: user.uid,
+                        email: user.email,
+                        displayName: [profileData.firstName, profileData.lastName].filter(Boolean).join(' ') || user.displayName,
+                        photoURL: user.photoURL || '',
+                        profile: profileData,
+                        lastSeen: new Date().toISOString()
+                    },
+                    { merge: true }
+                );
 
-                // Обновляем имя в профиле Firebase Auth
+                // Обновляем имя в Firebase Auth
                 const newName = [profileData.firstName, profileData.lastName].filter(Boolean).join(' ');
                 if (newName && window.__authExports && window.__authExports.updateProfile) {
                     await window.__authExports.updateProfile(user, { displayName: newName });
@@ -1371,10 +1373,12 @@ document.addEventListener('click', function(e) {
                     if (nameEl) nameEl.textContent = newName;
                 }
 
+                console.log('✅ Профиль успешно сохранен в Firebase');
                 footerShowToast(lang('footer_account_saved'), 'success');
+                
             } catch (err) {
-                console.error('Firebase Save Error:', err);
-                footerShowToast(lang('footer_account_saved_local') + ' (DB Error)', 'error');
+                console.error('❌ Firebase Save Error:', err);
+                footerShowToast(lang('footer_account_saved_local') + ' (Ошибка: ' + err.message + ')', 'error');
             } finally {
                 if (submitBtn) {
                     submitBtn.disabled = false;
@@ -1382,8 +1386,15 @@ document.addEventListener('click', function(e) {
                 }
             }
         } else {
-            console.error('Firebase module not found', {db, exp});
+            console.error('Firebase недоступен:', {
+                db: !!db,
+                exp: !!exp,
+                doc: !!(exp && exp.doc),
+                setDoc: !!(exp && exp.setDoc)
+            });
+            
             footerShowToast(lang('footer_account_saved_local'), 'info');
+            
             if (submitBtn) {
                 submitBtn.disabled = false;
                 submitBtn.innerHTML = originalHTML;
