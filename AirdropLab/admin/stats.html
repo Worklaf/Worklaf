@@ -77,6 +77,7 @@
         .badge-purple { background: rgba(139,92,246,0.2); color:#a78bfa; }
         .badge-yellow { background: rgba(245,158,11,0.2); color:#fbbf24; }
         .badge-gray   { background: rgba(100,116,139,0.2);color:#94a3b8; }
+        .badge-cyan   { background: rgba(6,182,212,0.2);  color:#67e8f9; }
         .tab-btn {
             padding: 7px 14px;
             border-radius: 8px;
@@ -114,8 +115,6 @@
             overflow-y:auto;
         }
         mark { background:rgba(59,130,246,0.3); color:#93c5fd; border-radius:2px; }
-
-        /* Диагностическая панель */
         .debug-panel {
             background: rgba(15,23,42,0.9);
             border: 1px solid rgba(239,68,68,0.3);
@@ -130,6 +129,26 @@
         .debug-err  { color: #f87171; }
         .debug-warn { color: #fbbf24; }
         .debug-info { color: #60a5fa; }
+        .ref-chain {
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            flex-wrap: wrap;
+        }
+        .ref-node {
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            background: rgba(139,92,246,0.15);
+            border: 1px solid rgba(139,92,246,0.3);
+            border-radius: 20px;
+            padding: 2px 8px;
+            font-size: 11px;
+            color: #a78bfa;
+            cursor: pointer;
+        }
+        .ref-node:hover { background: rgba(139,92,246,0.25); }
+        .ref-arrow { color: #475569; font-size: 12px; }
     </style>
 </head>
 <body class="antialiased">
@@ -179,7 +198,7 @@
         <p class="text-slate-400" id="loadingText">Проверка авторизации...</p>
     </div>
 
-    <!-- Debug Panel (скрыт по умолчанию) -->
+    <!-- Debug Panel -->
     <div id="debugPanel" class="debug-panel hidden">
         <div class="flex items-center justify-between mb-3">
             <span class="text-yellow-400 font-bold">🔧 Диагностика подключения</span>
@@ -202,8 +221,8 @@
     <!-- Admin Content -->
     <div id="adminContent" class="hidden">
 
-        <!-- Stat Cards -->
-        <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4 mb-6">
+        <!-- Stat Cards — 7 карточек -->
+        <div class="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-4 mb-6">
             <div class="glass-card rounded-2xl p-4">
                 <div class="w-10 h-10 rounded-xl bg-blue-600/20 flex items-center justify-center mb-3">
                     <i class="fas fa-users text-blue-400"></i>
@@ -246,6 +265,13 @@
                 <div class="stat-value text-2xl font-bold" id="st-countries">—</div>
                 <div class="text-slate-400 text-xs mt-1">Стран</div>
             </div>
+            <div class="glass-card rounded-2xl p-4">
+                <div class="w-10 h-10 rounded-xl bg-indigo-600/20 flex items-center justify-center mb-3">
+                    <i class="fas fa-link text-indigo-400"></i>
+                </div>
+                <div class="stat-value text-2xl font-bold" id="st-referrals">—</div>
+                <div class="text-slate-400 text-xs mt-1">Рефералов</div>
+            </div>
         </div>
 
         <!-- Charts + Broadcast -->
@@ -271,6 +297,15 @@
                     </h3>
                     <div id="countriesChart" class="space-y-2">
                         <p class="text-slate-500 text-sm">Нет данных о странах</p>
+                    </div>
+                </div>
+                <!-- Реферальная статистика -->
+                <div class="glass-card rounded-2xl p-5">
+                    <h3 class="font-semibold text-base mb-4 flex items-center gap-2">
+                        <i class="fas fa-project-diagram text-purple-400"></i> Статистика рефералов
+                    </h3>
+                    <div id="referralsStats" class="space-y-4">
+                        <p class="text-slate-500 text-sm">Загрузка...</p>
                     </div>
                 </div>
             </div>
@@ -330,6 +365,16 @@
                     </div>
                 </div>
 
+                <!-- Top Referrers -->
+                <div class="glass-card rounded-2xl p-5">
+                    <h3 class="font-semibold text-base mb-4 flex items-center gap-2">
+                        <i class="fas fa-link text-purple-400"></i> Топ пригласителей
+                    </h3>
+                    <div id="topReferrers" class="space-y-2">
+                        <p class="text-slate-500 text-sm">Загрузка...</p>
+                    </div>
+                </div>
+
                 <!-- Notifications -->
                 <div class="glass-card rounded-2xl p-5">
                     <h3 class="font-semibold text-base mb-3 flex items-center gap-2">
@@ -361,13 +406,13 @@
                     Пользователи <span id="usersCount" class="text-sm text-slate-400 font-normal"></span>
                 </h3>
                 <div class="flex items-center gap-2 flex-wrap">
-                    <div class="flex gap-1 bg-slate-800/50 p-1 rounded-lg">
-    <button onclick="window.switchTab('main')"     id="tab-main"     class="tab-btn active">Основное</button>
-    <button onclick="window.switchTab('profile')"  id="tab-profile"  class="tab-btn">Профиль</button>
-    <button onclick="window.switchTab('activity')" id="tab-activity" class="tab-btn">Активность</button>
-    <!-- ДОБАВЬ ЭТО: -->
-    <button onclick="window.switchTab('reagents')" id="tab-reagents" class="tab-btn">🧪 Reagents</button>
-</div>
+                    <div class="flex gap-1 bg-slate-800/50 p-1 rounded-lg flex-wrap">
+                        <button onclick="window.switchTab('main')"      id="tab-main"      class="tab-btn active">Основное</button>
+                        <button onclick="window.switchTab('profile')"   id="tab-profile"   class="tab-btn">Профиль</button>
+                        <button onclick="window.switchTab('activity')"  id="tab-activity"  class="tab-btn">Активность</button>
+                        <button onclick="window.switchTab('reagents')"  id="tab-reagents"  class="tab-btn">🧪 Reagents</button>
+                        <button onclick="window.switchTab('referrals')" id="tab-referrals" class="tab-btn">🔗 Рефералы</button>
+                    </div>
                     <button onclick="window.filterOnline()"
                         class="text-xs bg-emerald-600/20 text-emerald-400 px-3 py-1.5 rounded-lg hover:bg-emerald-600/30">
                         <i class="fas fa-circle mr-1"></i>Онлайн
@@ -382,6 +427,8 @@
                         <option value="clicks">По кликам</option>
                         <option value="name">По имени</option>
                         <option value="country">По стране</option>
+                        <option value="referrals">По рефералам</option>
+                        <option value="reagents">По Reagents</option>
                     </select>
                 </div>
             </div>
@@ -424,43 +471,31 @@
 </div>
 
 <script type="module">
-// ─────────────────────────────────────────────────────────────────
-// ИМПОРТЫ — каждый именован уникально, нет конфликтов
-// ─────────────────────────────────────────────────────────────────
 import { initializeApp as fbInitApp, getApps as fbGetApps, getApp as fbGetApp }
     from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
-
 import {
     getAuth as fbGetAuth,
     signInWithPopup as fbSignIn,
     GoogleAuthProvider as fbGoogleProvider,
     onAuthStateChanged as fbOnAuth
 } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
-
 import {
-    getFirestore         as fbGetFirestore,
-    initializeFirestore  as fbInitFirestore,
-    collection           as fbCol,
-    doc                  as fbDoc,
-    getDocs              as fbGetDocs,
-    getDoc               as fbGetDoc,
-    setDoc               as fbSetDoc,
-    deleteDoc            as fbDelDoc,
-    writeBatch           as fbBatch,
-    serverTimestamp      as fbServerTs,
-    query                as fbQuery,
-    orderBy              as fbOrderBy,
-    limit                as fbLimit,
-    CACHE_SIZE_UNLIMITED,
-    persistentLocalCache,
-    persistentSingleTabManager
+    getFirestore as fbGetFirestore,
+    collection   as fbCol,
+    doc          as fbDoc,
+    getDocs      as fbGetDocs,
+    getDoc       as fbGetDoc,
+    setDoc       as fbSetDoc,
+    deleteDoc    as fbDelDoc,
+    writeBatch   as fbBatch,
+    serverTimestamp as fbServerTs,
+    query        as fbQuery,
+    orderBy      as fbOrderBy,
+    limit        as fbLimit
 } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
-// ─────────────────────────────────────────────────────────────────
-// КОНФИГ
-// ─────────────────────────────────────────────────────────────────
+// ── КОНФИГ ────────────────────────────────────────────────────────
 const ADMIN_UID = "SAkz4mdW9reDaIsvqigCNZhEKJR2";
-
 const FB_CONFIG = {
     apiKey:            "AIzaSyBdXGYg2t8DJBrQHCC80-pFerZU9PWmSCk",
     authDomain:        "testnet-hub.firebaseapp.com",
@@ -470,9 +505,7 @@ const FB_CONFIG = {
     appId:             "1:497813176653:web:089188fdd1555d76cd7704"
 };
 
-// ─────────────────────────────────────────────────────────────────
-// ИНИЦИАЛИЗАЦИЯ FIREBASE
-// ─────────────────────────────────────────────────────────────────
+// ── DEBUG ─────────────────────────────────────────────────────────
 function debugLog(msg, type) {
     type = type || 'info';
     const panel = document.getElementById('debugLog');
@@ -482,126 +515,39 @@ function debugLog(msg, type) {
     const icons = { ok:'✅', err:'❌', warn:'⚠️', info:'ℹ️' };
     line.textContent = (icons[type] || '•') + ' ' + msg;
     panel.appendChild(line);
-    console.log('[ADMIN DEBUG]', msg);
+    console.log('[ADMIN]', msg);
 }
 
-let fbApp  = null;
-let fbAuth = null;
-let fbDb   = null;
+let fbApp = null, fbAuth = null, fbDb = null;
 
 function initFirebase() {
     try {
-        // ✅ Проверяем: уже есть инициализированный app?
         const apps = fbGetApps();
-
-        if (apps.length > 0) {
-            // Берём существующий app (из index.html / app.js)
-            fbApp = fbGetApp();
-            debugLog('Используем существующий Firebase App (' + apps.length + ' apps)', 'ok');
-        } else {
-            // Создаём новый
-            fbApp = fbInitApp(FB_CONFIG);
-            debugLog('Создан новый Firebase App', 'ok');
-        }
-
+        fbApp  = apps.length > 0 ? fbGetApp() : fbInitApp(FB_CONFIG);
         fbAuth = fbGetAuth(fbApp);
         fbDb   = fbGetFirestore(fbApp);
-
-        debugLog('Auth: ' + (fbAuth ? 'OK' : 'нет'), fbAuth ? 'ok' : 'err');
-        debugLog('Firestore: ' + (fbDb ? 'OK' : 'нет'), fbDb ? 'ok' : 'err');
-
+        debugLog('Firebase OK (' + (apps.length > 0 ? 'existing' : 'new') + ')', 'ok');
         return true;
-    } catch (err) {
-        debugLog('Ошибка initFirebase: ' + err.message, 'err');
-
-        // Попытка с именованным app
+    } catch(err) {
+        debugLog('initFirebase error: ' + err.message, 'err');
         try {
-            fbApp  = fbInitApp(FB_CONFIG, 'stats-app-' + Date.now());
+            fbApp  = fbInitApp(FB_CONFIG, 'stats-' + Date.now());
             fbAuth = fbGetAuth(fbApp);
             fbDb   = fbGetFirestore(fbApp);
-            debugLog('Создан именованный Firebase App', 'ok');
             return true;
-        } catch (err2) {
-            debugLog('Критическая ошибка: ' + err2.message, 'err');
+        } catch(e2) {
+            debugLog('Fatal: ' + e2.message, 'err');
             return false;
         }
     }
 }
 
-function startAuth() {
-    // Пытаемся взять из window (если открыто как iframe или shared context)
-    if (window.db && window.auth) {
-        fbDb   = window.db;
-        fbAuth = window.auth;
-        debugLog('Взяли Firebase из window.db + window.auth', 'ok');
-    } else {
-        const ok = initFirebase();
-        if (!ok) {
-            setLoading(false);
-            setTableMsg('Ошибка инициализации Firebase', true);
-            return;
-        }
-    }
-
-    setLoading(true, 'Проверка авторизации...');
-
-    fbOnAuth(fbAuth, async function(user) {
-        setLoading(false);
-
-        if (!user) {
-            debugLog('Не авторизован', 'warn');
-            showLoginScreen();
-            return;
-        }
-
-        debugLog('Авторизован: ' + user.email, 'ok');
-        debugLog('UID: ' + user.uid, 'info');
-
-        // ✅ Проверяем isAdmin в Firestore (не только по UID)
-        const isAdminByUID = user.uid === ADMIN_UID;
-
-        let isAdminByField = false;
-        try {
-            const userDoc = await fbGetDoc(fbDoc(fbDb, 'users', user.uid));
-            if (userDoc.exists()) {
-                isAdminByField = userDoc.data().isAdmin === true;
-                debugLog('isAdmin field: ' + isAdminByField, isAdminByField ? 'ok' : 'warn');
-            } else {
-                debugLog('Документ пользователя не найден', 'warn');
-            }
-        } catch (err) {
-            debugLog('Ошибка чтения своего документа: ' + err.message, 'err');
-        }
-
-        const isAdmin = isAdminByUID || isAdminByField;
-        debugLog('Итог isAdmin: ' + isAdmin, isAdmin ? 'ok' : 'err');
-
-        if (!isAdmin) {
-            document.getElementById('accessDenied').classList.remove('hidden');
-            return;
-        }
-
-        document.getElementById('adminContent').classList.remove('hidden');
-        renderTableHead();
-        loadAllData(user);
-    });
-}
-
-// Если Firebase уже инициализирован в родительском app.js — берём оттуда
 function getOrInitFirebase() {
-    // Проверяем window.db (из app.js)
-    if (window.db) {
-        fbDb   = window.db;
-        fbAuth = window.auth || fbGetAuth(fbInitApp(FB_CONFIG));
-        debugLog('Используем Firebase из window.db (app.js)', 'ok');
-        return true;
-    }
+    if (window.db) { fbDb = window.db; fbAuth = window.auth; return true; }
     return initFirebase();
 }
 
-// ─────────────────────────────────────────────────────────────────
-// СОСТОЯНИЕ
-// ─────────────────────────────────────────────────────────────────
+// ── СОСТОЯНИЕ ─────────────────────────────────────────────────────
 let allUsers      = [];
 let filteredUsers = [];
 let selectedIds   = new Set();
@@ -609,196 +555,106 @@ let projectsMap   = new Map();
 let projStats     = {};
 let currentTab    = 'main';
 
+// ── AUTH ──────────────────────────────────────────────────────────
+function startAuth() {
+    if (window.db && window.auth) {
+        fbDb = window.db; fbAuth = window.auth;
+        debugLog('Firebase from window', 'ok');
+    } else {
+        if (!initFirebase()) { setLoading(false); setTableMsg('Ошибка Firebase', true); return; }
+    }
+    setLoading(true, 'Проверка авторизации...');
+    fbOnAuth(fbAuth, async function(user) {
+        setLoading(false);
+        if (!user) { showLoginScreen(); return; }
+        debugLog('User: ' + user.email, 'ok');
+        const isAdminByUID = user.uid === ADMIN_UID;
+        let isAdminByField = false;
+        try {
+            const d = await fbGetDoc(fbDoc(fbDb, 'users', user.uid));
+            if (d.exists()) isAdminByField = d.data().isAdmin === true;
+        } catch(e) { debugLog('read own doc: ' + e.message, 'err'); }
+        if (!isAdminByUID && !isAdminByField) {
+            document.getElementById('accessDenied').classList.remove('hidden');
+            return;
+        }
+        document.getElementById('adminContent').classList.remove('hidden');
+        renderTableHead();
+        loadAllData();
+    });
+}
 
 function showLoginScreen() {
     const el = document.getElementById('loadingScreen');
     el.innerHTML = '<div class="text-6xl mb-4">🔐</div>' +
         '<h2 class="text-2xl font-bold mb-4">Требуется вход</h2>' +
-        '<p class="text-slate-400 mb-6">Только для администратора</p>' +
-        '<button onclick="window.adminLogin()" ' +
-        'class="bg-blue-600 hover:bg-blue-500 px-6 py-3 rounded-lg text-sm font-medium flex items-center gap-2 mx-auto">' +
+        '<button onclick="window.adminLogin()" class="bg-blue-600 hover:bg-blue-500 px-6 py-3 rounded-lg text-sm font-medium flex items-center gap-2 mx-auto">' +
         '<i class="fab fa-google"></i> Войти через Google</button>';
     el.classList.remove('hidden');
 }
 
 window.adminLogin = function() {
-    var provider = new fbGoogleProvider();
-    fbSignIn(fbAuth, provider).catch(function(err) {
-        alert('Ошибка входа: ' + err.message);
-    });
+    fbSignIn(fbAuth, new fbGoogleProvider()).catch(function(e) { alert('Ошибка: ' + e.message); });
 };
 
 function setLoading(show, text) {
     var el = document.getElementById('loadingScreen');
     if (!el) return;
-    if (show) {
-        el.classList.remove('hidden');
-        var textEl = document.getElementById('loadingText');
-        if (textEl) textEl.textContent = text || 'Загрузка...';
-    } else {
-        el.classList.add('hidden');
-    }
+    show ? el.classList.remove('hidden') : el.classList.add('hidden');
+    if (show && text) { var t = document.getElementById('loadingText'); if (t) t.textContent = text; }
 }
 
 window.runDiagnostics = async function() {
     var panel = document.getElementById('debugPanel');
     var log   = document.getElementById('debugLog');
     if (panel) panel.classList.remove('hidden');
-    if (log)   log.innerHTML = '';
-
-    debugLog('=== Диагностика ===', 'info');
-    debugLog('Navigator online: ' + navigator.onLine, navigator.onLine ? 'ok' : 'err');
-
-    // Firebase Apps
-    try {
-        const apps = fbGetApps();
-        debugLog('Firebase Apps инициализировано: ' + apps.length, apps.length > 0 ? 'ok' : 'warn');
-    } catch(e) {
-        debugLog('fbGetApps error: ' + e.message, 'err');
-    }
-
-    debugLog('window.db:   ' + (window.db   ? '✓' : '✗'), window.db   ? 'ok' : 'warn');
-    debugLog('window.auth: ' + (window.auth ? '✓' : '✗'), window.auth ? 'ok' : 'warn');
-    debugLog('fbDb:        ' + (fbDb        ? '✓' : '✗'), fbDb        ? 'ok' : 'err');
-    debugLog('fbAuth:      ' + (fbAuth      ? '✓' : '✗'), fbAuth      ? 'ok' : 'err');
-
-    // Текущий пользователь
-    const currentUser = fbAuth ? fbAuth.currentUser : null;
-    debugLog('Текущий user: ' + (currentUser ? currentUser.email : 'НЕТ'), currentUser ? 'ok' : 'err');
-
-    if (!currentUser) {
-        debugLog('→ ПРИЧИНА: нет авторизации → нет доступа к users', 'err');
-        debugLog('→ Войдите через Google', 'info');
-        return;
-    }
-
-    debugLog('UID: ' + currentUser.uid, 'info');
-    debugLog('UID совпадает с ADMIN_UID: ' + (currentUser.uid === ADMIN_UID), currentUser.uid === ADMIN_UID ? 'ok' : 'warn');
-
-    if (!fbDb) {
-        debugLog('Firestore не инициализирован', 'err');
-        return;
-    }
-
-    // Читаем свой документ
-    try {
-        debugLog('Чтение своего документа users/' + currentUser.uid + '...', 'info');
-        const myDoc = await fbGetDoc(fbDoc(fbDb, 'users', currentUser.uid));
-        if (myDoc.exists()) {
-            const data = myDoc.data();
-            debugLog('Документ найден ✓', 'ok');
-            debugLog('  isAdmin: ' + data.isAdmin, data.isAdmin ? 'ok' : 'err');
-            debugLog('  email: ' + (data.email || '—'), 'info');
-
-            if (!data.isAdmin) {
-                debugLog('→ ДОБАВЬТЕ isAdmin: true в Firebase Console!', 'err');
-                debugLog('→ Firestore → users → ' + currentUser.uid + ' → Add field: isAdmin (boolean) = true', 'warn');
-            }
-        } else {
-            debugLog('Документ НЕ найден в Firestore', 'err');
-        }
-    } catch (err) {
-        debugLog('Ошибка чтения своего документа: ' + err.code, 'err');
-    }
-
-    // Тест чтения всех users
-    try {
-        debugLog('Тест: чтение коллекции users...', 'info');
-        const snap = await fbGetDocs(fbCol(fbDb, "users"));
-        debugLog('users: ' + snap.size + ' документов', snap.size > 0 ? 'ok' : 'warn');
-
-        if (snap.size > 0) {
-            const firstData = snap.docs[0].data();
-            debugLog('Пример структуры документа:', 'info');
-            debugLog('  email: '        + (firstData.email        || '—'), 'info');
-            debugLog('  displayName: '  + (firstData.displayName  || '—'), 'info');
-            debugLog('  profile: '      + (firstData.profile      ? 'объект' : 'нет'), 'info');
-            debugLog('  arcGuideStats: '+ (firstData.arcGuideStats ? 'объект' : 'нет'), 'info');
-            debugLog('  isAdmin: '      + (firstData.isAdmin       || 'нет'),  'info');
-        }
-    } catch (err) {
-        debugLog('users ERROR: ' + err.code + ' — ' + err.message, 'err');
-        if (err.code === 'permission-denied') {
-            debugLog('→ Нет поля isAdmin: true в вашем документе', 'err');
-        }
-    }
-
-    // Тест projects
-    try {
-        const snap2 = await fbGetDocs(fbCol(fbDb, "projects"));
-        debugLog('projects: ' + snap2.size + ' документов', snap2.size > 0 ? 'ok' : 'warn');
-    } catch (err2) {
-        debugLog('projects ERROR: ' + err2.code, 'err');
-    }
-};
-
-window.forceReconnect = function() {
-    var log = document.getElementById('debugLog');
     if (log) log.innerHTML = '';
-    debugLog('Принудительное переподключение...', 'info');
-    debugLog('Перезагрузка страницы...', 'warn');
-    setTimeout(function() { location.reload(true); }, 1000);
-};
-
-// ─────────────────────────────────────────────────────────────────
-// ЗАГРУЗКА ДАННЫХ
-// ─────────────────────────────────────────────────────────────────
-window.reloadData = async function() {
-    if (!fbDb) {
-        var ok = getOrInitFirebase();
-        if (!ok) { alert('Firebase не инициализирован'); return; }
+    debugLog('=== Диагностика ===', 'info');
+    debugLog('Online: ' + navigator.onLine, navigator.onLine ? 'ok' : 'err');
+    debugLog('fbDb: ' + (fbDb ? '✓' : '✗'), fbDb ? 'ok' : 'err');
+    const cu = fbAuth ? fbAuth.currentUser : null;
+    debugLog('User: ' + (cu ? cu.email : 'НЕТ'), cu ? 'ok' : 'err');
+    if (fbDb && cu) {
+        try {
+            const snap = await fbGetDocs(fbCol(fbDb, "users"));
+            debugLog('users: ' + snap.size, snap.size > 0 ? 'ok' : 'warn');
+        } catch(e) { debugLog('users ERROR: ' + e.code, 'err'); }
     }
-    setTableMsg('Загрузка...', false);
-    await loadAllData(null);
 };
 
-async function loadAllData(user) {
-    setTableMsg('<i class="fas fa-spinner fa-spin mr-2 text-blue-400"></i>Загрузка данных...', false);
+window.forceReconnect = function() { setTimeout(function(){ location.reload(true); }, 500); };
 
+// ── ЗАГРУЗКА ДАННЫХ ───────────────────────────────────────────────
+window.reloadData = async function() {
+    if (!fbDb && !getOrInitFirebase()) { alert('Firebase не инициализирован'); return; }
+    await loadAllData();
+};
+
+async function loadAllData() {
+    setTableMsg('<i class="fas fa-spinner fa-spin mr-2 text-blue-400"></i>Загрузка...', false);
     try {
-        // Загружаем проекты и пользователей ПАРАЛЛЕЛЬНО
-        const [, usersOk] = await Promise.allSettled([
-            loadProjects(),
-            loadUsers()
-        ]);
-
-        // Сразу показываем таблицу не дожидаясь статистики
-        await Promise.allSettled([
-            buildProjectStats(),
-            loadNotifStats(),
-            loadBcastHistory()
-        ]);
-
+        await Promise.allSettled([loadProjects(), loadUsers()]);
+        await Promise.allSettled([buildProjectStats(), loadNotifStats(), loadBcastHistory()]);
         updateCount();
-
-    } catch (outerErr) {
-        console.error('[loadAllData]', outerErr);
-        setTableMsg('Ошибка: ' + outerErr.message, true);
-        var panel = document.getElementById('debugPanel');
-        if (panel) panel.classList.remove('hidden');
+    } catch(e) {
+        console.error('[loadAllData]', e);
+        setTableMsg('Ошибка: ' + e.message, true);
+        document.getElementById('debugPanel').classList.remove('hidden');
         window.runDiagnostics();
     }
 }
 
-// ── Проекты ──────────────────────────────────────────────────────
 async function loadProjects() {
     if (!fbDb) return;
     try {
         var snap = await fbGetDocs(fbCol(fbDb, "projects"));
         projectsMap.clear();
         snap.forEach(function(d) { projectsMap.set(d.id, d.data()); });
-        console.log('[loadProjects] Загружено:', projectsMap.size);
-    } catch (err) {
-        console.warn('[loadProjects]', err.code, err.message);
-    }
+    } catch(e) { console.warn('[loadProjects]', e.message); }
 }
 
-// ── Пользователи ─────────────────────────────────────────────────
 async function loadUsers() {
-    if (!fbDb) {
-        setTableMsg('Firebase не инициализирован', true);
-        return;
-    }
+    if (!fbDb) { setTableMsg('Firebase не инициализирован', true); return; }
 
     setTableMsg(
         '<div class="flex flex-col items-center gap-3">' +
@@ -806,42 +662,24 @@ async function loadUsers() {
         '<span class="text-slate-400">Загрузка пользователей...</span>' +
         '<div class="w-48 h-1.5 bg-slate-800 rounded-full overflow-hidden">' +
         '<div class="h-full bg-blue-500 rounded-full loading-bar" style="width:0%;transition:width 8s linear"></div>' +
-        '</div></div>',
-        false
+        '</div></div>', false
     );
-
-    // Анимируем прогресс-бар
-    setTimeout(function() {
-        var bar = document.querySelector('.loading-bar');
-        if (bar) bar.style.width = '90%';
-    }, 50);
+    setTimeout(function(){ var b = document.querySelector('.loading-bar'); if(b) b.style.width='90%'; }, 50);
 
     var snap;
-    try {
-        snap = await fbGetDocs(fbCol(fbDb, "users"));
-    } catch (err) {
-        console.error('[loadUsers] getDocs error:', err);
-        setTableMsg('Ошибка: ' + err.code + ' — ' + err.message, true);
-        throw err;
-    }
-
-    console.log('[loadUsers] Документов:', snap.size);
+    try { snap = await fbGetDocs(fbCol(fbDb, "users")); }
+    catch(e) { setTableMsg('Ошибка: ' + e.code + ' — ' + e.message, true); throw e; }
 
     if (snap.size === 0) {
-        setTableMsg('Нет пользователей или нет доступа', true);
+        setTableMsg('Нет пользователей', true);
         updateStatCards([], new Set());
-        renderActivityChart([]);
-        renderTopUsers([]);
-        renderCountriesChart([]);
+        renderActivityChart([]); renderTopUsers([]); renderCountriesChart([]);
+        renderReferralsStats([]); renderTopReferrers([]);
         return;
     }
 
-    var now        = new Date();
-    var ms30min    = 30 * 60 * 1000;
-    var todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-    var weekStart  = new Date(todayStart);
-    weekStart.setDate(weekStart.getDate() - 7);
-
+    var now     = new Date();
+    var ms30min = 30 * 60 * 1000;
     var countriesSet = new Set();
     allUsers = [];
 
@@ -853,33 +691,23 @@ async function loadUsers() {
             if (!val) return null;
             if (typeof val.toDate === 'function') return val.toDate();
             if (val instanceof Date) return val;
-            var p = new Date(val);
-            return isNaN(p.getTime()) ? null : p;
+            var p = new Date(val); return isNaN(p.getTime()) ? null : p;
         };
 
         var lastLogin  = toDate(raw.lastLogin);
         var firstLogin = toDate(raw.firstLogin);
         var isOnline   = !!(lastLogin && (now - lastLogin) < ms30min);
 
-        // Клики по гайдам
-        var guideStats       = raw.arcGuideStats || {};
-        var totalClicks      = 0;
-        var topProjectId     = null;
-        var topProjectClicks = 0;
-
+        var guideStats = raw.arcGuideStats || {};
+        var totalClicks = 0, topProjectId = null, topProjectClicks = 0;
         Object.keys(guideStats).forEach(function(pid) {
-            var st = guideStats[pid] || {};
-            var cl = Number(st.totalClicks || 0);
+            var cl = Number((guideStats[pid] || {}).totalClicks || 0);
             totalClicks += cl;
-            if (cl > topProjectClicks) {
-                topProjectClicks = cl;
-                topProjectId     = pid;
-            }
+            if (cl > topProjectClicks) { topProjectClicks = cl; topProjectId = pid; }
         });
 
-        // Данные профиля — ищем в нескольких местах
-        var profile   = raw.profile   || {};
-        var userData  = raw.userData  || {};
+        var profile  = raw.profile  || {};
+        var userData = raw.userData || {};
 
         var firstName = profile.firstName  || raw.firstName  || userData.firstName  || '';
         var lastName  = profile.lastName   || raw.lastName   || userData.lastName   || '';
@@ -888,75 +716,78 @@ async function loadUsers() {
         var birthdate = profile.birthdate  || raw.birthdate  || userData.birthdate  || '';
         var gender    = profile.gender     || raw.gender     || userData.gender     || '';
         var bio       = profile.bio        || raw.bio        || userData.bio        || '';
-
+        var city      = profile.city       || raw.city       || userData.city       || '';
+        var twitter   = profile.twitter    || raw.twitter    || userData.twitter    || '';
+        var discord   = profile.discord    || raw.discord    || userData.discord    || '';
+        var evmAddress = profile.evmAddress || raw.evmAddress || '';
+        var solAddress = profile.solAddress || raw.solAddress || '';
         var countryCode = profile.country     || raw.country     || userData.country     || '';
         var countryName = profile.countryName || raw.countryName || userData.countryName || countryCode;
 
         if (countryName) countriesSet.add(countryName);
 
-        var displayName = raw.displayName
-            || [firstName, lastName].filter(Boolean).join(' ')
-            || 'Аноним';
+        var displayName = (raw.displayName || [firstName, lastName].filter(Boolean).join(' ') || 'Аноним').trim() || 'Аноним';
 
         allUsers.push({
-            id:               uid,
-            email:            raw.email    || '—',
-            displayName:      displayName.trim() || 'Аноним',
-            photoURL:         raw.photoURL || '',
-            provider:         raw.provider || 'unknown',
-            firstLogin,
-            lastLogin,
-            isOnline,
-            totalClicks,
-            topProjectId,
-            topProjectClicks,
-            completedCount:   Array.isArray(raw.completed)  ? raw.completed.length  : 0,
-            favoritesCount:   Array.isArray(raw.favorites)  ? raw.favorites.length  : 0,
-            profileFilled:    !!(firstName || lastName || username || telegram || countryCode),
-            firstName,  lastName,  username,
-            telegram,   birthdate, gender,
-            country:    countryName,
-            countryCode,
-            bio,
-            raw,
-            reagents:    raw.reagents    || 0,
-            streak:      raw.streak      || 0,
-            evmAddress:  profile.evmAddress  || raw.evmAddress  || '',
-    solAddress:  profile.solAddress  || raw.solAddress  || '',
-    twitter:     profile.twitter     || raw.twitter     || '',
-    discord:     profile.discord     || raw.discord     || '',
-    city:        profile.city        || raw.city        || '',
-    referralCode: raw.referralCode   || '',
-    invitedCount: raw.invitedCount   || 0,
-    raw
+            id:            uid,
+            email:         raw.email    || '—',
+            displayName,
+            photoURL:      raw.photoURL || '',
+            provider:      raw.provider || 'unknown',
+            firstLogin,    lastLogin,    isOnline,
+            totalClicks,   topProjectId, topProjectClicks,
+            completedCount: Array.isArray(raw.completed) ? raw.completed.length : 0,
+            favoritesCount: Array.isArray(raw.favorites) ? raw.favorites.length : 0,
+            profileFilled:  !!(firstName || lastName || username || telegram || countryCode),
+            firstName, lastName, username, telegram, birthdate, gender, bio,
+            city, twitter, discord, evmAddress, solAddress,
+            country: countryName, countryCode,
+            referralCode:  raw.referralCode  || '',
+            invitedCount:  raw.invitedCount  || 0,
+            invitedBy:     raw.invitedBy     || '',
+            invitedByName: raw.invitedByName || '',
+            invitedAt:     raw.invitedAt     || '',
+            reagents:      raw.reagents      || 0,
+            streak:        raw.streak        || 0,
+            invitedUsers:  [],   // заполним ниже
+            raw
         });
     });
 
-    // Сортировка по последнему входу
-    allUsers.sort(function(a, b) { return (b.lastLogin || 0) - (a.lastLogin || 0); });
+    // ✅ FIX: строим карту рефералов ПОСЛЕ того как allUsers заполнен
+    var referralsMap = {};
+    allUsers.forEach(function(u) {
+        if (u.invitedBy) {
+            if (!referralsMap[u.invitedBy]) referralsMap[u.invitedBy] = [];
+            referralsMap[u.invitedBy].push(u);
+        }
+    });
+    allUsers.forEach(function(u) {
+        u.invitedUsers = referralsMap[u.id] || [];
+    });
+
+    allUsers.sort(function(a,b){ return (b.lastLogin||0)-(a.lastLogin||0); });
     filteredUsers = allUsers.slice();
 
-    // Рендерим всё
     updateStatCards(allUsers, countriesSet);
     renderActivityChart(allUsers);
     renderTopUsers(allUsers);
+    renderTopReferrers(allUsers);
     renderCountriesChart(allUsers);
+    renderReferralsStats(allUsers);
     renderTableHead();
     renderTable();
     updateTimestamp();
     updateCount();
-
-    console.log('[loadUsers] Готово:', allUsers.length, 'пользователей');
 }
 
-// ── Статистика проектов ───────────────────────────────────────────
 async function buildProjectStats() {
     projStats = {};
-    allUsers.forEach(function(user) {
-        var gs = user.raw.arcGuideStats || {};
+    allUsers.forEach(function(u) {
+        var gs = u.raw.arcGuideStats || {};
         Object.keys(gs).forEach(function(pid) {
             if (!projectsMap.has(pid)) return;
-            if (!projStats[pid]) projStats[pid] = { clicks: 0, userCount: 0 };
+            if (!projStats[pid]) projStats[pid] = { clicks:0, userCount:0 };
             projStats[pid].clicks += (gs[pid].totalClicks || 0);
             projStats[pid].userCount++;
         });
@@ -964,137 +795,119 @@ async function buildProjectStats() {
     renderTopProjects();
 }
 
-// ── Уведомления ───────────────────────────────────────────────────
 async function loadNotifStats() {
     if (!fbDb) return;
     try {
         var snap = await fbGetDocs(fbCol(fbDb, "notifications"));
-        var total = snap.size;
         var viewed = 0;
-        snap.forEach(function(d) {
-            var data = d.data();
-            if (data.read || data.viewedAt) viewed++;
-        });
-        setText('notif-total',  total);
+        snap.forEach(function(d){ if(d.data().read || d.data().viewedAt) viewed++; });
+        setText('notif-total',  snap.size);
         setText('notif-viewed', viewed);
-        setText('notif-rate',   total > 0 ? Math.round(viewed / total * 100) + '%' : '0%');
-    } catch (err) {
-        console.warn('[loadNotifStats]', err.message);
-    }
+        setText('notif-rate',   snap.size > 0 ? Math.round(viewed/snap.size*100)+'%' : '0%');
+    } catch(e) { console.warn('[loadNotifStats]', e.message); }
 }
 
-// ── История рассылок ──────────────────────────────────────────────
 async function loadBcastHistory() {
     var container = document.getElementById('bcastHistory');
     if (!fbDb || !container) return;
     try {
-        var qry  = fbQuery(fbCol(fbDb, "broadcasts"), fbOrderBy("createdAt", "desc"), fbLimit(10));
+        var qry  = fbQuery(fbCol(fbDb,"broadcasts"), fbOrderBy("createdAt","desc"), fbLimit(10));
         var snap = await fbGetDocs(qry);
         if (snap.empty) { container.innerHTML = '<p class="text-slate-500 text-sm">Нет рассылок</p>'; return; }
         var colorMap = {
-            info:     'bg-blue-600/20 text-blue-400',
-            success:  'bg-green-600/20 text-green-400',
-            warning:  'bg-yellow-600/20 text-yellow-400',
-            promo:    'bg-pink-600/20 text-pink-400',
-            referral: 'bg-purple-600/20 text-purple-400'
+            info:'bg-blue-600/20 text-blue-400', success:'bg-green-600/20 text-green-400',
+            warning:'bg-yellow-600/20 text-yellow-400', promo:'bg-pink-600/20 text-pink-400',
+            referral:'bg-purple-600/20 text-purple-400'
         };
         container.innerHTML = snap.docs.map(function(d) {
             var data  = d.data();
             var date  = data.createdAt ? data.createdAt.toDate() : new Date();
             var color = colorMap[data.type] || colorMap.info;
-            return '<div class="flex items-start gap-3 p-3 bg-slate-800/50 rounded-lg">' +
-                '<div class="w-9 h-9 rounded-lg ' + color + ' flex items-center justify-center flex-shrink-0">' +
-                '<i class="fas fa-bell text-sm"></i></div>' +
+            return '<div class="flex items-start gap-3 p-3 bg-slate-800/50 rounded-lg mb-2">' +
+                '<div class="w-9 h-9 rounded-lg '+color+' flex items-center justify-center flex-shrink-0"><i class="fas fa-bell text-sm"></i></div>' +
                 '<div class="flex-1 min-w-0">' +
                 '<div class="flex items-center gap-2 mb-1">' +
-                '<span class="text-xs px-2 py-0.5 rounded ' + color + '">' + (data.type || 'info') + '</span>' +
-                '<span class="text-xs text-slate-500">' + date.toLocaleString('ru-RU') + '</span>' +
-                '</div>' +
-                '<p class="text-sm text-slate-300 line-clamp-2">' + esc(data.message || '') + '</p>' +
+                '<span class="text-xs px-2 py-0.5 rounded '+color+'">'+(data.type||'info')+'</span>' +
+                '<span class="text-xs text-slate-500">'+date.toLocaleString('ru-RU')+'</span></div>' +
+                '<p class="text-sm text-slate-300 line-clamp-2">'+esc(data.message||'')+'</p>' +
                 '<div class="flex gap-3 mt-1 text-xs text-slate-500">' +
-                '<span>📤 ' + (data.recipientCount || 0) + '</span>' +
-                '<span>👁️ ' + (data.viewCount || 0) + '</span>' +
-                '</div></div>' +
-                '<button onclick="window.delBcast(\'' + d.id + '\')" class="text-red-400 hover:text-red-300 p-1 flex-shrink-0">' +
-                '<i class="fas fa-trash text-xs"></i></button></div>';
+                '<span>📤 '+(data.recipientCount||0)+'</span>' +
+                '<span>👁️ '+(data.viewCount||0)+'</span></div></div>' +
+                '<button onclick="window.delBcast(\''+d.id+'\')" class="text-red-400 hover:text-red-300 p-1 flex-shrink-0"><i class="fas fa-trash text-xs"></i></button></div>';
         }).join('');
-    } catch (err) {
-        console.warn('[loadBcastHistory]', err.message);
-        container.innerHTML = '<p class="text-red-400 text-sm">Ошибка: ' + err.message + '</p>';
+    } catch(e) {
+        container.innerHTML = '<p class="text-red-400 text-sm">Ошибка: '+e.message+'</p>';
     }
 }
 
 window.delBcast = async function(id) {
     if (!confirm('Удалить?')) return;
-    await fbDelDoc(fbDoc(fbDb, "broadcasts", id));
+    await fbDelDoc(fbDoc(fbDb,"broadcasts",id));
     loadBcastHistory();
 };
 
-// ─────────────────────────────────────────────────────────────────
-// РЕНДЕР
-// ─────────────────────────────────────────────────────────────────
+// ── РЕНДЕР ────────────────────────────────────────────────────────
 function updateStatCards(users, countriesSet) {
-    var now       = new Date();
-    var today     = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-    var weekAgo   = new Date(today); weekAgo.setDate(weekAgo.getDate() - 7);
-
+    var now    = new Date();
+    var today  = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    var weekAgo = new Date(today); weekAgo.setDate(weekAgo.getDate()-7);
     setText('st-total',     users.length);
-    setText('st-today',     users.filter(function(u) { return u.firstLogin && u.firstLogin >= today; }).length);
-    setText('st-week',      users.filter(function(u) { return u.lastLogin  && u.lastLogin  >= weekAgo; }).length);
-    setText('st-online',    users.filter(function(u) { return u.isOnline; }).length);
-    setText('st-profiles',  users.filter(function(u) { return u.profileFilled; }).length);
+    setText('st-today',     users.filter(function(u){ return u.firstLogin && u.firstLogin >= today; }).length);
+    setText('st-week',      users.filter(function(u){ return u.lastLogin  && u.lastLogin  >= weekAgo; }).length);
+    setText('st-online',    users.filter(function(u){ return u.isOnline; }).length);
+    setText('st-profiles',  users.filter(function(u){ return u.profileFilled; }).length);
     setText('st-countries', countriesSet ? countriesSet.size : new Set(users.map(function(u){ return u.country; }).filter(Boolean)).size);
-    setText('usersCount',   '(' + users.length + ')');
+    // Считаем тех, кто пригласил хотя бы одного
+    setText('st-referrals', users.filter(function(u){ return u.invitedCount > 0; }).length);
+    setText('usersCount', '('+users.length+')');
 }
 
 function renderActivityChart(users) {
     var container = document.getElementById('activityChart');
     if (!container) return;
-    var now  = new Date();
-    var days = [];
-    for (var i = 6; i >= 0; i--) {
-        var d  = new Date(now); d.setDate(d.getDate() - i);
-        var ds = new Date(d.getFullYear(), d.getMonth(), d.getDate());
-        var de = new Date(ds); de.setDate(de.getDate() + 1);
-        var cnt = users.filter(function(u) { return u.lastLogin && u.lastLogin >= ds && u.lastLogin < de; }).length;
-        days.push({ label: d.toLocaleDateString('ru-RU', {weekday:'short', day:'numeric'}), count: cnt, isToday: d.toDateString() === now.toDateString() });
+    var now = new Date(), days = [];
+    for (var i=6; i>=0; i--) {
+        var d  = new Date(now); d.setDate(d.getDate()-i);
+        var ds = new Date(d.getFullYear(),d.getMonth(),d.getDate());
+        var de = new Date(ds); de.setDate(de.getDate()+1);
+        var cnt = users.filter(function(u){ return u.lastLogin && u.lastLogin>=ds && u.lastLogin<de; }).length;
+        days.push({ label: d.toLocaleDateString('ru-RU',{weekday:'short',day:'numeric'}), count:cnt, isToday: d.toDateString()===now.toDateString() });
     }
     var maxVal = Math.max.apply(null, days.map(function(d){ return d.count; }).concat([1]));
     container.innerHTML = days.map(function(day) {
-        var pct = Math.round(day.count / maxVal * 100);
+        var pct = Math.round(day.count/maxVal*100);
         var cls = day.isToday ? 'bg-gradient-to-r from-blue-500 to-purple-500' : 'bg-gradient-to-r from-blue-600/40 to-purple-600/40';
         return '<div class="flex items-center gap-3">' +
-            '<span class="text-xs text-slate-400 w-14">' + day.label + '</span>' +
+            '<span class="text-xs text-slate-400 w-14">'+day.label+'</span>' +
             '<div class="flex-1 h-6 bg-slate-800 rounded-lg overflow-hidden">' +
-            '<div class="h-full rounded-lg ' + cls + '" style="width:' + pct + '%"></div></div>' +
-            '<span class="text-sm text-slate-300 w-5 text-right">' + day.count + '</span></div>';
+            '<div class="h-full rounded-lg '+cls+'" style="width:'+pct+'%"></div></div>' +
+            '<span class="text-sm text-slate-300 w-5 text-right">'+day.count+'</span></div>';
     }).join('');
 }
 
 function renderTopProjects() {
     var container = document.getElementById('topProjects');
     if (!container) return;
-    var sorted = Object.keys(projStats).map(function(pid) {
-        return { id: pid, clicks: projStats[pid].clicks, userCount: projStats[pid].userCount };
-    }).sort(function(a, b) { return b.clicks - a.clicks; }).slice(0, 6);
-    if (!sorted.length) { container.innerHTML = '<p class="text-slate-500 text-sm col-span-3">Нет данных</p>'; return; }
-    var maxC   = sorted[0].clicks || 1;
+    var sorted = Object.keys(projStats).map(function(pid){
+        return {id:pid, clicks:projStats[pid].clicks, userCount:projStats[pid].userCount};
+    }).sort(function(a,b){ return b.clicks-a.clicks; }).slice(0,6);
+    if (!sorted.length) { container.innerHTML='<p class="text-slate-500 text-sm col-span-3">Нет данных</p>'; return; }
+    var maxC   = sorted[0].clicks||1;
     var colors = ['bg-yellow-500','bg-slate-400','bg-orange-500','bg-blue-500','bg-purple-500','bg-green-500'];
     var medals = ['🥇','🥈','🥉','4️⃣','5️⃣','6️⃣'];
-    container.innerHTML = sorted.map(function(ps, idx) {
+    container.innerHTML = sorted.map(function(ps,idx){
         var proj = projectsMap.get(ps.id);
-        var name = proj ? (proj.name || ps.id) : ps.id;
-        var img  = proj && proj.image ? proj.image : '';
-        var pct  = Math.round(ps.clicks / maxC * 100);
+        var name = proj ? (proj.name||ps.id) : ps.id;
+        var img  = proj&&proj.image ? proj.image : '';
+        var pct  = Math.round(ps.clicks/maxC*100);
         return '<div class="bg-slate-800/50 rounded-lg p-3">' +
-            '<div class="flex items-center justify-between mb-2">' +
-            '<span>' + medals[idx] + '</span>' +
-            '<span class="text-xs text-slate-500">' + ps.userCount + ' чел.</span></div>' +
+            '<div class="flex items-center justify-between mb-2"><span>'+medals[idx]+'</span>' +
+            '<span class="text-xs text-slate-500">'+ps.userCount+' чел.</span></div>' +
             '<div class="flex items-center gap-2 mb-2">' +
-            (img ? '<img src="' + img + '" class="w-7 h-7 rounded-full object-cover" onerror="this.style.display=\'none\'">' : '') +
-            '<span class="text-xs font-medium truncate flex-1">' + esc(name) + '</span></div>' +
-            '<div class="text-xs text-slate-400 mb-1">' + ps.clicks + ' кликов</div>' +
-            '<div class="h-1.5 bg-slate-700 rounded-full"><div class="h-full ' + colors[idx] + ' rounded-full" style="width:' + pct + '%"></div></div></div>';
+            (img?'<img src="'+img+'" class="w-7 h-7 rounded-full object-cover" onerror="this.style.display=\'none\'">':'') +
+            '<span class="text-xs font-medium truncate flex-1">'+esc(name)+'</span></div>' +
+            '<div class="text-xs text-slate-400 mb-1">'+ps.clicks+' кликов</div>' +
+            '<div class="h-1.5 bg-slate-700 rounded-full"><div class="h-full '+colors[idx]+' rounded-full" style="width:'+pct+'%"></div></div></div>';
     }).join('');
 }
 
@@ -1102,49 +915,134 @@ function renderCountriesChart(users) {
     var container = document.getElementById('countriesChart');
     if (!container) return;
     var counts = {};
-    users.forEach(function(u) { if (u.country) counts[u.country] = (counts[u.country] || 0) + 1; });
-    var sorted = Object.entries(counts).sort(function(a, b) { return b[1] - a[1]; }).slice(0, 10);
-    if (!sorted.length) { container.innerHTML = '<p class="text-slate-500 text-sm">Страны не указаны</p>'; return; }
-    var maxC = sorted[0][1] || 1;
-    container.innerHTML = sorted.map(function(entry) {
-        var pct = Math.round(entry[1] / maxC * 100);
+    users.forEach(function(u){ if(u.country) counts[u.country]=(counts[u.country]||0)+1; });
+    var sorted = Object.entries(counts).sort(function(a,b){ return b[1]-a[1]; }).slice(0,10);
+    if (!sorted.length) { container.innerHTML='<p class="text-slate-500 text-sm">Страны не указаны</p>'; return; }
+    var maxC = sorted[0][1]||1;
+    container.innerHTML = sorted.map(function(entry){
+        var pct = Math.round(entry[1]/maxC*100);
         return '<div class="flex items-center gap-3">' +
-            '<span class="text-xs text-slate-300 w-28 truncate">' + esc(entry[0]) + '</span>' +
+            '<span class="text-xs text-slate-300 w-28 truncate">'+esc(entry[0])+'</span>' +
             '<div class="flex-1 h-5 bg-slate-800 rounded overflow-hidden">' +
-            '<div class="h-full bg-gradient-to-r from-pink-600/60 to-purple-600/60 rounded" style="width:' + pct + '%"></div></div>' +
-            '<span class="text-xs text-slate-400 w-5 text-right">' + entry[1] + '</span></div>';
+            '<div class="h-full bg-gradient-to-r from-pink-600/60 to-purple-600/60 rounded" style="width:'+pct+'%"></div></div>' +
+            '<span class="text-xs text-slate-400 w-5 text-right">'+entry[1]+'</span></div>';
     }).join('');
 }
 
 function renderTopUsers(users) {
     var container = document.getElementById('topUsers');
     if (!container) return;
-    var arr    = users || allUsers;
-    var top5   = arr.slice().sort(function(a, b) { return b.totalClicks - a.totalClicks; }).slice(0, 5);
+    var top5 = (users||allUsers).slice().sort(function(a,b){ return b.totalClicks-a.totalClicks; }).slice(0,5);
+    if (!top5.length) { container.innerHTML='<p class="text-slate-500 text-sm">Нет данных</p>'; return; }
     var medals = ['🥇','🥈','🥉','4️⃣','5️⃣'];
-    if (!top5.length) { container.innerHTML = '<p class="text-slate-500 text-sm">Нет данных</p>'; return; }
-    container.innerHTML = top5.map(function(u, i) {
-        var av = u.photoURL ? u.photoURL : 'https://ui-avatars.com/api/?name=' + encodeURIComponent(u.displayName) + '&background=3b82f6&color=fff';
-        return '<div class="flex items-center gap-2 p-2.5 bg-slate-800/50 rounded-lg cursor-pointer hover:bg-slate-700/50" onclick="window.openProfile(\'' + u.id + '\')">' +
-            '<span class="text-base w-7">' + medals[i] + '</span>' +
-            '<img src="' + av + '" class="w-8 h-8 rounded-full object-cover" onerror="this.style.display=\'none\'">' +
+    container.innerHTML = top5.map(function(u,i){
+        var av = u.photoURL||('https://ui-avatars.com/api/?name='+encodeURIComponent(u.displayName)+'&background=3b82f6&color=fff');
+        return '<div class="flex items-center gap-2 p-2.5 bg-slate-800/50 rounded-lg cursor-pointer hover:bg-slate-700/50" onclick="window.openProfile(\''+u.id+'\')">' +
+            '<span class="text-base w-7">'+medals[i]+'</span>' +
+            '<img src="'+av+'" class="w-8 h-8 rounded-full object-cover" onerror="this.style.display=\'none\'">' +
             '<div class="flex-1 min-w-0">' +
-            '<div class="text-sm font-medium truncate">' + esc(u.displayName) + '</div>' +
-            '<div class="text-xs text-slate-500">' + esc(u.country || u.email) + '</div></div>' +
-            '<div class="text-right"><div class="text-base font-bold text-blue-400">' + u.totalClicks + '</div>' +
+            '<div class="text-sm font-medium truncate">'+esc(u.displayName)+'</div>' +
+            '<div class="text-xs text-slate-500">'+esc(u.country||u.email)+'</div></div>' +
+            '<div class="text-right"><div class="text-base font-bold text-blue-400">'+u.totalClicks+'</div>' +
             '<div class="text-[10px] text-slate-500">кликов</div></div></div>';
     }).join('');
 }
 
-// ─────────────────────────────────────────────────────────────────
-// ТАБЛИЦА
-// ─────────────────────────────────────────────────────────────────
+// ✅ НОВАЯ функция — Топ пригласителей
+function renderTopReferrers(users) {
+    var container = document.getElementById('topReferrers');
+    if (!container) return;
+    var top5 = (users||allUsers).slice()
+        .filter(function(u){ return u.invitedCount > 0; })
+        .sort(function(a,b){ return b.invitedCount - a.invitedCount; })
+        .slice(0,5);
+    if (!top5.length) { container.innerHTML='<p class="text-slate-500 text-sm">Рефералов пока нет</p>'; return; }
+    var medals = ['🥇','🥈','🥉','4️⃣','5️⃣'];
+    container.innerHTML = top5.map(function(u,i){
+        var av = u.photoURL||('https://ui-avatars.com/api/?name='+encodeURIComponent(u.displayName)+'&background=8b5cf6&color=fff');
+        return '<div class="flex items-center gap-2 p-2.5 bg-slate-800/50 rounded-lg cursor-pointer hover:bg-slate-700/50" onclick="window.openProfile(\''+u.id+'\')">' +
+            '<span class="text-base w-7">'+medals[i]+'</span>' +
+            '<img src="'+av+'" class="w-8 h-8 rounded-full object-cover" onerror="this.style.display=\'none\'">' +
+            '<div class="flex-1 min-w-0">' +
+            '<div class="text-sm font-medium truncate">'+esc(u.displayName)+'</div>' +
+            '<div class="text-xs text-slate-500 font-mono">'+esc(u.referralCode||'—')+'</div></div>' +
+            '<div class="text-right"><div class="text-base font-bold text-purple-400">'+u.invitedCount+'</div>' +
+            '<div class="text-[10px] text-slate-500">рефералов</div></div></div>';
+    }).join('');
+}
+
+// ✅ НОВАЯ функция — Статистика рефералов
+function renderReferralsStats(users) {
+    var container = document.getElementById('referralsStats');
+    if (!container) return;
+
+    var totalInvited    = users.filter(function(u){ return u.invitedBy; }).length;
+    var totalInviters   = users.filter(function(u){ return u.invitedCount > 0; }).length;
+    var totalRefs       = users.reduce(function(s,u){ return s+(u.invitedCount||0); }, 0);
+    var avgRefs         = totalInviters > 0 ? (totalRefs/totalInviters).toFixed(1) : '0';
+    var convRate        = users.length > 0 ? Math.round(totalInvited/users.length*100) : 0;
+
+    // Топ-5 пригласителей для мини-таблицы
+    var topRef = users.slice()
+        .filter(function(u){ return u.invitedCount > 0; })
+        .sort(function(a,b){ return b.invitedCount-a.invitedCount; })
+        .slice(0,5);
+
+    container.innerHTML =
+        // Счётчики
+        '<div class="grid grid-cols-2 md:grid-cols-4 gap-3 mb-4">' +
+            _statBox('👤 Приглашённых', totalInvited, 'text-emerald-400') +
+            _statBox('🎯 Пригласивших', totalInviters, 'text-purple-400') +
+            _statBox('📊 Среднее', avgRefs, 'text-blue-400') +
+            _statBox('📈 Конверсия', convRate+'%', 'text-yellow-400') +
+        '</div>' +
+
+        // Мини-таблица цепочек
+        (topRef.length ? '<div>' +
+            '<div class="text-xs text-slate-500 font-semibold mb-2 uppercase tracking-wide">Топ реферальные цепочки</div>' +
+            topRef.map(function(u) {
+                // Строим цепочку: пригласитель → приглашённые
+                var chain = '<div class="flex flex-col gap-1.5 p-3 bg-slate-800/40 rounded-lg mb-2">' +
+                    '<div class="flex items-center gap-2 mb-1">' +
+                        '<img src="'+(u.photoURL||'https://ui-avatars.com/api/?name='+encodeURIComponent(u.displayName)+'&background=8b5cf6&color=fff')+'" class="w-6 h-6 rounded-full object-cover">' +
+                        '<span class="text-sm font-medium text-purple-300 cursor-pointer hover:text-purple-200" onclick="window.openProfile(\''+u.id+'\')">'+esc(u.displayName)+'</span>' +
+                        '<span class="badge badge-purple text-[10px]">'+u.invitedCount+' реф.</span>' +
+                        (u.referralCode ? '<span class="text-[10px] font-mono text-slate-500">'+esc(u.referralCode)+'</span>' : '') +
+                    '</div>' +
+                    // Список приглашённых
+                    (u.invitedUsers && u.invitedUsers.length ?
+                        '<div class="pl-4 space-y-1">' +
+                        u.invitedUsers.slice(0,5).map(function(ru) {
+                            return '<div class="flex items-center gap-2">' +
+                                '<i class="fas fa-level-up-alt fa-rotate-90 text-slate-600 text-[10px]"></i>' +
+                                '<img src="'+(ru.photoURL||'https://ui-avatars.com/api/?name='+encodeURIComponent(ru.displayName)+'&background=334155&color=fff')+'" class="w-5 h-5 rounded-full object-cover">' +
+                                '<span class="text-xs text-slate-300 cursor-pointer hover:text-white" onclick="window.openProfile(\''+ru.id+'\')">'+esc(ru.displayName)+'</span>' +
+                                '<span class="text-[10px] text-slate-500">'+esc(ru.email)+'</span>' +
+                                (ru.invitedAt ? '<span class="text-[10px] text-slate-600 ml-auto">'+fmtDate(new Date(ru.invitedAt))+'</span>' : '') +
+                                '</div>';
+                        }).join('') +
+                        (u.invitedUsers.length>5 ? '<div class="text-[10px] text-slate-500 pl-5">...ещё '+(u.invitedUsers.length-5)+'</div>' : '') +
+                        '</div>'
+                    : '') +
+                '</div>';
+                return chain;
+            }).join('') +
+        '</div>' : '');
+}
+
+function _statBox(label, val, cls) {
+    return '<div class="bg-slate-800/50 rounded-xl p-3 text-center">' +
+        '<div class="text-xl font-bold '+cls+'">'+val+'</div>' +
+        '<div class="text-[11px] text-slate-500 mt-0.5">'+label+'</div>' +
+        '</div>';
+}
+
+// ── ТАБЛИЦА ───────────────────────────────────────────────────────
 window.switchTab = function(tab) {
     currentTab = tab;
-    // Обновляем список вкладок (добавь 'reagents'):
-    ['main','profile','activity','reagents'].forEach(function(t) {
-        var btn = document.getElementById('tab-' + t);
-        if (btn) btn.classList.toggle('active', t === tab);
+    ['main','profile','activity','reagents','referrals'].forEach(function(t){
+        var btn = document.getElementById('tab-'+t);
+        if (btn) btn.classList.toggle('active', t===tab);
     });
     renderTableHead();
     renderTable();
@@ -1153,650 +1051,488 @@ window.switchTab = function(tab) {
 function renderTableHead() {
     var head = document.getElementById('tHead');
     if (!head) return;
-
     var cb = '<th class="w-10"><input type="checkbox" onchange="window.toggleAll()" class="w-4 h-4 rounded"></th>';
-
     var heads = {
         main:
-            '<tr>' + cb +
-            '<th>Пользователь</th><th>UID</th><th>Первый вход</th>' +
-            '<th>Последний вход</th><th>Способ входа</th><th>Статус</th></tr>',
-
+            '<tr>'+cb+'<th>Пользователь</th><th>UID</th><th>Первый вход</th><th>Последний вход</th><th>Способ входа</th><th>Статус</th></tr>',
         profile:
-    '<tr>' + cb +
-    '<th>Пользователь</th><th>Имя</th><th>Фамилия</th>' +
-    '<th>Никнейм</th><th>Город</th><th>Страна</th>' +
-    '<th>Пол</th><th>Дата рожд.</th></tr>',
-
+            '<tr>'+cb+'<th>Пользователь</th><th>Имя</th><th>Фамилия</th><th>Никнейм</th><th>Город</th><th>Страна</th><th>Пол</th><th>Дата рожд.</th></tr>',
         activity:
-            '<tr>' + cb +
-            '<th>Пользователь</th><th class="text-center">Кликов</th>' +
-            '<th class="text-center">Завершено</th>' +
-            '<th class="text-center">Избранное ❤️</th>' +
-            '<th>Топ проект</th></tr>',
-
-        // 🔥 НОВАЯ ВКЛАДКА
+            '<tr>'+cb+'<th>Пользователь</th><th class="text-center">Кликов</th><th class="text-center">Завершено</th><th class="text-center">Избранное ❤️</th><th>Топ проект</th></tr>',
         reagents:
-            '<tr>' + cb +
-            '<th>Пользователь</th>' +
-            '<th class="text-center">🧪 Reagents</th>' +
-            '<th class="text-center">🔥 Стрик</th>' +
-            '<th class="text-center">👥 Рефералов</th>' +
-            '<th>Twitter</th>' +
-            '<th>Discord</th>' +
-            '<th>Telegram</th>' +
-            '</tr>'
+            '<tr>'+cb+'<th>Пользователь</th><th class="text-center">🧪 Reagents</th><th class="text-center">🔥 Стрик</th><th class="text-center">👥 Реф.</th><th>Twitter</th><th>Discord</th><th>Telegram</th></tr>',
+        referrals:
+            '<tr>'+cb+'<th>Пользователь</th><th>Реф. код</th><th>Кто пригласил</th><th>Когда пригласил</th><th class="text-center">Пригласил</th><th class="text-center">🧪 RGT</th><th class="text-center">🔥 Стрик</th></tr>'
     };
-
     head.innerHTML = heads[currentTab] || heads.main;
 }
 
-
 function renderTable() {
-    var tbody  = document.getElementById('tBody');
+    var tbody = document.getElementById('tBody');
     if (!tbody) return;
     if (!filteredUsers.length) {
         tbody.innerHTML = '<tr><td colspan="9" class="py-8 text-center text-slate-500">Нет пользователей</td></tr>';
         return;
     }
-    var srch = ((document.getElementById('searchInput') || {}).value || '').toLowerCase();
+    var srch = ((document.getElementById('searchInput')||{}).value||'').toLowerCase();
     tbody.innerHTML = filteredUsers.map(function(user) {
         var sel   = selectedIds.has(user.id);
-        var rowCl = 'user-row border-b border-slate-800/30' + (sel ? ' selected-row' : '');
-        var cb    = '<td class="w-10"><input type="checkbox"' + (sel ? ' checked' : '') +
-                    ' onchange="window.toggleSel(\'' + user.id + '\')" class="w-4 h-4 rounded"></td>';
+        var rowCl = 'user-row border-b border-slate-800/30'+(sel?' selected-row':'');
+        var cbEl  = '<td class="w-10"><input type="checkbox"'+(sel?' checked':'')+' onchange="window.toggleSel(\''+user.id+'\')" class="w-4 h-4 rounded"></td>';
 
         var avSrc = user.photoURL
-            ? user.photoURL
-            : 'https://ui-avatars.com/api/?name=' + encodeURIComponent(user.displayName[0] || '?') + '&background=334155&color=fff';
+            || 'https://ui-avatars.com/api/?name='+encodeURIComponent(user.displayName[0]||'?')+'&background=334155&color=fff';
+        var av = '<img src="'+avSrc+'" class="w-8 h-8 rounded-full object-cover mr-2 flex-shrink-0" onerror="this.src=\'https://ui-avatars.com/api/?name=?&background=334155&color=fff\'">';
 
-        var av    = '<img src="' + avSrc + '" class="w-8 h-8 rounded-full object-cover mr-2 flex-shrink-0" ' +
-                    'onerror="this.src=\'https://ui-avatars.com/api/?name=?&background=334155&color=fff\'">';
-
-        var userCell = '<td><div class="flex items-center cursor-pointer hover:opacity-80" onclick="window.openProfile(\'' + user.id + '\')">' +
-            av + '<div class="min-w-0">' +
-            '<div class="text-sm font-medium flex items-center gap-1.5">' +
-            hlText(user.displayName, srch) +
-            (user.isOnline ? '<span class="w-1.5 h-1.5 bg-emerald-400 rounded-full flex-shrink-0"></span>' : '') +
-            '</div>' +
-            '<div class="text-xs text-slate-500 truncate max-w-[150px]">' + hlText(user.email, srch) + '</div>' +
+        var userCell = '<td><div class="flex items-center cursor-pointer hover:opacity-80" onclick="window.openProfile(\''+user.id+'\')">' +
+            av+'<div class="min-w-0">' +
+            '<div class="text-sm font-medium flex items-center gap-1.5">'+hlText(user.displayName,srch)+
+            (user.isOnline?'<span class="w-1.5 h-1.5 bg-emerald-400 rounded-full flex-shrink-0"></span>':'')+
+            '</div><div class="text-xs text-slate-500 truncate max-w-[150px]">'+hlText(user.email,srch)+'</div>' +
             '</div></div></td>';
 
         if (currentTab === 'main') {
-            return '<tr class="' + rowCl + '">' + cb + userCell +
-                '<td><span class="text-xs font-mono text-slate-500" title="' + user.id + '">' + user.id.substring(0,10) + '…</span></td>' +
-                '<td class="text-xs text-slate-300">' + fmtDate(user.firstLogin) + '</td>' +
-                '<td class="text-xs ' + (isRecent(user.lastLogin) ? 'text-emerald-400' : 'text-slate-300') + '">' + fmtDate(user.lastLogin) + '</td>' +
-                '<td>' + provBadge(user.provider) + '</td>' +
-                '<td>' + (user.isOnline ? '<span class="badge badge-green">Online</span>' : '<span class="text-slate-600 text-xs">—</span>') + '</td>' +
+            return '<tr class="'+rowCl+'">'+cbEl+userCell+
+                '<td><span class="text-xs font-mono text-slate-500" title="'+user.id+'">'+user.id.substring(0,10)+'…</span></td>'+
+                '<td class="text-xs text-slate-300">'+fmtDate(user.firstLogin)+'</td>'+
+                '<td class="text-xs '+(isRecent(user.lastLogin)?'text-emerald-400':'text-slate-300')+'">'+fmtDate(user.lastLogin)+'</td>'+
+                '<td>'+provBadge(user.provider)+'</td>'+
+                '<td>'+(user.isOnline?'<span class="badge badge-green">Online</span>':'<span class="text-slate-600 text-xs">—</span>')+'</td>'+
                 '</tr>';
         }
         if (currentTab === 'profile') {
-            var tg = user.telegram
-                ? '<a href="https://t.me/' + user.telegram.replace('@','') + '" target="_blank" class="text-blue-400 hover:underline text-xs">@' + esc(user.telegram.replace('@','')) + '</a>'
-                : '<span class="text-slate-600 text-xs">—</span>';
-            return '<tr class="' + rowCl + '">' + cb + userCell +
-                '<td class="text-sm">' + (user.firstName ? esc(user.firstName) : dsh()) + '</td>' +
-                '<td class="text-sm">' + (user.lastName  ? esc(user.lastName)  : dsh()) + '</td>' +
-                '<td>' + (user.username ? '<span class="badge badge-blue">@' + esc(user.username) + '</span>' : dsh()) + '</td>' +
-                '<td class="text-sm text-slate-300">' + (user.city ? esc(user.city) : dsh()) + '</td>' +
-                '<td>' + (user.country  ? '<span class="badge badge-purple">' + esc(user.country) + '</span>' : dsh()) + '</td>' +
-                '<td>' + genderBdg(user.gender) + '</td>' +
-                '<td class="text-xs text-slate-300">' + (user.birthdate || dsh()) + '</td>' +
+            return '<tr class="'+rowCl+'">'+cbEl+userCell+
+                '<td class="text-sm">'+(user.firstName?esc(user.firstName):dsh())+'</td>'+
+                '<td class="text-sm">'+(user.lastName ?esc(user.lastName) :dsh())+'</td>'+
+                '<td>'+(user.username?'<span class="badge badge-blue">@'+esc(user.username)+'</span>':dsh())+'</td>'+
+                '<td class="text-sm text-slate-300">'+(user.city?esc(user.city):dsh())+'</td>'+
+                '<td>'+(user.country?'<span class="badge badge-purple">'+esc(user.country)+'</span>':dsh())+'</td>'+
+                '<td>'+genderBdg(user.gender)+'</td>'+
+                '<td class="text-xs text-slate-300">'+(user.birthdate||dsh())+'</td>'+
                 '</tr>';
         }
         if (currentTab === 'activity') {
             var topProj = user.topProjectId ? projectsMap.get(user.topProjectId) : null;
-            var topName = topProj ? (topProj.name || user.topProjectId) : '—';
-            var topImg  = topProj && topProj.image ? '<img src="' + topProj.image + '" class="w-5 h-5 rounded-full object-cover mr-1.5" onerror="this.style.display=\'none\'">' : '';
+            var topName = topProj ? (topProj.name||user.topProjectId) : '—';
+            var topImg  = topProj&&topProj.image ? '<img src="'+topProj.image+'" class="w-5 h-5 rounded-full object-cover mr-1.5" onerror="this.style.display=\'none\'">' : '';
             var topCell = user.topProjectId
-                ? '<div class="flex items-center">' + topImg + '<span class="text-xs truncate max-w-[100px]">' + esc(topName) + '</span>' +
-                  '<span class="text-xs text-slate-500 ml-1">(' + user.topProjectClicks + ')</span></div>'
+                ? '<div class="flex items-center">'+topImg+'<span class="text-xs truncate max-w-[100px]">'+esc(topName)+'</span><span class="text-xs text-slate-500 ml-1">('+user.topProjectClicks+')</span></div>'
                 : dsh();
-            return '<tr class="' + rowCl + '">' + cb + userCell +
-                '<td class="text-center"><span class="badge badge-blue">' + user.totalClicks + '</span></td>' +
-                '<td class="text-center"><span class="badge badge-green">' + user.completedCount + '</span></td>' +
-                '<td class="text-center"><span class="badge badge-red">' + user.favoritesCount + '</span></td>' +
-                '<td>' + topCell + '</td>' +
+            return '<tr class="'+rowCl+'">'+cbEl+userCell+
+                '<td class="text-center"><span class="badge badge-blue">'+user.totalClicks+'</span></td>'+
+                '<td class="text-center"><span class="badge badge-green">'+user.completedCount+'</span></td>'+
+                '<td class="text-center"><span class="badge badge-red">'+user.favoritesCount+'</span></td>'+
+                '<td>'+topCell+'</td>'+
                 '</tr>';
         }
         if (currentTab === 'reagents') {
-    return '<tr class="' + rowCl + '">' + cb + userCell +
-
-        // Reagents
-        '<td class="text-center">' +
-            '<span class="text-lg font-bold text-cyan-400">' + (user.reagents || 0) + '</span>' +
-            '<span class="text-xs text-slate-500 ml-1">RGT</span>' +
-        '</td>' +
-
-        // Streak
-        '<td class="text-center">' +
-            '<span class="font-bold text-orange-400">' + (user.streak || 0) + '</span>' +
-            '<span class="ml-1">🔥</span>' +
-        '</td>' +
-
-        // Referrals
-        '<td class="text-center">' +
-            '<span class="badge badge-green">' + (user.invitedCount || 0) + '</span>' +
-        '</td>' +
-
-        // Twitter
-        '<td>' +
-            (user.twitter
-                ? '<a href="https://x.com/' + esc(user.twitter) +
-                  '" target="_blank" class="text-sky-400 hover:underline text-xs">@' +
-                  esc(user.twitter) + '</a>'
-                : dsh()
-            ) +
-        '</td>' +
-
-        // Discord
-        '<td class="text-xs text-indigo-400">' +
-            (user.discord || dsh()) +
-        '</td>' +
-
-        // Telegram
-'<td>' +
-    (user.telegram
-        ? '<a href="https://t.me/' + user.telegram.replace('@','') +
-          '" target="_blank" class="text-blue-400 hover:underline text-xs">@' +
-          esc(user.telegram.replace('@','')) + '</a>'
-        : dsh()
-    ) +
-'</td>' +
-
-    '</tr>';
-}
+            return '<tr class="'+rowCl+'">'+cbEl+userCell+
+                '<td class="text-center"><span class="text-lg font-bold text-cyan-400">'+(user.reagents||0)+'</span><span class="text-xs text-slate-500 ml-1">RGT</span></td>'+
+                '<td class="text-center"><span class="font-bold text-orange-400">'+(user.streak||0)+'</span><span class="ml-1">🔥</span></td>'+
+                '<td class="text-center"><span class="badge badge-green">'+(user.invitedCount||0)+'</span></td>'+
+                '<td>'+(user.twitter?'<a href="https://x.com/'+esc(user.twitter)+'" target="_blank" class="text-sky-400 hover:underline text-xs">@'+esc(user.twitter)+'</a>':dsh())+'</td>'+
+                '<td class="text-xs text-indigo-400">'+(user.discord||dsh())+'</td>'+
+                '<td>'+(user.telegram?'<a href="https://t.me/'+user.telegram.replace('@','')+'" target="_blank" class="text-blue-400 hover:underline text-xs">@'+esc(user.telegram.replace('@',''))+'</a>':dsh())+'</td>'+
+                '</tr>';
+        }
+        if (currentTab === 'referrals') {
+            // Ищем пригласителя в allUsers чтобы показать аватар
+            var inviter = user.invitedBy ? allUsers.find(function(u){ return u.id === user.invitedBy; }) : null;
+            var inviterCell = user.invitedBy
+                ? '<div class="flex items-center gap-1.5">' +
+                    (inviter && inviter.photoURL
+                        ? '<img src="'+inviter.photoURL+'" class="w-5 h-5 rounded-full object-cover">'
+                        : '<div class="w-5 h-5 rounded-full bg-slate-700 flex items-center justify-center"><i class="fas fa-user text-[8px] text-slate-400"></i></div>') +
+                    '<span class="text-xs text-emerald-400 cursor-pointer hover:text-emerald-300" onclick="window.openProfile(\''+(inviter?inviter.id:user.invitedBy)+'\')">'+esc(user.invitedByName||'Пользователь')+'</span>' +
+                  '</div>'
+                : dsh();
+            return '<tr class="'+rowCl+'">'+cbEl+userCell+
+                '<td><span class="text-xs font-mono text-cyan-400">'+(user.referralCode?esc(user.referralCode):dsh())+'</span></td>'+
+                '<td>'+inviterCell+'</td>'+
+                '<td class="text-xs text-slate-400">'+(user.invitedAt?fmtDate(new Date(user.invitedAt)):dsh())+'</td>'+
+                '<td class="text-center"><span class="badge badge-green">'+(user.invitedCount||0)+'</span></td>'+
+                '<td class="text-center"><span class="font-bold text-cyan-400">'+(user.reagents||0)+'</span></td>'+
+                '<td class="text-center"><span class="font-bold text-orange-400">'+(user.streak||0)+'</span></td>'+
+                '</tr>';
+        }
         return '';
     }).join('');
 }
 
-// ─────────────────────────────────────────────────────────────────
-// ПРОФИЛЬ МОДАЛКА
-// ─────────────────────────────────────────────────────────────────
+// ── ПРОФИЛЬ МОДАЛКА ───────────────────────────────────────────────
 window.openProfile = function(userId) {
-    var user = allUsers.find(function(u) { return u.id === userId; });
+    var user = allUsers.find(function(u){ return u.id===userId; });
     if (!user) return;
 
     var topProj = user.topProjectId ? projectsMap.get(user.topProjectId) : null;
-
-    var avSrc = user.photoURL
-        ? user.photoURL
-        : 'https://ui-avatars.com/api/?name=' + encodeURIComponent(user.displayName) +
-          '&background=3b82f6&color=fff&size=80';
+    var avSrc   = user.photoURL || ('https://ui-avatars.com/api/?name='+encodeURIComponent(user.displayName)+'&background=3b82f6&color=fff&size=80');
 
     var pf = function(label, val) {
         return '<div class="bg-slate-800/50 rounded-lg p-2.5">' +
-            '<div class="text-xs text-slate-500 mb-0.5">' + label + '</div>' +
-            '<div class="text-sm text-slate-200">' + (val || '<span class="text-slate-600">—</span>') + '</div>' +
-        '</div>';
+            '<div class="text-xs text-slate-500 mb-0.5">'+label+'</div>' +
+            '<div class="text-sm text-slate-200">'+(val||'<span class="text-slate-600">—</span>')+'</div></div>';
     };
+
+    // Список приглашённых
+    var invitedUsersHtml = '';
+    if (user.invitedUsers && user.invitedUsers.length) {
+        invitedUsersHtml =
+            '<div class="mt-4 border-t border-slate-700/50 pt-4">' +
+            '<h4 class="text-sm font-semibold text-slate-300 mb-3 flex items-center gap-2">' +
+            '<i class="fas fa-users text-emerald-400"></i> Приглашённые ('+user.invitedUsers.length+')</h4>' +
+            '<div class="space-y-2">' +
+            user.invitedUsers.map(function(ru) {
+                return '<div class="bg-slate-800/40 rounded-lg p-2.5 flex items-center justify-between gap-3">' +
+                    '<div class="flex items-center gap-2">' +
+                        '<img src="'+(ru.photoURL||'https://ui-avatars.com/api/?name='+encodeURIComponent(ru.displayName)+'&background=334155&color=fff')+'" class="w-6 h-6 rounded-full object-cover">' +
+                        '<div>' +
+                            '<div class="text-sm text-slate-200 cursor-pointer hover:text-white" onclick="window.openProfile(\''+ru.id+'\')">'+esc(ru.displayName)+'</div>' +
+                            '<div class="text-xs text-slate-500">'+esc(ru.email)+'</div>' +
+                        '</div>' +
+                    '</div>' +
+                    '<div class="text-right flex-shrink-0">' +
+                        '<div class="text-xs text-slate-400">'+(ru.invitedAt?fmtDate(new Date(ru.invitedAt)):'—')+'</div>' +
+                        '<div class="text-[11px] text-emerald-400">+25 RGT</div>' +
+                    '</div>' +
+                '</div>';
+            }).join('') +
+            '</div></div>';
+    }
+
+    // Пригласивший
+    var inviterUser = user.invitedBy ? allUsers.find(function(u){ return u.id===user.invitedBy; }) : null;
 
     document.getElementById('modalBody').innerHTML =
         // HEADER
         '<div class="flex items-center gap-4 mb-5 pb-5 border-b border-slate-700">' +
-            '<img src="' + avSrc + '" class="w-16 h-16 rounded-full border-2 border-blue-500/40 object-cover">' +
+            '<img src="'+avSrc+'" class="w-16 h-16 rounded-full border-2 border-blue-500/40 object-cover">' +
             '<div>' +
-                '<div class="text-xl font-bold">' + esc(user.displayName) + '</div>' +
-                '<div class="text-sm text-slate-400">' + esc(user.email) + '</div>' +
+                '<div class="text-xl font-bold">'+esc(user.displayName)+'</div>' +
+                '<div class="text-sm text-slate-400">'+esc(user.email)+'</div>' +
                 '<div class="flex items-center gap-2 mt-2 flex-wrap">' +
-                    (user.isOnline ? '<span class="badge badge-green">Online</span>' : '') +
-                    provBadge(user.provider) +
+                    (user.isOnline?'<span class="badge badge-green">Online</span>':'')+
+                    provBadge(user.provider)+
                 '</div>' +
             '</div>' +
         '</div>' +
 
         // UID + LOGIN INFO
         '<div class="grid grid-cols-1 gap-2 mb-4">' +
-            pf('UID', '<span class="font-mono text-xs break-all">' + user.id + '</span>') +
+            pf('UID', '<span class="font-mono text-xs break-all">'+user.id+'</span>') +
             pf('Первый вход', fmtDate(user.firstLogin)) +
-            pf('Последний вход',
-                '<span class="' + (isRecent(user.lastLogin) ? 'text-emerald-400' : '') + '">' +
-                fmtDate(user.lastLogin) + '</span>'
-            ) +
+            pf('Последний вход', '<span class="'+(isRecent(user.lastLogin)?'text-emerald-400':'')+'">'+fmtDate(user.lastLogin)+'</span>') +
+            pf('С нами', _daysWithUs(user.firstLogin)+' дней') +
         '</div>' +
 
-        // PROFILE DATA
-        '<h4 class="text-sm font-semibold text-slate-300 mb-2 flex items-center gap-2">' +
-            '<i class="fas fa-id-card text-blue-400"></i> Данные профиля</h4>' +
+        // ПРОФИЛЬ
+        '<h4 class="text-sm font-semibold text-slate-300 mb-2 flex items-center gap-2"><i class="fas fa-id-card text-blue-400"></i> Данные профиля</h4>' +
         '<div class="grid grid-cols-2 gap-2 mb-4">' +
             pf('Имя', esc(user.firstName)) +
             pf('Фамилия', esc(user.lastName)) +
-            pf('Никнейм', user.username ? '@' + esc(user.username) : '') +
-            pf('Пол', user.gender === 'male' ? '👨 Мужской'
-                : user.gender === 'female' ? '👩 Женский'
-                : esc(user.gender)
-            ) +
+            pf('Никнейм', user.username?'@'+esc(user.username):'') +
+            pf('Пол', user.gender==='male'?'👨 Мужской':user.gender==='female'?'👩 Женский':esc(user.gender)) +
             pf('Дата рождения', esc(user.birthdate)) +
             pf('Bio', esc(user.bio)) +
         '</div>' +
 
-        // ============================
-        // КРИПТО & СОЦСЕТИ
-        // ============================
-        '<h4 class="text-sm font-semibold text-slate-300 mb-2 flex items-center gap-2">' +
-    '<i class="fas fa-address-card text-cyan-400"></i> Контакты & Соцсети</h4>' +
-
-'<div class="grid grid-cols-2 gap-2 mb-4">' +
-    pf('Город', esc(user.city)) +
-    pf('Страна', esc(user.country)) +
-    pf('Telegram',
-        user.telegram
-            ? '<a href="https://t.me/' + user.telegram.replace('@','') +
-              '" target="_blank" class="text-blue-400">@' + esc(user.telegram.replace('@','')) + '</a>'
-            : ''
-    ) +
-    pf('Twitter',
-        user.twitter
-            ? '<a href="https://x.com/' + esc(user.twitter) +
-              '" target="_blank" class="text-sky-400">@' + esc(user.twitter) + '</a>'
-            : ''
-    ) +
-    pf('Discord',
-        user.discord
-            ? '<span class="text-indigo-400">' + esc(user.discord) + '</span>'
-            : ''
-    ) +
-'</div>' +
-
-'<h4 class="text-sm font-semibold text-slate-300 mb-2 flex items-center gap-2">' +
-    '<i class="fas fa-wallet text-cyan-400"></i> Крипто-адреса</h4>' +
-'<div class="grid grid-cols-1 gap-2 mb-4">' +
-    (user.evmAddress
-        ? pf('EVM', '<span class="font-mono text-xs break-all text-cyan-300">' + esc(user.evmAddress) + '</span>')
-        : '') +
-    (user.solAddress
-        ? pf('Solana', '<span class="font-mono text-xs break-all text-purple-300">' + esc(user.solAddress) + '</span>')
-        : '') +
-'</div>' +
-
-        // ============================
-        // REAGENTS / STREAK / REFERRALS
-        // ============================
-        '<h4 class="text-sm font-semibold text-slate-300 mb-2 flex items-center gap-2">' +
-            '<span>🧪</span> Reagents</h4>' +
-        '<div class="grid grid-cols-3 gap-2 mb-4">' +
-
-            '<div class="bg-slate-800/50 rounded-lg p-2.5 text-center">' +
-                '<div class="text-xl font-bold text-cyan-400">' + (user.raw?.reagents || 0) + '</div>' +
-                '<div class="text-xs text-slate-500">RGT</div>' +
-            '</div>' +
-
-            '<div class="bg-slate-800/50 rounded-lg p-2.5 text-center">' +
-                '<div class="text-xl font-bold text-orange-400">' + (user.raw?.streak || 0) + '🔥</div>' +
-                '<div class="text-xs text-slate-500">Стрик</div>' +
-            '</div>' +
-
-            '<div class="bg-slate-800/50 rounded-lg p-2.5 text-center">' +
-                '<div class="text-xl font-bold text-emerald-400">' + (user.raw?.invitedCount || 0) + '</div>' +
-                '<div class="text-xs text-slate-500">Рефералов</div>' +
-            '</div>' +
-
+        // КОНТАКТЫ
+        '<h4 class="text-sm font-semibold text-slate-300 mb-2 flex items-center gap-2"><i class="fas fa-address-card text-cyan-400"></i> Контакты & Соцсети</h4>' +
+        '<div class="grid grid-cols-2 gap-2 mb-4">' +
+            pf('Город', esc(user.city)) +
+            pf('Страна', esc(user.country)) +
+            pf('Telegram', user.telegram?'<a href="https://t.me/'+user.telegram.replace('@','')+'" target="_blank" class="text-blue-400">@'+esc(user.telegram.replace('@',''))+'</a>':'') +
+            pf('Twitter', user.twitter?'<a href="https://x.com/'+esc(user.twitter)+'" target="_blank" class="text-sky-400">@'+esc(user.twitter)+'</a>':'') +
+            pf('Discord', user.discord?'<span class="text-indigo-400">'+esc(user.discord)+'</span>':'') +
         '</div>' +
 
-        // ============================
-        // DAYS WITH US
-        // ============================
-        pf('С нами',
-            _daysWithUs(user.firstLogin) + ' дней' +
-            (user.raw?.referralCode
-                ? ' · <span class="text-xs text-slate-500">Реф. код: </span>' +
-                  '<span class="font-mono text-cyan-400">' + esc(user.raw.referralCode) + '</span>'
-                : '') +
-            (user.raw?.invitedBy
-                ? ' · <span class="text-xs text-slate-500">Приглашён: </span>' +
-                  '<span class="text-slate-300">' + esc(user.raw.invitedByName || user.raw.invitedBy) + '</span>'
-                : '')
-        ) +
-
-        // ============================
-        // ACTIVITY
-        // ============================
-        '<h4 class="text-sm font-semibold text-slate-300 mb-2 flex items-center gap-2">' +
-            '<i class="fas fa-chart-bar text-purple-400"></i> Активность</h4>' +
-        '<div class="grid grid-cols-3 gap-2 mb-4">' +
-            '<div class="bg-slate-800/50 rounded-lg p-2.5 text-center">' +
-                '<div class="text-xl font-bold text-blue-400">' + user.totalClicks + '</div>' +
-                '<div class="text-xs text-slate-500">Кликов</div>' +
-            '</div>' +
-            '<div class="bg-slate-800/50 rounded-lg p-2.5 text-center">' +
-                '<div class="text-xl font-bold text-green-400">' + user.completedCount + '</div>' +
-                '<div class="text-xs text-slate-500">Завершено</div>' +
-            '</div>' +
-            '<div class="bg-slate-800/50 rounded-lg p-2.5 text-center">' +
-                '<div class="text-xl font-bold text-red-400">' + user.favoritesCount + '</div>' +
-                '<div class="text-xs text-slate-500">Избранное</div>' +
-            '</div>' +
+        // КРИПТО-АДРЕСА
+        '<h4 class="text-sm font-semibold text-slate-300 mb-2 flex items-center gap-2"><i class="fas fa-wallet text-cyan-400"></i> Крипто-адреса</h4>' +
+        '<div class="grid grid-cols-1 gap-2 mb-4">' +
+            (user.evmAddress?pf('EVM','<span class="font-mono text-xs break-all text-cyan-300">'+esc(user.evmAddress)+'</span>'):'') +
+            (user.solAddress?pf('Solana','<span class="font-mono text-xs break-all text-purple-300">'+esc(user.solAddress)+'</span>'):'') +
         '</div>' +
 
-        (topProj
-            ? '<div class="bg-slate-800/50 rounded-lg p-3 flex items-center gap-3 mb-4">' +
-                (topProj.image
-                    ? '<img src="' + topProj.image + '" class="w-8 h-8 rounded-full object-cover">'
-                    : '') +
-                '<div>' +
-                    '<div class="text-xs text-slate-500">Любимый проект</div>' +
-                    '<div class="text-sm font-medium">' + esc(topProj.name || user.topProjectId) +
-                    ' <span class="text-slate-500">(' + user.topProjectClicks + ' кл.)</span></div>' +
-                '</div>' +
-              '</div>'
-            : ''
-        ) +
+        // РЕФЕРАЛЬНАЯ СЕКЦИЯ
+        '<h4 class="text-sm font-semibold text-slate-300 mb-2 flex items-center gap-2"><i class="fas fa-link text-purple-400"></i> Рефералы</h4>' +
+        '<div class="grid grid-cols-2 gap-2 mb-2">' +
+            pf('Реф. код', user.referralCode?'<span class="font-mono text-cyan-400">'+esc(user.referralCode)+'</span>':'') +
+            pf('Пригласил других', '<span class="text-emerald-400 font-bold">'+user.invitedCount+'</span>') +
+        '</div>' +
+        (user.invitedBy ? '<div class="mb-4">' + pf('Приглашён',
+            '<div class="flex items-center gap-2">' +
+            (inviterUser&&inviterUser.photoURL?'<img src="'+inviterUser.photoURL+'" class="w-5 h-5 rounded-full object-cover">':'') +
+            '<span class="text-emerald-400 cursor-pointer hover:text-emerald-300" onclick="window.closeModal();window.openProfile(\''+(inviterUser?inviterUser.id:user.invitedBy)+'\')">'+esc(user.invitedByName||user.invitedBy)+'</span>' +
+            (user.invitedAt?'<span class="text-xs text-slate-500 ml-auto">'+fmtDate(new Date(user.invitedAt))+'</span>':'') +
+            '</div>'
+        ) + '</div>' : '') +
 
-        // FOOTER BUTTONS
+        // REAGENTS
+        '<h4 class="text-sm font-semibold text-slate-300 mb-2 flex items-center gap-2"><span>🧪</span> Reagents</h4>' +
+        '<div class="grid grid-cols-3 gap-2 mb-4">' +
+            '<div class="bg-slate-800/50 rounded-lg p-2.5 text-center"><div class="text-xl font-bold text-cyan-400">'+(user.reagents||0)+'</div><div class="text-xs text-slate-500">RGT</div></div>' +
+            '<div class="bg-slate-800/50 rounded-lg p-2.5 text-center"><div class="text-xl font-bold text-orange-400">'+(user.streak||0)+'🔥</div><div class="text-xs text-slate-500">Стрик</div></div>' +
+            '<div class="bg-slate-800/50 rounded-lg p-2.5 text-center"><div class="text-xl font-bold text-emerald-400">'+user.invitedCount+'</div><div class="text-xs text-slate-500">Рефералов</div></div>' +
+        '</div>' +
+
+        // Список приглашённых
+        invitedUsersHtml +
+
+        // АКТИВНОСТЬ
+        '<h4 class="text-sm font-semibold text-slate-300 mb-2 mt-4 flex items-center gap-2"><i class="fas fa-chart-bar text-purple-400"></i> Активность</h4>' +
+        '<div class="grid grid-cols-3 gap-2 mb-4">' +
+            '<div class="bg-slate-800/50 rounded-lg p-2.5 text-center"><div class="text-xl font-bold text-blue-400">'+user.totalClicks+'</div><div class="text-xs text-slate-500">Кликов</div></div>' +
+            '<div class="bg-slate-800/50 rounded-lg p-2.5 text-center"><div class="text-xl font-bold text-green-400">'+user.completedCount+'</div><div class="text-xs text-slate-500">Завершено</div></div>' +
+            '<div class="bg-slate-800/50 rounded-lg p-2.5 text-center"><div class="text-xl font-bold text-red-400">'+user.favoritesCount+'</div><div class="text-xs text-slate-500">Избранное</div></div>' +
+        '</div>' +
+
+        (topProj ?
+            '<div class="bg-slate-800/50 rounded-lg p-3 flex items-center gap-3 mb-4">' +
+            (topProj.image?'<img src="'+topProj.image+'" class="w-8 h-8 rounded-full object-cover">':'') +
+            '<div><div class="text-xs text-slate-500">Любимый проект</div>' +
+            '<div class="text-sm font-medium">'+esc(topProj.name||user.topProjectId)+' <span class="text-slate-500">('+user.topProjectClicks+' кл.)</span></div></div></div>'
+        : '') +
+
+        // FOOTER
         '<div class="flex gap-2 pt-4 border-t border-slate-700">' +
             '<button onclick="window.closeModal()" class="flex-1 bg-slate-700 hover:bg-slate-600 px-4 py-2 rounded-lg text-sm">Закрыть</button>' +
-            '<button onclick="window.sendToUser(\'' + user.id + '\')" class="flex-1 bg-blue-600 hover:bg-blue-500 px-4 py-2 rounded-lg text-sm flex items-center justify-center gap-2">' +
-                '<i class="fas fa-bell"></i> Уведомление</button>' +
+            '<button onclick="window.sendToUser(\''+user.id+'\')" class="flex-1 bg-blue-600 hover:bg-blue-500 px-4 py-2 rounded-lg text-sm flex items-center justify-center gap-2">' +
+            '<i class="fas fa-bell"></i> Уведомление</button>' +
         '</div>';
 
     document.getElementById('profileModal').classList.remove('hidden');
 };
 
-function _daysWithUs(firstLogin) {
-    if (!firstLogin) return '—';
-    const diff = new Date() - firstLogin;
-    return Math.max(1, Math.floor(diff / 86400000));
+function _daysWithUs(d) {
+    if (!d) return '—';
+    return Math.max(1, Math.floor((new Date()-d)/86400000));
 }
-window.closeModal = function() {
-    document.getElementById('profileModal').classList.add('hidden');
-};
+
+window.closeModal = function() { document.getElementById('profileModal').classList.add('hidden'); };
 
 window.sendToUser = function(userId) {
     window.closeModal();
     selectedIds = new Set([userId]);
-    var radio = document.querySelector('input[name="bTarget"][value="selected"]');
-    if (radio) radio.checked = true;
+    var r = document.querySelector('input[name="bTarget"][value="selected"]');
+    if (r) r.checked = true;
     updateCount();
     var ta = document.getElementById('bcastMsg');
     if (ta) ta.focus();
 };
 
-// ─────────────────────────────────────────────────────────────────
-// ВЫБОР И ФИЛЬТРАЦИЯ
-// ─────────────────────────────────────────────────────────────────
+// ── ВЫБОР И ФИЛЬТРАЦИЯ ────────────────────────────────────────────
 window.toggleSel = function(userId) {
     selectedIds.has(userId) ? selectedIds.delete(userId) : selectedIds.add(userId);
-    updateCount();
-    renderTable();
+    updateCount(); renderTable();
 };
 
 window.toggleAll = function() {
-    var allSel = filteredUsers.every(function(u) { return selectedIds.has(u.id); });
-    filteredUsers.forEach(function(u) { allSel ? selectedIds.delete(u.id) : selectedIds.add(u.id); });
-    updateCount();
-    renderTable();
+    var allSel = filteredUsers.every(function(u){ return selectedIds.has(u.id); });
+    filteredUsers.forEach(function(u){ allSel?selectedIds.delete(u.id):selectedIds.add(u.id); });
+    updateCount(); renderTable();
 };
 
 window.filterOnline = function() {
     var btn = document.querySelector('button[onclick="window.filterOnline()"]');
-
-    // Переключатель: если уже фильтр онлайн — сбрасываем
     if (window._onlineFilterActive) {
         window._onlineFilterActive = false;
         filteredUsers = allUsers.slice();
-        setText('usersCount', '(' + allUsers.length + ')');
-
-        if (btn) {
-            btn.className = 'text-xs bg-emerald-600/20 text-emerald-400 px-3 py-1.5 rounded-lg hover:bg-emerald-600/30';
-            btn.innerHTML = '<i class="fas fa-circle mr-1"></i>Онлайн';
-        }
+        setText('usersCount','('+allUsers.length+')');
+        if(btn){btn.className='text-xs bg-emerald-600/20 text-emerald-400 px-3 py-1.5 rounded-lg hover:bg-emerald-600/30';btn.innerHTML='<i class="fas fa-circle mr-1"></i>Онлайн';}
     } else {
         window._onlineFilterActive = true;
-        filteredUsers = allUsers.filter(function(u) { return u.isOnline; });
-
-        var onlineCount = filteredUsers.length;
-        setText('usersCount', '(' + onlineCount + ' онлайн из ' + allUsers.length + ')');
-
-        if (btn) {
-            btn.className = 'text-xs bg-emerald-500 text-white px-3 py-1.5 rounded-lg';
-            btn.innerHTML = '<i class="fas fa-times mr-1"></i>Сбросить (' + onlineCount + ')';
-        }
-
-        // Если никого нет онлайн
-        if (onlineCount === 0) {
-            var tbody = document.getElementById('tBody');
-            if (tbody) {
-                tbody.innerHTML =
-                    '<tr><td colspan="9" class="py-8 text-center">' +
-                    '<div class="text-4xl mb-3">😴</div>' +
-                    '<p class="text-slate-400">Никого нет онлайн</p>' +
-                    '<p class="text-slate-500 text-xs mt-1">Онлайн = активность за последние 30 минут</p>' +
-                    '</td></tr>';
-            }
+        filteredUsers = allUsers.filter(function(u){ return u.isOnline; });
+        var cnt = filteredUsers.length;
+        setText('usersCount','('+cnt+' онлайн из '+allUsers.length+')');
+        if(btn){btn.className='text-xs bg-emerald-500 text-white px-3 py-1.5 rounded-lg';btn.innerHTML='<i class="fas fa-times mr-1"></i>Сбросить ('+cnt+')';}
+        if (cnt===0) {
+            var tb=document.getElementById('tBody');
+            if(tb) tb.innerHTML='<tr><td colspan="9" class="py-8 text-center"><div class="text-4xl mb-3">😴</div><p class="text-slate-400">Никого нет онлайн</p></td></tr>';
             return;
         }
     }
-
-    // Сбрасываем сортировку поиска
-    var searchEl = document.getElementById('searchInput');
-    if (searchEl) searchEl.value = '';
-
+    var si=document.getElementById('searchInput'); if(si) si.value='';
     renderTable();
 };
 
 window.doSearch = function() {
-    // Сбрасываем онлайн-фильтр
     window._onlineFilterActive = false;
-    var onlineBtn = document.querySelector('button[onclick="window.filterOnline()"]');
-    if (onlineBtn) {
-        onlineBtn.className = 'text-xs bg-emerald-600/20 text-emerald-400 px-3 py-1.5 rounded-lg hover:bg-emerald-600/30';
-        onlineBtn.innerHTML = '<i class="fas fa-circle mr-1"></i>Онлайн';
-    }
-
-    var s = ((document.getElementById('searchInput') || {}).value || '').toLowerCase();
-    filteredUsers = !s ? allUsers.slice() : allUsers.filter(function(u) {
+    var ob = document.querySelector('button[onclick="window.filterOnline()"]');
+    if(ob){ob.className='text-xs bg-emerald-600/20 text-emerald-400 px-3 py-1.5 rounded-lg hover:bg-emerald-600/30';ob.innerHTML='<i class="fas fa-circle mr-1"></i>Онлайн';}
+    var s = ((document.getElementById('searchInput')||{}).value||'').toLowerCase();
+    filteredUsers = !s ? allUsers.slice() : allUsers.filter(function(u){
         return u.displayName.toLowerCase().includes(s) ||
                u.email.toLowerCase().includes(s)       ||
                u.id.toLowerCase().includes(s)          ||
-               (u.firstName && u.firstName.toLowerCase().includes(s)) ||
-               (u.lastName  && u.lastName.toLowerCase().includes(s))  ||
-               (u.username  && u.username.toLowerCase().includes(s))  ||
-               (u.telegram  && u.telegram.toLowerCase().includes(s))  ||
-               (u.country   && u.country.toLowerCase().includes(s));
+               (u.firstName     && u.firstName.toLowerCase().includes(s))     ||
+               (u.lastName      && u.lastName.toLowerCase().includes(s))      ||
+               (u.username      && u.username.toLowerCase().includes(s))      ||
+               (u.telegram      && u.telegram.toLowerCase().includes(s))      ||
+               (u.country       && u.country.toLowerCase().includes(s))       ||
+               (u.referralCode  && u.referralCode.toLowerCase().includes(s))  ||
+               (u.invitedByName && u.invitedByName.toLowerCase().includes(s));
     });
-    setText('usersCount', '(' + filteredUsers.length + (s ? ' из ' + allUsers.length : '') + ')');
+    setText('usersCount','('+filteredUsers.length+(s?' из '+allUsers.length:'')+')');
     renderTable();
 };
 
 window.doSort = function() {
-    var by = (document.getElementById('sortSel') || {}).value || 'lastLogin';
-    filteredUsers.sort(function(a, b) {
-        if (by === 'lastLogin')  return (b.lastLogin  || 0) - (a.lastLogin  || 0);
-        if (by === 'firstLogin') return (b.firstLogin || 0) - (a.firstLogin || 0);
-        if (by === 'clicks')     return b.totalClicks - a.totalClicks;
-        if (by === 'name')       return a.displayName.localeCompare(b.displayName);
-        if (by === 'country')    return (a.country || '').localeCompare(b.country || '');
+    var by = (document.getElementById('sortSel')||{}).value||'lastLogin';
+    filteredUsers.sort(function(a,b){
+        if(by==='referrals') return (b.invitedCount||0)-(a.invitedCount||0);
+        if(by==='reagents')  return (b.reagents||0)-(a.reagents||0);
+        if(by==='lastLogin') return (b.lastLogin||0)-(a.lastLogin||0);
+        if(by==='firstLogin')return (b.firstLogin||0)-(a.firstLogin||0);
+        if(by==='clicks')    return b.totalClicks-a.totalClicks;
+        if(by==='name')      return a.displayName.localeCompare(b.displayName);
+        if(by==='country')   return (a.country||'').localeCompare(b.country||'');
         return 0;
     });
     renderTable();
 };
 
 window.updateCount = function() {
-    var online = allUsers.filter(function(u) { return u.isOnline; }).length;
-    setText('cnt-all',      '(' + allUsers.length + ')');
-    setText('cnt-online',   '(' + online + ')');
+    var online = allUsers.filter(function(u){ return u.isOnline; }).length;
+    setText('cnt-all',     '('+allUsers.length+')');
+    setText('cnt-online',  '('+online+')');
     setText('cnt-selected', String(selectedIds.size));
-
     var radio  = document.querySelector('input[name="bTarget"]:checked');
-    var target = radio ? radio.value : 'all';
+    var target = radio?radio.value:'all';
     var list   = document.getElementById('selectedNamesList');
     var names  = document.getElementById('selectedNamesContent');
-    if (target === 'selected' && selectedIds.size > 0 && list && names) {
+    if (target==='selected' && selectedIds.size>0 && list && names) {
         list.classList.remove('hidden');
-        var arr = allUsers.filter(function(u) { return selectedIds.has(u.id); }).slice(0, 5);
-        var html = arr.map(function(u) { return '<div>• ' + esc(u.displayName) + '</div>'; }).join('');
-        if (selectedIds.size > 5) html += '<div>... и ещё ' + (selectedIds.size - 5) + '</div>';
+        var arr  = allUsers.filter(function(u){ return selectedIds.has(u.id); }).slice(0,5);
+        var html = arr.map(function(u){ return '<div>• '+esc(u.displayName)+'</div>'; }).join('');
+        if(selectedIds.size>5) html+='<div>... и ещё '+(selectedIds.size-5)+'</div>';
         names.innerHTML = html;
-    } else if (list) {
-        list.classList.add('hidden');
-    }
+    } else if(list) list.classList.add('hidden');
 };
 
-// ─────────────────────────────────────────────────────────────────
-// РАССЫЛКА
-// ─────────────────────────────────────────────────────────────────
+// ── РАССЫЛКА ──────────────────────────────────────────────────────
 window.sendBcast = async function() {
     var msgEl  = document.getElementById('bcastMsg');
     var typeEl = document.getElementById('bcastType');
     var msg    = msgEl.value.trim();
     var type   = typeEl.value;
-
-    if (!msg)          { bcastStatus('Введите сообщение', false); return; }
-    if (msg.length>500){ bcastStatus('Макс. 500 символов', false); return; }
-    if (!fbDb)         { bcastStatus('Firebase не готов', false); return; }
-
+    if (!msg)           { bcastStatus('Введите сообщение', false); return; }
+    if (msg.length>500) { bcastStatus('Макс. 500 символов', false); return; }
+    if (!fbDb)          { bcastStatus('Firebase не готов', false); return; }
     var radio  = document.querySelector('input[name="bTarget"]:checked');
-    var target = radio ? radio.value : 'all';
-    var ids    = target === 'all'    ? allUsers.map(function(u){ return u.id; })
-               : target === 'online' ? allUsers.filter(function(u){ return u.isOnline; }).map(function(u){ return u.id; })
+    var target = radio?radio.value:'all';
+    var ids    = target==='all'    ? allUsers.map(function(u){ return u.id; })
+               : target==='online' ? allUsers.filter(function(u){ return u.isOnline; }).map(function(u){ return u.id; })
                : Array.from(selectedIds);
-
     if (!ids.length) { bcastStatus('Нет получателей', false); return; }
-
     var btn = document.getElementById('sendBtn');
-    btn.disabled = true;
-    btn.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i>Отправка...';
-
+    btn.disabled=true; btn.innerHTML='<i class="fas fa-spinner fa-spin mr-2"></i>Отправка...';
     try {
         var batch = fbBatch(fbDb);
-        var bRef  = fbDoc(fbCol(fbDb, "broadcasts"));
-        batch.set(bRef, { message: msg, type: type, createdAt: fbServerTs(), recipientCount: ids.length, viewCount: 0, status: 'sent' });
-        ids.forEach(function(uid) {
-            var nRef = fbDoc(fbCol(fbDb, "notifications"));
-            batch.set(nRef, { userId: uid, broadcastId: bRef.id, message: msg, type: type, read: false, createdAt: fbServerTs() });
+        var bRef  = fbDoc(fbCol(fbDb,"broadcasts"));
+        batch.set(bRef,{message:msg,type:type,createdAt:fbServerTs(),recipientCount:ids.length,viewCount:0,status:'sent'});
+        ids.forEach(function(uid){
+            batch.set(fbDoc(fbCol(fbDb,"notifications")),{userId:uid,broadcastId:bRef.id,message:msg,type:type,read:false,createdAt:fbServerTs()});
         });
         await batch.commit();
-        bcastStatus('Отправлено ' + ids.length + ' пользователям ✅', true);
-        msgEl.value = '';
-        setText('bcastLen', '0/500');
-        loadBcastHistory();
-        loadNotifStats();
-    } catch (err) {
-        bcastStatus('Ошибка: ' + err.message, false);
-    } finally {
-        btn.disabled = false;
-        btn.innerHTML = '<i class="fas fa-paper-plane mr-2"></i>Отправить';
-    }
+        bcastStatus('Отправлено '+ids.length+' пользователям ✅', true);
+        msgEl.value=''; setText('bcastLen','0/500');
+        loadBcastHistory(); loadNotifStats();
+    } catch(e) { bcastStatus('Ошибка: '+e.message, false); }
+    finally { btn.disabled=false; btn.innerHTML='<i class="fas fa-paper-plane mr-2"></i>Отправить'; }
 };
 
 function bcastStatus(text, ok) {
     var el = document.getElementById('bcastStatus');
     if (!el) return;
     el.textContent = text;
-    el.className   = 'mt-2 text-center text-sm ' + (ok ? 'text-green-400' : 'text-red-400');
+    el.className = 'mt-2 text-center text-sm '+(ok?'text-green-400':'text-red-400');
     el.classList.remove('hidden');
-    setTimeout(function() { el.classList.add('hidden'); }, 5000);
+    setTimeout(function(){ el.classList.add('hidden'); }, 5000);
 }
 
 var bcastMsgEl = document.getElementById('bcastMsg');
 if (bcastMsgEl) {
-    bcastMsgEl.addEventListener('input', function() {
-        setText('bcastLen', this.value.length + '/500');
+    bcastMsgEl.addEventListener('input', function(){
+        setText('bcastLen', this.value.length+'/500');
     });
 }
 
-// ─────────────────────────────────────────────────────────────────
-// CSV ЭКСПОРТ
-// ─────────────────────────────────────────────────────────────────
+// ── CSV ЭКСПОРТ ───────────────────────────────────────────────────
 window.exportCSV = function() {
     var headers = ['UID','Email','DisplayName','FirstName','LastName',
                    'Username','Telegram','Country','Gender','Birthdate',
                    'Provider','FirstLogin','LastLogin',
-                   'TotalClicks','Completed','Favorites'];
-    var rows = allUsers.map(function(u) {
+                   'TotalClicks','Completed','Favorites',
+                   'ReferralCode','InvitedBy','InvitedByName','InvitedAt','InvitedCount',
+                   'Reagents','Streak'];
+    var rows = allUsers.map(function(u){
         return [
             u.id, u.email, u.displayName,
             u.firstName, u.lastName, u.username, u.telegram,
-            u.country, u.gender, u.birthdate,
-            u.provider,
-            u.firstLogin ? u.firstLogin.toISOString() : '',
-            u.lastLogin  ? u.lastLogin.toISOString()  : '',
-            u.totalClicks, u.completedCount, u.favoritesCount
-        ].map(function(v) { return '"' + String(v || '').replace(/"/g, '""') + '"'; });
+            u.country, u.gender, u.birthdate, u.provider,
+            u.firstLogin?u.firstLogin.toISOString():'',
+            u.lastLogin ?u.lastLogin.toISOString() :'',
+            u.totalClicks, u.completedCount, u.favoritesCount,
+            u.referralCode||'', u.invitedBy||'', u.invitedByName||'', u.invitedAt||'', u.invitedCount||0,
+            u.reagents||0, u.streak||0
+        ].map(function(v){ return '"'+String(v||'').replace(/"/g,'""')+'"'; });
     });
     var csv  = [headers.join(',')].concat(rows.map(function(r){ return r.join(','); })).join('\n');
-    var blob = new Blob(['\uFEFF' + csv], { type: 'text/csv;charset=utf-8;' });
+    var blob = new Blob(['\uFEFF'+csv],{type:'text/csv;charset=utf-8;'});
     var url  = URL.createObjectURL(blob);
     var a    = document.createElement('a');
-    a.href = url;
-    a.download = 'users_' + new Date().toISOString().slice(0,10) + '.csv';
+    a.href=url; a.download='users_'+new Date().toISOString().slice(0,10)+'.csv';
     document.body.appendChild(a); a.click();
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
+    document.body.removeChild(a); URL.revokeObjectURL(url);
 };
 
-// ─────────────────────────────────────────────────────────────────
-// ВСПОМОГАТЕЛЬНЫЕ
-// ─────────────────────────────────────────────────────────────────
+// ── ВСПОМОГАТЕЛЬНЫЕ ───────────────────────────────────────────────
 function setText(id, val) {
     var el = document.getElementById(id);
     if (el) el.textContent = String(val);
 }
-
 function setTableMsg(html, isError) {
     var tbody = document.getElementById('tBody');
     if (!tbody) return;
-    var color = isError ? 'text-red-400' : 'text-slate-400';
-    tbody.innerHTML = '<tr><td colspan="9" class="py-8 text-center ' + color + '">' + html + '</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="9" class="py-8 text-center '+(isError?'text-red-400':'text-slate-400')+'">'+html+'</td></tr>';
 }
-
 function updateTimestamp() {
     var el = document.getElementById('lastUpdate');
-    if (el) el.textContent = 'Обновлено: ' + new Date().toLocaleTimeString('ru-RU');
+    if (el) el.textContent = 'Обновлено: '+new Date().toLocaleTimeString('ru-RU');
 }
-
 function fmtDate(date) {
     if (!date) return '—';
-    return date.toLocaleString('ru-RU', { day:'2-digit', month:'2-digit', year:'numeric', hour:'2-digit', minute:'2-digit' });
+    return date.toLocaleString('ru-RU',{day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit'});
 }
-
-function isRecent(date) {
-    return !!(date && (new Date() - date) < 30 * 60 * 1000);
-}
-
-function provBadge(provider) {
-    var map = {
-        'google.com':  '<span class="badge badge-red"><i class="fab fa-google mr-1"></i>Google</span>',
-        'twitter.com': '<span class="badge badge-blue"><i class="fab fa-twitter mr-1"></i>Twitter</span>',
-        'password':    '<span class="badge badge-yellow"><i class="fas fa-envelope mr-1"></i>Email</span>',
-        'phone':       '<span class="badge badge-green"><i class="fas fa-phone mr-1"></i>Phone</span>'
+function isRecent(date) { return !!(date && (new Date()-date)<30*60*1000); }
+function provBadge(p) {
+    var m = {
+        'google.com': '<span class="badge badge-red"><i class="fab fa-google mr-1"></i>Google</span>',
+        'twitter.com':'<span class="badge badge-blue"><i class="fab fa-twitter mr-1"></i>Twitter</span>',
+        'password':   '<span class="badge badge-yellow"><i class="fas fa-envelope mr-1"></i>Email</span>',
+        'phone':      '<span class="badge badge-green"><i class="fas fa-phone mr-1"></i>Phone</span>'
     };
-    return map[provider] || '<span class="badge badge-gray">—</span>';
+    return m[p]||'<span class="badge badge-gray">—</span>';
 }
-
-function genderBdg(gender) {
-    if (!gender) return dsh();
-    if (gender === 'male')   return '<span class="badge badge-blue">👨 М</span>';
-    if (gender === 'female') return '<span class="badge" style="background:rgba(236,72,153,0.2);color:#f9a8d4">👩 Ж</span>';
-    return '<span class="badge badge-gray">' + esc(gender) + '</span>';
+function genderBdg(g) {
+    if (!g) return dsh();
+    if (g==='male')   return '<span class="badge badge-blue">👨 М</span>';
+    if (g==='female') return '<span class="badge" style="background:rgba(236,72,153,0.2);color:#f9a8d4">👩 Ж</span>';
+    return '<span class="badge badge-gray">'+esc(g)+'</span>';
 }
-
 function dsh() { return '<span class="text-slate-600 text-xs">—</span>'; }
-
 function esc(str) {
     if (!str) return '';
-    return String(str)
-        .replace(/&/g,'&amp;').replace(/</g,'&lt;')
-        .replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+    return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
 }
-
 function hlText(text, search) {
-    if (!search || !text) return esc(text || '');
+    if (!search||!text) return esc(text||'');
     var idx = text.toLowerCase().indexOf(search);
-    if (idx === -1) return esc(text);
-    return esc(text.substring(0, idx)) +
-        '<mark>' + esc(text.substring(idx, idx + search.length)) + '</mark>' +
-        esc(text.substring(idx + search.length));
+    if (idx===-1) return esc(text);
+    return esc(text.substring(0,idx))+'<mark>'+esc(text.substring(idx,idx+search.length))+'</mark>'+esc(text.substring(idx+search.length));
 }
 
-// ─────────────────────────────────────────────────────────────────
-// СТАРТ
-// ─────────────────────────────────────────────────────────────────
-// Ждём небольшой паузы чтобы app.js успел инициализировать window.db
-setTimeout(function() {
-    startAuth();
-}, 300);
+// ── СТАРТ ─────────────────────────────────────────────────────────
+setTimeout(function(){ startAuth(); }, 300);
 
 </script>
 </body>
