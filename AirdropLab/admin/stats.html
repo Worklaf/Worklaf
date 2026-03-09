@@ -362,10 +362,12 @@
                 </h3>
                 <div class="flex items-center gap-2 flex-wrap">
                     <div class="flex gap-1 bg-slate-800/50 p-1 rounded-lg">
-                        <button onclick="window.switchTab('main')"     id="tab-main"     class="tab-btn active">Основное</button>
-                        <button onclick="window.switchTab('profile')"  id="tab-profile"  class="tab-btn">Профиль</button>
-                        <button onclick="window.switchTab('activity')" id="tab-activity" class="tab-btn">Активность</button>
-                    </div>
+    <button onclick="window.switchTab('main')"     id="tab-main"     class="tab-btn active">Основное</button>
+    <button onclick="window.switchTab('profile')"  id="tab-profile"  class="tab-btn">Профиль</button>
+    <button onclick="window.switchTab('activity')" id="tab-activity" class="tab-btn">Активность</button>
+    <!-- ДОБАВЬ ЭТО: -->
+    <button onclick="window.switchTab('reagents')" id="tab-reagents" class="tab-btn">🧪 Reagents</button>
+</div>
                     <button onclick="window.filterOnline()"
                         class="text-xs bg-emerald-600/20 text-emerald-400 px-3 py-1.5 rounded-lg hover:bg-emerald-600/30">
                         <i class="fas fa-circle mr-1"></i>Онлайн
@@ -916,7 +918,17 @@ async function loadUsers() {
             country:    countryName,
             countryCode,
             bio,
-            raw
+            raw,
+            reagents:    raw.reagents    || 0,
+            streak:      raw.streak      || 0,
+            evmAddress:  profile.evmAddress  || raw.evmAddress  || '',
+    solAddress:  profile.solAddress  || raw.solAddress  || '',
+    twitter:     profile.twitter     || raw.twitter     || '',
+    discord:     profile.discord     || raw.discord     || '',
+    city:        profile.city        || raw.city        || '',
+    referralCode: raw.referralCode   || '',
+    invitedCount: raw.invitedCount   || 0,
+    raw
         });
     });
 
@@ -1129,7 +1141,8 @@ function renderTopUsers(users) {
 // ─────────────────────────────────────────────────────────────────
 window.switchTab = function(tab) {
     currentTab = tab;
-    ['main','profile','activity'].forEach(function(t) {
+    // Обновляем список вкладок (добавь 'reagents'):
+    ['main','profile','activity','reagents'].forEach(function(t) {
         var btn = document.getElementById('tab-' + t);
         if (btn) btn.classList.toggle('active', t === tab);
     });
@@ -1140,24 +1153,44 @@ window.switchTab = function(tab) {
 function renderTableHead() {
     var head = document.getElementById('tHead');
     if (!head) return;
+
     var cb = '<th class="w-10"><input type="checkbox" onchange="window.toggleAll()" class="w-4 h-4 rounded"></th>';
+
     var heads = {
         main:
             '<tr>' + cb +
             '<th>Пользователь</th><th>UID</th><th>Первый вход</th>' +
             '<th>Последний вход</th><th>Способ входа</th><th>Статус</th></tr>',
+
         profile:
             '<tr>' + cb +
             '<th>Пользователь</th><th>Имя</th><th>Фамилия</th>' +
-            '<th>Никнейм</th><th>Telegram</th><th>Страна</th><th>Пол</th><th>Дата рожд.</th></tr>',
+            '<th>Никнейм</th><th>Telegram</th><th>Страна</th>' +
+            '<th>Пол</th><th>Дата рожд.</th></tr>',
+
         activity:
             '<tr>' + cb +
             '<th>Пользователь</th><th class="text-center">Кликов</th>' +
-            '<th class="text-center">Завершено</th><th class="text-center">Избранное ❤️</th>' +
-            '<th>Топ проект</th></tr>'
+            '<th class="text-center">Завершено</th>' +
+            '<th class="text-center">Избранное ❤️</th>' +
+            '<th>Топ проект</th></tr>',
+
+        // 🔥 НОВАЯ ВКЛАДКА
+        reagents:
+            '<tr>' + cb +
+            '<th>Пользователь</th>' +
+            '<th class="text-center">🧪 Reagents</th>' +
+            '<th class="text-center">🔥 Стрик</th>' +
+            '<th class="text-center">👥 Рефералов</th>' +
+            '<th>Twitter</th>' +
+            '<th>Discord</th>' +
+            '<th>Город</th>' +
+            '</tr>'
     };
+
     head.innerHTML = heads[currentTab] || heads.main;
 }
+
 
 function renderTable() {
     var tbody  = document.getElementById('tBody');
@@ -1227,6 +1260,48 @@ function renderTable() {
                 '<td>' + topCell + '</td>' +
                 '</tr>';
         }
+        if (currentTab === 'reagents') {
+    return '<tr class="' + rowCl + '">' + cb + userCell +
+
+        // Reagents
+        '<td class="text-center">' +
+            '<span class="text-lg font-bold text-cyan-400">' + (user.reagents || 0) + '</span>' +
+            '<span class="text-xs text-slate-500 ml-1">RGT</span>' +
+        '</td>' +
+
+        // Streak
+        '<td class="text-center">' +
+            '<span class="font-bold text-orange-400">' + (user.streak || 0) + '</span>' +
+            '<span class="ml-1">🔥</span>' +
+        '</td>' +
+
+        // Referrals
+        '<td class="text-center">' +
+            '<span class="badge badge-green">' + (user.invitedCount || 0) + '</span>' +
+        '</td>' +
+
+        // Twitter
+        '<td>' +
+            (user.twitter
+                ? '<a href="https://x.com/' + esc(user.twitter) +
+                  '" target="_blank" class="text-sky-400 hover:underline text-xs">@' +
+                  esc(user.twitter) + '</a>'
+                : dsh()
+            ) +
+        '</td>' +
+
+        // Discord
+        '<td class="text-xs text-indigo-400">' +
+            (user.discord || dsh()) +
+        '</td>' +
+
+        // City
+        '<td class="text-xs text-slate-300">' +
+            (user.city || dsh()) +
+        '</td>' +
+
+    '</tr>';
+}
         return '';
     }).join('');
 }
@@ -1283,13 +1358,6 @@ window.openProfile = function(userId) {
             pf('Имя', esc(user.firstName)) +
             pf('Фамилия', esc(user.lastName)) +
             pf('Никнейм', user.username ? '@' + esc(user.username) : '') +
-            pf('Telegram', user.telegram
-                ? '<a href="https://t.me/' + user.telegram.replace('@','') +
-                  '" target="_blank" class="text-blue-400 hover:underline">@' +
-                  esc(user.telegram.replace('@','')) + '</a>'
-                : ''
-            ) +
-            pf('Страна', esc(user.country)) +
             pf('Пол', user.gender === 'male' ? '👨 Мужской'
                 : user.gender === 'female' ? '👩 Женский'
                 : esc(user.gender)
@@ -1302,38 +1370,40 @@ window.openProfile = function(userId) {
         // КРИПТО & СОЦСЕТИ
         // ============================
         '<h4 class="text-sm font-semibold text-slate-300 mb-2 flex items-center gap-2">' +
-            '<i class="fas fa-wallet text-cyan-400"></i> Крипто & Соцсети</h4>' +
-        '<div class="grid grid-cols-1 gap-2 mb-4">' +
+    '<i class="fas fa-address-card text-cyan-400"></i> Контакты & Соцсети</h4>' +
 
-            (user.raw?.profile?.evmAddress
-                ? pf('EVM адрес',
-                    '<span class="font-mono text-xs break-all text-cyan-300">' +
-                    esc(user.raw.profile.evmAddress) + '</span>')
-                : '') +
+'<div class="grid grid-cols-2 gap-2 mb-4">' +
+    pf('Город', esc(user.city)) +
+    pf('Страна', esc(user.country)) +
+    pf('Telegram',
+        user.telegram
+            ? '<a href="https://t.me/' + user.telegram.replace('@','') +
+              '" target="_blank" class="text-blue-400">@' + esc(user.telegram.replace('@','')) + '</a>'
+            : ''
+    ) +
+    pf('Twitter',
+        user.twitter
+            ? '<a href="https://x.com/' + esc(user.twitter) +
+              '" target="_blank" class="text-sky-400">@' + esc(user.twitter) + '</a>'
+            : ''
+    ) +
+    pf('Discord',
+        user.discord
+            ? '<span class="text-indigo-400">' + esc(user.discord) + '</span>'
+            : ''
+    ) +
+'</div>' +
 
-            (user.raw?.profile?.solAddress
-                ? pf('Solana адрес',
-                    '<span class="font-mono text-xs break-all text-purple-300">' +
-                    esc(user.raw.profile.solAddress) + '</span>')
-                : '') +
-
-            (user.raw?.profile?.twitter
-                ? pf('Twitter/X',
-                    '<a href="https://x.com/' + esc(user.raw.profile.twitter) +
-                    '" target="_blank" class="text-sky-400 hover:underline">@' +
-                    esc(user.raw.profile.twitter) + '</a>')
-                : '') +
-
-            (user.raw?.profile?.discord
-                ? pf('Discord',
-                    '<span class="text-indigo-400">' + esc(user.raw.profile.discord) + '</span>')
-                : '') +
-
-            (user.raw?.profile?.city
-                ? pf('Город', esc(user.raw.profile.city))
-                : '') +
-
-        '</div>' +
+'<h4 class="text-sm font-semibold text-slate-300 mb-2 flex items-center gap-2">' +
+    '<i class="fas fa-wallet text-cyan-400"></i> Крипто-адреса</h4>' +
+'<div class="grid grid-cols-1 gap-2 mb-4">' +
+    (user.evmAddress
+        ? pf('EVM', '<span class="font-mono text-xs break-all text-cyan-300">' + esc(user.evmAddress) + '</span>')
+        : '') +
+    (user.solAddress
+        ? pf('Solana', '<span class="font-mono text-xs break-all text-purple-300">' + esc(user.solAddress) + '</span>')
+        : '') +
+'</div>' +
 
         // ============================
         // REAGENTS / STREAK / REFERRALS
