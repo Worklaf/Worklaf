@@ -679,9 +679,9 @@ window.doClaim         = doClaim;
 console.log('🧪 Reagents System v1.0 loaded');
 // ── Автопроверка при загрузке ──────────────────────────────
 async function _checkClaimOnLoad() {
-    // Ждём Firebase
+    // Ждём Firebase — до 15 секунд
     let attempts = 0;
-    while ((!window.auth || !window.auth.currentUser) && attempts < 20) {
+    while ((!window.auth || !window.auth.currentUser) && attempts < 30) {
         await new Promise(r => setTimeout(r, 500));
         attempts++;
     }
@@ -692,12 +692,47 @@ async function _checkClaimOnLoad() {
     const status = await getClaimStatus(user);
     if (!status) return;
 
-    const dot = document.getElementById('claimDot');
-    if (dot && status.canClaim) {
-        dot.classList.remove('hidden');
+    _applyClaimBtnVisual(status.canClaim);
+}
+
+// ── Обновляем внешний вид кнопки клейма ──────────────────────
+function _applyClaimBtnVisual(canClaim) {
+    const btn = document.getElementById('headerClaimBtn');
+    if (!btn) return;
+
+    if (canClaim) {
+        btn.className = [
+            'relative flex items-center gap-2 px-3 py-2',
+            'bg-gradient-to-r from-cyan-600/20 to-blue-600/20',
+            'hover:from-cyan-600/40 hover:to-blue-600/40',
+            'border border-cyan-500/30 hover:border-cyan-400/60',
+            'rounded-xl text-sm text-cyan-400 hover:text-white',
+            'transition-all duration-300 cursor-pointer'
+        ].join(' ');
+        btn.title = 'Получить ежедневные Reagents';
+        btn.innerHTML =
+            '<span class="text-base">🧪</span>' +
+            '<span class="hidden sm:inline font-medium text-xs">Клейм</span>' +
+            '<span class="absolute -top-1 -right-1 w-2.5 h-2.5 ' +
+            'bg-emerald-400 rounded-full border-2 border-slate-900 animate-pulse"></span>';
+    } else {
+        btn.className = [
+            'relative flex items-center gap-2 px-3 py-2',
+            'bg-slate-800/30 border border-slate-700/30',
+            'rounded-xl text-sm text-slate-500',
+            'transition-all duration-300 cursor-default'
+        ].join(' ');
+        btn.title = 'Следующий клейм в 00:00 UTC';
+        btn.innerHTML =
+            '<span class="text-base">✅</span>' +
+            '<span class="hidden sm:inline font-medium text-xs">Готово</span>';
     }
 }
 
-// Запускаем через 2 секунды после загрузки
+// Экспортируем чтобы index.html мог вызывать
+window._applyClaimBtnVisual = _applyClaimBtnVisual;
+
+// Запускаем проверку
 setTimeout(_checkClaimOnLoad, 2000);
+setTimeout(_checkClaimOnLoad, 5000); // повтор если Firebase медленный
 })();
