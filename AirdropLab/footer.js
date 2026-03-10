@@ -1192,7 +1192,7 @@
                                     <input type="text" id="profileInviteCode"
                                            placeholder="${lang('ref_code_input_placeholder')}"
                                            class="flex-1 bg-slate-800 border border-slate-700 rounded-lg px-4 py-2 text-sm text-white font-mono focus:border-yellow-500 focus:outline-none transition-colors">
-                                    <button type="button" onclick="applyReferralCode()"
+                                    <button type="button" onclick="applyReferralCodeFooter()"
                                             class="px-4 py-2 bg-yellow-600 hover:bg-yellow-500 rounded-lg text-sm font-medium text-white transition-colors whitespace-nowrap">
                                         ${lang('account_apply')}
                                     </button>
@@ -1364,7 +1364,7 @@
 
     // ============ REFERRAL CODE ============
 
-    window.applyReferralCode = async function() {
+    window.applyReferralCodeFooter = async function() {
         const lang  = typeof window.t === 'function' ? window.t : (k) => k;
         const input = document.getElementById('profileInviteCode');
         if (!input) return;
@@ -1421,7 +1421,7 @@
 
             await exp.setDoc(
                 exp.doc(db, 'users', inviterId),
-                { reagents: currentReagents + 50, invitedCount: currentInvited + 1 },
+                { reagents: currentReagents + 25, invitedCount: currentInvited + 1 },
                 { merge: true }
             );
 
@@ -1431,7 +1431,7 @@
 
             await exp.setDoc(
                 exp.doc(db, 'users', user.uid),
-                { reagents: myReagents + 25 },
+                { reagents: myReagents + 50 },
                 { merge: true }
             );
 
