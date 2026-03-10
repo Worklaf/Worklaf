@@ -294,32 +294,43 @@ function _generateCode(uid) {
  */
 async function _creditPassiveToUpstream(claimUser, claimedAmount, exp, db) {
     try {
-        // Получаем свою запись чтобы найти referredBy
         const mySnap = await exp.getDoc(exp.doc(db, 'users', claimUser.uid));
-        if (!mySnap.exists()) return;
+        if (!mySnap.exists()) {
+            console.warn('[Reagents] upstream: mySnap not exists for', claimUser.uid);
+            return;
+        }
 
         let currentUid  = claimUser.uid;
         let currentData = mySnap.data();
 
+        console.log('[Reagents] upstream start — referredBy:', currentData.referredBy, '| claimedAmount:', claimedAmount);
+
         for (const levelCfg of REAGENTS_CONFIG.referralLevels) {
             const upstreamUid = currentData.referredBy;
-            if (!upstreamUid) break; // цепочка закончилась
 
-            // Загружаем данные апстрима
+            console.log(`[Reagents] Level ${levelCfg.level} — upstreamUid:`, upstreamUid);
+
+            if (!upstreamUid) {
+                console.log('[Reagents] Chain ended at level', levelCfg.level);
+                break;
+            }
+
             const upSnap = await exp.getDoc(exp.doc(db, 'users', upstreamUid));
-            if (!upSnap.exists()) break;
+            if (!upSnap.exists()) {
+                console.warn('[Reagents] upSnap not exists for', upstreamUid);
+                break;
+            }
 
             const upData = upSnap.data();
 
             const rawReward     = claimedAmount * (levelCfg.percent / 100);
             const roundedReward = roundReward(rawReward);
 
-            if (roundedReward > 0) {
-                // Добавляем в pendingPassive апстрима
-                const currentPending = upData.pendingPassive || 0;
+            console.log(`[Reagents] Level ${levelCfg.level}: raw=${rawReward}, rounded=${roundedReward} → ${upstreamUid}`);
 
-                // Лог: кто и сколько принёс на этой неделе
-                const existingLog = upData.passiveLog || {};
+            if (roundedReward > 0) {
+                const currentPending  = upData.pendingPassive || 0;
+                const existingLog     = upData.passiveLog || {};
                 const existingFromUser = existingLog[claimUser.uid] || {};
 
                 await exp.setDoc(
@@ -340,12 +351,12 @@ async function _creditPassiveToUpstream(claimUser, claimedAmount, exp, db) {
                     { merge: true }
                 );
 
-                console.log(`[Reagents] Level ${levelCfg.level} passive: +${roundedReward} RGT → ${upstreamUid}`);
+                console.log(`[Reagents] ✅ Credited +${roundedReward} RGT to ${upstreamUid} (level ${levelCfg.level})`);
             }
 
-            // Поднимаемся на уровень выше
+            // Поднимаемся выше
             currentUid  = upstreamUid;
-            currentData = upData; // ИСПРАВЛЕНО: теперь берём данные апстрима для следующей итерации
+            currentData = upData;
         }
     } catch(err) {
         console.error('[Reagents] _creditPassiveToUpstream error:', err);
@@ -368,9 +379,11 @@ async function _tryPassivePayout(user) {
 
         const data           = snap.data();
         const pendingPassive = data.pendingPassive || 0;
+
+        console.log('[Reagents] _tryPassivePayout — pendingPassive:', pendingPassive);
+
         if (pendingPassive <= 0) return 0;
 
-        // Выплачиваем всё накопленное — без ограничений по дням
         const payout = Math.ceil(pendingPassive);
 
         await exp.setDoc(
@@ -386,7 +399,7 @@ async function _tryPassivePayout(user) {
             { merge: true }
         );
 
-        console.log(`[Reagents] Passive payout: +${payout} RGT`);
+        console.log(`[Reagents] ✅ Passive payout done: +${payout} RGT`);
         return payout;
 
     } catch(err) {
@@ -395,10 +408,10 @@ async function _tryPassivePayout(user) {
     }
 }
 
-// Оставляем старое имя как алиас для совместимости
-const _tryWeeklyPassivePayout = _tryPassivePayout;async function getPassiveRewardInfo(user, userData) {
+const _tryWeeklyPassivePayout = _tryPassivePayout;
+
+    async function getPassiveRewardInfo(user, userData) {
     try {
-        // Перечитываем свежие данные из Firestore для актуального pendingPassive
         let freshData = userData;
         if (user) {
             const db  = window.db;
@@ -410,23 +423,33 @@ const _tryWeeklyPassivePayout = _tryPassivePayout;async function getPassiveRewar
                         freshData = freshSnap.data();
                     }
                 } catch(e) {
-                    // fallback на переданный userData
+                    console.warn('[Reagents] getPassiveRewardInfo freshSnap error:', e);
                     freshData = userData;
                 }
             }
         }
+
+        // ── ДИАГНОСТИКА ──────────────────────────────────────────
+        console.log('[Reagents] getPassiveRewardInfo freshData:', {
+            pendingPassive:   freshData.pendingPassive,
+            referralEarnings: freshData.referralEarnings,
+            invitedCount:     freshData.invitedCount,
+            lastPassivePayout: freshData.lastPassivePayout,
+            lastPassivePayoutAt: freshData.lastPassivePayoutAt,
+            passiveLog:       freshData.passiveLog,
+            referredBy:       freshData.referredBy,
+            referralCode:     freshData.referralCode,
+        });
+        // ─────────────────────────────────────────────────────────
 
         const pendingPassive   = freshData.pendingPassive    || 0;
         const referralEarnings = freshData.referralEarnings  || 0;
         const invitedCount     = freshData.invitedCount      || 0;
         const lastPayout       = freshData.lastPassivePayout || 0;
         const lastPayoutAt     = freshData.lastPassivePayoutAt || '';
-
-        // Считаем passiveLog — сколько рефералов клеймили и принесли доход
         const passiveLog       = freshData.passiveLog || {};
         const activeReferrals  = Object.keys(passiveLog).length;
 
-        // Детализация по рефералам из лога
         const referralDetails = Object.entries(passiveLog).map(([uid, info]) => ({
             uid,
             level:       info.level,
@@ -436,6 +459,8 @@ const _tryWeeklyPassivePayout = _tryPassivePayout;async function getPassiveRewar
             lastClaimAt: info.lastClaimAt,
         }));
 
+        console.log('[Reagents] passiveLog entries:', activeReferrals, referralDetails);
+
         return {
             pendingPassive:   Math.round(pendingPassive * 10) / 10,
             referralEarnings,
@@ -444,10 +469,10 @@ const _tryWeeklyPassivePayout = _tryPassivePayout;async function getPassiveRewar
             lastPayoutAt,
             activeReferrals,
             referralDetails,
-            // Нет ограничений по дням — выплата при любом заходе
             canPayoutNow: pendingPassive > 0,
         };
     } catch(err) {
+        console.error('[Reagents] getPassiveRewardInfo error:', err);
         return {
             pendingPassive:   0,
             referralEarnings: 0,
