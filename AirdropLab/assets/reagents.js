@@ -1128,6 +1128,7 @@ window.ReagentsSystem = {
     calcReward,
     getNextMilestone,
     getPassiveRewardInfo,
+    _applyReferralCode: window.applyReferralCode,
     CONFIG: REAGENTS_CONFIG
 };
 
