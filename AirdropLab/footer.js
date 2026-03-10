@@ -1220,17 +1220,10 @@ window.closeAccountOverlay = function() {
                             </div>
                         </div>
                         <div>
-                            <label class="block text-sm font-medium text-slate-300 mb-2">${lang('footer_account_telegram')}</label>
-                            <input type="text" id="profileTelegram" value="${userData.telegram || ''}"
-                                   placeholder="@username"
+                            <label class="block text-sm font-medium text-slate-300 mb-2">${lang('footer_account_birthdate')}</label>
+                            <input type="date" id="profileBirthdate" value="${userData.birthdate || ''}"
                                    class="w-full bg-slate-800 border border-slate-700 rounded-lg px-4 py-2.5 text-sm text-white focus:border-cyan-500 focus:outline-none">
                         </div>
-                    </div>
-
-                    <div>
-                        <label class="block text-sm font-medium text-slate-300 mb-2">${lang('footer_account_birthdate')}</label>
-                        <input type="date" id="profileBirthdate" value="${userData.birthdate || ''}"
-                               class="w-full bg-slate-800 border border-slate-700 rounded-lg px-4 py-2.5 text-sm text-white focus:border-cyan-500 focus:outline-none">
                     </div>
 
                     <div>
@@ -1251,38 +1244,49 @@ window.closeAccountOverlay = function() {
                         </div>
                     </div>
 
-                    <!-- Country with searchable input -->
-                    <div>
-                        <label class="block text-sm font-medium text-slate-300 mb-2">${lang('footer_account_country')}</label>
-                        <div class="relative" id="countryPickerWrapper">
-                            <div class="relative">
-                                <i class="fas fa-search absolute left-3 top-1/2 -translate-y-1/2 text-slate-500 text-xs"></i>
-                                <input type="text"
-                                       id="countrySearchInput"
-                                       placeholder="${lang('account_select_country')}"
-                                       autocomplete="off"
-                                       class="w-full bg-slate-800 border border-slate-700 rounded-lg pl-9 pr-10 py-2.5 text-sm text-white focus:border-cyan-500 focus:outline-none"
-                                       oninput="filterCountryList(this.value)"
-                                       onfocus="showCountryDropdown()"
-                                       value="${countries.find(c => c.code === savedCountry)?.name || savedCountry || ''}">
-                                <button type="button" onclick="clearCountryInput()" class="absolute right-3 top-1/2 -translate-y-1/2 text-slate-500 hover:text-white transition-colors">
-                                    <i class="fas fa-times text-xs"></i>
-                                </button>
-                            </div>
-                            <input type="hidden" id="profileCountry" value="${savedCountry}">
+                    <!-- Country + City in one row -->
+                    <div class="grid grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-sm font-medium text-slate-300 mb-2">${lang('footer_account_country')}</label>
+                            <div class="relative" id="countryPickerWrapper">
+                                <div class="relative">
+                                    <i class="fas fa-search absolute left-3 top-1/2 -translate-y-1/2 text-slate-500 text-xs"></i>
+                                    <input type="text"
+                                           id="countrySearchInput"
+                                           placeholder="${lang('account_select_country')}"
+                                           autocomplete="off"
+                                           class="w-full bg-slate-800 border border-slate-700 rounded-lg pl-9 pr-10 py-2.5 text-sm text-white focus:border-cyan-500 focus:outline-none"
+                                           oninput="filterCountryList(this.value)"
+                                           onfocus="showCountryDropdown()"
+                                           value="${countries.find(c => c.code === savedCountry)?.name || savedCountry || ''}">
+                                    <button type="button" onclick="clearCountryInput()" class="absolute right-3 top-1/2 -translate-y-1/2 text-slate-500 hover:text-white transition-colors">
+                                        <i class="fas fa-times text-xs"></i>
+                                    </button>
+                                </div>
+                                <input type="hidden" id="profileCountry" value="${savedCountry}">
 
-                            <!-- Dropdown list -->
-                            <div id="countryDropdown"
-                                 class="hidden absolute z-50 w-full mt-1 bg-slate-800 border border-slate-600 rounded-lg shadow-xl max-h-48 overflow-y-auto">
-                                ${countries.map(c => `
-                                    <div class="country-option px-4 py-2.5 text-sm text-slate-300 hover:bg-slate-700 hover:text-white cursor-pointer transition-colors flex items-center gap-2"
-                                         data-code="${c.code}"
-                                         data-name="${c.name}"
-                                         onclick="selectCountry('${c.code}', '${c.name}')">
-                                        ${c.name}
-                                    </div>
-                                `).join('')}
+                                <!-- Dropdown list -->
+                                <div id="countryDropdown"
+                                     class="hidden absolute z-50 w-full mt-1 bg-slate-800 border border-slate-600 rounded-lg shadow-xl max-h-48 overflow-y-auto">
+                                    ${countries.map(c => `
+                                        <div class="country-option px-4 py-2.5 text-sm text-slate-300 hover:bg-slate-700 hover:text-white cursor-pointer transition-colors flex items-center gap-2"
+                                             data-code="${c.code}"
+                                             data-name="${c.name}"
+                                             onclick="selectCountry('${c.code}', '${c.name}')">
+                                            ${c.name}
+                                        </div>
+                                    `).join('')}
+                                </div>
                             </div>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-slate-300 mb-2">
+                                <i class="fas fa-city text-orange-400 mr-1"></i>${lang('footer_account_city') || 'Город'}
+                            </label>
+                            <input type="text" id="profileCity"
+                                   value="${userData.city || ''}"
+                                   placeholder="${lang('footer_account_city_placeholder') || 'Ваш город'}"
+                                   class="w-full bg-slate-800 border border-slate-700 rounded-lg px-4 py-2.5 text-sm text-white focus:border-cyan-500 focus:outline-none transition-colors">
                         </div>
                     </div>
 
@@ -1292,76 +1296,80 @@ window.closeAccountOverlay = function() {
                                   placeholder="${lang('footer_account_bio_placeholder')}"
                                   class="w-full bg-slate-800 border border-slate-700 rounded-lg px-4 py-2.5 text-sm text-white focus:border-cyan-500 focus:outline-none resize-none">${userData.bio || ''}</textarea>
                     </div>
-<!-- Crypto & Social Section -->
-<div class="border-t border-slate-700/50 pt-5">
-    <h4 class="text-sm font-semibold text-slate-300 mb-4 flex items-center gap-2">
-        <i class="fas fa-wallet text-cyan-400"></i>
-        Крипто-адреса
-    </h4>
-    <div class="space-y-3">
-        <div>
-            <label class="block text-xs font-medium text-slate-400 mb-1.5 flex items-center gap-1.5">
-                <span class="w-5 h-5 rounded-full bg-blue-500/20 flex items-center justify-center text-xs font-bold text-blue-400">Ξ</span>
-                EVM адрес
-                <span class="text-slate-600">(Ethereum, BSC, Polygon...)</span>
-            </label>
-            <input type="text" id="profileEvmAddress"
-                   value="${userData.evmAddress || ''}"
-                   placeholder="0x..."
-                   class="w-full bg-slate-800 border border-slate-700 rounded-lg px-4 py-2.5 text-sm text-white font-mono focus:border-cyan-500 focus:outline-none transition-colors">
-        </div>
-        <div>
-            <label class="block text-xs font-medium text-slate-400 mb-1.5 flex items-center gap-1.5">
-                <span class="w-5 h-5 rounded-full bg-purple-500/20 flex items-center justify-center text-xs font-bold text-purple-400">◎</span>
-                Solana адрес
-            </label>
-            <input type="text" id="profileSolAddress"
-                   value="${userData.solAddress || ''}"
-                   placeholder="Ваш Solana адрес..."
-                   class="w-full bg-slate-800 border border-slate-700 rounded-lg px-4 py-2.5 text-sm text-white font-mono focus:border-cyan-500 focus:outline-none transition-colors">
-        </div>
-    </div>
-</div>
 
-<!-- Social Links -->
-<div class="border-t border-slate-700/50 pt-5">
-    <h4 class="text-sm font-semibold text-slate-300 mb-4 flex items-center gap-2">
-        <i class="fas fa-share-alt text-pink-400"></i>
-        Социальные сети
-    </h4>
-    <div class="grid grid-cols-2 gap-3">
-        <div>
-            <label class="block text-xs font-medium text-slate-400 mb-1.5">
-                <i class="fab fa-twitter text-sky-400 mr-1"></i>Twitter / X
-            </label>
-            <div class="relative">
-                <span class="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500 text-xs">@</span>
-                <input type="text" id="profileTwitter"
-                       value="${userData.twitter || ''}"
-                       placeholder="username"
-                       class="w-full bg-slate-800 border border-slate-700 rounded-lg pl-7 pr-4 py-2.5 text-sm text-white focus:border-cyan-500 focus:outline-none transition-colors">
-            </div>
-        </div>
-        <div>
-            <label class="block text-xs font-medium text-slate-400 mb-1.5">
-                <i class="fab fa-discord text-indigo-400 mr-1"></i>Discord
-            </label>
-            <input type="text" id="profileDiscord"
-                   value="${userData.discord || ''}"
-                   placeholder="username"
-                   class="w-full bg-slate-800 border border-slate-700 rounded-lg px-4 py-2.5 text-sm text-white focus:border-cyan-500 focus:outline-none transition-colors">
-        </div>
-        <div class="col-span-2">
-            <label class="block text-xs font-medium text-slate-400 mb-1.5">
-                <i class="fas fa-city text-orange-400 mr-1"></i>Город
-            </label>
-            <input type="text" id="profileCity"
-                   value="${userData.city || ''}"
-                   placeholder="Ваш город"
-                   class="w-full bg-slate-800 border border-slate-700 rounded-lg px-4 py-2.5 text-sm text-white focus:border-cyan-500 focus:outline-none transition-colors">
-        </div>
-    </div>
-</div>
+                    <!-- Crypto & Social Section -->
+                    <div class="border-t border-slate-700/50 pt-5">
+                        <h4 class="text-sm font-semibold text-slate-300 mb-4 flex items-center gap-2">
+                            <i class="fas fa-wallet text-cyan-400"></i>
+                            ${lang('footer_crypto_wallets') || 'Крипто-адреса'}
+                        </h4>
+                        <div class="space-y-3">
+                            <div>
+                                <label class="block text-xs font-medium text-slate-400 mb-1.5 flex items-center gap-1.5">
+                                    <span class="w-5 h-5 rounded-full bg-blue-500/20 flex items-center justify-center text-xs font-bold text-blue-400">Ξ</span>
+                                    EVM ${lang('footer_address') || 'адрес'}
+                                    <span class="text-slate-600">(Ethereum, BSC, Polygon...)</span>
+                                </label>
+                                <input type="text" id="profileEvmAddress"
+                                       value="${userData.evmAddress || ''}"
+                                       placeholder="0x..."
+                                       class="w-full bg-slate-800 border border-slate-700 rounded-lg px-4 py-2.5 text-sm text-white font-mono focus:border-cyan-500 focus:outline-none transition-colors">
+                            </div>
+                            <div>
+                                <label class="block text-xs font-medium text-slate-400 mb-1.5 flex items-center gap-1.5">
+                                    <span class="w-5 h-5 rounded-full bg-purple-500/20 flex items-center justify-center text-xs font-bold text-purple-400">◎</span>
+                                    Solana ${lang('footer_address') || 'адрес'}
+                                </label>
+                                <input type="text" id="profileSolAddress"
+                                       value="${userData.solAddress || ''}"
+                                       placeholder="${lang('footer_solana_placeholder') || 'Ваш Solana адрес...'}"
+                                       class="w-full bg-slate-800 border border-slate-700 rounded-lg px-4 py-2.5 text-sm text-white font-mono focus:border-cyan-500 focus:outline-none transition-colors">
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Social Links: Twitter + Discord + Telegram (3 in a row) -->
+                    <div class="border-t border-slate-700/50 pt-5">
+                        <h4 class="text-sm font-semibold text-slate-300 mb-4 flex items-center gap-2">
+                            <i class="fas fa-share-alt text-pink-400"></i>
+                            ${lang('footer_social_networks') || 'Социальные сети'}
+                        </h4>
+                        <div class="grid grid-cols-3 gap-3">
+                            <div>
+                                <label class="block text-xs font-medium text-slate-400 mb-1.5">
+                                    <i class="fab fa-twitter text-sky-400 mr-1"></i>Twitter / X
+                                </label>
+                                <div class="relative">
+                                    <span class="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500 text-xs">@</span>
+                                    <input type="text" id="profileTwitter"
+                                           value="${userData.twitter || ''}"
+                                           placeholder="username"
+                                           class="w-full bg-slate-800 border border-slate-700 rounded-lg pl-7 pr-4 py-2.5 text-sm text-white focus:border-cyan-500 focus:outline-none transition-colors">
+                                </div>
+                            </div>
+                            <div>
+                                <label class="block text-xs font-medium text-slate-400 mb-1.5">
+                                    <i class="fab fa-discord text-indigo-400 mr-1"></i>Discord
+                                </label>
+                                <input type="text" id="profileDiscord"
+                                       value="${userData.discord || ''}"
+                                       placeholder="username"
+                                       class="w-full bg-slate-800 border border-slate-700 rounded-lg px-4 py-2.5 text-sm text-white focus:border-cyan-500 focus:outline-none transition-colors">
+                            </div>
+                            <div>
+                                <label class="block text-xs font-medium text-slate-400 mb-1.5">
+                                    <i class="fab fa-telegram text-sky-500 mr-1"></i>Telegram
+                                </label>
+                                <div class="relative">
+                                    <span class="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500 text-xs">@</span>
+                                    <input type="text" id="profileTelegram"
+                                           value="${userData.telegram || ''}"
+                                           placeholder="username"
+                                           class="w-full bg-slate-800 border border-slate-700 rounded-lg pl-7 pr-4 py-2.5 text-sm text-white focus:border-cyan-500 focus:outline-none transition-colors">
+                                </div>
+                            </div>
+                        </div>
+                    </div>
 
 <!-- Referral Block -->
 <div class="border-t border-slate-700/50 pt-5">
