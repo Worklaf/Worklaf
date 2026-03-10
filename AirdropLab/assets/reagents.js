@@ -246,7 +246,7 @@ window.applyReferralCode = async function(currentUser, code) {
     batch.set(
         exp.doc(db, 'users', currentUser.uid),
         {
-            referredBy:   inviterUid,
+            invitedBy: inviterUid,
             referralCode: myData.referralCode || _generateCode(currentUser.uid),
             reagents:     (myData.reagents || 0) + REAGENTS_CONFIG.referralBonus,
             referralEarnings: myData.referralEarnings || 0,
@@ -303,10 +303,12 @@ async function _creditPassiveToUpstream(claimUser, claimedAmount, exp, db) {
         let currentUid  = claimUser.uid;
         let currentData = mySnap.data();
 
-        console.log('[Reagents] upstream start — referredBy:', currentData.referredBy, '| claimedAmount:', claimedAmount);
+        // ИСПРАВЛЕНО: поле называется invitedBy, не referredBy
+        console.log('[Reagents] upstream start — invitedBy:', currentData.invitedBy, '| claimedAmount:', claimedAmount);
 
         for (const levelCfg of REAGENTS_CONFIG.referralLevels) {
-            const upstreamUid = currentData.referredBy;
+            // ИСПРАВЛЕНО: invitedBy вместо referredBy
+            const upstreamUid = currentData.invitedBy;
 
             console.log(`[Reagents] Level ${levelCfg.level} — upstreamUid:`, upstreamUid);
 
@@ -329,8 +331,8 @@ async function _creditPassiveToUpstream(claimUser, claimedAmount, exp, db) {
             console.log(`[Reagents] Level ${levelCfg.level}: raw=${rawReward}, rounded=${roundedReward} → ${upstreamUid}`);
 
             if (roundedReward > 0) {
-                const currentPending  = upData.pendingPassive || 0;
-                const existingLog     = upData.passiveLog || {};
+                const currentPending   = upData.pendingPassive || 0;
+                const existingLog      = upData.passiveLog || {};
                 const existingFromUser = existingLog[claimUser.uid] || {};
 
                 await exp.setDoc(
@@ -354,7 +356,7 @@ async function _creditPassiveToUpstream(claimUser, claimedAmount, exp, db) {
                 console.log(`[Reagents] ✅ Credited +${roundedReward} RGT to ${upstreamUid} (level ${levelCfg.level})`);
             }
 
-            // Поднимаемся выше
+            // Поднимаемся выше — тоже ищем invitedBy
             currentUid  = upstreamUid;
             currentData = upData;
         }
@@ -424,23 +426,20 @@ const _tryWeeklyPassivePayout = _tryPassivePayout;
                     }
                 } catch(e) {
                     console.warn('[Reagents] getPassiveRewardInfo freshSnap error:', e);
-                    freshData = userData;
                 }
             }
         }
 
-        // ── ДИАГНОСТИКА ──────────────────────────────────────────
         console.log('[Reagents] getPassiveRewardInfo freshData:', {
-            pendingPassive:   freshData.pendingPassive,
-            referralEarnings: freshData.referralEarnings,
-            invitedCount:     freshData.invitedCount,
-            lastPassivePayout: freshData.lastPassivePayout,
-            lastPassivePayoutAt: freshData.lastPassivePayoutAt,
-            passiveLog:       freshData.passiveLog,
-            referredBy:       freshData.referredBy,
-            referralCode:     freshData.referralCode,
+            pendingPassive:     freshData.pendingPassive,
+            referralEarnings:   freshData.referralEarnings,
+            invitedCount:       freshData.invitedCount,
+            lastPassivePayout:  freshData.lastPassivePayout,
+            lastPassivePayoutAt:freshData.lastPassivePayoutAt,
+            passiveLog:         freshData.passiveLog,
+            invitedBy:          freshData.invitedBy,
+            referralCode:       freshData.referralCode,
         });
-        // ─────────────────────────────────────────────────────────
 
         const pendingPassive   = freshData.pendingPassive    || 0;
         const referralEarnings = freshData.referralEarnings  || 0;
