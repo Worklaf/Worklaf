@@ -303,10 +303,11 @@ async function _creditPassiveToUpstream(claimUser, claimedAmount, exp, db) {
         let currentUid  = claimUser.uid;
         let currentData = mySnap.data();
 
-        // ИСПРАВЛЕНО: поле называется invitedBy, не referredBy
+        // ИСПРАВЛЕНО: invitedBy вместо referredBy
         console.log('[Reagents] upstream start — invitedBy:', currentData.invitedBy, '| claimedAmount:', claimedAmount);
 
         for (const levelCfg of REAGENTS_CONFIG.referralLevels) {
+
             // ИСПРАВЛЕНО: invitedBy вместо referredBy
             const upstreamUid = currentData.invitedBy;
 
@@ -332,7 +333,7 @@ async function _creditPassiveToUpstream(claimUser, claimedAmount, exp, db) {
 
             if (roundedReward > 0) {
                 const currentPending   = upData.pendingPassive || 0;
-                const existingLog      = upData.passiveLog || {};
+                const existingLog      = upData.passiveLog     || {};
                 const existingFromUser = existingLog[claimUser.uid] || {};
 
                 await exp.setDoc(
@@ -356,7 +357,7 @@ async function _creditPassiveToUpstream(claimUser, claimedAmount, exp, db) {
                 console.log(`[Reagents] ✅ Credited +${roundedReward} RGT to ${upstreamUid} (level ${levelCfg.level})`);
             }
 
-            // Поднимаемся выше — тоже ищем invitedBy
+            // Поднимаемся выше — ищем invitedBy у апстрима
             currentUid  = upstreamUid;
             currentData = upData;
         }
