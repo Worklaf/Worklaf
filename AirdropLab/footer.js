@@ -1362,120 +1362,85 @@
     // ============ REFERRAL CODE ============
 
     window.applyReferralCode = async function() {
-    const lang  = typeof window.t === 'function' ? window.t : (k) => k;
-    const input = document.getElementById('profileInviteCode');
-    if (!input) return;
+        const lang  = typeof window.t === 'function' ? window.t : (k) => k;
+        const input = document.getElementById('profileInviteCode');
+        if (!input) return;
 
-    const code = input.value.trim().toUpperCase();
-    if (!code || !code.startsWith('AL-')) {
-        footerShowToast(lang('ref_wrong_format'), 'error');
-        return;
-    }
-
-    const user = (window.auth && window.auth.currentUser) || window.currentUser || null;
-    if (!user) {
-        footerShowToast(lang('ref_login_required'), 'error');
-        return;
-    }
-
-    const db  = window.db;
-    const exp = window.__firestoreExports;
-    if (!db || !exp) {
-        footerShowToast('Firebase not available', 'error');
-        return;
-    }
-
-    // Находим нужные функции — они могут быть в разных местах
-    const getDoc    = exp.getDoc    || window.firestoreGetDoc;
-    const getDocs   = exp.getDocs   || window.firestoreGetDocs;
-    const setDoc    = exp.setDoc    || window.firestoreSetDoc;
-    const doc       = exp.doc       || window.firestoreDoc;
-    const collection = exp.collection || window.firestoreCollection;
-    const query     = exp.query     || window.firestoreQuery;
-    const where     = exp.where     || window.firestoreWhere;
-
-    if (!getDoc || !getDocs || !setDoc || !doc || !collection || !query || !where) {
-        console.error('[Referral] Missing firestore functions:', {
-            getDoc: !!getDoc, getDocs: !!getDocs, setDoc: !!setDoc,
-            doc: !!doc, collection: !!collection, query: !!query, where: !!where
-        });
-        footerShowToast('Firestore functions missing', 'error');
-        return;
-    }
-
-    try {
-        // Получаем свои данные
-        const mySnap = await getDoc(doc(db, 'users', user.uid));
-        const myData = mySnap.exists() ? mySnap.data() : {};
-
-        if (myData.referredBy) {
-            footerShowToast(lang('ref_already_used'), 'error');
+        const code = input.value.trim().toUpperCase();
+        if (!code || !code.startsWith('AL-')) {
+            footerShowToast(lang('ref_wrong_format'), 'error');
             return;
         }
 
-        // Ищем владельца кода
-        const q    = query(collection(db, 'users'), where('referralCode', '==', code));
-        const snap = await getDocs(q);
-
-        if (snap.empty) {
-            footerShowToast(lang('ref_not_found'), 'error');
+        const user = typeof window.currentUser !== 'undefined' ? window.currentUser : null;
+        if (!user) {
+            footerShowToast(lang('ref_login_required'), 'error');
             return;
         }
 
-        const inviterDoc  = snap.docs[0];
-        const inviterId   = inviterDoc.id;
-        const inviterData = inviterDoc.data();
+        const db  = window.db;
+        const exp = window.__firestoreExports;
+        if (!db || !exp) return;
 
-        if (inviterId === user.uid) {
-            footerShowToast(lang('ref_own_code'), 'error');
-            return;
+        try {
+            const snap = await exp.getDocs(
+                exp.query(
+                    exp.collection(db, 'users'),
+                    exp.where('referralCode', '==', code)
+                )
+            );
+
+            if (snap.empty) {
+                footerShowToast(lang('ref_not_found'), 'error');
+                return;
+            }
+
+            const inviterDoc  = snap.docs[0];
+            const inviterId   = inviterDoc.id;
+            const inviterData = inviterDoc.data();
+
+            if (inviterId === user.uid) {
+                footerShowToast(lang('ref_own_code'), 'error');
+                return;
+            }
+
+            await exp.setDoc(
+                exp.doc(db, 'users', user.uid),
+                {
+                    invitedBy:    inviterId,
+                    invitedByName: inviterData.displayName || inviterData.profile?.firstName || lang('user')
+                },
+                { merge: true }
+            );
+
+            const currentReagents = inviterData.reagents    || 0;
+            const currentInvited  = inviterData.invitedCount || 0;
+
+            await exp.setDoc(
+                exp.doc(db, 'users', inviterId),
+                { reagents: currentReagents + 50, invitedCount: currentInvited + 1 },
+                { merge: true }
+            );
+
+            const mySnap     = await exp.getDoc(exp.doc(db, 'users', user.uid));
+            const myData     = mySnap.exists() ? mySnap.data() : {};
+            const myReagents = myData.reagents || 0;
+
+            await exp.setDoc(
+                exp.doc(db, 'users', user.uid),
+                { reagents: myReagents + 25 },
+                { merge: true }
+            );
+
+            footerShowToast(lang('ref_applied'), 'success');
+            input.style.display = 'none';
+            setTimeout(function() { initAccountPage(); }, 500);
+
+        } catch(err) {
+            console.error('Referral error:', err);
+            footerShowToast(lang('ref_error') + err.message, 'error');
         }
-
-        console.log('[Referral] Applying code:', code, '| Inviter:', inviterId);
-
-        // ✅ Новый юзер +50 RGT
-        await setDoc(
-            doc(db, 'users', user.uid),
-            {
-                referredBy:       inviterId,
-                invitedBy:        inviterId,
-                invitedByUid:     inviterId,
-                invitedByName:    inviterData.displayName
-                                  || inviterData.profile?.firstName
-                                  || lang('user'),
-                referralCode:     myData.referralCode
-                                  || ('AL-' + user.uid.substring(0, 6).toUpperCase()),
-                reagents:         (myData.reagents || 0) + 50,
-                referralEarnings: myData.referralEarnings || 0,
-                invitedAt:        new Date().toISOString(),
-            },
-            { merge: true }
-        );
-
-        console.log('[Referral] New user +50 RGT saved');
-
-        // ✅ Пригласивший +25 RGT
-        await setDoc(
-            doc(db, 'users', inviterId),
-            {
-                reagents:         (inviterData.reagents        || 0) + 25,
-                invitedCount:     (inviterData.invitedCount     || 0) + 1,
-                referralEarnings: (inviterData.referralEarnings || 0) + 25,
-            },
-            { merge: true }
-        );
-
-        console.log('[Referral] Inviter +25 RGT saved');
-
-        footerShowToast(lang('ref_applied'), 'success');
-        input.style.display = 'none';
-        setTimeout(function() { initAccountPage(); }, 500);
-
-    } catch(err) {
-        console.error('[Referral] Error:', err);
-        footerShowToast((lang('ref_error') || 'Ошибка: ') + err.message, 'error');
-    }
-};
+    };
 
     // ============ COUNTRY PICKER ============
 
