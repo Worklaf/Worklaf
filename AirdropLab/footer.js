@@ -1372,7 +1372,7 @@
         return;
     }
 
-    const user = typeof window.currentUser !== 'undefined' ? window.currentUser : null;
+    const user = (window.auth && window.auth.currentUser) || window.currentUser || null;
     if (!user) {
         footerShowToast(lang('ref_login_required'), 'error');
         return;
@@ -1383,7 +1383,7 @@
     if (!db || !exp) return;
 
     try {
-        // Проверяем не использовал ли уже реф код
+        // Проверяем свои данные
         const mySnap = await exp.getDoc(exp.doc(db, 'users', user.uid));
         const myData = mySnap.exists() ? mySnap.data() : {};
 
@@ -1392,6 +1392,7 @@
             return;
         }
 
+        // Ищем владельца кода
         const snap = await exp.getDocs(
             exp.query(
                 exp.collection(db, 'users'),
@@ -1415,28 +1416,31 @@
 
         const batch = exp.writeBatch(db);
 
-        // ✅ Новому юзеру +50 RGT + referredBy для MLM
+        // ✅ НОВЫЙ ЮЗЕР получает +50 RGT (referralBonus)
         batch.set(
             exp.doc(db, 'users', user.uid),
             {
-                referredBy:       inviterId,   // ← ГЛАВНОЕ ПОЛЕ для MLM
+                referredBy:       inviterId,
                 invitedBy:        inviterId,
                 invitedByUid:     inviterId,
-                invitedByName:    inviterData.displayName || inviterData.profile?.firstName || lang('user'),
-                referralCode:     myData.referralCode || ('AL-' + user.uid.substring(0, 6).toUpperCase()),
-                reagents:         (myData.reagents || 0) + 50,
+                invitedByName:    inviterData.displayName
+                                  || inviterData.profile?.firstName
+                                  || lang('user'),
+                referralCode:     myData.referralCode
+                                  || ('AL-' + user.uid.substring(0, 6).toUpperCase()),
+                reagents:         (myData.reagents || 0) + 50,  // ← новый юзер +50
                 referralEarnings: myData.referralEarnings || 0,
                 invitedAt:        new Date().toISOString(),
             },
             { merge: true }
         );
 
-        // ✅ Пригласившему +25 RGT + счётчик
+        // ✅ ПРИГЛАСИВШИЙ получает +25 RGT (referralInviter)
         batch.set(
             exp.doc(db, 'users', inviterId),
             {
-                reagents:         (inviterData.reagents    || 0) + 25,
-                invitedCount:     (inviterData.invitedCount || 0) + 1,
+                reagents:         (inviterData.reagents     || 0) + 25, // ← пригласивший +25
+                invitedCount:     (inviterData.invitedCount  || 0) + 1,
                 referralEarnings: (inviterData.referralEarnings || 0) + 25,
             },
             { merge: true }
@@ -1444,13 +1448,14 @@
 
         await batch.commit();
 
+        console.log('[Referral] Applied:', code, '| New user +50, Inviter +25');
         footerShowToast(lang('ref_applied'), 'success');
         input.style.display = 'none';
         setTimeout(function() { initAccountPage(); }, 500);
 
     } catch(err) {
-        console.error('Referral error:', err);
-        footerShowToast(lang('ref_error') + err.message, 'error');
+        console.error('[Referral] Error:', err);
+        footerShowToast((lang('ref_error') || 'Ошибка: ') + err.message, 'error');
     }
 };
 
@@ -2515,10 +2520,5 @@
     if (document.readyState === 'complete' || document.readyState === 'interactive') {
         setTimeout(initFooter, 100);
     }
-window.addEventListener('load', function() {
-    // Убеждаемся что используется правильная версия applyReferralCode из reagents.js
-    if (window.ReagentsSystem && window.ReagentsSystem._applyReferralCode) {
-        window.applyReferralCode = window.ReagentsSystem._applyReferralCode;
-    }
-});
+
 })();
