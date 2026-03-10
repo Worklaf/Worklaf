@@ -203,78 +203,6 @@ async function performClaim(user) {
     return { ...status, newReagents };
 }
 
-// ─────────────────────────────────────────────────────────────────
-// МНОГОУРОВНЕВАЯ РЕФЕРАЛЬНАЯ СИСТЕМА
-// ─────────────────────────────────────────────────────────────────
-
-/**
- * Применяем реферальный код при регистрации/первом вводе
- * Новый юзер: +50 RGT
- * Пригласивший: +25 RGT
- * Сохраняем цепочку referredBy для MLM
- */
-window.applyReferralCode = async function(currentUser, code) {
-    const db  = window.db;
-    const exp = window.__firestoreExports;
-    if (!db || !exp || !currentUser) throw new Error(lang('ref_login_required'));
-
-    // Валидация формата AL-XXXXXX
-    if (!/^AL-[A-Z0-9]{6}$/.test(code)) throw new Error(lang('ref_wrong_format'));
-
-    // Ищем владельца кода
-    const usersRef  = exp.collection(db, 'users');
-    const q         = exp.query(usersRef, exp.where('referralCode', '==', code));
-    const querySnap = await exp.getDocs(q);
-
-    if (querySnap.empty) throw new Error(lang('ref_not_found'));
-
-    const inviterDoc  = querySnap.docs[0];
-    const inviterUid  = inviterDoc.id;
-    const inviterData = inviterDoc.data();
-
-    // Нельзя использовать свой код
-    if (inviterUid === currentUser.uid) throw new Error(lang('ref_own_code'));
-
-    // Проверяем не использовал ли уже код
-    const mySnap = await exp.getDoc(exp.doc(db, 'users', currentUser.uid));
-    const myData = mySnap.exists() ? mySnap.data() : {};
-    if (myData.referredBy) throw new Error(lang('ref_already_used'));
-
-    const batch = exp.writeBatch(db);
-
-    // Новому юзеру +50 RGT
-    batch.set(
-        exp.doc(db, 'users', currentUser.uid),
-        {
-            referredBy:        inviterUid,   // новое поле для MLM
-        invitedBy:         inviterUid,   // старое поле для совместимости
-        invitedByUid:      inviterUid,   // ещё одно старое поле (видели в данных)
-        referralCode:      myData.referralCode || _generateCode(currentUser.uid),
-        reagents:          (myData.reagents || 0) + REAGENTS_CONFIG.referralBonus,
-        referralEarnings:  myData.referralEarnings || 0,
-        invitedAt:         new Date().toISOString(),
-        },
-        { merge: true }
-    );
-
-    // Пригласившему +25 RGT + счётчик рефералов
-    batch.set(
-        exp.doc(db, 'users', inviterUid),
-        {
-            reagents:      (inviterData.reagents || 0) + REAGENTS_CONFIG.referralInviter,
-            invitedCount:  (inviterData.invitedCount || 0) + 1,
-            referralEarnings: (inviterData.referralEarnings || 0) + REAGENTS_CONFIG.referralInviter,
-        },
-        { merge: true }
-    );
-
-    await batch.commit();
-
-    return {
-        bonusForMe:     REAGENTS_CONFIG.referralBonus,   // +50
-        bonusForInviter: REAGENTS_CONFIG.referralInviter, // +25
-    };
-};
 
 /**
  * Генерация реферального кода
@@ -1127,7 +1055,6 @@ window.openClaimModal  = window.openClaimModal;
 window.closeClaimModal = window.closeClaimModal;
 window.doClaim         = window.doClaim;
 
-console.log('🧪 Reagents System v2.0 loaded (MLM referrals)');
 window.ReagentsSystem = {
     getClaimStatus,
     performClaim,
@@ -1135,10 +1062,10 @@ window.ReagentsSystem = {
     calcReward,
     getNextMilestone,
     getPassiveRewardInfo,
-    _applyReferralCode: window.applyReferralCode,
     CONFIG: REAGENTS_CONFIG
 };
-    window.ReagentsSystem._applyReferralCode = window.applyReferralCode;
+
+console.log('🧪 Reagents System v2.0 loaded (MLM referrals)');
 setTimeout(_checkClaimOnLoad, 2000);
 setTimeout(_checkClaimOnLoad, 5000);
 
