@@ -1121,6 +1121,13 @@ async function _checkClaimOnLoad() {
 // ЭКСПОРТ
 // ─────────────────────────────────────────────────────────────────
 
+
+
+window.openClaimModal  = window.openClaimModal;
+window.closeClaimModal = window.closeClaimModal;
+window.doClaim         = window.doClaim;
+
+console.log('🧪 Reagents System v2.0 loaded (MLM referrals)');
 window.ReagentsSystem = {
     getClaimStatus,
     performClaim,
@@ -1131,13 +1138,7 @@ window.ReagentsSystem = {
     _applyReferralCode: window.applyReferralCode,
     CONFIG: REAGENTS_CONFIG
 };
-
-window.openClaimModal  = window.openClaimModal;
-window.closeClaimModal = window.closeClaimModal;
-window.doClaim         = window.doClaim;
-
-console.log('🧪 Reagents System v2.0 loaded (MLM referrals)');
-
+    window.ReagentsSystem._applyReferralCode = window.applyReferralCode;
 setTimeout(_checkClaimOnLoad, 2000);
 setTimeout(_checkClaimOnLoad, 5000);
 
