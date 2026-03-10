@@ -413,7 +413,6 @@ async function _tryPassivePayout(user) {
             {
                 reagents:            (data.reagents || 0) + payout,
                 pendingPassive:      0,
-                passiveLog:          {},
                 referralEarnings:    (data.referralEarnings || 0) + payout,
                 lastPassivePayoutAt: new Date().toISOString(),
                 lastPassivePayout:   payout,
@@ -773,14 +772,12 @@ function _renderPassiveBlock(passiveInfo) {
     if (!passiveInfo) return '';
 
     const {
-        pendingPassive,
         referralEarnings,
         invitedCount,
         lastPayout,
         lastPayoutAt,
         activeReferrals,
         referralDetails,
-        canPayoutNow,
     } = passiveInfo;
 
     const levels = REAGENTS_CONFIG.referralLevels;
@@ -794,85 +791,72 @@ function _renderPassiveBlock(passiveInfo) {
         } catch(e) { lastPayoutStr = lastPayoutAt.substring(0, 10); }
     }
 
+    // Считаем клеймивших за 7 дней
+    const sevenDaysAgo = Date.now() - 7 * 24 * 60 * 60 * 1000;
+    const recentActive = (referralDetails || []).filter(ref => {
+        if (!ref.lastClaimAt) return false;
+        try { return new Date(ref.lastClaimAt).getTime() > sevenDaysAgo; }
+        catch(e) { return false; }
+    }).length;
+
     return `
     <div class="mt-5 border-t border-slate-700/50 pt-4">
+
+        <!-- Заголовок -->
         <div class="flex items-center gap-2 mb-3">
             <span class="text-base">👥</span>
             <span class="text-xs font-semibold text-slate-300">${lang('passive_income_title')}</span>
-            ${canPayoutNow ? `
-            <span class="ml-auto text-[10px] px-2 py-0.5 bg-emerald-500/20 text-emerald-400
-                          border border-emerald-500/30 rounded-full animate-pulse">
-                ✨ Готово к выплате
-            </span>` : ''}
         </div>
 
-        <!-- 4 плитки статистики -->
-        <div class="grid grid-cols-2 gap-2 mb-3">
+        <!-- 3 плитки статистики -->
+        <div class="grid grid-cols-3 gap-2 mb-3">
             <div class="bg-slate-800/40 rounded-lg p-2.5 text-center">
                 <div class="text-base font-bold text-cyan-400">${invitedCount}</div>
                 <div class="text-[10px] text-slate-500">${lang('passive_invited')}</div>
             </div>
             <div class="bg-slate-800/40 rounded-lg p-2.5 text-center">
-                <div class="text-base font-bold text-blue-400">${activeReferrals || 0}</div>
-                <div class="text-[10px] text-slate-500">Клеймили (7 дн.)</div>
+                <div class="text-base font-bold text-blue-400">${recentActive}</div>
+                <div class="text-[10px] text-slate-500">Активны (7 дн.)</div>
             </div>
             <div class="bg-slate-800/40 rounded-lg p-2.5 text-center">
                 <div class="text-base font-bold text-emerald-400">${referralEarnings}</div>
                 <div class="text-[10px] text-slate-500">${lang('passive_total_earned')}</div>
             </div>
-            <div class="bg-slate-800/40 rounded-lg p-2.5 text-center border ${canPayoutNow
-                ? 'border-emerald-500/40 bg-emerald-900/20'
-                : 'border-slate-700/30'}">
-                <div class="text-base font-bold ${canPayoutNow ? 'text-yellow-400' : 'text-slate-400'}">
-                    ${pendingPassive > 0 ? '+' : ''}${Math.ceil(pendingPassive)}
-                </div>
-                <div class="text-[10px] text-slate-500">${lang('passive_pending')}</div>
-            </div>
         </div>
 
-        <!-- Блок выплаты -->
+        <!-- Блок итого заработано -->
         <div class="bg-slate-800/30 rounded-xl p-3 mb-3">
-            ${canPayoutNow ? `
             <div class="flex items-center justify-between mb-2">
-                <span class="text-xs text-slate-300 font-medium">💰 Накоплено к выплате</span>
-                <span class="text-sm font-bold text-yellow-400">+${Math.ceil(pendingPassive)} RGT</span>
+                <span class="text-xs text-slate-300 font-medium">💰 Всего получено от рефералов</span>
+                <span class="text-sm font-bold text-emerald-400">+${referralEarnings} RGT</span>
             </div>
-            <div class="text-[10px] text-emerald-500/70 mb-2">
-                ✅ Будет начислено автоматически при следующем открытии модалки
-            </div>
-            <div class="w-full h-1.5 bg-slate-700 rounded-full overflow-hidden">
-                <div class="h-full bg-gradient-to-r from-emerald-500 to-cyan-500 rounded-full w-full"></div>
-            </div>
-            ` : `
-            <div class="flex items-center justify-between">
-                <span class="text-xs text-slate-400">Ожидание клеймов рефералов</span>
-                <span class="text-xs text-slate-600">0 RGT</span>
-            </div>
-            <div class="text-[10px] text-slate-600 text-center mt-2">${lang('passive_no_pending')}</div>
-            `}
 
             ${lastPayout > 0 ? `
-            <div class="flex items-center justify-between mt-2 pt-2 border-t border-slate-700/30">
-                <span class="text-[10px] text-slate-600">Последняя выплата ${lastPayoutStr}</span>
+            <div class="flex items-center justify-between pt-2 border-t border-slate-700/30">
+                <span class="text-[10px] text-slate-500">Последнее начисление ${lastPayoutStr}</span>
                 <span class="text-[10px] text-emerald-500">+${lastPayout} RGT</span>
             </div>
-            ` : ''}
+            ` : `
+            <div class="text-[10px] text-slate-600 text-center">
+                Начисления появятся когда рефералы сделают клейм
+            </div>
+            `}
         </div>
 
         <!-- Детализация по рефералам из лога -->
         ${referralDetails && referralDetails.length > 0 ? `
         <div class="mb-3">
-            <div class="text-[10px] text-slate-500 mb-1.5">📋 Активные рефералы (принесли доход)</div>
-            <div class="space-y-1 max-h-24 overflow-y-auto">
+            <div class="text-[10px] text-slate-500 mb-1.5">📋 Рефералы (принесли доход)</div>
+            <div class="space-y-1 max-h-28 overflow-y-auto">
                 ${referralDetails.map(ref => {
                     let timeStr = '';
                     if (ref.lastClaimAt) {
                         try {
-                            const d = new Date(ref.lastClaimAt);
+                            const d    = new Date(ref.lastClaimAt);
                             const diff = Date.now() - d.getTime();
-                            if (diff < 3600000)      timeStr = Math.floor(diff/60000) + ' мин назад';
-                            else if (diff < 86400000) timeStr = Math.floor(diff/3600000) + ' ч назад';
-                            else                       timeStr = Math.floor(diff/86400000) + ' дн назад';
+                            if (diff < 3600000)       timeStr = Math.floor(diff / 60000) + ' мин назад';
+                            else if (diff < 86400000)  timeStr = Math.floor(diff / 3600000) + ' ч назад';
+                            else                        timeStr = Math.floor(diff / 86400000) + ' дн назад';
                         } catch(e) {}
                     }
                     return `
@@ -888,7 +872,7 @@ function _renderPassiveBlock(passiveInfo) {
                         <div class="flex items-center gap-2">
                             ${timeStr ? `<span class="text-[9px] text-slate-600">${timeStr}</span>` : ''}
                             <span class="text-[10px] text-emerald-400 font-medium">
-                                +${ref.totalAmount || ref.lastAmount} RGT
+                                +${ref.totalAmount || ref.lastAmount} RGT всего
                             </span>
                         </div>
                     </div>`;
@@ -916,13 +900,6 @@ function _renderPassiveBlock(passiveInfo) {
             </div>`).join('')}
         </div>
 
-        <!-- Подсказка про накопления -->
-        <div class="mt-2 p-2 bg-blue-900/15 border border-blue-800/25 rounded-lg">
-            <div class="text-[10px] text-slate-500 text-center leading-relaxed">
-                💡 Накопления <span class="text-blue-400">не сгорают</span> — 
-                выплата происходит автоматически при каждом открытии этого окна
-            </div>
-        </div>
     </div>
     `;
 }
