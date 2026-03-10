@@ -816,11 +816,11 @@ function _renderPassiveBlock(passiveInfo) {
                 <div class="text-[10px] text-slate-500">${lang('passive_invited')}</div>
             </div>
             <div class="bg-slate-800/40 rounded-lg p-2.5 text-center">
-                <div class="text-base font-bold text-blue-400">${recentActive}</div>
+                <div class="text-xl font-black text-blue-400">${recentActive}</div>
                 <div class="text-[10px] text-slate-500">Активны (7 дн.)</div>
             </div>
             <div class="bg-slate-800/40 rounded-lg p-2.5 text-center">
-                <div class="text-base font-bold text-emerald-400">${referralEarnings}</div>
+                <div class="text-xl font-black text-emerald-400">${referralEarnings}</div>
                 <div class="text-[10px] text-slate-500">${lang('passive_total_earned')}</div>
             </div>
         </div>
@@ -834,11 +834,11 @@ function _renderPassiveBlock(passiveInfo) {
 
             ${lastPayout > 0 ? `
             <div class="flex items-center justify-between pt-2 border-t border-slate-700/30">
-                <span class="text-[10px] text-slate-500">Последнее начисление ${lastPayoutStr}</span>
-                <span class="text-[10px] text-emerald-500">+${lastPayout} RGT</span>
+                <span class="text-[11px] text-slate-500">Последнее начисление ${lastPayoutStr}</span>
+                <span class="text-[11px] text-emerald-500">+${lastPayout} RGT</span>
             </div>
             ` : `
-            <div class="text-[10px] text-slate-600 text-center">
+            <div class="text-[11px] text-slate-600 text-center">
                 Начисления появятся когда рефералы сделают клейм
             </div>
             `}
