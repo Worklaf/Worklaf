@@ -2404,24 +2404,33 @@ function updateFooterStats() {
     // ============ INITIALIZE ============
 
     function initializeFooterFunctions() {
-        const footer = document.getElementById('site-footer');
-        if (!footer) return;
+    const footer = document.getElementById('site-footer');
+    if (!footer) return;
 
-        initBackToTop();
-        initNewsletterForm();
-        initFooterLinks();
-        updateFooterLanguageButton();
-        updateFooterStats();
-        setTimeout(updateFooterStats, 2000);
-        setTimeout(updateFooterStats, 5000);
-        setTimeout(updateFooterStats, 10000);
-        document.addEventListener('projectsLoaded', updateFooterStats);
-        document.addEventListener('userAuthChanged',  function() { setTimeout(updateFooterStats, 500); });
-        document.addEventListener('projectsLoaded',   function() { setTimeout(updateFooterStats, 300); });
+    initBackToTop();
+    initNewsletterForm();
+    initFooterLinks();
+    updateFooterLanguageButton();
+    
+    // ⭐️ Обязательно должен быть здесь
+    updateFooterStats();
+    
+    document.addEventListener('projectsLoaded', function() {
+        const projectEl = document.getElementById('footerProjectCount');
+        if (projectEl && Array.isArray(window.projects)) {
+            const count = window.projects.filter(p => !p.deleted).length;
+            projectEl.textContent = count;
+            projectEl.classList.add('text-cyan-400');
+        }
+    });
 
-        _initHeaderAvatarClick();
-        console.log('Footer v2.2 initialized');
-    }
+    document.addEventListener('userAuthChanged', function() {
+        setTimeout(updateFooterStats, 1000);
+    });
+
+    _initHeaderAvatarClick();
+    console.log('Footer v2.2 initialized');
+}
 
     function initBackToTop() {
         const btn = document.getElementById('backToTop');
