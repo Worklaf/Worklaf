@@ -466,7 +466,12 @@ const _tryWeeklyPassivePayout = _tryPassivePayout;
         const lastPayout       = freshData.lastPassivePayout || 0;
         const lastPayoutAt     = freshData.lastPassivePayoutAt || '';
         const passiveLog       = freshData.passiveLog || {};
-        const activeReferrals  = Object.keys(passiveLog).length;
+        const sevenDaysAgo = Date.now() - 7 * 24 * 60 * 60 * 1000;
+const activeReferrals = Object.values(passiveLog).filter(info => {
+    if (!info.lastClaimAt) return false;
+    try { return new Date(info.lastClaimAt).getTime() > sevenDaysAgo; }
+    catch(e) { return false; }
+}).length;
 
         const referralDetails = Object.entries(passiveLog).map(([uid, info]) => ({
             uid,
