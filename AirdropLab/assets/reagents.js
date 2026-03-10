@@ -576,7 +576,7 @@ function _ensureClaimModal() {
                         <h3 class="font-bold text-white" id="claimModalTitle">
                             ${lang('claim_title')}
                         </h3>
-                        <p class="text-xs text-slate-500">${lang('claim_updated_utc')}</p>
+                       <p class="text-xs text-slate-500" id="claimModalSubtitle">${lang('claim_updated_utc')}</p>
                     </div>
                 </div>
                 <button onclick="closeClaimModal()"
@@ -654,7 +654,7 @@ var _claimCountdownInterval = null;
 function _applyClaimBtnVisual(canClaim) {
     var btn = document.getElementById('headerClaimBtn');
     if (!btn) return;
-
+btn.setAttribute('data-claim-available', canClaim ? '1' : '0');
     if (_claimCountdownInterval) {
         clearInterval(_claimCountdownInterval);
         _claimCountdownInterval = null;
@@ -768,7 +768,33 @@ window.ReagentsSystem = {
 window.openClaimModal  = window.openClaimModal;
 window.closeClaimModal = window.closeClaimModal;
 window.doClaim         = window.doClaim;
+// ─────────────────────────────────────────────────────────────────
+// ОБНОВЛЕНИЕ ПЕРЕВОДОВ ПРИ СМЕНЕ ЯЗЫКА
+// ─────────────────────────────────────────────────────────────────
 
+function _updateClaimTranslations() {
+    // Обновляем заголовок модалки
+    const titleEl = document.getElementById('claimModalTitle');
+    if (titleEl) {
+        titleEl.textContent = lang('claim_title');
+    }
+
+    // Обновляем подзаголовок модалки
+    // ищем по data-атрибуту чтобы не путать с другими .text-xs
+    const subtitleEl = document.getElementById('claimModalSubtitle');
+    if (subtitleEl) {
+        subtitleEl.textContent = lang('claim_updated_utc');
+    }
+
+    // Обновляем кнопку хедера используя сохранённое состояние
+    const btn = document.getElementById('headerClaimBtn');
+    if (btn) {
+        const isAvailable = btn.getAttribute('data-claim-available') === '1';
+        _applyClaimBtnVisual(isAvailable);
+    }
+}
+
+document.addEventListener('languageChanged', _updateClaimTranslations);
 console.log('🧪 Reagents System v1.0 loaded');
 
 setTimeout(_checkClaimOnLoad, 2000);
