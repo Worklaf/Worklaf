@@ -122,9 +122,33 @@ async function getClaimStatus(user) {
 
     try {
         const snap = await exp.getDoc(exp.doc(db, 'users', user.uid));
-        if (!snap.exists()) return null;
 
-        const data      = snap.data();
+        // Если документа нет — создаём базовый
+        let data = {};
+        if (!snap.exists()) {
+            data = {
+                reagents:      0,
+                streak:        0,
+                lastClaimDate: '',
+                invitedBy:     '',
+                invitedCount:  0,
+                pendingPassive: 0,
+                passiveLog:    {},
+                referralEarnings: 0,
+            };
+        } else {
+            data = snap.data();
+        }
+
+        console.log('[Reagents] getClaimStatus raw data:', {
+            reagents:      data.reagents,
+            streak:        data.streak,
+            lastClaimDate: data.lastClaimDate,
+            invitedBy:     data.invitedBy,
+            pendingPassive: data.pendingPassive,
+            passiveLog:    data.passiveLog,
+        });
+
         const todayUTC  = getUTCDateString();
         const lastClaim = data.lastClaimDate || '';
         const streak    = data.streak        || 0;
@@ -151,7 +175,7 @@ async function getClaimStatus(user) {
 
         const reward = calcReward(newStreak);
 
-        // Проверяем пассивный доход от рефералов
+        // Передаём свежий data в getPassiveRewardInfo
         const passiveInfo = await getPassiveRewardInfo(user, data);
 
         return {
@@ -300,16 +324,13 @@ async function _creditPassiveToUpstream(claimUser, claimedAmount, exp, db) {
             return;
         }
 
-        let currentUid  = claimUser.uid;
         let currentData = mySnap.data();
 
-        // ИСПРАВЛЕНО: invitedBy вместо referredBy
         console.log('[Reagents] upstream start — invitedBy:', currentData.invitedBy, '| claimedAmount:', claimedAmount);
 
         for (const levelCfg of REAGENTS_CONFIG.referralLevels) {
 
-            // ИСПРАВЛЕНО: invitedBy вместо referredBy
-            const upstreamUid = currentData.invitedBy;
+            const upstreamUid = currentData.invitedBy; // ← ИСПРАВЛЕНО
 
             console.log(`[Reagents] Level ${levelCfg.level} — upstreamUid:`, upstreamUid);
 
@@ -357,15 +378,13 @@ async function _creditPassiveToUpstream(claimUser, claimedAmount, exp, db) {
                 console.log(`[Reagents] ✅ Credited +${roundedReward} RGT to ${upstreamUid} (level ${levelCfg.level})`);
             }
 
-            // Поднимаемся выше — ищем invitedBy у апстрима
-            currentUid  = upstreamUid;
+            // Поднимаемся выше
             currentData = upData;
         }
     } catch(err) {
         console.error('[Reagents] _creditPassiveToUpstream error:', err);
     }
 }
-
 /**
  * Еженедельная выплата пассивного дохода
  * Вызывается при каждом открытии клейм-модалки
