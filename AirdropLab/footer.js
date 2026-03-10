@@ -2538,12 +2538,5 @@
     if (document.readyState === 'complete' || document.readyState === 'interactive') {
         setTimeout(initFooter, 100);
     }
-// Диагностика firestoreExports при загрузке
-window.addEventListener('load', function() {
-    console.log('[Footer] __firestoreExports keys:', 
-        window.__firestoreExports 
-            ? Object.keys(window.__firestoreExports).join(', ') 
-            : 'NOT FOUND'
-    );
-});
+
 })();
