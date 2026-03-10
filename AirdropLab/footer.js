@@ -1,7 +1,6 @@
 /**
  * ============================================
  * AirdropLab Footer Module v2.2
- * Реальные страницы: FAQ, Поддержка, Аккаунт, Уведомления
  * ============================================
  */
 
@@ -21,34 +20,6 @@
             youtube: '',
             email: 'airdroplab.support@gmail.com'
         },
-        // Данные для FAQ
-        faq: [
-            {
-                question: 'Как начать участвовать в аирдропах?',
-                answer: 'Зарегистрируйтесь на AirdropLab, выберите интересующий проект из списка и следуйте инструкциям в гайде. Выполняйте задания и следите за обновлениями.'
-            },
-            {
-                question: 'Что такое тестнет и зачем в нем участвовать?',
-                answer: 'Тестнет - это тестовая сеть блокчейна до его запуска в основной сети. Участие в тестнетах позволяет получить токены проекта бесплатно, которые могут стать ценными при запуске mainnet.'
-            },
-            {
-                question: 'Как не попасть на скам-проект?',
-                answer: 'Мы проверяем все проекты перед добавлением, но всегда проводите собственное исследование. Не вводите приватные ключи, не отправьте ETH на неизвестные адреса и не доверяйте проектам без аудита безопасности.'
-            },
-            {
-                question: 'Почему проект не отображается в списке?',
-                answer: 'Проект может быть в архиве (завершен), находиться на модерации или быть удален. Также убедитесь, что вы используете правильные фильтры в боковой панели.'
-            },
-            {
-                question: 'Как получить помощь по проекту?',
-                answer: 'Используйте раздел "Поддержка" в футере или оставьте отзыв на странице конкретного проекта. Наша команда отвечает в течение 24 часов.'
-            },
-            {
-                question: 'Можно ли добавить свой проект?',
-                answer: 'Да, вы можете предложить проект через форму обратной связи или написав в Telegram. Мы рассмотрим все предложения.'
-            }
-        ],
-        // Данные для юридических документов
         legal: {
             terms: {
                 title: 'Условия использования',
@@ -57,7 +28,6 @@
                     <h3>1. Общие положения</h3>
                     <p>Настоящие Условия использования (далее - "Условия") регулируют отношения между вами и AirdropLab при использовании сайта airdroplab.com (далее - "Сервис").</p>
                     <p>Используя Сервис, вы соглашаетесь с настоящими Условиями. Если вы не согласны с какими-либо положениями, пожалуйста, не используйте наш Сервис.</p>
-                    
                     <h3>2. Описание сервиса</h3>
                     <p>AirdropLab предоставляет информационные услуги по:</p>
                     <ul>
@@ -66,10 +36,8 @@
                         <li>Отслеживанию прогресса выполнения заданий</li>
                         <li>Уведомлению о новых возможностях</li>
                     </ul>
-                    
                     <h3>3. Регистрация и аккаунт</h3>
                     <p>При регистрации вы обязуетесь предоставить достоверную информацию и поддерживать её актуальность. Вы несете ответственность за сохранность своего аккаунта и пароля.</p>
-                    
                     <h3>4. Правила использования</h3>
                     <p>При использовании Сервиса запрещается:</p>
                     <ul>
@@ -78,18 +46,14 @@
                         <li>Публиковать вредоносный контент или спам</li>
                         <li>Присваивать себе авторство чужих материалов</li>
                     </ul>
-                    
                     <h3>5. Интеллектуальная собственность</h3>
-                    <p>Весь контент на Сервисе, включая тексты, графику, логотипы и код, принадлежит AirdropLab или соответствующим правообладателям. Копирование материалов без разрешения запрещено.</p>
-                    
+                    <p>Весь контент на Сервисе принадлежит AirdropLab или соответствующим правообладателям. Копирование материалов без разрешения запрещено.</p>
                     <h3>6. Отказ от ответственности</h3>
-                    <p>Сервис предоставляется "как есть". Мы не гарантируем точность информации и не несем ответственности за любые убытки, возникшие в результате использования Сервиса.</p>
-                    
+                    <p>Сервис предоставляется "как есть". Мы не гарантируем точность информации и не несем ответственности за любые убытки.</p>
                     <h3>7. Изменения в условиях</h3>
-                    <p>Мы оставляем право изменять настоящие Условия в любое время. Продолжая использовать Сервис после изменений, вы соглашаетесь с новыми условиями.</p>
-                    
+                    <p>Мы оставляем право изменять настоящие Условия в любое время.</p>
                     <h3>8. Контакты</h3>
-                    <p>По вопросам, связанным с настоящими Условиями, обращайтесь: airdroplab.support@gmail.com</p>
+                    <p>По вопросам: airdroplab.support@gmail.com</p>
                 `
             },
             privacy: {
@@ -98,54 +62,36 @@
                 content: `
                     <h3>1. Введение</h3>
                     <p>Политика конфиденциальности AirdropLab объясняет, как мы собираем, используем и защищаем ваши персональные данные.</p>
-                    
                     <h3>2. Какие данные мы собираем</h3>
                     <ul>
-                        <li><strong>Данные аккаунта:</strong> имя, email, фото профиля (при регистрации через соцсети)</li>
-                        <li><strong>Данные об использовании:</strong> история посещений, выполненные задания, избранные проекты</li>
+                        <li><strong>Данные аккаунта:</strong> имя, email, фото профиля</li>
+                        <li><strong>Данные об использовании:</strong> история посещений, выполненные задания</li>
                         <li><strong>Технические данные:</strong> IP-адрес, тип браузера, устройство</li>
                     </ul>
-                    
                     <h3>3. Как мы используем данные</h3>
-                    <p>Ваши данные используются для:</p>
                     <ul>
                         <li>Предоставления доступа к функциям Сервиса</li>
                         <li>Персонализации вашего опыта</li>
                         <li>Улучшения качества Сервиса</li>
                         <li>Отправки уведомлений о новых аирдропах</li>
-                        <li>Обеспечения безопасности аккаунта</li>
                     </ul>
-                    
                     <h3>4. Защита данных</h3>
-                    <p>Мы применяем современные методы защиты данных:</p>
                     <ul>
                         <li>Шифрование данных при передаче (SSL/TLS)</li>
                         <li>Безопасное хранение паролей (bcrypt)</li>
                         <li>Регулярный аудит безопасности</li>
-                        <li>Ограниченный доступ к персональным данным</li>
                     </ul>
-                    
                     <h3>5. Передача данных третьим лицам</h3>
-                    <p>Мы не продаем ваши персональные данные. Передача возможна только:</p>
-                    <ul>
-                        <li>При вашем согласии</li>
-                        <li>Для выполнения услуг (Firebase, хостинг)</li>
-                        <li>По требованию закона</li>
-                    </ul>
-                    
+                    <p>Мы не продаем ваши персональные данные. Передача возможна только при вашем согласии или по требованию закона.</p>
                     <h3>6. Ваши права</h3>
-                    <p>Вы имеете право:</p>
                     <ul>
                         <li>Получить доступ к своим данным</li>
                         <li>Исправить неточные данные</li>
                         <li>Удалить аккаунт и данные</li>
-                        <li>Отказаться от обработки данных</li>
                         <li>Экспортировать свои данные</li>
                     </ul>
-                    
                     <h3>7. Cookies</h3>
-                    <p>Мы используем cookies для аутентификации, запоминания настроек и анализа посещаемости. Вы можете отключить cookies в браузере.</p>
-                    
+                    <p>Мы используем cookies для аутентификации и анализа посещаемости.</p>
                     <h3>8. Контакты</h3>
                     <p>По вопросам конфиденциальности: airdroplab.support@gmail.com</p>
                 `
@@ -155,36 +101,22 @@
                 lastUpdated: '07 марта 2026',
                 content: `
                     <h3>1. Что такое Cookies</h3>
-                    <p>Cookies - это небольшие текстовые файлы, которые сохраняются на вашем устройстве при посещении веб-сайтов. Они помогают сайтам запоминать ваши действия и предпочтения.</p>
-                    
+                    <p>Cookies - это небольшие текстовые файлы, которые сохраняются на вашем устройстве при посещении веб-сайтов.</p>
                     <h3>2. Какие cookies мы используем</h3>
-                    
                     <h4>Необходимые cookies</h4>
-                    <p>Эти cookies необходимы для работы Сервиса:</p>
                     <ul>
                         <li><strong>auth_token:</strong> для аутентификации пользователя</li>
                         <li><strong>session_id:</strong> для поддержки сессии</li>
                         <li><strong>preferences:</strong> для сохранения настроек</li>
                     </ul>
-                    
                     <h4>Аналитические cookies</h4>
-                    <p>Помогают нам улучшать Сервис:</p>
                     <ul>
                         <li><strong>_ga:</strong> Google Analytics (2 года)</li>
                         <li><strong>_gid:</strong> Google Analytics (24 часа)</li>
                     </ul>
-                    
                     <h3>3. Управление cookies</h3>
-                    <p>Вы можете:</p>
-                    <ul>
-                        <li>Отключить cookies в настройках браузера</li>
-                        <li>Удалить существующие cookies</li>
-                        <li>Настроить уведомления о cookies</li>
-                    </ul>
-                    <p><strong>Внимание:</strong> Отключение cookies может повлиять на работу некоторых функций Сервиса.</p>
-                    
+                    <p>Вы можете отключить cookies в настройках браузера.</p>
                     <h3>4. Сторонние сервисы</h3>
-                    <p>Мы используем сторонние сервисы, которые также могут устанавливать cookies:</p>
                     <ul>
                         <li>Firebase (аутентификация, база данных)</li>
                         <li>Google Analytics (аналитика)</li>
@@ -197,90 +129,59 @@
                 lastUpdated: '07 марта 2026',
                 content: `
                     <h3>1. Информационная цель</h3>
-                    <p>AirdropLab предоставляет исключительно информационные услуги. Мы не являемся финансовым консультантом, брокером или инвестиционной компанией.</p>
-                    
+                    <p>AirdropLab предоставляет исключительно информационные услуги. Мы не являемся финансовым консультантом.</p>
                     <h3>2. Информация не является советом</h3>
-                    <p>Вся информация на Сервисе носит ознакомительный характер и не является:</p>
                     <ul>
                         <li>Финансовым или инвестиционным советом</li>
                         <li>Рекомендацией к покупке/продаже криптовалют</li>
                         <li>Гарантией прибыли или доходности</li>
                     </ul>
-                    
                     <h3>3. Риски криптовалют</h3>
-                    <p>Инвестиции в криптовалюту сопряжены с высокими рисками:</p>
                     <ul>
                         <li><strong>Волатильность:</strong> цены могут резко изменяться</li>
                         <li><strong>Потеря средств:</strong> возможна полная потеря инвестиций</li>
                         <li><strong>Мошенничество:</strong> существуют скамы и мошеннические проекты</li>
-                        <li><strong>Технические риски:</strong> взломы, потеря ключей</li>
-                        <li><strong>Регуляторные риски:</strong> запреты в разных странах</li>
                     </ul>
-                    
                     <h3>4. Ответственность пользователя</h3>
-                    <p>Вы несете полную ответственность за:</p>
                     <ul>
                         <li>Собственное исследование проектов</li>
                         <li>Принятие инвестиционных решений</li>
                         <li>Сохранность своих средств и ключей</li>
-                        <li>Соблюдение законов вашей страны</li>
                     </ul>
-                    
-                    <h3>5. Внешние ссылки</h3>
-                    <p>Сервис может содержать ссылки на внешние сайты. Мы не несем ответственности за содержание, политику или практики этих сайтов.</p>
-                    
-                    <h3>6. Ответственность AirdropLab</h3>
-                    <p>AirdropLab не несет ответственности за:</p>
-                    <ul>
-                        <li>Убытки, возникшие в результате использования информации с Сервиса</li>
-                        <li>Потерю средств пользователей</li>
-                        <li>Действия третьих лиц</li>
-                        <li>Технические сбои или перерывы в работе</li>
-                    </ul>
-                    
-                    <h3>7. Тестнеты и аирдропы</h3>
-                    <p>Участие в тестнетах и аирдропах:</p>
-                    <ul>
-                        <li>Не гарантирует получение токенов</li>
-                        <li>Не гарантирует ценность токенов</li>
-                        <li>Может потребовать выполнения сложных заданий</li>
-                        <li>Проекты могут завершиться без распределения токенов</li>
-                    </ul>
-                    
-                    <h3>8. Согласие с рисками</h3>
-                    <p>Используя Сервис, вы подтверждаете, что понимаете и принимаете все риски, связанные с криптовалютами и блокчейн-проектами.</p>
+                    <h3>5. Согласие с рисками</h3>
+                    <p>Используя Сервис, вы подтверждаете, что понимаете и принимаете все риски.</p>
                 `
             }
         },
         guides: [
-    {
-        id: 'arc',
-        title: 'Arc Testnet',
-        descKey: 'guide_arc_desc',
-        logo: 'https://givemebit.com/wp-content/uploads/2025/11/arc-testnet-logo-1024x235.jpg',
-        link: '../AirdropLab/guides/Arc/Arc_Testnet_by_Circle.html',
-        status: 'active',
-        difficultyKey: 'guide_difficulty_easy'
-    },
-    {
-        id: 'tempo',
-        title: 'Tempo Testnet',
-        descKey: 'guide_tempo_desc',
-        logo: 'https://givemebit.com/wp-content/uploads/2025/12/tempo-testnet-logo-1024x235.jpg',
-        link: '../AirdropLab/guides/Tempo/Tempo_Testnet.html',
-        status: 'active',
-        difficultyKey: 'guide_difficulty_medium'
-    },
-    {
-        id: 'robinhood',
-        title: 'Robinhood Chain',
-        descKey: 'guide_robinhood_desc',
-        logo: 'https://cryptocurrencyjobs.co/startups/assets/logos/robinhood.e4ca7c6b17d08763d0714e8a061cf5ba65950fe4d236e3c2db812421997fb743_hu_e366a75e4d388edb.jpg',
-        link: '../AirdropLab/guides/Robinhood/robinhood-chain.html',
-        status: 'new',
-        difficultyKey: 'guide_difficulty_easy'
-    }
-]
+            {
+                id: 'arc',
+                title: 'Arc Testnet',
+                descKey: 'guide_arc_desc',
+                logo: 'https://givemebit.com/wp-content/uploads/2025/11/arc-testnet-logo-1024x235.jpg',
+                link: '../AirdropLab/guides/Arc/Arc_Testnet_by_Circle.html',
+                status: 'active',
+                difficultyKey: 'guide_difficulty_easy'
+            },
+            {
+                id: 'tempo',
+                title: 'Tempo Testnet',
+                descKey: 'guide_tempo_desc',
+                logo: 'https://givemebit.com/wp-content/uploads/2025/12/tempo-testnet-logo-1024x235.jpg',
+                link: '../AirdropLab/guides/Tempo/Tempo_Testnet.html',
+                status: 'active',
+                difficultyKey: 'guide_difficulty_medium'
+            },
+            {
+                id: 'robinhood',
+                title: 'Robinhood Chain',
+                descKey: 'guide_robinhood_desc',
+                logo: 'https://cryptocurrencyjobs.co/startups/assets/logos/robinhood.e4ca7c6b17d08763d0714e8a061cf5ba65950fe4d236e3c2db812421997fb743_hu_e366a75e4d388edb.jpg',
+                link: '../AirdropLab/guides/Robinhood/robinhood-chain.html',
+                status: 'new',
+                difficultyKey: 'guide_difficulty_easy'
+            }
+        ]
     };
 
     function DOMReady(fn) {
@@ -296,7 +197,6 @@
             console.log('Footer v2.2 already exists');
             return;
         }
-
         createFooter();
         setTimeout(initializeFooterFunctions, 150);
     }
@@ -311,18 +211,17 @@
     }
 
     function getFooterHTML() {
-    const lang = typeof window.t === 'function' ? window.t : (k) => k;
-    
-    return `
-        <!-- Background Effects -->
+        const lang = typeof window.t === 'function' ? window.t : (k) => k;
+
+        return `
         <div class="footer-bg-gradient absolute inset-0 bg-gradient-to-br from-slate-900/30 via-transparent to-cyan-900/15"></div>
-        <div class="footer-bg-pattern absolute inset-0 opacity-25" 
+        <div class="footer-bg-pattern absolute inset-0 opacity-25"
              style="background-image: url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNDAiIGhlaWdodD0iNDAiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+PGNpcmNsZSBjeD0iMjAiIGN5PSIyMCIgcj0iMSIgZmlsbD0icmdiYSgyMiwyMTAsMjM4LDAuMDgpIiBzdHJva2U9InJnYmEoMjIsMjEwLDIzOCwwLjA4KSIgc3Ryb2tlLXdpZHRoPSIxIi8+PC9zdmc+');">
         </div>
-        
+
         <div class="footer-main max-w-[1600px] mx-auto px-4 py-16 relative z-10">
             <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8 lg:gap-12">
-                
+
                 <!-- Logo & Description -->
                 <div class="footer-section footer-brand">
                     <div class="flex items-center gap-3 mb-6">
@@ -344,11 +243,11 @@
                             <p class="text-xs text-slate-400 mt-1 tracking-wider uppercase">${FOOTER_CONFIG.company.version}</p>
                         </div>
                     </div>
-                    
+
                     <p class="footer-description text-sm text-slate-400 leading-relaxed max-w-xs mb-6" data-footer-translate="footer_tagline_desc">
                         ${lang('footer_tagline_desc')}
                     </p>
-                    
+
                     <div class="footer-social flex gap-3 mb-6">
                         <a href="${FOOTER_CONFIG.social.twitter}" target="_blank" rel="noopener noreferrer" class="social-link group p-2.5 text-slate-400 hover:text-cyan-400 transition-all rounded-xl hover:bg-cyan-500/10 border border-transparent hover:border-cyan-500/30" title="Twitter"><i class="fab fa-twitter text-lg"></i></a>
                         <a href="${FOOTER_CONFIG.social.telegram}" target="_blank" rel="noopener noreferrer" class="social-link group p-2.5 text-slate-400 hover:text-blue-400 transition-all rounded-xl hover:bg-blue-500/10 border border-transparent hover:border-blue-500/30" title="Telegram"><i class="fab fa-telegram-plane text-lg"></i></a>
@@ -356,7 +255,7 @@
                         <a href="${FOOTER_CONFIG.social.youtube}" target="_blank" rel="noopener noreferrer" class="social-link group p-2.5 text-slate-400 hover:text-red-400 transition-all rounded-xl hover:bg-red-500/10 border border-transparent hover:border-red-500/30" title="YouTube"><i class="fab fa-youtube text-lg"></i></a>
                         <a href="mailto:${FOOTER_CONFIG.social.email}" class="social-link group p-2.5 text-slate-400 hover:text-emerald-400 transition-all rounded-xl hover:bg-emerald-500/10 border border-transparent hover:border-emerald-500/30" title="Email"><i class="fas fa-envelope text-lg"></i></a>
                     </div>
-                    
+
                     <div class="footer-status flex items-center gap-4">
                         <div class="status-item flex items-center gap-1.5">
                             <span class="status-dot relative flex h-2 w-2">
@@ -374,7 +273,7 @@
                         </div>
                     </div>
                 </div>
-                
+
                 <!-- Quick Links -->
                 <div class="footer-section">
                     <h4 class="footer-heading text-sm font-bold text-white mb-4 flex items-center gap-2">
@@ -405,7 +304,7 @@
                         </a>
                     </nav>
                 </div>
-                
+
                 <!-- User & Tools -->
                 <div class="footer-section">
                     <h4 class="footer-heading text-sm font-bold text-white mb-4 flex items-center gap-2">
@@ -439,14 +338,14 @@
                         </div>
                     </nav>
                 </div>
-                
+
                 <!-- Legal -->
                 <div class="lg:col-span-2 md:col-span-2">
                     <h4 class="footer-heading text-sm font-bold text-white mb-4 flex items-center gap-2">
                         <i class="fas fa-gavel text-purple-400"></i>
                         <span data-footer-translate="footer_legal_title">${lang('footer_legal_title')}</span>
                     </h4>
-                    
+
                     <div class="footer-legal-grid grid grid-cols-1 sm:grid-cols-2 gap-4 mb-6">
                         <div>
                             <h5 class="legal-heading text-xs font-semibold text-slate-300 mb-2 uppercase tracking-wider" data-footer-translate="footer_documents">${lang('footer_documents')}</h5>
@@ -483,7 +382,7 @@
                             </nav>
                         </div>
                     </div>
-                    
+
                     <!-- Newsletter -->
                     <div class="footer-newsletter bg-slate-900/60 border border-slate-700/50 rounded-xl p-5">
                         <div class="flex items-start gap-3 mb-3">
@@ -498,7 +397,7 @@
                                 <p class="text-xs text-slate-500 mt-1" data-footer-translate="footer_newsletter_desc">${lang('footer_newsletter_desc')}</p>
                             </div>
                         </div>
-                        
+
                         <form class="newsletter-form flex gap-2" onsubmit="return footerSubscribeNewsletter(event)">
                             <div class="flex-1 relative">
                                 <i class="fas fa-envelope absolute left-3 top-1/2 -translate-y-1/2 text-slate-500"></i>
@@ -516,7 +415,7 @@
                                 <i class="fas fa-paper-plane text-xs"></i>
                             </button>
                         </form>
-                        
+
                         <div class="footer-privacy-note flex items-center gap-2 mt-3 pt-3 border-t border-slate-700/50">
                             <i class="fas fa-shield-alt text-emerald-400 text-xs"></i>
                             <span class="text-xs text-slate-500" data-footer-translate="footer_privacy_note">${lang('footer_privacy_note')}</span>
@@ -525,7 +424,7 @@
                 </div>
             </div>
         </div>
-        
+
         <!-- Bottom Bar -->
         <div class="footer-bottom border-t border-slate-800/50 relative z-10">
             <div class="max-w-[1600px] mx-auto px-4 py-5">
@@ -561,13 +460,13 @@
                 </div>
             </div>
         </div>
-        
+
         <!-- Back to Top -->
         <button onclick="footerScrollToTop()" id="backToTop" class="back-to-top fixed bottom-6 right-6 hidden md:flex items-center justify-center w-12 h-12 bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 rounded-full shadow-lg shadow-cyan-500/30 border border-cyan-500/30 text-white transition-all hover:scale-110 z-50">
             <i class="fas fa-chevron-up"></i>
         </button>
-        
-        <!-- Modals (без изменений) -->
+
+        <!-- Page Modal -->
         <div id="pageModal" class="modal">
             <div class="modal-content page-modal-content p-0 relative">
                 <button onclick="closePageModal()" class="absolute top-4 right-4 z-10 text-slate-400 hover:text-white transition-colors bg-slate-800/80 rounded-full w-8 h-8 flex items-center justify-center">
@@ -576,7 +475,8 @@
                 <div id="pageModalContent"></div>
             </div>
         </div>
-        
+
+        <!-- Support Modal -->
         <div id="supportModal" class="modal">
             <div class="modal-content modal-md p-6 relative">
                 <button onclick="closeSupportModal()" class="absolute top-4 right-4 text-slate-400 hover:text-white transition-colors">
@@ -616,11 +516,17 @@
                     </div>
                     <div>
                         <label class="block text-sm font-medium text-slate-300 mb-2" data-footer-translate="footer_support_subject">${lang('footer_support_subject')}</label>
-                        <input type="text" id="supportSubject" required placeholder="${lang('footer_support_subject_placeholder')}" data-footer-placeholder="footer_support_subject_placeholder" class="w-full bg-slate-800 border border-slate-700 rounded-lg px-4 py-2.5 text-sm text-white focus:border-purple-500 focus:outline-none">
+                        <input type="text" id="supportSubject" required
+                               placeholder="${lang('footer_support_subject_placeholder')}"
+                               data-footer-placeholder="footer_support_subject_placeholder"
+                               class="w-full bg-slate-800 border border-slate-700 rounded-lg px-4 py-2.5 text-sm text-white focus:border-purple-500 focus:outline-none">
                     </div>
                     <div>
                         <label class="block text-sm font-medium text-slate-300 mb-2" data-footer-translate="footer_support_message">${lang('footer_support_message')}</label>
-                        <textarea id="supportMessage" required rows="5" placeholder="${lang('footer_support_message_placeholder')}" data-footer-placeholder="footer_support_message_placeholder" class="w-full bg-slate-800 border border-slate-700 rounded-lg px-4 py-2.5 text-sm text-white focus:border-purple-500 focus:outline-none resize-none"></textarea>
+                        <textarea id="supportMessage" required rows="5"
+                                  placeholder="${lang('footer_support_message_placeholder')}"
+                                  data-footer-placeholder="footer_support_message_placeholder"
+                                  class="w-full bg-slate-800 border border-slate-700 rounded-lg px-4 py-2.5 text-sm text-white focus:border-purple-500 focus:outline-none resize-none"></textarea>
                     </div>
                     <button type="submit" id="supportSubmitBtn" class="w-full bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-500 hover:to-blue-500 py-3 rounded-lg text-sm font-bold text-white transition-all hover:scale-[1.02] shadow-lg shadow-purple-500/20">
                         <i class="fas fa-paper-plane mr-2"></i>
@@ -629,8 +535,8 @@
                 </form>
             </div>
         </div>
-        
-        <!-- Newsletter Success Modal -->
+
+        <!-- Newsletter Modal -->
         <div id="newsletterModal" class="modal">
             <div class="modal-content modal-sm p-6 relative">
                 <button onclick="closeNewsletterModal()" class="absolute top-4 right-4 text-slate-400 hover:text-white transition-colors">
@@ -646,140 +552,95 @@
                 </div>
             </div>
         </div>
-    `;
-}
-
-    // ============ MODAL FUNCTIONS ============
-function _openAccountOverlay() {
-    // Удаляем старую если есть
-    const old = document.getElementById('accountOverlayModal');
-    if (old) old.remove();
-
-    // Создаём оверлей
-    const overlay = document.createElement('div');
-    overlay.id = 'accountOverlayModal';
-    overlay.style.cssText = `
-        position: fixed;
-        inset: 0;
-        z-index: 9999;
-        background: rgba(0,0,0,0.75);
-        backdrop-filter: blur(4px);
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        padding: 16px;
-        opacity: 0;
-        transition: opacity 0.2s ease;
-    `;
-
-    // Контент
-    const box = document.createElement('div');
-    box.style.cssText = `
-        background: #1e2538;
-        border: 1px solid rgba(71,85,105,0.5);
-        border-radius: 20px;
-        width: 100%;
-        max-width: 680px;
-        max-height: 90vh;
-        overflow: hidden;
-        display: flex;
-        flex-direction: column;
-        position: relative;
-        transform: scale(0.95);
-        transition: transform 0.2s ease;
-        box-shadow: 0 25px 60px rgba(0,0,0,0.5);
-    `;
-
-    // Кнопка закрытия
-    const closeBtn = document.createElement('button');
-    closeBtn.innerHTML = '<i class="fas fa-times"></i>';
-    closeBtn.style.cssText = `
-        position: absolute;
-        top: 16px;
-        right: 16px;
-        z-index: 10;
-        width: 32px;
-        height: 32px;
-        border-radius: 50%;
-        background: rgba(71,85,105,0.5);
-        border: none;
-        color: #94a3b8;
-        cursor: pointer;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        font-size: 14px;
-        transition: all 0.2s;
-    `;
-    closeBtn.onmouseover = () => {
-        closeBtn.style.background = 'rgba(239,68,68,0.3)';
-        closeBtn.style.color = '#f87171';
-    };
-    closeBtn.onmouseout = () => {
-        closeBtn.style.background = 'rgba(71,85,105,0.5)';
-        closeBtn.style.color = '#94a3b8';
-    };
-
-    function closeOverlay() {
-        overlay.style.opacity = '0';
-        box.style.transform = 'scale(0.95)';
-        setTimeout(() => overlay.remove(), 200);
+        `;
     }
 
-    closeBtn.onclick = closeOverlay;
+    // ============ ACCOUNT OVERLAY ============
 
-    // Клик по фону — закрыть
-    overlay.addEventListener('mousedown', function(e) {
-        if (e.target === overlay) closeOverlay();
-    });
+    function _openAccountOverlay() {
+        const old = document.getElementById('accountOverlayModal');
+        if (old) old.remove();
 
-    // ESC — закрыть
-    function onKeyDown(e) {
-        if (e.key === 'Escape') {
-            closeOverlay();
-            document.removeEventListener('keydown', onKeyDown);
+        const overlay = document.createElement('div');
+        overlay.id = 'accountOverlayModal';
+        overlay.style.cssText = `
+            position: fixed; inset: 0; z-index: 9999;
+            background: rgba(0,0,0,0.75); backdrop-filter: blur(4px);
+            display: flex; align-items: center; justify-content: center;
+            padding: 16px; opacity: 0; transition: opacity 0.2s ease;
+        `;
+
+        const box = document.createElement('div');
+        box.style.cssText = `
+            background: #1e2538; border: 1px solid rgba(71,85,105,0.5);
+            border-radius: 20px; width: 100%; max-width: 680px; max-height: 90vh;
+            overflow: hidden; display: flex; flex-direction: column;
+            position: relative; transform: scale(0.95); transition: transform 0.2s ease;
+            box-shadow: 0 25px 60px rgba(0,0,0,0.5);
+        `;
+
+        const closeBtn = document.createElement('button');
+        closeBtn.innerHTML = '<i class="fas fa-times"></i>';
+        closeBtn.style.cssText = `
+            position: absolute; top: 16px; right: 16px; z-index: 10;
+            width: 32px; height: 32px; border-radius: 50%;
+            background: rgba(71,85,105,0.5); border: none; color: #94a3b8;
+            cursor: pointer; display: flex; align-items: center; justify-content: center;
+            font-size: 14px; transition: all 0.2s;
+        `;
+        closeBtn.onmouseover = () => { closeBtn.style.background = 'rgba(239,68,68,0.3)'; closeBtn.style.color = '#f87171'; };
+        closeBtn.onmouseout  = () => { closeBtn.style.background = 'rgba(71,85,105,0.5)';  closeBtn.style.color = '#94a3b8'; };
+
+        function closeOverlay() {
+            overlay.style.opacity = '0';
+            box.style.transform = 'scale(0.95)';
+            setTimeout(() => overlay.remove(), 200);
         }
-    }
-    document.addEventListener('keydown', onKeyDown);
 
-    // Контент аккаунта
-    const contentWrap = document.createElement('div');
-    contentWrap.style.cssText = 'overflow-y: auto; flex: 1;';
-    contentWrap.innerHTML = getAccountContent();
+        closeBtn.onclick = closeOverlay;
+        overlay.addEventListener('mousedown', function(e) { if (e.target === overlay) closeOverlay(); });
 
-    box.appendChild(closeBtn);
-    box.appendChild(contentWrap);
-    overlay.appendChild(box);
-    document.body.appendChild(overlay);
+        function onKeyDown(e) {
+            if (e.key === 'Escape') { closeOverlay(); document.removeEventListener('keydown', onKeyDown); }
+        }
+        document.addEventListener('keydown', onKeyDown);
 
-    // Анимация появления
-    requestAnimationFrame(() => {
+        const contentWrap = document.createElement('div');
+        contentWrap.style.cssText = 'overflow-y: auto; flex: 1;';
+        contentWrap.innerHTML = getAccountContent();
+
+        box.appendChild(closeBtn);
+        box.appendChild(contentWrap);
+        overlay.appendChild(box);
+        document.body.appendChild(overlay);
+
         requestAnimationFrame(() => {
-            overlay.style.opacity = '1';
-            box.style.transform = 'scale(1)';
+            requestAnimationFrame(() => {
+                overlay.style.opacity = '1';
+                box.style.transform = 'scale(1)';
+            });
         });
-    });
 
-    // Инициализируем логику аккаунта
-    setTimeout(() => initAccountPage(), 100);
+        setTimeout(() => initAccountPage(), 100);
+        window._closeAccountOverlay = closeOverlay;
+    }
 
-    // Делаем closeOverlay доступной глобально
-    // для кнопок внутри контента
-    window._closeAccountOverlay = closeOverlay;
-}
+    // ============ COPY FUNCTIONS ============
+
     window.copyRefCode = function() {
+        const lang = typeof window.t === 'function' ? window.t : (k) => k;
         const el = document.getElementById('profileRefCode');
         if (!el) return;
-        
+
         const code = el.textContent.trim();
-        if (!code || code === 'Генерация...') return;
+        if (!code || code === lang('account_generating')) return;
 
         const btn = document.querySelector('#profileRefCode + button');
 
         if (navigator.clipboard && navigator.clipboard.writeText) {
             navigator.clipboard.writeText(code).then(function() {
                 _showCopySuccess(btn);
-                footerShowToast('Реферальный код скопирован!', 'success');
+                footerShowToast(lang('ref_code_copied'), 'success');
             }).catch(function() {
                 _copyFallback(code, btn);
             });
@@ -802,6 +663,7 @@ function _openAccountOverlay() {
     }
 
     function _copyFallback(text, btn) {
+        const lang = typeof window.t === 'function' ? window.t : (k) => k;
         try {
             const ta = document.createElement('textarea');
             ta.value = text;
@@ -812,102 +674,101 @@ function _openAccountOverlay() {
             document.execCommand('copy');
             document.body.removeChild(ta);
             _showCopySuccess(btn);
-            footerShowToast('Реферальный код скопирован!', 'success');
+            footerShowToast(lang('ref_code_copied'), 'success');
         } catch(e) {
-            footerShowToast('Не удалось скопировать', 'error');
+            footerShowToast(lang('copy_failed'), 'error');
         }
     }
+
+    // ============ PAGE MODAL ============
+
     window.openPageModal = function(page) {
-    // Для аккаунта открываем отдельную всплывающую модалку
-    if (page === 'account') {
-        _openAccountOverlay();
-        return;
-    }
+        if (page === 'account') {
+            _openAccountOverlay();
+            return;
+        }
 
-    // Для остальных страниц — старая логика (в футере)
-    const modal = document.getElementById('pageModal');
-    const content = document.getElementById('pageModalContent');
-    if (!modal || !content) return;
+        const modal   = document.getElementById('pageModal');
+        const content = document.getElementById('pageModalContent');
+        if (!modal || !content) return;
 
-    let html = '';
-    switch(page) {
-        case 'faq':
-            html = getFAQContent();
-            break;
-        case 'guides':
-            html = getGuidesContent();
-            break;
-        default:
-            html = '<p class="text-center text-slate-400 p-8">Страница в разработке</p>';
-    }
+        const lang = typeof window.t === 'function' ? window.t : (k) => k;
+        let html = '';
 
-    content.innerHTML = html;
-    modal.classList.add('active');
+        switch(page) {
+            case 'faq':    html = getFAQContent();    break;
+            case 'guides': html = getGuidesContent(); break;
+            default:       html = `<p class="text-center text-slate-400 p-8">${lang('in_work') || 'В разработке'}</p>`;
+        }
 
-    if (page === 'faq') initFAQ();
-};
+        content.innerHTML = html;
+        modal.classList.add('active');
+        if (page === 'faq') initFAQ();
+    };
 
     window.closePageModal = function() {
         const modal = document.getElementById('pageModal');
         if (modal) modal.classList.remove('active');
     };
-window.closeAccountOverlay = function() {
-    if (typeof window._closeAccountOverlay === 'function') {
-        window._closeAccountOverlay();
-    }
-};
+
+    window.closeAccountOverlay = function() {
+        if (typeof window._closeAccountOverlay === 'function') window._closeAccountOverlay();
+    };
+
+    // ============ FAQ ============
+
     function getFAQContent() {
-    const lang = typeof window.t === 'function' ? window.t : (k) => k;
-    
-    const faqData = [
-        { q: lang('faq_q1'), a: lang('faq_a1') },
-        { q: lang('faq_q2'), a: lang('faq_a2') },
-        { q: lang('faq_q3'), a: lang('faq_a3') },
-        { q: lang('faq_q4'), a: lang('faq_a4') },
-        { q: lang('faq_q5'), a: lang('faq_a5') },
-        { q: lang('faq_q6'), a: lang('faq_a6') }
-    ];
-    
-    return `
-        <div class="bg-gradient-to-r from-slate-900 to-slate-800 p-6 border-b border-slate-700">
-            <h2 class="text-2xl font-bold text-white flex items-center gap-3">
-                <i class="fas fa-question-circle text-cyan-400"></i>
-                ${lang('footer_faq_title')}
-            </h2>
-            <p class="text-slate-400 mt-2">${lang('footer_faq_subtitle')}</p>
-        </div>
-        <div class="p-6 max-h-[70vh] overflow-y-auto">
-            <div class="space-y-4">
-                ${faqData.map((item, index) => `
-                    <div class="faq-item border border-slate-700/50 rounded-xl overflow-hidden">
-                        <button onclick="toggleFaqItem(${index})" class="faq-question w-full text-left p-4 flex items-center justify-between gap-4 bg-slate-800/30 hover:bg-slate-800/50 transition-colors">
-                            <span class="font-medium text-white">${item.q}</span>
-                            <i class="fas fa-chevron-down text-slate-400 transition-transform" id="faq-icon-${index}"></i>
-                        </button>
-                        <div class="faq-answer hidden p-4 pt-2 text-slate-300 text-sm leading-relaxed" id="faq-answer-${index}">
-                            ${item.a}
+        const lang = typeof window.t === 'function' ? window.t : (k) => k;
+
+        const faqData = [
+            { q: lang('faq_q1'), a: lang('faq_a1') },
+            { q: lang('faq_q2'), a: lang('faq_a2') },
+            { q: lang('faq_q3'), a: lang('faq_a3') },
+            { q: lang('faq_q4'), a: lang('faq_a4') },
+            { q: lang('faq_q5'), a: lang('faq_a5') },
+            { q: lang('faq_q6'), a: lang('faq_a6') }
+        ];
+
+        return `
+            <div class="bg-gradient-to-r from-slate-900 to-slate-800 p-6 border-b border-slate-700">
+                <h2 class="text-2xl font-bold text-white flex items-center gap-3">
+                    <i class="fas fa-question-circle text-cyan-400"></i>
+                    ${lang('footer_faq_title')}
+                </h2>
+                <p class="text-slate-400 mt-2">${lang('footer_faq_subtitle')}</p>
+            </div>
+            <div class="p-6 max-h-[70vh] overflow-y-auto">
+                <div class="space-y-4">
+                    ${faqData.map((item, index) => `
+                        <div class="faq-item border border-slate-700/50 rounded-xl overflow-hidden">
+                            <button onclick="toggleFaqItem(${index})" class="faq-question w-full text-left p-4 flex items-center justify-between gap-4 bg-slate-800/30 hover:bg-slate-800/50 transition-colors">
+                                <span class="font-medium text-white">${item.q}</span>
+                                <i class="fas fa-chevron-down text-slate-400 transition-transform" id="faq-icon-${index}"></i>
+                            </button>
+                            <div class="faq-answer hidden p-4 pt-2 text-slate-300 text-sm leading-relaxed" id="faq-answer-${index}">
+                                ${item.a}
+                            </div>
                         </div>
-                    </div>
-                `).join('')}
+                    `).join('')}
+                </div>
+                <div class="mt-8 p-4 bg-blue-900/20 border border-blue-800/50 rounded-xl">
+                    <h4 class="font-bold text-white mb-2 flex items-center gap-2">
+                        <i class="fas fa-info-circle text-blue-400"></i>
+                        ${lang('footer_faq_not_found')}
+                    </h4>
+                    <p class="text-sm text-slate-400 mb-3">${lang('footer_faq_contact')}</p>
+                    <button onclick="closePageModal(); setTimeout(() => openSupportModal(), 300);"
+                            class="bg-blue-600 hover:bg-blue-500 px-4 py-2 rounded-lg text-sm font-medium transition-colors text-white">
+                        ${lang('footer_faq_write')}
+                    </button>
+                </div>
             </div>
-            <div class="mt-8 p-4 bg-blue-900/20 border border-blue-800/50 rounded-xl">
-                <h4 class="font-bold text-white mb-2 flex items-center gap-2">
-                    <i class="fas fa-info-circle text-blue-400"></i>
-                    ${lang('footer_faq_not_found')}
-                </h4>
-                <p class="text-sm text-slate-400 mb-3">${lang('footer_faq_contact')}</p>
-                <button onclick="closePageModal(); setTimeout(() => openSupportModal(), 300);" class="bg-blue-600 hover:bg-blue-500 px-4 py-2 rounded-lg text-sm font-medium transition-colors">
-                    ${lang('footer_faq_write')}
-                </button>
-            </div>
-        </div>
-    `;
-}
+        `;
+    }
 
     window.toggleFaqItem = function(index) {
         const answer = document.getElementById(`faq-answer-${index}`);
-        const icon = document.getElementById(`faq-icon-${index}`);
-        
+        const icon   = document.getElementById(`faq-icon-${index}`);
         if (answer.classList.contains('hidden')) {
             answer.classList.remove('hidden');
             icon.classList.add('rotate-180');
@@ -917,1345 +778,963 @@ window.closeAccountOverlay = function() {
         }
     };
 
-    function initFAQ() {
-        console.log('FAQ initialized');
-    }
+    function initFAQ() { console.log('FAQ initialized'); }
+
+    // ============ GUIDES ============
 
     function getGuidesContent() {
-    const lang = typeof window.t === 'function' ? window.t : (k) => k;
-    
-    return `
-        <div class="bg-gradient-to-r from-slate-900 to-slate-800 p-6 border-b border-slate-700">
-            <h2 class="text-2xl font-bold text-white flex items-center gap-3">
-                <i class="fas fa-book-open text-cyan-400"></i>
-                ${lang('footer_guides_title')}
-            </h2>
-            <p class="text-slate-400 mt-2">${lang('footer_guides_subtitle')}</p>
-        </div>
-        <div class="p-6 max-h-[70vh] overflow-y-auto">
-            <div class="grid gap-4">
-                ${FOOTER_CONFIG.guides.map(guide => `
-                    <div class="guide-card border border-slate-700/50 rounded-xl p-4 hover:border-cyan-500/50 transition-colors bg-slate-800/30">
-                        <div class="flex items-start gap-4">
-                            <div class="w-16 h-16 rounded-xl overflow-hidden bg-slate-800 flex-shrink-0 border border-slate-700">
-                                ${guide.logo
-                                    ? `<img src="${guide.logo}" alt="${guide.title}" class="w-full h-full object-cover">`
-                                    : `<div class="w-full h-full flex items-center justify-center text-2xl font-bold text-cyan-400">${guide.title.charAt(0)}</div>`
-                                }
-                            </div>
-                            <div class="flex-1 min-w-0">
-                                <div class="flex items-center gap-2 flex-wrap mb-1">
-                                    <h3 class="font-bold text-white">${guide.title}</h3>
-                                    ${guide.status === 'new'
-                                        ? '<span class="bg-green-500/20 text-green-400 text-xs px-2 py-0.5 rounded-full">NEW</span>'
-                                        : ''}
-                                    ${guide.status === 'active'
-                                        ? `<span class="bg-cyan-500/20 text-cyan-400 text-xs px-2 py-0.5 rounded-full">${lang('footer_guide_active')}</span>`
-                                        : ''}
+        const lang = typeof window.t === 'function' ? window.t : (k) => k;
+
+        return `
+            <div class="bg-gradient-to-r from-slate-900 to-slate-800 p-6 border-b border-slate-700">
+                <h2 class="text-2xl font-bold text-white flex items-center gap-3">
+                    <i class="fas fa-book-open text-cyan-400"></i>
+                    ${lang('footer_guides_title')}
+                </h2>
+                <p class="text-slate-400 mt-2">${lang('footer_guides_subtitle')}</p>
+            </div>
+            <div class="p-6 max-h-[70vh] overflow-y-auto">
+                <div class="grid gap-4">
+                    ${FOOTER_CONFIG.guides.map(guide => `
+                        <div class="guide-card border border-slate-700/50 rounded-xl p-4 hover:border-cyan-500/50 transition-colors bg-slate-800/30">
+                            <div class="flex items-start gap-4">
+                                <div class="w-16 h-16 rounded-xl overflow-hidden bg-slate-800 flex-shrink-0 border border-slate-700">
+                                    ${guide.logo
+                                        ? `<img src="${guide.logo}" alt="${guide.title}" class="w-full h-full object-cover">`
+                                        : `<div class="w-full h-full flex items-center justify-center text-2xl font-bold text-cyan-400">${guide.title.charAt(0)}</div>`
+                                    }
                                 </div>
-                                <p class="text-sm text-slate-400 mb-2">${lang(guide.descKey)}</p>
-                                <div class="flex items-center gap-4 text-xs text-slate-500">
-                                    <span class="flex items-center gap-1">
-                                        <i class="fas fa-signal text-green-400"></i>
-                                        ${lang(guide.difficultyKey)}
-                                    </span>
+                                <div class="flex-1 min-w-0">
+                                    <div class="flex items-center gap-2 flex-wrap mb-1">
+                                        <h3 class="font-bold text-white">${guide.title}</h3>
+                                        ${guide.status === 'new'
+                                            ? '<span class="bg-green-500/20 text-green-400 text-xs px-2 py-0.5 rounded-full">NEW</span>'
+                                            : ''}
+                                        ${guide.status === 'active'
+                                            ? `<span class="bg-cyan-500/20 text-cyan-400 text-xs px-2 py-0.5 rounded-full">${lang('footer_guide_active')}</span>`
+                                            : ''}
+                                    </div>
+                                    <p class="text-sm text-slate-400 mb-2">${lang(guide.descKey)}</p>
+                                    <div class="flex items-center gap-4 text-xs text-slate-500">
+                                        <span class="flex items-center gap-1">
+                                            <i class="fas fa-signal text-green-400"></i>
+                                            ${lang(guide.difficultyKey)}
+                                        </span>
+                                    </div>
+                                    <a href="${guide.link}" target="_blank"
+                                       class="mt-3 inline-flex items-center gap-2 px-4 py-2 bg-cyan-600 hover:bg-cyan-500 rounded-lg text-sm font-medium text-white transition-colors">
+                                        <i class="fas fa-external-link-alt"></i>
+                                        ${lang('footer_guide_go')}
+                                    </a>
                                 </div>
-                                <a href="${guide.link}" target="_blank" class="mt-3 inline-flex items-center gap-2 px-4 py-2 bg-cyan-600 hover:bg-cyan-500 rounded-lg text-sm font-medium text-white transition-colors">
-                                    <i class="fas fa-external-link-alt"></i>
-                                    ${lang('footer_guide_go')}
-                                </a>
                             </div>
                         </div>
-                    </div>
-                `).join('')}
-            </div>
-            <div class="mt-6 p-4 bg-slate-800/30 border border-slate-700/50 rounded-xl">
-                <p class="text-sm text-slate-400 text-center">
-                    <i class="fas fa-lock text-slate-500 mr-2"></i>
-                    ${lang('footer_guide_lock')}
-                </p>
-            </div>
-        </div>
-    `;
-}
-    function getAccountContent() {
-    const lang = typeof window.t === 'function' ? window.t : (k) => k;
-    const user = typeof currentUser !== 'undefined' ? currentUser : null;
-    const userData = typeof window.userProfileData !== 'undefined' ? window.userProfileData : {};
-
-    // Полный список стран
-    const countries = [
-        { code: 'AF', name: 'Afghanistan' },
-        { code: 'AL', name: 'Albania' },
-        { code: 'DZ', name: 'Algeria' },
-        { code: 'AD', name: 'Andorra' },
-        { code: 'AO', name: 'Angola' },
-        { code: 'AR', name: 'Argentina' },
-        { code: 'AM', name: 'Armenia' },
-        { code: 'AU', name: 'Australia' },
-        { code: 'AT', name: 'Austria' },
-        { code: 'AZ', name: 'Azerbaijan' },
-        { code: 'BH', name: 'Bahrain' },
-        { code: 'BD', name: 'Bangladesh' },
-        { code: 'BY', name: 'Belarus' },
-        { code: 'BE', name: 'Belgium' },
-        { code: 'BZ', name: 'Belize' },
-        { code: 'BJ', name: 'Benin' },
-        { code: 'BT', name: 'Bhutan' },
-        { code: 'BO', name: 'Bolivia' },
-        { code: 'BA', name: 'Bosnia and Herzegovina' },
-        { code: 'BW', name: 'Botswana' },
-        { code: 'BR', name: 'Brazil' },
-        { code: 'BN', name: 'Brunei' },
-        { code: 'BG', name: 'Bulgaria' },
-        { code: 'BF', name: 'Burkina Faso' },
-        { code: 'BI', name: 'Burundi' },
-        { code: 'KH', name: 'Cambodia' },
-        { code: 'CM', name: 'Cameroon' },
-        { code: 'CA', name: 'Canada' },
-        { code: 'CF', name: 'Central African Republic' },
-        { code: 'TD', name: 'Chad' },
-        { code: 'CL', name: 'Chile' },
-        { code: 'CN', name: 'China' },
-        { code: 'CO', name: 'Colombia' },
-        { code: 'KM', name: 'Comoros' },
-        { code: 'CG', name: 'Congo' },
-        { code: 'CR', name: 'Costa Rica' },
-        { code: 'HR', name: 'Croatia' },
-        { code: 'CU', name: 'Cuba' },
-        { code: 'CY', name: 'Cyprus' },
-        { code: 'CZ', name: 'Czech Republic' },
-        { code: 'DK', name: 'Denmark' },
-        { code: 'DJ', name: 'Djibouti' },
-        { code: 'DO', name: 'Dominican Republic' },
-        { code: 'EC', name: 'Ecuador' },
-        { code: 'EG', name: 'Egypt' },
-        { code: 'SV', name: 'El Salvador' },
-        { code: 'EE', name: 'Estonia' },
-        { code: 'ET', name: 'Ethiopia' },
-        { code: 'FJ', name: 'Fiji' },
-        { code: 'FI', name: 'Finland' },
-        { code: 'FR', name: 'France' },
-        { code: 'GA', name: 'Gabon' },
-        { code: 'GE', name: 'Georgia' },
-        { code: 'DE', name: 'Germany' },
-        { code: 'GH', name: 'Ghana' },
-        { code: 'GR', name: 'Greece' },
-        { code: 'GT', name: 'Guatemala' },
-        { code: 'GN', name: 'Guinea' },
-        { code: 'HT', name: 'Haiti' },
-        { code: 'HN', name: 'Honduras' },
-        { code: 'HK', name: 'Hong Kong' },
-        { code: 'HU', name: 'Hungary' },
-        { code: 'IS', name: 'Iceland' },
-        { code: 'IN', name: 'India' },
-        { code: 'ID', name: 'Indonesia' },
-        { code: 'IR', name: 'Iran' },
-        { code: 'IQ', name: 'Iraq' },
-        { code: 'IE', name: 'Ireland' },
-        { code: 'IL', name: 'Israel' },
-        { code: 'IT', name: 'Italy' },
-        { code: 'JM', name: 'Jamaica' },
-        { code: 'JP', name: 'Japan' },
-        { code: 'JO', name: 'Jordan' },
-        { code: 'KZ', name: 'Kazakhstan' },
-        { code: 'KE', name: 'Kenya' },
-        { code: 'KW', name: 'Kuwait' },
-        { code: 'KG', name: 'Kyrgyzstan' },
-        { code: 'LA', name: 'Laos' },
-        { code: 'LV', name: 'Latvia' },
-        { code: 'LB', name: 'Lebanon' },
-        { code: 'LY', name: 'Libya' },
-        { code: 'LI', name: 'Liechtenstein' },
-        { code: 'LT', name: 'Lithuania' },
-        { code: 'LU', name: 'Luxembourg' },
-        { code: 'MK', name: 'Macedonia' },
-        { code: 'MG', name: 'Madagascar' },
-        { code: 'MY', name: 'Malaysia' },
-        { code: 'MV', name: 'Maldives' },
-        { code: 'ML', name: 'Mali' },
-        { code: 'MT', name: 'Malta' },
-        { code: 'MR', name: 'Mauritania' },
-        { code: 'MX', name: 'Mexico' },
-        { code: 'MD', name: 'Moldova' },
-        { code: 'MC', name: 'Monaco' },
-        { code: 'MN', name: 'Mongolia' },
-        { code: 'ME', name: 'Montenegro' },
-        { code: 'MA', name: 'Morocco' },
-        { code: 'MZ', name: 'Mozambique' },
-        { code: 'MM', name: 'Myanmar' },
-        { code: 'NA', name: 'Namibia' },
-        { code: 'NP', name: 'Nepal' },
-        { code: 'NL', name: 'Netherlands' },
-        { code: 'NZ', name: 'New Zealand' },
-        { code: 'NI', name: 'Nicaragua' },
-        { code: 'NE', name: 'Niger' },
-        { code: 'NG', name: 'Nigeria' },
-        { code: 'KP', name: 'North Korea' },
-        { code: 'NO', name: 'Norway' },
-        { code: 'OM', name: 'Oman' },
-        { code: 'PK', name: 'Pakistan' },
-        { code: 'PA', name: 'Panama' },
-        { code: 'PG', name: 'Papua New Guinea' },
-        { code: 'PY', name: 'Paraguay' },
-        { code: 'PE', name: 'Peru' },
-        { code: 'PH', name: 'Philippines' },
-        { code: 'PL', name: 'Poland' },
-        { code: 'PT', name: 'Portugal' },
-        { code: 'QA', name: 'Qatar' },
-        { code: 'RO', name: 'Romania' },
-        { code: 'RU', name: 'Russia' },
-        { code: 'RW', name: 'Rwanda' },
-        { code: 'SA', name: 'Saudi Arabia' },
-        { code: 'SN', name: 'Senegal' },
-        { code: 'RS', name: 'Serbia' },
-        { code: 'SL', name: 'Sierra Leone' },
-        { code: 'SG', name: 'Singapore' },
-        { code: 'SK', name: 'Slovakia' },
-        { code: 'SI', name: 'Slovenia' },
-        { code: 'SO', name: 'Somalia' },
-        { code: 'ZA', name: 'South Africa' },
-        { code: 'KR', name: 'South Korea' },
-        { code: 'SS', name: 'South Sudan' },
-        { code: 'ES', name: 'Spain' },
-        { code: 'LK', name: 'Sri Lanka' },
-        { code: 'SD', name: 'Sudan' },
-        { code: 'SE', name: 'Sweden' },
-        { code: 'CH', name: 'Switzerland' },
-        { code: 'SY', name: 'Syria' },
-        { code: 'TW', name: 'Taiwan' },
-        { code: 'TJ', name: 'Tajikistan' },
-        { code: 'TZ', name: 'Tanzania' },
-        { code: 'TH', name: 'Thailand' },
-        { code: 'TG', name: 'Togo' },
-        { code: 'TN', name: 'Tunisia' },
-        { code: 'TR', name: 'Turkey' },
-        { code: 'TM', name: 'Turkmenistan' },
-        { code: 'UG', name: 'Uganda' },
-        { code: 'UA', name: 'Ukraine' },
-        { code: 'AE', name: 'United Arab Emirates' },
-        { code: 'GB', name: 'United Kingdom' },
-        { code: 'US', name: 'United States' },
-        { code: 'UY', name: 'Uruguay' },
-        { code: 'UZ', name: 'Uzbekistan' },
-        { code: 'VE', name: 'Venezuela' },
-        { code: 'VN', name: 'Vietnam' },
-        { code: 'YE', name: 'Yemen' },
-        { code: 'ZM', name: 'Zambia' },
-        { code: 'ZW', name: 'Zimbabwe' }
-    ];
-
-    const savedCountry = userData.country || '';
-
-    return `
-        <div class="bg-gradient-to-r from-slate-900 to-slate-800 p-6 border-b border-slate-700">
-            <h2 class="text-2xl font-bold text-white flex items-center gap-3">
-                <i class="fas fa-user-cog text-emerald-400"></i>
-                ${lang('footer_account_title')}
-            </h2>
-            <p class="text-slate-400 mt-2">${lang('footer_account_manage')}</p>
-        </div>
-        <div class="p-6 max-h-[70vh] overflow-y-auto">
-            ${user ? `
-                <!-- Avatar Section -->
-                <div class="flex items-center gap-6 mb-8 pb-6 border-b border-slate-700/50">
-                    <div class="relative group">
-                        <div class="w-24 h-24 rounded-full overflow-hidden border-4 border-cyan-500/50">
-                            <img id="accountAvatar" src="${user.photoURL || 'https://ui-avatars.com/api/?name=' + (user.displayName || 'U') + '&background=random'}" alt="Avatar" class="w-full h-full object-cover">
-                        </div>
-                        <label for="avatarUpload" class="absolute bottom-0 right-0 w-8 h-8 bg-cyan-600 rounded-full flex items-center justify-center cursor-pointer hover:bg-cyan-500 transition-colors shadow-lg">
-                            <i class="fas fa-camera text-white text-xs"></i>
-                        </label>
-                        <input type="file" id="avatarUpload" accept="image/*" class="hidden" onchange="uploadAvatar(event)">
-                    </div>
-                   <div class="flex-1 min-w-0">
-    <h3 class="text-xl font-bold text-white" id="accountDisplayName">${user.displayName || lang('user')}</h3>
-    <p class="text-slate-400 text-sm">${user.email}</p>
-    
-    <!-- Full UID with copy button -->
-    <div class="mt-2 flex items-center gap-2">
-        <span class="text-xs text-slate-500">ID:</span>
-        <code id="accountUID" class="text-xs text-slate-400 font-mono bg-slate-800 px-2 py-0.5 rounded select-all break-all">${user.uid}</code>
-        <button onclick="copyAccountUID()" 
-                id="copyUIDBtn"
-                title="Copy ID"
-                class="flex-shrink-0 w-7 h-7 flex items-center justify-center rounded-lg bg-slate-700 hover:bg-cyan-600 text-slate-400 hover:text-white transition-all">
-            <i class="fas fa-copy text-xs"></i>
-        </button>
-    </div>
-    
-    <!-- Registration date -->
-    <p class="text-xs text-slate-600 mt-1">
-        <i class="fas fa-calendar-alt mr-1"></i>
-        ${user.metadata?.creationTime ? new Date(user.metadata.creationTime).toLocaleDateString() : ''}
-    </p>
-</div>
+                    `).join('')}
                 </div>
+                <div class="mt-6 p-4 bg-slate-800/30 border border-slate-700/50 rounded-xl">
+                    <p class="text-sm text-slate-400 text-center">
+                        <i class="fas fa-lock text-slate-500 mr-2"></i>
+                        ${lang('footer_guide_lock')}
+                    </p>
+                </div>
+            </div>
+        `;
+    }
 
-                <!-- Profile Form -->
-                <form id="accountForm" onsubmit="saveAccountProfile(event)" class="space-y-6">
-                    <div class="grid grid-cols-2 gap-4">
-                        <div>
-                            <label class="block text-sm font-medium text-slate-300 mb-2">${lang('footer_account_firstname')}</label>
-                            <input type="text" id="profileFirstName" value="${userData.firstName || ''}"
-                                   placeholder="${lang('footer_account_firstname')}"
-                                   class="w-full bg-slate-800 border border-slate-700 rounded-lg px-4 py-2.5 text-sm text-white focus:border-cyan-500 focus:outline-none">
+    // ============ ACCOUNT CONTENT ============
+
+    function getAccountContent() {
+        const lang      = typeof window.t === 'function' ? window.t : (k) => k;
+        const user      = typeof currentUser !== 'undefined' ? currentUser : null;
+        const userData  = typeof window.userProfileData !== 'undefined' ? window.userProfileData : {};
+
+        const countries = [
+            { code: 'AF', name: 'Afghanistan' }, { code: 'AL', name: 'Albania' },
+            { code: 'DZ', name: 'Algeria' },     { code: 'AD', name: 'Andorra' },
+            { code: 'AO', name: 'Angola' },      { code: 'AR', name: 'Argentina' },
+            { code: 'AM', name: 'Armenia' },     { code: 'AU', name: 'Australia' },
+            { code: 'AT', name: 'Austria' },     { code: 'AZ', name: 'Azerbaijan' },
+            { code: 'BH', name: 'Bahrain' },     { code: 'BD', name: 'Bangladesh' },
+            { code: 'BY', name: 'Belarus' },     { code: 'BE', name: 'Belgium' },
+            { code: 'BZ', name: 'Belize' },      { code: 'BJ', name: 'Benin' },
+            { code: 'BT', name: 'Bhutan' },      { code: 'BO', name: 'Bolivia' },
+            { code: 'BA', name: 'Bosnia and Herzegovina' }, { code: 'BW', name: 'Botswana' },
+            { code: 'BR', name: 'Brazil' },      { code: 'BN', name: 'Brunei' },
+            { code: 'BG', name: 'Bulgaria' },    { code: 'BF', name: 'Burkina Faso' },
+            { code: 'BI', name: 'Burundi' },     { code: 'KH', name: 'Cambodia' },
+            { code: 'CM', name: 'Cameroon' },    { code: 'CA', name: 'Canada' },
+            { code: 'CF', name: 'Central African Republic' }, { code: 'TD', name: 'Chad' },
+            { code: 'CL', name: 'Chile' },       { code: 'CN', name: 'China' },
+            { code: 'CO', name: 'Colombia' },    { code: 'KM', name: 'Comoros' },
+            { code: 'CG', name: 'Congo' },       { code: 'CR', name: 'Costa Rica' },
+            { code: 'HR', name: 'Croatia' },     { code: 'CU', name: 'Cuba' },
+            { code: 'CY', name: 'Cyprus' },      { code: 'CZ', name: 'Czech Republic' },
+            { code: 'DK', name: 'Denmark' },     { code: 'DJ', name: 'Djibouti' },
+            { code: 'DO', name: 'Dominican Republic' }, { code: 'EC', name: 'Ecuador' },
+            { code: 'EG', name: 'Egypt' },       { code: 'SV', name: 'El Salvador' },
+            { code: 'EE', name: 'Estonia' },     { code: 'ET', name: 'Ethiopia' },
+            { code: 'FJ', name: 'Fiji' },        { code: 'FI', name: 'Finland' },
+            { code: 'FR', name: 'France' },      { code: 'GA', name: 'Gabon' },
+            { code: 'GE', name: 'Georgia' },     { code: 'DE', name: 'Germany' },
+            { code: 'GH', name: 'Ghana' },       { code: 'GR', name: 'Greece' },
+            { code: 'GT', name: 'Guatemala' },   { code: 'GN', name: 'Guinea' },
+            { code: 'HT', name: 'Haiti' },       { code: 'HN', name: 'Honduras' },
+            { code: 'HK', name: 'Hong Kong' },   { code: 'HU', name: 'Hungary' },
+            { code: 'IS', name: 'Iceland' },     { code: 'IN', name: 'India' },
+            { code: 'ID', name: 'Indonesia' },   { code: 'IR', name: 'Iran' },
+            { code: 'IQ', name: 'Iraq' },        { code: 'IE', name: 'Ireland' },
+            { code: 'IL', name: 'Israel' },      { code: 'IT', name: 'Italy' },
+            { code: 'JM', name: 'Jamaica' },     { code: 'JP', name: 'Japan' },
+            { code: 'JO', name: 'Jordan' },      { code: 'KZ', name: 'Kazakhstan' },
+            { code: 'KE', name: 'Kenya' },       { code: 'KW', name: 'Kuwait' },
+            { code: 'KG', name: 'Kyrgyzstan' },  { code: 'LA', name: 'Laos' },
+            { code: 'LV', name: 'Latvia' },      { code: 'LB', name: 'Lebanon' },
+            { code: 'LY', name: 'Libya' },       { code: 'LI', name: 'Liechtenstein' },
+            { code: 'LT', name: 'Lithuania' },   { code: 'LU', name: 'Luxembourg' },
+            { code: 'MK', name: 'Macedonia' },   { code: 'MG', name: 'Madagascar' },
+            { code: 'MY', name: 'Malaysia' },    { code: 'MV', name: 'Maldives' },
+            { code: 'ML', name: 'Mali' },        { code: 'MT', name: 'Malta' },
+            { code: 'MR', name: 'Mauritania' },  { code: 'MX', name: 'Mexico' },
+            { code: 'MD', name: 'Moldova' },     { code: 'MC', name: 'Monaco' },
+            { code: 'MN', name: 'Mongolia' },    { code: 'ME', name: 'Montenegro' },
+            { code: 'MA', name: 'Morocco' },     { code: 'MZ', name: 'Mozambique' },
+            { code: 'MM', name: 'Myanmar' },     { code: 'NA', name: 'Namibia' },
+            { code: 'NP', name: 'Nepal' },       { code: 'NL', name: 'Netherlands' },
+            { code: 'NZ', name: 'New Zealand' }, { code: 'NI', name: 'Nicaragua' },
+            { code: 'NE', name: 'Niger' },       { code: 'NG', name: 'Nigeria' },
+            { code: 'KP', name: 'North Korea' }, { code: 'NO', name: 'Norway' },
+            { code: 'OM', name: 'Oman' },        { code: 'PK', name: 'Pakistan' },
+            { code: 'PA', name: 'Panama' },      { code: 'PG', name: 'Papua New Guinea' },
+            { code: 'PY', name: 'Paraguay' },    { code: 'PE', name: 'Peru' },
+            { code: 'PH', name: 'Philippines' }, { code: 'PL', name: 'Poland' },
+            { code: 'PT', name: 'Portugal' },    { code: 'QA', name: 'Qatar' },
+            { code: 'RO', name: 'Romania' },     { code: 'RU', name: 'Russia' },
+            { code: 'RW', name: 'Rwanda' },      { code: 'SA', name: 'Saudi Arabia' },
+            { code: 'SN', name: 'Senegal' },     { code: 'RS', name: 'Serbia' },
+            { code: 'SL', name: 'Sierra Leone' },{ code: 'SG', name: 'Singapore' },
+            { code: 'SK', name: 'Slovakia' },    { code: 'SI', name: 'Slovenia' },
+            { code: 'SO', name: 'Somalia' },     { code: 'ZA', name: 'South Africa' },
+            { code: 'KR', name: 'South Korea' }, { code: 'SS', name: 'South Sudan' },
+            { code: 'ES', name: 'Spain' },       { code: 'LK', name: 'Sri Lanka' },
+            { code: 'SD', name: 'Sudan' },       { code: 'SE', name: 'Sweden' },
+            { code: 'CH', name: 'Switzerland' }, { code: 'SY', name: 'Syria' },
+            { code: 'TW', name: 'Taiwan' },      { code: 'TJ', name: 'Tajikistan' },
+            { code: 'TZ', name: 'Tanzania' },    { code: 'TH', name: 'Thailand' },
+            { code: 'TG', name: 'Togo' },        { code: 'TN', name: 'Tunisia' },
+            { code: 'TR', name: 'Turkey' },      { code: 'TM', name: 'Turkmenistan' },
+            { code: 'UG', name: 'Uganda' },      { code: 'UA', name: 'Ukraine' },
+            { code: 'AE', name: 'United Arab Emirates' }, { code: 'GB', name: 'United Kingdom' },
+            { code: 'US', name: 'United States' },{ code: 'UY', name: 'Uruguay' },
+            { code: 'UZ', name: 'Uzbekistan' },  { code: 'VE', name: 'Venezuela' },
+            { code: 'VN', name: 'Vietnam' },     { code: 'YE', name: 'Yemen' },
+            { code: 'ZM', name: 'Zambia' },      { code: 'ZW', name: 'Zimbabwe' }
+        ];
+
+        const savedCountry = userData.country || '';
+
+        return `
+            <div class="bg-gradient-to-r from-slate-900 to-slate-800 p-6 border-b border-slate-700">
+                <h2 class="text-2xl font-bold text-white flex items-center gap-3">
+                    <i class="fas fa-user-cog text-emerald-400"></i>
+                    ${lang('footer_account_title')}
+                </h2>
+                <p class="text-slate-400 mt-2">${lang('footer_account_manage')}</p>
+            </div>
+            <div class="p-6 max-h-[70vh] overflow-y-auto">
+                ${user ? `
+                    <!-- Avatar Section -->
+                    <div class="flex items-center gap-6 mb-8 pb-6 border-b border-slate-700/50">
+                        <div class="relative group">
+                            <div class="w-24 h-24 rounded-full overflow-hidden border-4 border-cyan-500/50">
+                                <img id="accountAvatar"
+                                     src="${user.photoURL || 'https://ui-avatars.com/api/?name=' + encodeURIComponent(user.displayName || 'U') + '&background=random'}"
+                                     alt="Avatar" class="w-full h-full object-cover">
+                            </div>
+                            <label for="avatarUpload" class="absolute bottom-0 right-0 w-8 h-8 bg-cyan-600 rounded-full flex items-center justify-center cursor-pointer hover:bg-cyan-500 transition-colors shadow-lg">
+                                <i class="fas fa-camera text-white text-xs"></i>
+                            </label>
+                            <input type="file" id="avatarUpload" accept="image/*" class="hidden" onchange="uploadAvatar(event)">
                         </div>
-                        <div>
-                            <label class="block text-sm font-medium text-slate-300 mb-2">${lang('footer_account_lastname')}</label>
-                            <input type="text" id="profileLastName" value="${userData.lastName || ''}"
-                                   placeholder="${lang('footer_account_lastname')}"
-                                   class="w-full bg-slate-800 border border-slate-700 rounded-lg px-4 py-2.5 text-sm text-white focus:border-cyan-500 focus:outline-none">
+                        <div class="flex-1 min-w-0">
+                            <h3 class="text-xl font-bold text-white" id="accountDisplayName">${user.displayName || lang('user')}</h3>
+                            <p class="text-slate-400 text-sm">${user.email}</p>
+                            <div class="mt-2 flex items-center gap-2">
+                                <span class="text-xs text-slate-500">ID:</span>
+                                <code id="accountUID" class="text-xs text-slate-400 font-mono bg-slate-800 px-2 py-0.5 rounded select-all break-all">${user.uid}</code>
+                                <button onclick="copyAccountUID()" id="copyUIDBtn" title="${lang('copied')}"
+                                        class="flex-shrink-0 w-7 h-7 flex items-center justify-center rounded-lg bg-slate-700 hover:bg-cyan-600 text-slate-400 hover:text-white transition-all">
+                                    <i class="fas fa-copy text-xs"></i>
+                                </button>
+                            </div>
+                            <p class="text-xs text-slate-600 mt-1">
+                                <i class="fas fa-calendar-alt mr-1"></i>
+                                ${user.metadata?.creationTime ? new Date(user.metadata.creationTime).toLocaleDateString() : ''}
+                            </p>
                         </div>
                     </div>
 
-                    <div class="grid grid-cols-2 gap-4">
-                        <div>
-                            <label class="block text-sm font-medium text-slate-300 mb-2">${lang('footer_account_username')}</label>
-                            <div class="relative">
-                                <span class="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500">@</span>
-                                <input type="text" id="profileUsername" value="${userData.username || ''}"
-                                       placeholder="nickname"
-                                       class="w-full bg-slate-800 border border-slate-700 rounded-lg pl-8 pr-4 py-2.5 text-sm text-white focus:border-cyan-500 focus:outline-none">
+                    <!-- Profile Form -->
+                    <form id="accountForm" onsubmit="saveAccountProfile(event)" class="space-y-6">
+
+                        <!-- Name Row -->
+                        <div class="grid grid-cols-2 gap-4">
+                            <div>
+                                <label class="block text-sm font-medium text-slate-300 mb-2">${lang('footer_account_firstname')}</label>
+                                <input type="text" id="profileFirstName" value="${userData.firstName || ''}"
+                                       placeholder="${lang('footer_account_firstname')}"
+                                       class="w-full bg-slate-800 border border-slate-700 rounded-lg px-4 py-2.5 text-sm text-white focus:border-cyan-500 focus:outline-none">
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-slate-300 mb-2">${lang('footer_account_lastname')}</label>
+                                <input type="text" id="profileLastName" value="${userData.lastName || ''}"
+                                       placeholder="${lang('footer_account_lastname')}"
+                                       class="w-full bg-slate-800 border border-slate-700 rounded-lg px-4 py-2.5 text-sm text-white focus:border-cyan-500 focus:outline-none">
                             </div>
                         </div>
-                        <div>
-                            <label class="block text-sm font-medium text-slate-300 mb-2">${lang('footer_account_birthdate')}</label>
-                            <input type="date" id="profileBirthdate" value="${userData.birthdate || ''}"
-                                   class="w-full bg-slate-800 border border-slate-700 rounded-lg px-4 py-2.5 text-sm text-white focus:border-cyan-500 focus:outline-none">
-                        </div>
-                    </div>
 
-                    <div>
-                        <label class="block text-sm font-medium text-slate-300 mb-2">${lang('footer_account_gender')}</label>
-                        <div class="flex gap-4">
-                            <label class="flex items-center gap-2 cursor-pointer">
-                                <input type="radio" name="gender" value="male" ${userData.gender === 'male' ? 'checked' : ''} class="text-cyan-500 bg-slate-800 border-slate-600">
-                                <span class="text-sm text-slate-300">${lang('footer_account_male')}</span>
-                            </label>
-                            <label class="flex items-center gap-2 cursor-pointer">
-                                <input type="radio" name="gender" value="female" ${userData.gender === 'female' ? 'checked' : ''} class="text-cyan-500 bg-slate-800 border-slate-600">
-                                <span class="text-sm text-slate-300">${lang('footer_account_female')}</span>
-                            </label>
-                            <label class="flex items-center gap-2 cursor-pointer">
-                                <input type="radio" name="gender" value="other" ${userData.gender === 'other' ? 'checked' : ''} class="text-cyan-500 bg-slate-800 border-slate-600">
-                                <span class="text-sm text-slate-300">${lang('footer_account_other_gender')}</span>
-                            </label>
-                        </div>
-                    </div>
-
-                    <!-- Country + City in one row -->
-                    <div class="grid grid-cols-2 gap-4">
-                        <div>
-                            <label class="block text-sm font-medium text-slate-300 mb-2">${lang('footer_account_country')}</label>
-                            <div class="relative" id="countryPickerWrapper">
+                        <!-- Username + Birthdate -->
+                        <div class="grid grid-cols-2 gap-4">
+                            <div>
+                                <label class="block text-sm font-medium text-slate-300 mb-2">${lang('footer_account_username')}</label>
                                 <div class="relative">
-                                    <i class="fas fa-search absolute left-3 top-1/2 -translate-y-1/2 text-slate-500 text-xs"></i>
-                                    <input type="text"
-                                           id="countrySearchInput"
-                                           placeholder="${lang('account_select_country')}"
-                                           autocomplete="off"
-                                           class="w-full bg-slate-800 border border-slate-700 rounded-lg pl-9 pr-10 py-2.5 text-sm text-white focus:border-cyan-500 focus:outline-none"
-                                           oninput="filterCountryList(this.value)"
-                                           onfocus="showCountryDropdown()"
-                                           value="${countries.find(c => c.code === savedCountry)?.name || savedCountry || ''}">
-                                    <button type="button" onclick="clearCountryInput()" class="absolute right-3 top-1/2 -translate-y-1/2 text-slate-500 hover:text-white transition-colors">
-                                        <i class="fas fa-times text-xs"></i>
+                                    <span class="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500">@</span>
+                                    <input type="text" id="profileUsername" value="${userData.username || ''}"
+                                           placeholder="nickname"
+                                           class="w-full bg-slate-800 border border-slate-700 rounded-lg pl-8 pr-4 py-2.5 text-sm text-white focus:border-cyan-500 focus:outline-none">
+                                </div>
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-slate-300 mb-2">${lang('footer_account_birthdate')}</label>
+                                <input type="date" id="profileBirthdate" value="${userData.birthdate || ''}"
+                                       class="w-full bg-slate-800 border border-slate-700 rounded-lg px-4 py-2.5 text-sm text-white focus:border-cyan-500 focus:outline-none">
+                            </div>
+                        </div>
+
+                        <!-- Gender -->
+                        <div>
+                            <label class="block text-sm font-medium text-slate-300 mb-2">${lang('footer_account_gender')}</label>
+                            <div class="flex gap-4">
+                                <label class="flex items-center gap-2 cursor-pointer">
+                                    <input type="radio" name="gender" value="male" ${userData.gender === 'male' ? 'checked' : ''} class="text-cyan-500 bg-slate-800 border-slate-600">
+                                    <span class="text-sm text-slate-300">${lang('footer_account_male')}</span>
+                                </label>
+                                <label class="flex items-center gap-2 cursor-pointer">
+                                    <input type="radio" name="gender" value="female" ${userData.gender === 'female' ? 'checked' : ''} class="text-cyan-500 bg-slate-800 border-slate-600">
+                                    <span class="text-sm text-slate-300">${lang('footer_account_female')}</span>
+                                </label>
+                                <label class="flex items-center gap-2 cursor-pointer">
+                                    <input type="radio" name="gender" value="other" ${userData.gender === 'other' ? 'checked' : ''} class="text-cyan-500 bg-slate-800 border-slate-600">
+                                    <span class="text-sm text-slate-300">${lang('footer_account_other_gender')}</span>
+                                </label>
+                            </div>
+                        </div>
+
+                        <!-- Country + City -->
+                        <div class="grid grid-cols-2 gap-4">
+                            <div>
+                                <label class="block text-sm font-medium text-slate-300 mb-2">${lang('footer_account_country')}</label>
+                                <div class="relative" id="countryPickerWrapper">
+                                    <div class="relative">
+                                        <i class="fas fa-search absolute left-3 top-1/2 -translate-y-1/2 text-slate-500 text-xs"></i>
+                                        <input type="text" id="countrySearchInput"
+                                               placeholder="${lang('account_select_country')}"
+                                               autocomplete="off"
+                                               class="w-full bg-slate-800 border border-slate-700 rounded-lg pl-9 pr-10 py-2.5 text-sm text-white focus:border-cyan-500 focus:outline-none"
+                                               oninput="filterCountryList(this.value)"
+                                               onfocus="showCountryDropdown()"
+                                               value="${countries.find(c => c.code === savedCountry)?.name || savedCountry || ''}">
+                                        <button type="button" onclick="clearCountryInput()" class="absolute right-3 top-1/2 -translate-y-1/2 text-slate-500 hover:text-white transition-colors">
+                                            <i class="fas fa-times text-xs"></i>
+                                        </button>
+                                    </div>
+                                    <input type="hidden" id="profileCountry" value="${savedCountry}">
+                                    <div id="countryDropdown" class="hidden absolute z-50 w-full mt-1 bg-slate-800 border border-slate-600 rounded-lg shadow-xl max-h-48 overflow-y-auto">
+                                        ${countries.map(c => `
+                                            <div class="country-option px-4 py-2.5 text-sm text-slate-300 hover:bg-slate-700 hover:text-white cursor-pointer transition-colors"
+                                                 data-code="${c.code}" data-name="${c.name}"
+                                                 onclick="selectCountry('${c.code}', '${c.name}')">
+                                                ${c.name}
+                                            </div>
+                                        `).join('')}
+                                    </div>
+                                </div>
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-slate-300 mb-2">
+                                    <i class="fas fa-city text-orange-400 mr-1"></i>${lang('account_city')}
+                                </label>
+                                <input type="text" id="profileCity" value="${userData.city || ''}"
+                                       placeholder="${lang('account_city_placeholder')}"
+                                       class="w-full bg-slate-800 border border-slate-700 rounded-lg px-4 py-2.5 text-sm text-white focus:border-cyan-500 focus:outline-none">
+                            </div>
+                        </div>
+
+                        <!-- Bio -->
+                        <div>
+                            <label class="block text-sm font-medium text-slate-300 mb-2">${lang('footer_account_bio')}</label>
+                            <textarea id="profileBio" rows="3"
+                                      placeholder="${lang('footer_account_bio_placeholder')}"
+                                      class="w-full bg-slate-800 border border-slate-700 rounded-lg px-4 py-2.5 text-sm text-white focus:border-cyan-500 focus:outline-none resize-none">${userData.bio || ''}</textarea>
+                        </div>
+
+                        <!-- Crypto Wallets -->
+                        <div class="border-t border-slate-700/50 pt-5">
+                            <h4 class="text-sm font-semibold text-slate-300 mb-4 flex items-center gap-2">
+                                <i class="fas fa-wallet text-cyan-400"></i>
+                                ${lang('footer_crypto_wallets')}
+                            </h4>
+                            <div class="space-y-3">
+                                <div>
+                                    <label class="block text-xs font-medium text-slate-400 mb-1.5 flex items-center gap-1.5">
+                                        <span class="w-5 h-5 rounded-full bg-blue-500/20 flex items-center justify-center text-xs font-bold text-blue-400">Ξ</span>
+                                        EVM ${lang('footer_address')}
+                                        <span class="text-slate-600">(Ethereum, BSC, Polygon...)</span>
+                                    </label>
+                                    <input type="text" id="profileEvmAddress" value="${userData.evmAddress || ''}"
+                                           placeholder="0x..."
+                                           class="w-full bg-slate-800 border border-slate-700 rounded-lg px-4 py-2.5 text-sm text-white font-mono focus:border-cyan-500 focus:outline-none">
+                                </div>
+                                <div>
+                                    <label class="block text-xs font-medium text-slate-400 mb-1.5 flex items-center gap-1.5">
+                                        <span class="w-5 h-5 rounded-full bg-purple-500/20 flex items-center justify-center text-xs font-bold text-purple-400">◎</span>
+                                        Solana ${lang('footer_address')}
+                                    </label>
+                                    <input type="text" id="profileSolAddress" value="${userData.solAddress || ''}"
+                                           placeholder="${lang('footer_solana_placeholder')}"
+                                           class="w-full bg-slate-800 border border-slate-700 rounded-lg px-4 py-2.5 text-sm text-white font-mono focus:border-cyan-500 focus:outline-none">
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Social Networks -->
+                        <div class="border-t border-slate-700/50 pt-5">
+                            <h4 class="text-sm font-semibold text-slate-300 mb-4 flex items-center gap-2">
+                                <i class="fas fa-share-alt text-pink-400"></i>
+                                ${lang('footer_social_networks')}
+                            </h4>
+                            <div class="grid grid-cols-3 gap-3">
+                                <div>
+                                    <label class="block text-xs font-medium text-slate-400 mb-1.5">
+                                        <i class="fab fa-twitter text-sky-400 mr-1"></i>Twitter / X
+                                    </label>
+                                    <div class="relative">
+                                        <span class="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500 text-xs">@</span>
+                                        <input type="text" id="profileTwitter" value="${(userData.twitter || '').replace('@','')}"
+                                               placeholder="username"
+                                               class="w-full bg-slate-800 border border-slate-700 rounded-lg pl-7 pr-4 py-2.5 text-sm text-white focus:border-cyan-500 focus:outline-none">
+                                    </div>
+                                </div>
+                                <div>
+                                    <label class="block text-xs font-medium text-slate-400 mb-1.5">
+                                        <i class="fab fa-discord text-indigo-400 mr-1"></i>Discord
+                                    </label>
+                                    <input type="text" id="profileDiscord" value="${userData.discord || ''}"
+                                           placeholder="username"
+                                           class="w-full bg-slate-800 border border-slate-700 rounded-lg px-4 py-2.5 text-sm text-white focus:border-cyan-500 focus:outline-none">
+                                </div>
+                                <div>
+                                    <label class="block text-xs font-medium text-slate-400 mb-1.5">
+                                        <i class="fas fa-telegram text-sky-500 mr-1"></i>${lang('footer_account_telegram')}
+                                    </label>
+                                    <div class="relative">
+                                        <span class="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500 text-xs">@</span>
+                                        <input type="text" id="profileTelegram" value="${userData.telegram || ''}"
+                                               placeholder="username"
+                                               class="w-full bg-slate-800 border border-slate-700 rounded-lg pl-7 pr-4 py-2.5 text-sm text-white focus:border-cyan-500 focus:outline-none">
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Referral Block -->
+                        <div class="border-t border-slate-700/50 pt-5">
+                            <h4 class="text-sm font-semibold text-slate-300 mb-4 flex items-center gap-2">
+                                <i class="fas fa-user-plus text-emerald-400"></i>
+                                ${lang('account_ref_program')}
+                            </h4>
+                            <div class="grid grid-cols-2 gap-3 mb-3">
+                                <div class="bg-slate-800/50 rounded-xl p-3 border border-slate-700/50">
+                                    <div class="text-xs text-slate-500 mb-1.5">${lang('account_your_ref_code')}</div>
+                                    <div class="flex items-center gap-2">
+                                        <code id="profileRefCode" class="text-sm font-mono text-cyan-400 font-bold tracking-wider">
+                                            ${userData.referralCode || lang('account_generating')}
+                                        </code>
+                                        <button type="button" onclick="copyRefCode()"
+                                                class="w-6 h-6 flex items-center justify-center rounded-lg bg-slate-700 hover:bg-cyan-600 text-slate-400 hover:text-white transition-all">
+                                            <i class="fas fa-copy text-xs"></i>
+                                        </button>
+                                    </div>
+                                </div>
+                                <div class="bg-slate-800/50 rounded-xl p-3 border border-slate-700/50">
+                                    <div class="text-xs text-slate-500 mb-1.5">${lang('account_invited_count')}</div>
+                                    <div class="text-lg font-bold text-emerald-400" id="profileInvitedCount">
+                                        ${userData.invitedCount || 0}
+                                        <span class="text-xs font-normal text-slate-500">${lang('account_people_short')}</span>
+                                    </div>
+                                </div>
+                            </div>
+
+                            ${userData.invitedBy ? `
+                            <div class="mb-3 text-xs text-slate-500 flex items-center gap-1.5 bg-slate-800/30 rounded-lg px-3 py-2">
+                                <i class="fas fa-user-check text-emerald-400"></i>
+                                ${lang('account_invited_by')}
+                                <span class="text-slate-300 font-medium">${userData.invitedByName || userData.invitedBy}</span>
+                            </div>` : `
+                            <div class="mb-3">
+                                <label class="block text-xs font-medium text-slate-400 mb-1.5">
+                                    <i class="fas fa-ticket-alt text-yellow-400 mr-1"></i>
+                                    ${lang('account_enter_ref_code')}
+                                </label>
+                                <div class="flex gap-2">
+                                    <input type="text" id="profileInviteCode"
+                                           placeholder="${lang('ref_code_input_placeholder')}"
+                                           class="flex-1 bg-slate-800 border border-slate-700 rounded-lg px-4 py-2 text-sm text-white font-mono focus:border-yellow-500 focus:outline-none transition-colors">
+                                    <button type="button" onclick="applyReferralCode()"
+                                            class="px-4 py-2 bg-yellow-600 hover:bg-yellow-500 rounded-lg text-sm font-medium text-white transition-colors whitespace-nowrap">
+                                        ${lang('account_apply')}
                                     </button>
                                 </div>
-                                <input type="hidden" id="profileCountry" value="${savedCountry}">
+                            </div>`}
 
-                                <!-- Dropdown list -->
-                                <div id="countryDropdown"
-                                     class="hidden absolute z-50 w-full mt-1 bg-slate-800 border border-slate-600 rounded-lg shadow-xl max-h-48 overflow-y-auto">
-                                    ${countries.map(c => `
-                                        <div class="country-option px-4 py-2.5 text-sm text-slate-300 hover:bg-slate-700 hover:text-white cursor-pointer transition-colors flex items-center gap-2"
-                                             data-code="${c.code}"
-                                             data-name="${c.name}"
-                                             onclick="selectCountry('${c.code}', '${c.name}')">
-                                            ${c.name}
+                            <div class="p-3 bg-emerald-900/20 border border-emerald-800/30 rounded-lg text-xs text-slate-400">
+                                <i class="fas fa-flask text-emerald-400 mr-1.5"></i>
+                                ${lang('account_ref_bonus_text')}
+                                <span class="text-emerald-400 font-bold">${lang('account_ref_bonus_amount')}</span>!
+                            </div>
+                        </div>
+
+                        <!-- Reagents Balance -->
+                        <div class="border-t border-slate-700/50 pt-5">
+                            <h4 class="text-sm font-semibold text-slate-300 mb-4 flex items-center gap-2">
+                                <span class="text-lg">🧪</span>
+                                ${lang('reagents_section_title')}
+                            </h4>
+                            <div class="bg-gradient-to-br from-cyan-900/30 to-blue-900/30 border border-cyan-500/20 rounded-xl p-4">
+                                <div class="flex items-center justify-between mb-3">
+                                    <div>
+                                        <div class="text-xs text-slate-400 mb-1">${lang('account_balance_label')}</div>
+                                        <div class="text-2xl font-black text-cyan-400" id="profileReagentBalance">
+                                            ${userData.reagents || 0}
+                                            <span class="text-sm font-normal text-slate-400 ml-1">${lang('reagents_rgt_unit')}</span>
                                         </div>
-                                    `).join('')}
+                                    </div>
+                                    <div class="text-right">
+                                        <div class="text-xs text-slate-400 mb-1">${lang('account_streak_label')}</div>
+                                        <div class="text-xl font-bold text-orange-400" id="profileStreak">
+                                            ${userData.streak || 0}
+                                            <span class="text-xs font-normal text-slate-400">${lang('account_days_short')}</span>
+                                        </div>
+                                    </div>
                                 </div>
+                                <button type="button" onclick="openClaimModal()" id="profileClaimBtn"
+                                        class="w-full py-2.5 rounded-lg text-sm font-bold transition-all bg-gradient-to-r from-cyan-600 to-blue-600 hover:from-cyan-500 hover:to-blue-500 text-white">
+                                    <i class="fas fa-flask mr-2"></i>${lang('account_get_reagents')}
+                                </button>
                             </div>
                         </div>
-                        <div>
-                            <label class="block text-sm font-medium text-slate-300 mb-2">
-                                <i class="fas fa-city text-orange-400 mr-1"></i>${lang('footer_account_city') || 'Город'}
-                            </label>
-                            <input type="text" id="profileCity"
-                                   value="${userData.city || ''}"
-                                   placeholder="${lang('footer_account_city_placeholder') || 'Ваш город'}"
-                                   class="w-full bg-slate-800 border border-slate-700 rounded-lg px-4 py-2.5 text-sm text-white focus:border-cyan-500 focus:outline-none transition-colors">
+
+                        <!-- Action Buttons -->
+                        <div class="flex gap-3 pt-4">
+                            <button type="button"
+                                    onclick="window._closeAccountOverlay ? window._closeAccountOverlay() : closePageModal()"
+                                    class="flex-1 bg-slate-700 hover:bg-slate-600 py-3 rounded-lg text-sm font-medium text-white transition-colors">
+                                ${lang('footer_account_cancel')}
+                            </button>
+                            <button type="submit"
+                                    class="flex-1 bg-gradient-to-r from-cyan-600 to-blue-600 hover:from-cyan-500 hover:to-blue-500 py-3 rounded-lg text-sm font-bold text-white transition-all">
+                                <i class="fas fa-save mr-2"></i>${lang('footer_account_save')}
+                            </button>
                         </div>
-                    </div>
-
-                    <div>
-                        <label class="block text-sm font-medium text-slate-300 mb-2">${lang('footer_account_bio')}</label>
-                        <textarea id="profileBio" rows="3"
-                                  placeholder="${lang('footer_account_bio_placeholder')}"
-                                  class="w-full bg-slate-800 border border-slate-700 rounded-lg px-4 py-2.5 text-sm text-white focus:border-cyan-500 focus:outline-none resize-none">${userData.bio || ''}</textarea>
-                    </div>
-
-                    <!-- Crypto & Social Section -->
-                    <div class="border-t border-slate-700/50 pt-5">
-                        <h4 class="text-sm font-semibold text-slate-300 mb-4 flex items-center gap-2">
-                            <i class="fas fa-wallet text-cyan-400"></i>
-                            ${lang('footer_crypto_wallets')}
-                        </h4>
-                        <div class="space-y-3">
-                            <div>
-                                <label class="block text-xs font-medium text-slate-400 mb-1.5 flex items-center gap-1.5">
-                                    <span class="w-5 h-5 rounded-full bg-blue-500/20 flex items-center justify-center text-xs font-bold text-blue-400">Ξ</span>
-                                    EVM ${lang('footer_address') || 'адрес'}
-                                    <span class="text-slate-600">(Ethereum, BSC, Polygon...)</span>
-                                </label>
-                                <input type="text" id="profileEvmAddress"
-                                       value="${userData.evmAddress || ''}"
-                                       placeholder="0x..."
-                                       class="w-full bg-slate-800 border border-slate-700 rounded-lg px-4 py-2.5 text-sm text-white font-mono focus:border-cyan-500 focus:outline-none transition-colors">
-                            </div>
-                            <div>
-                                <label class="block text-xs font-medium text-slate-400 mb-1.5 flex items-center gap-1.5">
-                                    <span class="w-5 h-5 rounded-full bg-purple-500/20 flex items-center justify-center text-xs font-bold text-purple-400">◎</span>
-                                    Solana ${lang('footer_address') || 'адрес'}
-                                </label>
-                                <input type="text" id="profileSolAddress"
-                                       value="${userData.solAddress || ''}"
-                                       placeholder="${lang('footer_solana_placeholder') || 'Ваш Solana адрес...'}"
-                                       class="w-full bg-slate-800 border border-slate-700 rounded-lg px-4 py-2.5 text-sm text-white font-mono focus:border-cyan-500 focus:outline-none transition-colors">
-                            </div>
+                    </form>
+                ` : `
+                    <div class="text-center py-8">
+                        <div class="w-20 h-20 bg-slate-800 rounded-full flex items-center justify-center mx-auto mb-4">
+                            <i class="fas fa-user-lock text-4xl text-slate-500"></i>
                         </div>
-                    </div>
-
-                    <!-- Social Links: Twitter + Discord + Telegram (3 in a row) -->
-                    <div class="border-t border-slate-700/50 pt-5">
-                        <h4 class="text-sm font-semibold text-slate-300 mb-4 flex items-center gap-2">
-                            <i class="fas fa-share-alt text-pink-400"></i>
-                            ${lang('footer_social_networks') || 'Социальные сети'}
-                        </h4>
-                        <div class="grid grid-cols-3 gap-3">
-                            <div>
-                                <label class="block text-xs font-medium text-slate-400 mb-1.5">
-                                    <i class="fab fa-twitter text-sky-400 mr-1"></i>Twitter / X
-                                </label>
-                                <div class="relative">
-                                    <span class="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500 text-xs">@</span>
-                                    <input type="text" id="profileTwitter"
-                                           value="${userData.twitter || ''}"
-                                           placeholder="username"
-                                           class="w-full bg-slate-800 border border-slate-700 rounded-lg pl-7 pr-4 py-2.5 text-sm text-white focus:border-cyan-500 focus:outline-none transition-colors">
-                                </div>
-                            </div>
-                            <div>
-                                <label class="block text-xs font-medium text-slate-400 mb-1.5">
-                                    <i class="fab fa-discord text-indigo-400 mr-1"></i>Discord
-                                </label>
-                                <input type="text" id="profileDiscord"
-                                       value="${userData.discord || ''}"
-                                       placeholder="username"
-                                       class="w-full bg-slate-800 border border-slate-700 rounded-lg px-4 py-2.5 text-sm text-white focus:border-cyan-500 focus:outline-none transition-colors">
-                            </div>
-                            <div>
-                                <label class="block text-xs font-medium text-slate-400 mb-1.5">
-                                    <i class="fas fa-telegram text-sky-500 mr-1"></i>${lang('footer_account_telegram') || 'Telegram'}
-                                </label>
-                                <div class="relative">
-                                    <span class="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500 text-xs">@</span>
-                                    <input type="text" id="profileTelegram"
-                                           value="${userData.telegram || ''}"
-                                           placeholder="username"
-                                           class="w-full bg-slate-800 border border-slate-700 rounded-lg pl-7 pr-4 py-2.5 text-sm text-white focus:border-cyan-500 focus:outline-none transition-colors">
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-
-<!-- Referral Block -->
-<div class="border-t border-slate-700/50 pt-5">
-    <h4 class="text-sm font-semibold text-slate-300 mb-4 flex items-center gap-2">
-        <i class="fas fa-user-plus text-emerald-400"></i>
-        ${lang('account_ref_program')}
-    </h4>
-    <div class="grid grid-cols-2 gap-3 mb-3">
-        <div class="bg-slate-800/50 rounded-xl p-3 border border-slate-700/50">
-            <div class="text-xs text-slate-500 mb-1.5">${lang('account_your_ref_code')}</div>
-            <div class="flex items-center gap-2">
-                <code id="profileRefCode"
-                      class="text-sm font-mono text-cyan-400 font-bold tracking-wider">
-                    ${userData.referralCode || 'Генерация...'}
-                </code>
-                <button type="button" onclick="copyRefCode()"
-                    class="w-6 h-6 flex items-center justify-center rounded-lg bg-slate-700 hover:bg-cyan-600 text-slate-400 hover:text-white transition-all">
-                    <i class="fas fa-copy text-xs"></i>
-                </button>
-            </div>
-        </div>
-        <div class="bg-slate-800/50 rounded-xl p-3 border border-slate-700/50">
-            <div class="text-xs text-slate-500 mb-1.5">${lang('account_invited_count')}</div>
-            <div class="text-lg font-bold text-emerald-400" id="profileInvitedCount">
-                ${userData.invitedCount || 0}
-                <span class="text-xs font-normal text-slate-500">${lang('account_people_short')}</span>
-            </div>
-        </div>
-    </div>
-
-    ${userData.invitedBy ? `
-    <div class="mb-3 text-xs text-slate-500 flex items-center gap-1.5 bg-slate-800/30 rounded-lg px-3 py-2">
-        <i class="fas fa-user-check text-emerald-400"></i>
-      ${lang('account_invited_by')}
-        <span class="text-slate-300 font-medium">${userData.invitedByName || userData.invitedBy}</span>
-    </div>` : `
-    <div class="mb-3">
-        <label class="block text-xs font-medium text-slate-400 mb-1.5">
-            <i class="fas fa-ticket-alt text-yellow-400 mr-1"></i>
-            Ввести реферальный код
-        </label>
-        <div class="flex gap-2">
-            <input type="text" id="profileInviteCode"
-                   placeholder="AL-XXXXXX"
-                   class="flex-1 bg-slate-800 border border-slate-700 rounded-lg px-4 py-2 text-sm text-white font-mono focus:border-yellow-500 focus:outline-none transition-colors">
-            <button type="button" onclick="applyReferralCode()"
-                    class="px-4 py-2 bg-yellow-600 hover:bg-yellow-500 rounded-lg text-sm font-medium text-white transition-colors whitespace-nowrap">
-                Применить
-            </button>
-        </div>
-    </div>`}
-
-    <div class="p-3 bg-emerald-900/20 border border-emerald-800/30 rounded-lg text-xs text-slate-400">
-        <i class="fas fa-flask text-emerald-400 mr-1.5"></i>
-        ${lang('account_ref_bonus_text')}
-<span class="text-emerald-400 font-bold">${lang('account_ref_bonus_amount')}</span>!
-    </div>
-</div>
-
-<!-- Reagents Balance (только чтение) -->
-<div class="border-t border-slate-700/50 pt-5">
-    <h4 class="text-sm font-semibold text-slate-300 mb-4 flex items-center gap-2">
-        <span class="text-lg">🧪</span>
-        ${lang('reagents_section_title')}
-    </h4>
-    <div class="bg-gradient-to-br from-cyan-900/30 to-blue-900/30 border border-cyan-500/20 rounded-xl p-4">
-        <div class="flex items-center justify-between mb-3">
-            <div>
-                <div class="text-xs text-slate-400 mb-1">${lang('account_balance_label')}</div>
-                <div class="text-2xl font-black text-cyan-400" id="profileReagentBalance">
-                    ${userData.reagents || 0}
-                    <span class="text-sm font-normal text-slate-400 ml-1">${lang('reagents_rgt_unit')}</span>
-                </div>
-            </div>
-            <div class="text-right">
-                <div class="text-xs text-slate-400 mb-1">${lang('account_streak_label')}</div>
-                <div class="text-xl font-bold text-orange-400" id="profileStreak">
-                    ${userData.streak || 0}
-                    <span class="text-xs font-normal text-slate-400">дней</span>
-                </div>
-            </div>
-        </div>
-        <button type="button" onclick="openClaimModal()"
-            id="profileClaimBtn"
-            class="w-full py-2.5 rounded-lg text-sm font-bold transition-all
-                   bg-gradient-to-r from-cyan-600 to-blue-600 hover:from-cyan-500 hover:to-blue-500 text-white">
-           <i class="fas fa-flask mr-2"></i>${lang('account_get_reagents')}
-        </button>
-    </div>
-</div>
-                    <div class="flex gap-3 pt-4">
-                        <button type="button" onclick="window._closeAccountOverlay ? window._closeAccountOverlay() : closePageModal()"
-                                class="flex-1 bg-slate-700 hover:bg-slate-600 py-3 rounded-lg text-sm font-medium text-white transition-colors">
-                            ${lang('footer_account_cancel')}
-                        </button>
-                        <button type="submit"
-                                class="flex-1 bg-gradient-to-r from-cyan-600 to-blue-600 hover:from-cyan-500 hover:to-blue-500 py-3 rounded-lg text-sm font-bold text-white transition-all">
-                            <i class="fas fa-save mr-2"></i>${lang('footer_account_save')}
+                        <h3 class="text-xl font-bold text-white mb-2">${lang('footer_account_not_logged')}</h3>
+                        <p class="text-slate-400 mb-6">${lang('footer_account_login_desc')}</p>
+                        <button onclick="(window._closeAccountOverlay ? window._closeAccountOverlay() : closePageModal()); setTimeout(() => { if(typeof openLoginModal==='function') openLoginModal(); }, 300);"
+                                class="bg-gradient-to-r from-cyan-600 to-blue-600 hover:from-cyan-500 hover:to-blue-500 px-6 py-3 rounded-lg text-sm font-bold text-white transition-all">
+                            <i class="fas fa-sign-in-alt mr-2"></i>${lang('login_btn')}
                         </button>
                     </div>
-                </form>
-            ` : `
-                <div class="text-center py-8">
-                    <div class="w-20 h-20 bg-slate-800 rounded-full flex items-center justify-center mx-auto mb-4">
-                        <i class="fas fa-user-lock text-4xl text-slate-500"></i>
-                    </div>
-                    <h3 class="text-xl font-bold text-white mb-2">${lang('footer_account_not_logged')}</h3>
-                    <p class="text-slate-400 mb-6">${lang('footer_account_login_desc')}</p>
-                    <button onclick="(window._closeAccountOverlay ? window._closeAccountOverlay() : closePageModal()); setTimeout(() => { if(typeof openLoginModal==='function') openLoginModal(); }, 300);"
-                            class="bg-gradient-to-r from-cyan-600 to-blue-600 hover:from-cyan-500 hover:to-blue-500 px-6 py-3 rounded-lg text-sm font-bold text-white transition-all">
-                        <i class="fas fa-sign-in-alt mr-2"></i>${lang('login_btn')}
-                    </button>
-                </div>
-            `}
-        </div>
-    `;
-}
+                `}
+            </div>
+        `;
+    }
+
+    // ============ INIT ACCOUNT PAGE ============
 
     function initAccountPage() {
-    const user = typeof window.currentUser !== 'undefined' ? window.currentUser : null;
-    if (!user) return;
+        const lang = typeof window.t === 'function' ? window.t : (k) => k;
+        const user = typeof window.currentUser !== 'undefined' ? window.currentUser : null;
+        if (!user) return;
 
-    const db  = window.db;
-    const exp = window.__firestoreExports;
+        const db  = window.db;
+        const exp = window.__firestoreExports;
 
-    if (db && exp && exp.doc && exp.getDoc && exp.setDoc) {
-        exp.getDoc(exp.doc(db, 'users', user.uid)).then(async function(snap) {
-            let profile = {};
-            let rootData = {};
+        if (db && exp && exp.doc && exp.getDoc && exp.setDoc) {
+            exp.getDoc(exp.doc(db, 'users', user.uid)).then(async function(snap) {
+                let rootData = {};
+                let profile  = {};
 
-            if (snap.exists()) {
-                rootData = snap.data();
-                profile  = rootData.profile || rootData || {};
-            }
+                if (snap.exists()) {
+                    rootData = snap.data();
+                    profile  = rootData.profile || rootData || {};
+                }
 
-            const local  = JSON.parse(localStorage.getItem('userProfileData') || '{}');
-            const merged = Object.assign({}, local, profile);
+                const local  = JSON.parse(localStorage.getItem('userProfileData') || '{}');
+                const merged = Object.assign({}, local, profile);
 
-            // ── Генерируем реф. код если нет ──────────────────────
-            if (!merged.referralCode && !rootData.referralCode) {
-                const code = 'AL-' + user.uid.substring(0, 6).toUpperCase();
-                merged.referralCode = code;
+                if (!merged.referralCode && !rootData.referralCode) {
+                    const code = 'AL-' + user.uid.substring(0, 6).toUpperCase();
+                    merged.referralCode = code;
+                    try {
+                        await exp.setDoc(exp.doc(db, 'users', user.uid), { referralCode: code }, { merge: true });
+                    } catch(e) { console.warn('Ref code save error:', e); }
+                } else {
+                    merged.referralCode = merged.referralCode || rootData.referralCode;
+                }
 
-                // Сохраняем код в Firestore
-                try {
-                    await exp.setDoc(
-                        exp.doc(db, 'users', user.uid),
-                        { referralCode: code },
-                        { merge: true }
-                    );
-                } catch(e) { console.warn('Ref code save error:', e); }
-            } else {
-                merged.referralCode = merged.referralCode || rootData.referralCode;
-            }
+                merged.invitedCount  = rootData.invitedCount  || 0;
+                merged.invitedBy     = rootData.invitedBy     || '';
+                merged.invitedByName = rootData.invitedByName || '';
 
-            // ── Считаем приглашённых ───────────────────────────────
-            merged.invitedCount = rootData.invitedCount || 0;
-            merged.invitedBy    = rootData.invitedBy    || '';
-            merged.invitedByName = rootData.invitedByName || '';
+                window.userProfileData = merged;
+                _fillAccountForm(merged);
 
-            window.userProfileData = merged;
-            _fillAccountForm(merged);
+                const refEl = document.getElementById('profileRefCode');
+                if (refEl) refEl.textContent = merged.referralCode || 'AL-' + user.uid.substring(0,6).toUpperCase();
 
-            // Обновляем UI реф. кода
-            const refEl = document.getElementById('profileRefCode');
-            if (refEl) refEl.textContent = merged.referralCode || 'AL-' + user.uid.substring(0,6).toUpperCase();
+                const invEl = document.getElementById('profileInvitedCount');
+                if (invEl) invEl.innerHTML = (merged.invitedCount || 0) + ' <span class="text-xs font-normal text-slate-500">' + lang('account_people_short') + '</span>';
 
-            const invEl = document.getElementById('profileInvitedCount');
-            if (invEl) invEl.textContent = (merged.invitedCount || 0) + ' чел.';
-
-        }).catch(function(err) {
-            console.warn('Profile load error:', err);
-            const local = JSON.parse(localStorage.getItem('userProfileData') || '{}');
-            _fillAccountForm(local);
-        });
+            }).catch(function(err) {
+                console.warn('Profile load error:', err);
+                const local = JSON.parse(localStorage.getItem('userProfileData') || '{}');
+                _fillAccountForm(local);
+            });
+        }
     }
-}
 
-function _fillAccountForm(profile) {
-    if (!profile) return;
+    function _fillAccountForm(profile) {
+        if (!profile) return;
+        const lang = typeof window.t === 'function' ? window.t : (k) => k;
 
-    const set = function(id, val) {
-        const el = document.getElementById(id);
-        if (el && val !== undefined && val !== null) el.value = val;
+        const set = function(id, val) {
+            const el = document.getElementById(id);
+            if (el && val !== undefined && val !== null) el.value = val;
+        };
+
+        set('profileFirstName',  profile.firstName);
+        set('profileLastName',   profile.lastName);
+        set('profileUsername',   profile.username);
+        set('profileTelegram',   profile.telegram);
+        set('profileBirthdate',  profile.birthdate);
+        set('profileBio',        profile.bio);
+        set('profileEvmAddress', profile.evmAddress);
+        set('profileSolAddress', profile.solAddress);
+        set('profileDiscord',    profile.discord);
+        set('profileCity',       profile.city);
+
+        const twEl = document.getElementById('profileTwitter');
+        if (twEl && profile.twitter) twEl.value = profile.twitter.replace('@', '');
+
+        if (profile.gender) {
+            const radio = document.querySelector(`input[name="gender"][value="${profile.gender}"]`);
+            if (radio) radio.checked = true;
+        }
+
+        if (profile.countryName || profile.country) {
+            const searchInput = document.getElementById('countrySearchInput');
+            const hiddenInput = document.getElementById('profileCountry');
+            if (searchInput) searchInput.value = profile.countryName || profile.country;
+            if (hiddenInput) hiddenInput.value  = profile.country || '';
+        }
+
+        const balEl = document.getElementById('profileReagentBalance');
+        if (balEl) balEl.innerHTML = (profile.reagents || 0) + ' <span class="text-sm font-normal text-slate-400 ml-1">' + lang('reagents_rgt_unit') + '</span>';
+
+        const streakEl = document.getElementById('profileStreak');
+        if (streakEl) streakEl.innerHTML = (profile.streak || 0) + ' <span class="text-xs font-normal text-slate-400">' + lang('account_days_short') + '</span>';
+    }
+
+    // ============ REFERRAL CODE ============
+
+    window.applyReferralCode = async function() {
+        const lang  = typeof window.t === 'function' ? window.t : (k) => k;
+        const input = document.getElementById('profileInviteCode');
+        if (!input) return;
+
+        const code = input.value.trim().toUpperCase();
+        if (!code || !code.startsWith('AL-')) {
+            footerShowToast(lang('ref_wrong_format'), 'error');
+            return;
+        }
+
+        const user = typeof window.currentUser !== 'undefined' ? window.currentUser : null;
+        if (!user) {
+            footerShowToast(lang('ref_login_required'), 'error');
+            return;
+        }
+
+        const db  = window.db;
+        const exp = window.__firestoreExports;
+        if (!db || !exp) return;
+
+        try {
+            const snap = await exp.getDocs(
+                exp.query(
+                    exp.collection(db, 'users'),
+                    exp.where('referralCode', '==', code)
+                )
+            );
+
+            if (snap.empty) {
+                footerShowToast(lang('ref_not_found'), 'error');
+                return;
+            }
+
+            const inviterDoc  = snap.docs[0];
+            const inviterId   = inviterDoc.id;
+            const inviterData = inviterDoc.data();
+
+            if (inviterId === user.uid) {
+                footerShowToast(lang('ref_own_code'), 'error');
+                return;
+            }
+
+            await exp.setDoc(
+                exp.doc(db, 'users', user.uid),
+                {
+                    invitedBy:    inviterId,
+                    invitedByName: inviterData.displayName || inviterData.profile?.firstName || lang('user')
+                },
+                { merge: true }
+            );
+
+            const currentReagents = inviterData.reagents    || 0;
+            const currentInvited  = inviterData.invitedCount || 0;
+
+            await exp.setDoc(
+                exp.doc(db, 'users', inviterId),
+                { reagents: currentReagents + 50, invitedCount: currentInvited + 1 },
+                { merge: true }
+            );
+
+            const mySnap     = await exp.getDoc(exp.doc(db, 'users', user.uid));
+            const myData     = mySnap.exists() ? mySnap.data() : {};
+            const myReagents = myData.reagents || 0;
+
+            await exp.setDoc(
+                exp.doc(db, 'users', user.uid),
+                { reagents: myReagents + 25 },
+                { merge: true }
+            );
+
+            footerShowToast(lang('ref_applied'), 'success');
+            input.style.display = 'none';
+            setTimeout(function() { initAccountPage(); }, 500);
+
+        } catch(err) {
+            console.error('Referral error:', err);
+            footerShowToast(lang('ref_error') + err.message, 'error');
+        }
     };
 
-    // Существующие поля
-    set('profileFirstName', profile.firstName);
-    set('profileLastName',  profile.lastName);
-    set('profileUsername',  profile.username);
-    set('profileTelegram',  profile.telegram);
-    set('profileBirthdate', profile.birthdate);
-    set('profileBio',       profile.bio);
+    // ============ COUNTRY PICKER ============
 
-    // ── Новые поля ─────────────────────────────────────────────
-    set('profileEvmAddress', profile.evmAddress);
-    set('profileSolAddress', profile.solAddress);
-    set('profileDiscord',    profile.discord);
-    set('profileCity',       profile.city);
+    window.filterCountryList = function(query) {
+        const lang     = typeof window.t === 'function' ? window.t : (k) => k;
+        const dropdown = document.getElementById('countryDropdown');
+        if (!dropdown) return;
+        const options = dropdown.querySelectorAll('.country-option');
+        const q = query.toLowerCase().trim();
 
-    // Twitter — убираем @ если есть
-    const twEl = document.getElementById('profileTwitter');
-    if (twEl && profile.twitter) {
-        twEl.value = profile.twitter.replace('@', '');
-    }
+        let hasVisible = false;
+        options.forEach(function(opt) {
+            const name = opt.getAttribute('data-name').toLowerCase();
+            if (name.includes(q)) { opt.style.display = ''; hasVisible = true; }
+            else                  { opt.style.display = 'none'; }
+        });
 
-    // Пол
-    if (profile.gender) {
-        const radio = document.querySelector(`input[name="gender"][value="${profile.gender}"]`);
-        if (radio) radio.checked = true;
-    }
+        dropdown.classList.remove('hidden');
 
-    // Страна
-    if (profile.countryName || profile.country) {
-        const searchInput = document.getElementById('countrySearchInput');
-        const hiddenInput = document.getElementById('profileCountry');
-        if (searchInput) searchInput.value = profile.countryName || profile.country;
-        if (hiddenInput) hiddenInput.value  = profile.country || '';
-    }
-
-    // Reagents
-    const balEl = document.getElementById('profileReagentBalance');
-    if (balEl) balEl.innerHTML = (profile.reagents || 0) + ' <span class="text-sm font-normal text-slate-400 ml-1">RGT</span>';
-
-    const streakEl = document.getElementById('profileStreak');
-    if (streakEl) streakEl.innerHTML = (profile.streak || 0) + ' <span class="text-xs font-normal text-slate-400">дней</span>';
-}
-    window.applyReferralCode = async function() {
-    const input = document.getElementById('profileInviteCode');
-    if (!input) return;
-
-    const code = input.value.trim().toUpperCase();
-    if (!code || !code.startsWith('AL-')) {
-        footerShowToast('Неверный формат кода (AL-XXXXXX)', 'error');
-        return;
-    }
-
-    const user = typeof window.currentUser !== 'undefined' ? window.currentUser : null;
-    if (!user) {
-        footerShowToast('Войдите в аккаунт', 'error');
-        return;
-    }
-
-    const db  = window.db;
-    const exp = window.__firestoreExports;
-    if (!db || !exp) return;
-
-    try {
-        // Ищем владельца кода
-        const snap = await exp.getDocs(
-            exp.query(
-                exp.collection(db, 'users'),
-                exp.where('referralCode', '==', code)
-            )
-        );
-
-        if (snap.empty) {
-            footerShowToast('Код не найден', 'error');
-            return;
-        }
-
-        const inviterDoc  = snap.docs[0];
-        const inviterId   = inviterDoc.id;
-        const inviterData = inviterDoc.data();
-
-        if (inviterId === user.uid) {
-            footerShowToast('Нельзя использовать свой код', 'error');
-            return;
-        }
-
-        // Сохраняем кто пригласил
-        await exp.setDoc(
-            exp.doc(db, 'users', user.uid),
-            {
-                invitedBy:    inviterId,
-                invitedByName: inviterData.displayName || inviterData.profile?.firstName || 'Пользователь'
-            },
-            { merge: true }
-        );
-
-        // Начисляем бонус пригласившему
-        const inviterRef     = exp.doc(db, 'users', inviterId);
-        const currentReagents = inviterData.reagents || 0;
-        const currentInvited  = inviterData.invitedCount || 0;
-
-        await exp.setDoc(inviterRef, {
-            reagents:     currentReagents + 50,
-            invitedCount: currentInvited + 1
-        }, { merge: true });
-
-        // Начисляем бонус новому пользователю
-        const mySnap    = await exp.getDoc(exp.doc(db, 'users', user.uid));
-        const myData    = mySnap.exists() ? mySnap.data() : {};
-        const myReagents = myData.reagents || 0;
-
-        await exp.setDoc(
-            exp.doc(db, 'users', user.uid),
-            { reagents: myReagents + 25 },
-            { merge: true }
-        );
-
-        footerShowToast('🧪 Код применён! +25 Reagents вам и +50 пригласившему!', 'success');
-        input.style.display = 'none';
-
-        // Обновляем форму
-        setTimeout(function() { initAccountPage(); }, 500);
-
-    } catch(err) {
-        console.error('Referral error:', err);
-        footerShowToast('Ошибка: ' + err.message, 'error');
-    }
-};
-// ============ COUNTRY PICKER FUNCTIONS ============
-
-window.filterCountryList = function(query) {
-    const dropdown = document.getElementById('countryDropdown');
-    const options = dropdown.querySelectorAll('.country-option');
-    const q = query.toLowerCase().trim();
-
-    let hasVisible = false;
-    options.forEach(function(opt) {
-        const name = opt.getAttribute('data-name').toLowerCase();
-        if (name.includes(q)) {
-            opt.style.display = '';
-            hasVisible = true;
+        let noResult = dropdown.querySelector('.no-country-result');
+        if (!hasVisible) {
+            if (!noResult) {
+                noResult = document.createElement('div');
+                noResult.className = 'no-country-result px-4 py-2.5 text-sm text-slate-500 italic';
+                dropdown.appendChild(noResult);
+            }
+            noResult.textContent = lang('account_country_other_input');
+            document.getElementById('profileCountry').value = query;
         } else {
-            opt.style.display = 'none';
+            if (noResult) noResult.remove();
+        }
+    };
+
+    window.showCountryDropdown = function() {
+        const dropdown = document.getElementById('countryDropdown');
+        if (dropdown) {
+            dropdown.classList.remove('hidden');
+            dropdown.querySelectorAll('.country-option').forEach(opt => opt.style.display = '');
+        }
+    };
+
+    window.selectCountry = function(code, name) {
+        const input    = document.getElementById('countrySearchInput');
+        const hidden   = document.getElementById('profileCountry');
+        const dropdown = document.getElementById('countryDropdown');
+        if (input)    input.value = name;
+        if (hidden)   hidden.value = code;
+        if (dropdown) dropdown.classList.add('hidden');
+    };
+
+    window.clearCountryInput = function() {
+        const input    = document.getElementById('countrySearchInput');
+        const hidden   = document.getElementById('profileCountry');
+        const dropdown = document.getElementById('countryDropdown');
+        if (input)    { input.value = ''; input.focus(); }
+        if (hidden)   hidden.value = '';
+        if (dropdown) {
+            dropdown.classList.remove('hidden');
+            dropdown.querySelectorAll('.country-option').forEach(opt => opt.style.display = '');
+        }
+    };
+
+    document.addEventListener('click', function(e) {
+        const wrapper = document.getElementById('countryPickerWrapper');
+        if (wrapper && !wrapper.contains(e.target)) {
+            const dropdown = document.getElementById('countryDropdown');
+            if (dropdown) dropdown.classList.add('hidden');
         }
     });
 
-    dropdown.classList.remove('hidden');
+    // ============ SAVE PROFILE ============
 
-    // Если ничего не найдено — показываем "можно ввести вручную"
-    let noResult = dropdown.querySelector('.no-country-result');
-    if (!hasVisible) {
-        if (!noResult) {
-            noResult = document.createElement('div');
-            noResult.className = 'no-country-result px-4 py-2.5 text-sm text-slate-500 italic';
-            dropdown.appendChild(noResult);
-        }
+    window.saveAccountProfile = async function(e) {
+        e.preventDefault();
         const lang = typeof window.t === 'function' ? window.t : (k) => k;
-        noResult.textContent = lang('account_country_other_input');
 
-        // Сохраняем введённое значение как есть
-        document.getElementById('profileCountry').value = query;
-    } else {
-        if (noResult) noResult.remove();
-    }
-};
+        const user = (window.auth && window.auth.currentUser) || window.currentUser || null;
+        const db   = window.db;
+        const exp  = window.__firestoreExports;
 
-window.showCountryDropdown = function() {
-    const dropdown = document.getElementById('countryDropdown');
-    if (dropdown) {
-        dropdown.classList.remove('hidden');
-        // Сбрасываем фильтр — показываем все
-        const options = dropdown.querySelectorAll('.country-option');
-        options.forEach(opt => opt.style.display = '');
-    }
-};
-
-window.selectCountry = function(code, name) {
-    const input = document.getElementById('countrySearchInput');
-    const hidden = document.getElementById('profileCountry');
-    const dropdown = document.getElementById('countryDropdown');
-
-    if (input) input.value = name;
-    if (hidden) hidden.value = code;
-    if (dropdown) dropdown.classList.add('hidden');
-};
-
-window.clearCountryInput = function() {
-    const input = document.getElementById('countrySearchInput');
-    const hidden = document.getElementById('profileCountry');
-    const dropdown = document.getElementById('countryDropdown');
-
-    if (input) { input.value = ''; input.focus(); }
-    if (hidden) hidden.value = '';
-    if (dropdown) {
-        dropdown.classList.remove('hidden');
-        dropdown.querySelectorAll('.country-option').forEach(opt => opt.style.display = '');
-    }
-};
-
-// Закрываем дропдаун при клике вне него
-document.addEventListener('click', function(e) {
-    const wrapper = document.getElementById('countryPickerWrapper');
-    if (wrapper && !wrapper.contains(e.target)) {
-        const dropdown = document.getElementById('countryDropdown');
-        if (dropdown) dropdown.classList.add('hidden');
-    }
-});
-            window.saveAccountProfile = async function(e) {
-    e.preventDefault();
-    const lang = typeof window.t === 'function' ? window.t : (k) => k;
-
-    // Получаем пользователя из нескольких источников
-    const user = (window.auth && window.auth.currentUser) 
-                 || window.currentUser 
-                 || null;
-
-    const db = window.db;
-    const exp = window.__firestoreExports;
-
-    // Детальная диагностика
-    if (!exp || !exp.setDoc) {
-        console.error('Firebase module not found', { 
-            db: db, 
-            exp: exp,
-            hasSetDoc: !!(exp && exp.setDoc),
-            hasDoc: !!(exp && exp.doc)
-        });
-        footerShowToast('Ошибка: модуль Firebase не найден', 'error');
-        return;
-    }
-
-    if (!user) {
-        console.error('Пользователь не авторизован');
-        footerShowToast(lang('footer_account_not_logged'), 'error');
-        return;
-    }
-
-    const submitBtn = e.target.querySelector('button[type="submit"]');
-    const originalHTML = submitBtn ? submitBtn.innerHTML : '';
-
-    if (submitBtn) {
-        submitBtn.disabled = true;
-        submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i>...';
-    }
-
-    // Собираем данные формы
-    const countryCode = document.getElementById('profileCountry')?.value || '';
-    const countryName = document.getElementById('countrySearchInput')?.value || countryCode;
-
-    const profileData = {
-    firstName:   (document.getElementById('profileFirstName')?.value || '').trim(),
-    lastName:    (document.getElementById('profileLastName')?.value || '').trim(),
-    username:    (document.getElementById('profileUsername')?.value || '').trim(),
-    telegram:    (document.getElementById('profileTelegram')?.value || '').trim(),
-    birthdate:   document.getElementById('profileBirthdate')?.value || '',
-    gender:      document.querySelector('input[name="gender"]:checked')?.value || '',
-    country:     countryCode,
-    countryName: countryName,
-    bio:         (document.getElementById('profileBio')?.value || '').trim(),
-
-    // ── НОВЫЕ ПОЛЯ ──────────────────────────────────────────────
-    evmAddress:  (document.getElementById('profileEvmAddress')?.value || '').trim(),
-    solAddress:  (document.getElementById('profileSolAddress')?.value || '').trim(),
-    twitter:     (document.getElementById('profileTwitter')?.value || '').replace('@','').trim(),
-    discord:     (document.getElementById('profileDiscord')?.value || '').trim(),
-    city:        (document.getElementById('profileCity')?.value || '').trim(),
-    // ────────────────────────────────────────────────────────────
-
-    updatedAt: new Date().toISOString()
-};
-
-    // Локальный бэкап
-    window.userProfileData = profileData;
-    localStorage.setItem('userProfileData', JSON.stringify(profileData));
-
-    try {
-        console.log('Сохранение в Firebase, uid:', user.uid);
-
-        await exp.setDoc(
-            exp.doc(db, 'users', user.uid),
-            {
-                uid:         user.uid,
-                email:       user.email || '',
-                displayName: [profileData.firstName, profileData.lastName]
-                             .filter(Boolean).join(' ') || user.displayName || '',
-                photoURL:    user.photoURL || '',
-                profile:     profileData,
-                lastSeen:    new Date().toISOString()
-            },
-            { merge: true }
-        );
-
-        console.log('✅ Профиль сохранен в Firebase');
-
-        // Обновляем имя в Auth
-        const newName = [profileData.firstName, profileData.lastName]
-                        .filter(Boolean).join(' ');
-        if (newName && window.__authExports?.updateProfile) {
-            try {
-                await window.__authExports.updateProfile(user, { displayName: newName });
-                const nameEl = document.getElementById('accountDisplayName');
-                if (nameEl) nameEl.textContent = newName;
-                // Обновляем в хедере
-                const headerName = document.getElementById('userName');
-                if (headerName) headerName.textContent = newName;
-            } catch(authErr) {
-                console.warn('Не удалось обновить displayName:', authErr);
-            }
+        if (!exp || !exp.setDoc) {
+            footerShowToast(lang('error_occurred'), 'error');
+            return;
         }
-
-        footerShowToast(lang('footer_account_saved'), 'success');
-
-    } catch (err) {
-        console.error('❌ Ошибка сохранения:', err);
-        footerShowToast(lang('footer_account_saved_local') + ' (' + err.message + ')', 'error');
-    } finally {
-        if (submitBtn) {
-            submitBtn.disabled = false;
-            submitBtn.innerHTML = originalHTML;
-        }
-    }
-};
-
-    window.uploadAvatar = async function(e) {
-    const file = e.target.files[0];
-    if (!file) return;
-
-    const lang = typeof window.t === 'function' ? window.t : (k) => k;
-    const user = typeof window.currentUser !== 'undefined' ? window.currentUser : null;
-
-    // Проверяем размер (макс 2MB)
-    if (file.size > 2 * 1024 * 1024) {
-        footerShowToast('Файл слишком большой (макс 2MB)', 'error');
-        return;
-    }
-
-    const img = document.getElementById('accountAvatar');
-
-    // Сразу показываем превью
-    const reader = new FileReader();
-    reader.onload = async function(event) {
-        if (img) img.src = event.target.result;
-
         if (!user) {
-            footerShowToast(lang('footer_account_photo'));
+            footerShowToast(lang('footer_account_not_logged'), 'error');
             return;
         }
 
-        // Пробуем загрузить в Firebase Storage
-        const storageExp = window.__storageExports;
-        const storage    = window.storage; // должен быть инициализирован в app.js
-
-        if (storageExp && storage && storageExp.ref && storageExp.uploadBytes && storageExp.getDownloadURL) {
-            try {
-                footerShowToast('Загрузка фото...', 'info');
-
-                const storageRef = storageExp.ref(storage, `avatars/${user.uid}`);
-                const snapshot   = await storageExp.uploadBytes(storageRef, file);
-                const downloadURL = await storageExp.getDownloadURL(snapshot.ref);
-
-                // Обновляем photoURL в Auth
-                const authExp = window.__authExports;
-                if (authExp && authExp.updateProfile && window.auth) {
-                    await authExp.updateProfile(user, { photoURL: downloadURL });
-                }
-
-                // Сохраняем в Firestore
-                const db  = window.db;
-                const exp = window.__firestoreExports;
-                if (db && exp && exp.doc && exp.setDoc) {
-                    await exp.setDoc(
-                        exp.doc(db, 'users', user.uid),
-                        { photoURL: downloadURL },
-                        { merge: true }
-                    );
-                }
-
-                if (img) img.src = downloadURL;
-                footerShowToast(lang('footer_account_photo'));
-
-            } catch(err) {
-                console.error('Avatar upload error:', err);
-                // Если Storage недоступен — сохраняем base64 в Firestore (только для маленьких фото)
-                await _saveAvatarAsBase64(event.target.result, user, lang);
-            }
-        } else {
-            // Storage не настроен — сохраняем base64
-            await _saveAvatarAsBase64(event.target.result, user, lang);
+        const submitBtn   = e.target.querySelector('button[type="submit"]');
+        const originalHTML = submitBtn ? submitBtn.innerHTML : '';
+        if (submitBtn) {
+            submitBtn.disabled = true;
+            submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i>...';
         }
-    };
-    reader.readAsDataURL(file);
-};
 
-async function _saveAvatarAsBase64(base64, user, lang) {
-    // Base64 аватар — только если файл не слишком большой
-    // Сохраняем в Firestore как строку
-    const db  = window.db;
-    const exp = window.__firestoreExports;
+        const countryCode = document.getElementById('profileCountry')?.value || '';
+        const countryName = document.getElementById('countrySearchInput')?.value || countryCode;
 
-    if (db && exp && exp.doc && exp.setDoc) {
+        const profileData = {
+            firstName:   (document.getElementById('profileFirstName')?.value  || '').trim(),
+            lastName:    (document.getElementById('profileLastName')?.value   || '').trim(),
+            username:    (document.getElementById('profileUsername')?.value   || '').trim(),
+            telegram:    (document.getElementById('profileTelegram')?.value   || '').trim(),
+            birthdate:   document.getElementById('profileBirthdate')?.value  || '',
+            gender:      document.querySelector('input[name="gender"]:checked')?.value || '',
+            country:     countryCode,
+            countryName: countryName,
+            bio:         (document.getElementById('profileBio')?.value        || '').trim(),
+            evmAddress:  (document.getElementById('profileEvmAddress')?.value || '').trim(),
+            solAddress:  (document.getElementById('profileSolAddress')?.value || '').trim(),
+            twitter:     (document.getElementById('profileTwitter')?.value    || '').replace('@','').trim(),
+            discord:     (document.getElementById('profileDiscord')?.value    || '').trim(),
+            city:        (document.getElementById('profileCity')?.value       || '').trim(),
+            updatedAt:   new Date().toISOString()
+        };
+
+        window.userProfileData = profileData;
+        localStorage.setItem('userProfileData', JSON.stringify(profileData));
+
         try {
             await exp.setDoc(
                 exp.doc(db, 'users', user.uid),
-                { photoURL: base64 },
+                {
+                    uid:         user.uid,
+                    email:       user.email || '',
+                    displayName: [profileData.firstName, profileData.lastName].filter(Boolean).join(' ') || user.displayName || '',
+                    photoURL:    user.photoURL || '',
+                    profile:     profileData,
+                    lastSeen:    new Date().toISOString()
+                },
                 { merge: true }
             );
-            footerShowToast(lang('footer_account_photo'));
-        } catch(err) {
-            console.error('Base64 save error:', err);
-            footerShowToast(lang('footer_account_photo') + ' (local only)');
-        }
-    } else {
-        footerShowToast(lang('footer_account_photo') + ' (local only)');
-    }
-}
 
- 
-function _showSupportForm() {
-    const modal = document.getElementById('pageModal');
-    const content = document.getElementById('pageModalContent');
-    if (!modal || !content) return;
-
-    content.innerHTML = `
-        <div class="bg-gradient-to-r from-slate-900 to-slate-800 p-6 border-b border-slate-700">
-            <div class="flex items-center gap-3">
-                <div class="w-12 h-12 rounded-xl bg-gradient-to-br from-purple-500/20 to-blue-500/20 border border-purple-500/30 flex items-center justify-center">
-                    <i class="fas fa-headset text-purple-400 text-xl"></i>
-                </div>
-                <div>
-                    <h2 class="text-xl font-bold text-white">Служба поддержки</h2>
-                    <p class="text-sm text-slate-400">Мы ответим в течение 24 часов</p>
-                </div>
-            </div>
-        </div>
-        <div class="p-6 max-h-[75vh] overflow-y-auto">
-            <form id="footerSupportForm" onsubmit="footerSubmitSupport(event)" class="space-y-4">
-                <div>
-                    <label class="block text-xs font-medium text-slate-400 mb-1.5">Тема обращения *</label>
-                    <select id="fsSupportCategory" required 
-                            class="w-full bg-slate-800 border border-slate-700 rounded-lg px-4 py-2.5 text-sm text-white focus:border-purple-500 focus:outline-none">
-                        <option value="">Выберите категорию</option>
-                        <option value="technical">🔧 Техническая проблема</option>
-                        <option value="account">👤 Проблема с аккаунтом</option>
-                        <option value="project">📋 Вопрос о проекте</option>
-                        <option value="suggestion">💡 Предложение</option>
-                        <option value="partnership">🤝 Партнёрство</option>
-                        <option value="other">💬 Другое</option>
-                    </select>
-                </div>
-                <div class="grid grid-cols-2 gap-4">
-                    <div>
-                        <label class="block text-xs font-medium text-slate-400 mb-1.5">Ваше имя</label>
-                        <input type="text" id="fsSupportName" 
-                               value="${_getSupportUserName()}"
-                               placeholder="Иван" 
-                               class="w-full bg-slate-800 border border-slate-700 rounded-lg px-4 py-2.5 text-sm text-white focus:border-purple-500 focus:outline-none">
-                    </div>
-                    <div>
-                        <label class="block text-xs font-medium text-slate-400 mb-1.5">Email *</label>
-                        <input type="email" id="fsSupportEmail" required 
-                               value="${_getSupportUserEmail()}"
-                               placeholder="example@mail.com" 
-                               class="w-full bg-slate-800 border border-slate-700 rounded-lg px-4 py-2.5 text-sm text-white focus:border-purple-500 focus:outline-none">
-                    </div>
-                </div>
-                <div>
-                    <label class="block text-xs font-medium text-slate-400 mb-1.5">Заголовок *</label>
-                    <input type="text" id="fsSupportSubject" required 
-                           placeholder="Краткое описание" 
-                           class="w-full bg-slate-800 border border-slate-700 rounded-lg px-4 py-2.5 text-sm text-white focus:border-purple-500 focus:outline-none">
-                </div>
-                <div>
-                    <label class="block text-xs font-medium text-slate-400 mb-1.5">Описание *</label>
-                    <textarea id="fsSupportMessage" required rows="5" 
-                              placeholder="Опишите вашу проблему подробно..." 
-                              class="w-full bg-slate-800 border border-slate-700 rounded-lg px-4 py-2.5 text-sm text-white focus:border-purple-500 focus:outline-none resize-none"></textarea>
-                </div>
-                <div class="flex gap-3 pt-2">
-                    <button type="button" onclick="closePageModal()" 
-                            class="flex-1 bg-slate-700 hover:bg-slate-600 py-3 rounded-lg text-sm font-medium text-white transition-colors">
-                        Отмена
-                    </button>
-                    <button type="submit" id="fsSupportSubmitBtn" 
-                            class="flex-1 bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-500 hover:to-blue-500 py-3 rounded-lg text-sm font-bold text-white transition-all">
-                        <i class="fas fa-paper-plane mr-2"></i>Отправить
-                    </button>
-                </div>
-            </form>
-        </div>
-    `;
-
-    modal.classList.add('active');
-}
-
-function _getSupportUserName() {
-    const user = typeof window.currentUser !== 'undefined' ? window.currentUser : null;
-    if (user) return user.displayName || '';
-    return '';
-}
-
-function _getSupportUserEmail() {
-    const user = typeof window.currentUser !== 'undefined' ? window.currentUser : null;
-    if (user) return user.email || '';
-    return '';
-}
-
-window.footerSubmitSupport = async function(e) {
-    e.preventDefault();
-
-    const btn = document.getElementById('fsSupportSubmitBtn');
-    if (!btn) return;
-
-    const originalHTML = btn.innerHTML;
-    btn.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i>Отправка...';
-    btn.disabled = true;
-
-    const user = (typeof window.currentUser !== 'undefined') ? window.currentUser : null;
-
-    // Проверяем авторизацию
-    if (!user) {
-        btn.innerHTML = originalHTML;
-        btn.disabled = false;
-        footerShowToast('Войдите в аккаунт для отправки обращения');
-        closePageModal();
-        // Открываем окно входа если оно есть
-        if (typeof window.openLoginModal === 'function') {
-            setTimeout(function() { window.openLoginModal(); }, 300);
-        }
-        return;
-    }
-
-    const category  = document.getElementById('fsSupportCategory').value;
-    const name      = document.getElementById('fsSupportName').value;
-    const email     = document.getElementById('fsSupportEmail').value;
-    const subject   = document.getElementById('fsSupportSubject').value;
-    const message   = document.getElementById('fsSupportMessage').value;
-
-    if (!category) {
-        btn.innerHTML = originalHTML;
-        btn.disabled = false;
-        footerShowToast('Выберите категорию обращения');
-        return;
-    }
-
-    // Формируем текст сообщения с заголовком
-        // Формируем текст сообщения с именем, email и заголовком
-    const contactInfo = '👤 ' + (name || 'Не указано') + '  |  📧 ' + email;
-    const fullMessage = contactInfo + '\n' + '─'.repeat(30) + '\n' 
-        + (subject ? '[' + subject + ']\n\n' : '') 
-        + message;
-
-    try {
-        const firestoreModule = window.__firestoreExports;
-
-        if (firestoreModule && firestoreModule.addDoc && firestoreModule.collection && window.db) {
-            // Отправляем в feedbacks — туда же куда openFeedbackModal
-            await firestoreModule.addDoc(
-                firestoreModule.collection(window.db, 'feedbacks'),
-                {
-                    projectId:   '__support__',
-                    projectName: 'Support',
-                    projectLogo: '',
-                    type:        'support',
-                    category:    category,
-                    userId:      user.uid,
-                    userName:    name || user.displayName || user.email,
-                    userPhoto:   user.photoURL || '',
-                    status:      'open',
-                    read:        false,
-                    userRead:    true,
-                    deleted:     false,
-                    userDeleted: false,
-                    createdAt:   new Date(),
-                    messages: [{
-                        sender:    'user',
-                        text:      fullMessage,
-                        timestamp: new Date()
-                    }]
+            const newName = [profileData.firstName, profileData.lastName].filter(Boolean).join(' ');
+            if (newName && window.__authExports?.updateProfile) {
+                try {
+                    await window.__authExports.updateProfile(user, { displayName: newName });
+                    const nameEl   = document.getElementById('accountDisplayName');
+                    const headerEl = document.getElementById('userName');
+                    if (nameEl)   nameEl.textContent   = newName;
+                    if (headerEl) headerEl.textContent = newName;
+                } catch(authErr) {
+                    console.warn(lang('error_occurred') + ':', authErr);
                 }
-            );
+            }
 
-            btn.innerHTML = originalHTML;
-            btn.disabled = false;
-            footerShowToast('Обращение отправлено! Ответим в течение 24 часов.');
-            setTimeout(function() { closePageModal(); }, 1200);
+            footerShowToast(lang('footer_account_saved'), 'success');
 
-        } else {
-            throw new Error('Firebase недоступен');
+        } catch(err) {
+            console.error('Save error:', err);
+            footerShowToast(lang('footer_account_saved_local') + ' (' + err.message + ')', 'error');
+        } finally {
+            if (submitBtn) {
+                submitBtn.disabled = false;
+                submitBtn.innerHTML = originalHTML;
+            }
         }
-
-    } catch(err) {
-        console.error('Support submit error:', err);
-        btn.innerHTML = originalHTML;
-        btn.disabled = false;
-        footerShowToast('Ошибка отправки. Попробуйте позже.');
-    }
-};
-    window.closeSupportModal = function() {
-        const modal = document.getElementById('supportModal');
-        if (modal) modal.classList.remove('active');
     };
 
-        window.submitSupportTicket = async function(e) {
-        e.preventDefault();
-        const btn = document.getElementById('supportSubmitBtn');
+    // ============ AVATAR UPLOAD ============
+
+    window.uploadAvatar = async function(e) {
+        const file = e.target.files[0];
+        if (!file) return;
+
+        const lang = typeof window.t === 'function' ? window.t : (k) => k;
         const user = typeof window.currentUser !== 'undefined' ? window.currentUser : null;
 
-        if (!user) {
-            footerShowToast('Войдите в аккаунт!');
+        if (file.size > 2 * 1024 * 1024) {
+            footerShowToast(lang('avatar_too_large'), 'error');
             return;
         }
 
-        btn.disabled = true;
-        btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Отправка...';
+        const img    = document.getElementById('accountAvatar');
+        const reader = new FileReader();
 
-        try {
-            const { collection, addDoc } = window.__firestoreExports;
-            await addDoc(collection(window.db, 'feedbacks'), {
-                projectId: '__support__',
-                projectName: 'Support',
-                category: document.getElementById('supportCategory').value,
-                userId: user.uid,
-                userName: user.displayName || 'User',
-                userPhoto: user.photoURL || '',
-                status: 'open',
-                read: false,
-                userRead: true,
-                createdAt: new Date(),
-                messages: [{
-                    sender: 'user',
-                   text: `👤 ${document.getElementById('supportName').value || user.displayName || 'Не указано'}  |  📧 ${document.getElementById('supportEmail').value}\n${'─'.repeat(30)}\n[${document.getElementById('supportSubject').value}]\n\n${document.getElementById('supportMessage').value}`,
-                    timestamp: new Date()
-                }]
-            });
+        reader.onload = async function(event) {
+            if (img) img.src = event.target.result;
 
-            footerShowToast('Обращение отправлено!');
-            closeSupportModal(); // Это закроет модалку поддержки
-            document.getElementById('supportForm').reset();
-        } catch (err) {
-            footerShowToast('Ошибка отправки');
-        } finally {
-            btn.disabled = false;
-            btn.innerHTML = 'Отправить обращение';
-        }
+            if (!user) {
+                footerShowToast(lang('footer_account_photo'));
+                return;
+            }
+
+            const storageExp = window.__storageExports;
+            const storage    = window.storage;
+
+            if (storageExp && storage && storageExp.ref && storageExp.uploadBytes && storageExp.getDownloadURL) {
+                try {
+                    footerShowToast(lang('avatar_uploading'), 'info');
+
+                    const storageRef  = storageExp.ref(storage, `avatars/${user.uid}`);
+                    const snapshot    = await storageExp.uploadBytes(storageRef, file);
+                    const downloadURL = await storageExp.getDownloadURL(snapshot.ref);
+
+                    const authExp = window.__authExports;
+                    if (authExp && authExp.updateProfile && window.auth) {
+                        await authExp.updateProfile(user, { photoURL: downloadURL });
+                    }
+
+                    const db  = window.db;
+                    const exp = window.__firestoreExports;
+                    if (db && exp && exp.doc && exp.setDoc) {
+                        await exp.setDoc(exp.doc(db, 'users', user.uid), { photoURL: downloadURL }, { merge: true });
+                    }
+
+                    if (img) img.src = downloadURL;
+                    footerShowToast(lang('footer_account_photo'));
+
+                } catch(err) {
+                    console.error('Avatar upload error:', err);
+                    await _saveAvatarAsBase64(event.target.result, user, lang);
+                }
+            } else {
+                await _saveAvatarAsBase64(event.target.result, user, lang);
+            }
+        };
+        reader.readAsDataURL(file);
     };
-window.copyAccountUID = function() {
-    const uidEl = document.getElementById('accountUID');
-    if (!uidEl) return;
 
-    const uid = uidEl.textContent;
-    const btn = document.getElementById('copyUIDBtn');
+    async function _saveAvatarAsBase64(base64, user, lang) {
+        const db  = window.db;
+        const exp = window.__firestoreExports;
 
-    navigator.clipboard.writeText(uid).then(function() {
-        // Визуальная обратная связь
-        if (btn) {
-            btn.innerHTML = '<i class="fas fa-check text-xs"></i>';
-            btn.classList.add('bg-emerald-600');
-            btn.classList.remove('bg-slate-700');
-            setTimeout(function() {
-                btn.innerHTML = '<i class="fas fa-copy text-xs"></i>';
-                btn.classList.remove('bg-emerald-600');
-                btn.classList.add('bg-slate-700');
-            }, 2000);
+        if (db && exp && exp.doc && exp.setDoc) {
+            try {
+                await exp.setDoc(exp.doc(db, 'users', user.uid), { photoURL: base64 }, { merge: true });
+                footerShowToast(lang('footer_account_photo'));
+            } catch(err) {
+                console.error('Base64 save error:', err);
+                footerShowToast(lang('avatar_local_only'));
+            }
+        } else {
+            footerShowToast(lang('avatar_local_only'));
         }
-        footerShowToast(typeof window.t === 'function' ? window.t('copied') : 'Copied!');
-    }).catch(function() {
-        // Fallback для старых браузеров
-        const range = document.createRange();
-        range.selectNode(uidEl);
-        window.getSelection().removeAllRanges();
-        window.getSelection().addRange(range);
-        document.execCommand('copy');
-        window.getSelection().removeAllRanges();
-        footerShowToast(typeof window.t === 'function' ? window.t('copied') : 'Copied!');
-    });
-};
-    // ============ NOTIFICATIONS MODAL ============
+    }
+
+    // ============ COPY UID ============
+
+    window.copyAccountUID = function() {
+        const lang  = typeof window.t === 'function' ? window.t : (k) => k;
+        const uidEl = document.getElementById('accountUID');
+        if (!uidEl) return;
+
+        const uid = uidEl.textContent;
+        const btn = document.getElementById('copyUIDBtn');
+
+        navigator.clipboard.writeText(uid).then(function() {
+            if (btn) {
+                btn.innerHTML = '<i class="fas fa-check text-xs"></i>';
+                btn.classList.add('bg-emerald-600');
+                btn.classList.remove('bg-slate-700');
+                setTimeout(function() {
+                    btn.innerHTML = '<i class="fas fa-copy text-xs"></i>';
+                    btn.classList.remove('bg-emerald-600');
+                    btn.classList.add('bg-slate-700');
+                }, 2000);
+            }
+            footerShowToast(lang('copied'));
+        }).catch(function() {
+            const range = document.createRange();
+            range.selectNode(uidEl);
+            window.getSelection().removeAllRanges();
+            window.getSelection().addRange(range);
+            document.execCommand('copy');
+            window.getSelection().removeAllRanges();
+            footerShowToast(lang('copied'));
+        });
+    };
+
+    // ============ NOTIFICATIONS ============
 
     window.openNotificationsModal = function() {
-        const modal = document.getElementById('pageModal');
+        const lang    = typeof window.t === 'function' ? window.t : (k) => k;
+        const modal   = document.getElementById('pageModal');
         const content = document.getElementById('pageModalContent');
-        
         if (!modal || !content) return;
-        
-        let notificationsList = [];
-        
-        // Получаем уведомления
-        if (typeof window.notifications !== 'undefined') {
-            notificationsList = window.notifications;
-        }
-        
+
+        const notificationsList = (typeof window.notifications !== 'undefined') ? window.notifications : [];
+
         const html = `
             <div class="bg-gradient-to-r from-slate-900 to-slate-800 p-6 border-b border-slate-700">
                 <div class="flex items-center justify-between">
                     <div>
                         <h2 class="text-2xl font-bold text-white flex items-center gap-3">
                             <i class="fas fa-bell text-yellow-400"></i>
-                            Уведомления
+                            ${lang('notif_title')}
                         </h2>
-                        <p class="text-slate-400 mt-2">${notificationsList.length} уведомлений</p>
+                        <p class="text-slate-400 mt-2">${notificationsList.length} ${lang('notifications')}</p>
                     </div>
-                    ${notificationsList.length > 0 ? '<button onclick="clearAllNotifications()" class="text-xs text-slate-400 hover:text-white transition-colors">Очистить все</button>' : ''}
+                    ${notificationsList.length > 0
+                        ? `<button onclick="clearAllNotifications()" class="text-xs text-slate-400 hover:text-white transition-colors">${lang('notif_clear_all')}</button>`
+                        : ''}
                 </div>
             </div>
             <div class="p-6 max-h-[70vh] overflow-y-auto">
@@ -2269,7 +1748,9 @@ window.copyAccountUID = function() {
                                 <p class="text-sm text-white">${notif.message}</p>
                                 <p class="text-xs text-slate-500 mt-1">${formatTimeAgo(notif.createdAt)}</p>
                             </div>
-                            ${!notif.read ? '<button onclick="markNotificationRead(\'' + notif.id + '\')" class="text-xs text-cyan-400 hover:text-cyan-300">Прочитано</button>' : ''}
+                            ${!notif.read
+                                ? `<button onclick="markNotificationRead('${notif.id}')" class="text-xs text-cyan-400 hover:text-cyan-300">${lang('notif_mark_read')}</button>`
+                                : ''}
                         </div>
                     </div>
                 `).join('') : `
@@ -2277,13 +1758,13 @@ window.copyAccountUID = function() {
                         <div class="w-16 h-16 bg-slate-800 rounded-full flex items-center justify-center mx-auto mb-4">
                             <i class="fas fa-bell-slash text-3xl text-slate-500"></i>
                         </div>
-                        <h3 class="text-lg font-bold text-white mb-2">Нет уведомлений</h3>
-                        <p class="text-slate-400 text-sm">Уведомления о новых аирдропах появятся здесь</p>
+                        <h3 class="text-lg font-bold text-white mb-2">${lang('notif_empty_title')}</h3>
+                        <p class="text-slate-400 text-sm">${lang('notif_empty_desc')}</p>
                     </div>
                 `}
             </div>
         `;
-        
+
         content.innerHTML = html;
         modal.classList.add('active');
     };
@@ -2292,7 +1773,7 @@ window.copyAccountUID = function() {
         if (typeof window.markNotificationAsRead === 'function') {
             await window.markNotificationAsRead(notifId);
         }
-        openNotificationsModal(); // Переоткрываем
+        openNotificationsModal();
     };
 
     window.clearAllNotifications = function() {
@@ -2302,33 +1783,34 @@ window.copyAccountUID = function() {
     };
 
     function formatTimeAgo(date) {
+        const lang = typeof window.t === 'function' ? window.t : (k) => k;
         if (!date) return '';
-        const now = new Date();
+        const now  = new Date();
         const diff = now - new Date(date);
-        if (diff < 60000) return 'только что';
-        if (diff < 3600000) return Math.floor(diff/60000) + ' мин назад';
-        if (diff < 86400000) return Math.floor(diff/3600000) + ' ч назад';
-        return Math.floor(diff/86400000) + ' дн назад';
+        if (diff < 60000)    return lang('time_just_now');
+        if (diff < 3600000)  return Math.floor(diff / 60000)    + ' ' + lang('time_min_ago');
+        if (diff < 86400000) return Math.floor(diff / 3600000)  + ' ' + lang('time_hour_ago');
+        return Math.floor(diff / 86400000) + ' ' + lang('time_day_ago');
     }
 
     // ============ LEGAL MODALS ============
 
     window.openLegalModal = function(type) {
+        const lang     = typeof window.t === 'function' ? window.t : (k) => k;
         const legalData = FOOTER_CONFIG.legal[type];
         if (!legalData) return;
-        
-        const modal = document.getElementById('pageModal');
+
+        const modal   = document.getElementById('pageModal');
         const content = document.getElementById('pageModalContent');
-        
         if (!modal || !content) return;
-        
+
         const icons = {
-            terms: 'fa-file-contract text-purple-400',
-            privacy: 'fa-shield-alt text-blue-400',
-            cookie: 'fa-cookie-bite text-orange-400',
+            terms:      'fa-file-contract text-purple-400',
+            privacy:    'fa-shield-alt text-blue-400',
+            cookie:     'fa-cookie-bite text-orange-400',
             disclaimer: 'fa-exclamation-triangle text-red-400'
         };
-        
+
         content.innerHTML = `
             <div class="bg-gradient-to-r from-slate-900 to-slate-800 p-6 border-b border-slate-700">
                 <div class="flex items-center gap-3">
@@ -2337,7 +1819,7 @@ window.copyAccountUID = function() {
                     </div>
                     <div>
                         <h2 class="text-2xl font-bold text-white">${legalData.title}</h2>
-                        <p class="text-sm text-slate-400">Обновлено: ${legalData.lastUpdated}</p>
+                        <p class="text-sm text-slate-400">${lang('footer_legal_updated')} ${legalData.lastUpdated}</p>
                     </div>
                 </div>
             </div>
@@ -2346,299 +1828,365 @@ window.copyAccountUID = function() {
             </div>
             <div class="p-4 border-t border-slate-700/50 bg-slate-900/50">
                 <button onclick="closePageModal()" class="w-full bg-slate-700 hover:bg-slate-600 py-3 rounded-lg text-sm font-medium text-white transition-colors">
-                    Закрыть
+                    ${lang('legal_close_btn')}
                 </button>
             </div>
         `;
-        
+
         modal.classList.add('active');
     };
 
     // ============ TUTORIALS ============
 
     window.openTutorialsPage = function() {
-        footerShowToast('Туториалы доступны в разделе проектов');
+        const lang = typeof window.t === 'function' ? window.t : (k) => k;
+        footerShowToast(lang('tutorials_toast'));
         const projectsSection = document.getElementById('projects');
         if (projectsSection) {
             projectsSection.scrollIntoView({ behavior: 'smooth' });
         }
     };
 
-    // ============ STYLES ============
+    // ============ SUPPORT MODAL ============
 
-    function addFooterStyles() {
-        if (document.getElementById('footer-styles-v2')) return;
-
-        const styles = document.createElement('style');
-        styles.id = 'footer-styles-v2';
-        styles.textContent = `
-            .site-footer { font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; color: #e2e8f0; }
-            .footer-bg-gradient, .footer-bg-pattern { pointer-events: none; }
-            .footer-logo-wrapper { transform: perspective(1000px); }
-            .footer-logo-wrapper:hover .footer-logo { rotate: Y 15deg; }
-            .social-link { position: relative; overflow: hidden; }
-            .social-link::before { content: ''; position: absolute; inset: 0; background: radial-gradient(circle at center, currentColor 0%, transparent 70%); opacity: 0; transition: opacity 0.3s; }
-            .social-link:hover::before { opacity: 0.1; }
-            .social-link:active { transform: scale(0.95); }
-            .footer-link { position: relative; padding: 4px 0; transition: all 0.2s ease; }
-            .footer-link:hover { transform: translateX(6px); }
-            .footer-link:hover i { transform: scale(1.2); }
-            .footer-link i { transition: transform 0.2s ease; }
-            .footer-email-input { box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.1); }
-            .footer-email-input:focus { box-shadow: 0 0 0 3px rgba(34, 211, 238, 0.15), inset 0 2px 4px rgba(0, 0, 0, 0.1); }
-            .footer-email-input.error { border-color: #ef4444 !important; animation: shake 0.5s; }
-            .footer-email-input.success { border-color: #10b981 !important; background: rgba(16, 185, 129, 0.1) !important; }
-            @keyframes shake { 0%, 100% { transform: translateX(0); } 25% { transform: translateX(-5px); } 75% { transform: translateX(5px); } }
-            .subscribe-btn { position: relative; overflow: hidden; }
-            .subscribe-btn::before { content: ''; position: absolute; inset: 0; background: linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent); transform: translateX(-100%); transition: transform 0.5s; }
-            .subscribe-btn:hover::before { transform: translateX(100%); }
-            .back-to-top { opacity: 0; visibility: hidden; transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); }
-            .back-to-top.visible { opacity: 1; visibility: visible; }
-            .back-to-top:hover { transform: translateY(-3px) scale(1.05) !important; box-shadow: 0 10px 30px rgba(34, 211, 238, 0.4) !important; }
-            .back-to-top:active { transform: scale(0.95); }
-            .status-dot { animation: statusPulse 2s infinite; }
-            @keyframes statusPulse { 0%, 100% { transform: scale(1); opacity: 1; } 50% { transform: scale(1.2); opacity: 0.7; } }
-            
-            /* Page Modal */
-            .page-modal-content { max-width: 700px; width: 95%; max-height: 90vh; overflow: hidden; display: flex; flex-direction: column; border-radius: 1rem; background: rgba(15, 23, 42, 0.98); border: 1px solid rgba(255,255,255,0.1); }
-            
-            /* FAQ Styles */
-            .faq-question { border: none; background: none; width: 100%; cursor: pointer; }
-            .faq-answer { border-top: none; }
-            
-            /* Guide Card */
-            .guide-card:hover { transform: translateY(-2px); }
-            
-            /* Legal Content */
-            .legal-content h3 { font-size: 1.1rem; font-weight: 700; color: #fff; margin: 1.5rem 0 0.75rem; }
-            .legal-content h3:first-child { margin-top: 0; }
-            .legal-content h4 { font-size: 1rem; font-weight: 600; color: #e2e8f0; margin: 1.25rem 0 0.5rem; }
-            .legal-content p { color: #cbd5e1; line-height: 1.7; margin-bottom: 0.75rem; }
-            .legal-content ul { margin: 0.5rem 0 1rem 1.5rem; }
-            .legal-content li { color: #cbd5e1; margin-bottom: 0.5rem; }
-            .legal-content strong { color: #fff; }
-            
-            @media (max-width: 768px) {
-                .site-footer .grid { grid-template-columns: 1fr; gap: 2rem; }
-                .site-footer [class*="col-span"] { grid-column: 1 / -1 !important; }
-                .footer-link { padding: 0.5rem 0; }
-                .back-to-top { bottom: 5rem; right: 1rem; width: 48px; height: 48px; }
-                .footer-newsletter { padding: 1rem; }
-                .newsletter-form { flex-direction: column; }
-                .subscribe-btn { width: 100%; justify-content: center; }
-                .page-modal-content { width: 98%; max-height: 95vh; }
-            }
-            html { scroll-behavior: smooth; }
-            .subscribe-btn.loading { pointer-events: none; opacity: 0.7; }
-            .subscribe-btn.loading::after { content: ''; width: 16px; height: 16px; border: 2px solid transparent; border-top-color: white; border-radius: 50%; animation: spin 0.8s linear infinite; margin-left: 8px; }
-            @keyframes spin { to { transform: rotate(360deg); } }
-            .footer-link:focus, .social-link:focus { outline: 2px solid rgba(34, 211, 238, 0.5); outline-offset: 2px; }
-            
-            /* Modal Styles Override */
-            .modal-md { max-width: 500px; }
-        `;
-
-        document.head.appendChild(styles);
-    }
-
-    // ============ FUNCTIONS ============
-
-    function initializeFooterFunctions() {
-    const footer = document.getElementById('site-footer');
-    if (!footer) return;
-
-    initBackToTop();
-    initNewsletterForm();
-    initFooterLinks();
-    updateFooterLanguageButton();
-    
-    // Запускаем статистику сразу и повторно через интервалы
-    updateFooterStats();
-    setTimeout(updateFooterStats, 2000);
-    setTimeout(updateFooterStats, 5000);
-    setTimeout(updateFooterStats, 10000);
-
-    // Слушаем событие когда пользователь залогинился/разлогинился
-    document.addEventListener('userAuthChanged', function() {
-        setTimeout(updateFooterStats, 500);
-    });
-
-    // Слушаем когда проекты загрузились
-    document.addEventListener('projectsLoaded', function() {
-        setTimeout(updateFooterStats, 300);
-    });
-    _initHeaderAvatarClick();
-    console.log('Footer v2.2 initialized successfully');
-}
-
-    function initBackToTop() {
-        const backToTopBtn = document.getElementById('backToTop');
-        if (!backToTopBtn) return;
-
-        window.addEventListener('scroll', function() {
-            if (window.pageYOffset > 400) {
-                backToTopBtn.classList.add('visible');
-            } else {
-                backToTopBtn.classList.remove('visible');
-            }
-        });
-
-        backToTopBtn.addEventListener('click', function() {
-            window.scrollTo({ top: 0, behavior: 'smooth' });
-        });
-    }
-
-    window.footerScrollToTop = function() {
-        window.scrollTo({ top: 0, behavior: 'smooth' });
-        footerShowToast('Наверх');
+    window.openSupportModal = function() {
+        const modal = document.getElementById('supportModal');
+        if (modal) modal.classList.add('active');
     };
 
-    function initNewsletterForm() {
-        const form = document.querySelector('.newsletter-form');
-        if (!form) return;
+    window.closeSupportModal = function() {
+        const modal = document.getElementById('supportModal');
+        if (modal) modal.classList.remove('active');
+    };
 
-        form.addEventListener('submit', function(e) {
-            e.preventDefault();
-            handleNewsletterSubscription();
-        });
+    window.submitSupportTicket = async function(e) {
+        e.preventDefault();
+        const lang = typeof window.t === 'function' ? window.t : (k) => k;
+        const btn  = document.getElementById('supportSubmitBtn');
+        const user = typeof window.currentUser !== 'undefined' ? window.currentUser : null;
+
+        if (!user) {
+            footerShowToast(lang('footer_support_login'));
+            return;
+        }
+
+        btn.disabled = true;
+        btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> ' + lang('ticket_sending');
+
+        try {
+            const { collection, addDoc } = window.__firestoreExports;
+            const name    = document.getElementById('supportName').value    || user.displayName || lang('user');
+            const email   = document.getElementById('supportEmail').value;
+            const subject = document.getElementById('supportSubject').value;
+            const message = document.getElementById('supportMessage').value;
+
+            const contactInfo = '👤 ' + name + '  |  📧 ' + email;
+            const fullText    = contactInfo + '\n' + '─'.repeat(30) + '\n'
+                              + (subject ? '[' + subject + ']\n\n' : '')
+                              + message;
+
+            await addDoc(collection(window.db, 'feedbacks'), {
+                projectId:   '__support__',
+                projectName: 'Support',
+                category:    document.getElementById('supportCategory').value,
+                userId:      user.uid,
+                userName:    name,
+                userPhoto:   user.photoURL || '',
+                status:      'open',
+                read:        false,
+                userRead:    true,
+                createdAt:   new Date(),
+                messages: [{
+                    sender:    'user',
+                    text:      fullText,
+                    timestamp: new Date()
+                }]
+            });
+
+            footerShowToast(lang('ticket_sent'), 'success');
+            closeSupportModal();
+            document.getElementById('supportForm').reset();
+
+        } catch(err) {
+            footerShowToast(lang('ticket_error'), 'error');
+        } finally {
+            btn.disabled  = false;
+            btn.innerHTML = '<i class="fas fa-paper-plane mr-2"></i>' + lang('ticket_submit_btn');
+        }
+    };
+
+    // ============ FOOTER SUPPORT FORM (_showSupportForm) ============
+
+    function _getSupportUserName() {
+        const user = typeof window.currentUser !== 'undefined' ? window.currentUser : null;
+        return user ? (user.displayName || '') : '';
     }
+
+    function _getSupportUserEmail() {
+        const user = typeof window.currentUser !== 'undefined' ? window.currentUser : null;
+        return user ? (user.email || '') : '';
+    }
+
+    function _showSupportForm() {
+        const lang    = typeof window.t === 'function' ? window.t : (k) => k;
+        const modal   = document.getElementById('pageModal');
+        const content = document.getElementById('pageModalContent');
+        if (!modal || !content) return;
+
+        content.innerHTML = `
+            <div class="bg-gradient-to-r from-slate-900 to-slate-800 p-6 border-b border-slate-700">
+                <div class="flex items-center gap-3">
+                    <div class="w-12 h-12 rounded-xl bg-gradient-to-br from-purple-500/20 to-blue-500/20 border border-purple-500/30 flex items-center justify-center">
+                        <i class="fas fa-headset text-purple-400 text-xl"></i>
+                    </div>
+                    <div>
+                        <h2 class="text-xl font-bold text-white">${lang('support_form_title')}</h2>
+                        <p class="text-sm text-slate-400">${lang('support_form_subtitle')}</p>
+                    </div>
+                </div>
+            </div>
+            <div class="p-6 max-h-[75vh] overflow-y-auto">
+                <form id="footerSupportForm" onsubmit="footerSubmitSupport(event)" class="space-y-4">
+                    <div>
+                        <label class="block text-xs font-medium text-slate-400 mb-1.5">${lang('footer_support_category')}</label>
+                        <select id="fsSupportCategory" required
+                                class="w-full bg-slate-800 border border-slate-700 rounded-lg px-4 py-2.5 text-sm text-white focus:border-purple-500 focus:outline-none">
+                            <option value="">${lang('support_select_category')}</option>
+                            <option value="technical">${lang('support_cat_technical')}</option>
+                            <option value="account">${lang('support_cat_account')}</option>
+                            <option value="project">${lang('support_cat_project')}</option>
+                            <option value="suggestion">${lang('support_cat_suggestion')}</option>
+                            <option value="partnership">${lang('support_cat_partnership')}</option>
+                            <option value="other">${lang('support_cat_other')}</option>
+                        </select>
+                    </div>
+                    <div class="grid grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-xs font-medium text-slate-400 mb-1.5">${lang('support_your_name')}</label>
+                            <input type="text" id="fsSupportName"
+                                   value="${_getSupportUserName()}"
+                                   class="w-full bg-slate-800 border border-slate-700 rounded-lg px-4 py-2.5 text-sm text-white focus:border-purple-500 focus:outline-none">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-medium text-slate-400 mb-1.5">${lang('footer_support_email')}</label>
+                            <input type="email" id="fsSupportEmail" required
+                                   value="${_getSupportUserEmail()}"
+                                   placeholder="example@mail.com"
+                                   class="w-full bg-slate-800 border border-slate-700 rounded-lg px-4 py-2.5 text-sm text-white focus:border-purple-500 focus:outline-none">
+                        </div>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-medium text-slate-400 mb-1.5">${lang('support_subject_label')}</label>
+                        <input type="text" id="fsSupportSubject" required
+                               placeholder="${lang('support_subject_placeholder')}"
+                               class="w-full bg-slate-800 border border-slate-700 rounded-lg px-4 py-2.5 text-sm text-white focus:border-purple-500 focus:outline-none">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-medium text-slate-400 mb-1.5">${lang('support_desc_label')}</label>
+                        <textarea id="fsSupportMessage" required rows="5"
+                                  placeholder="${lang('support_desc_placeholder')}"
+                                  class="w-full bg-slate-800 border border-slate-700 rounded-lg px-4 py-2.5 text-sm text-white focus:border-purple-500 focus:outline-none resize-none"></textarea>
+                    </div>
+                    <div class="flex gap-3 pt-2">
+                        <button type="button" onclick="closePageModal()"
+                                class="flex-1 bg-slate-700 hover:bg-slate-600 py-3 rounded-lg text-sm font-medium text-white transition-colors">
+                            ${lang('support_cancel')}
+                        </button>
+                        <button type="submit" id="fsSupportSubmitBtn"
+                                class="flex-1 bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-500 hover:to-blue-500 py-3 rounded-lg text-sm font-bold text-white transition-all">
+                            <i class="fas fa-paper-plane mr-2"></i>${lang('support_submit')}
+                        </button>
+                    </div>
+                </form>
+            </div>
+        `;
+
+        modal.classList.add('active');
+    }
+
+    window.footerSubmitSupport = async function(e) {
+        e.preventDefault();
+        const lang = typeof window.t === 'function' ? window.t : (k) => k;
+        const btn  = document.getElementById('fsSupportSubmitBtn');
+        if (!btn) return;
+
+        const originalHTML = btn.innerHTML;
+        btn.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i>' + lang('support_sending_text');
+        btn.disabled  = true;
+
+        const user = (typeof window.currentUser !== 'undefined') ? window.currentUser : null;
+
+        if (!user) {
+            btn.innerHTML = originalHTML;
+            btn.disabled  = false;
+            footerShowToast(lang('support_need_login'));
+            closePageModal();
+            if (typeof window.openLoginModal === 'function') {
+                setTimeout(function() { window.openLoginModal(); }, 300);
+            }
+            return;
+        }
+
+        const category = document.getElementById('fsSupportCategory').value;
+        const name     = document.getElementById('fsSupportName').value;
+        const email    = document.getElementById('fsSupportEmail').value;
+        const subject  = document.getElementById('fsSupportSubject').value;
+        const message  = document.getElementById('fsSupportMessage').value;
+
+        if (!category) {
+            btn.innerHTML = originalHTML;
+            btn.disabled  = false;
+            footerShowToast(lang('support_select_cat_warn'));
+            return;
+        }
+
+        const contactInfo = '👤 ' + (name || lang('account_not_specified')) + '  |  📧 ' + email;
+        const fullMessage = contactInfo + '\n' + '─'.repeat(30) + '\n'
+                          + (subject ? '[' + subject + ']\n\n' : '')
+                          + message;
+
+        try {
+            const firestoreModule = window.__firestoreExports;
+
+            if (firestoreModule && firestoreModule.addDoc && firestoreModule.collection && window.db) {
+                await firestoreModule.addDoc(
+                    firestoreModule.collection(window.db, 'feedbacks'),
+                    {
+                        projectId:   '__support__',
+                        projectName: 'Support',
+                        projectLogo: '',
+                        type:        'support',
+                        category:    category,
+                        userId:      user.uid,
+                        userName:    name || user.displayName || user.email,
+                        userPhoto:   user.photoURL || '',
+                        status:      'open',
+                        read:        false,
+                        userRead:    true,
+                        deleted:     false,
+                        userDeleted: false,
+                        createdAt:   new Date(),
+                        messages: [{
+                            sender:    'user',
+                            text:      fullMessage,
+                            timestamp: new Date()
+                        }]
+                    }
+                );
+
+                btn.innerHTML = originalHTML;
+                btn.disabled  = false;
+                footerShowToast(lang('support_sent_ok'), 'success');
+                setTimeout(function() { closePageModal(); }, 1200);
+
+            } else {
+                throw new Error('Firebase not available');
+            }
+
+        } catch(err) {
+            console.error('Support submit error:', err);
+            btn.innerHTML = originalHTML;
+            btn.disabled  = false;
+            footerShowToast(lang('support_send_error'), 'error');
+        }
+    };
+
+    // ============ NEWSLETTER ============
 
     function handleNewsletterSubscription() {
-    const emailInput = document.getElementById('footerEmailInput');
-    const subscribeBtn = document.getElementById('subscribeBtn');
-    
-    if (!emailInput || !subscribeBtn) return;
+        const lang         = typeof window.t === 'function' ? window.t : (k) => k;
+        const emailInput   = document.getElementById('footerEmailInput');
+        const subscribeBtn = document.getElementById('subscribeBtn');
+        if (!emailInput || !subscribeBtn) return;
 
-    const email = emailInput.value.trim();
-    
-    if (!email || !isValidEmail(email)) {
-        emailInput.classList.add('error');
-        footerShowToast(typeof window.t === 'function' ? window.t('footer_invalid_email') : 'Invalid email', 'error');
-        setTimeout(() => emailInput.classList.remove('error'), 2000);
-        emailInput.focus();
-        return;
-    }
+        const email = emailInput.value.trim();
 
-    subscribeBtn.classList.add('loading');
-    const originalHTML = subscribeBtn.innerHTML;
-    subscribeBtn.innerHTML = `<span>${typeof window.t === 'function' ? window.t('footer_sending') : 'Sending...'}</span>`;
+        if (!email || !isValidEmail(email)) {
+            emailInput.classList.add('error');
+            footerShowToast(lang('footer_invalid_email'), 'error');
+            setTimeout(() => emailInput.classList.remove('error'), 2000);
+            emailInput.focus();
+            return;
+        }
 
-    // Сохраняем в Firebase
-    var db = window.db;
-    var exp = window.__firestoreExports;
-    
-    if (db && exp && exp.addDoc && exp.collection && exp.getDocs && exp.query && exp.where) {
-        
-        // Проверяем не подписан ли уже этот email
-        exp.getDocs(
-            exp.query(
-                exp.collection(db, 'newsletter'),
-                exp.where('email', '==', email)
-            )
-        ).then(function(existing) {
-            
-            if (!existing.empty) {
-                // Уже подписан
+        subscribeBtn.classList.add('loading');
+        const originalHTML = subscribeBtn.innerHTML;
+        subscribeBtn.innerHTML = `<span>${lang('footer_sending')}</span>`;
+
+        const db  = window.db;
+        const exp = window.__firestoreExports;
+
+        if (db && exp && exp.addDoc && exp.collection && exp.getDocs && exp.query && exp.where) {
+
+            exp.getDocs(
+                exp.query(exp.collection(db, 'newsletter'), exp.where('email', '==', email))
+            ).then(function(existing) {
+
+                if (!existing.empty) {
+                    subscribeBtn.classList.remove('loading');
+                    subscribeBtn.innerHTML = originalHTML;
+                    emailInput.value = '';
+                    emailInput.classList.add('success');
+                    emailInput.placeholder = lang('footer_already_subscribed');
+                    footerShowToast(lang('footer_already_toast'));
+                    setTimeout(() => {
+                        emailInput.placeholder = lang('footer_email_placeholder');
+                        emailInput.classList.remove('success');
+                    }, 4000);
+                    return;
+                }
+
+                return exp.addDoc(exp.collection(db, 'newsletter'), {
+                    email:        email,
+                    subscribedAt: new Date().toISOString(),
+                    source:       'footer',
+                    active:       true,
+                    userAgent:    navigator.userAgent.substring(0, 100)
+                });
+
+            }).then(function(docRef) {
+                if (!docRef) return;
+
                 subscribeBtn.classList.remove('loading');
                 subscribeBtn.innerHTML = originalHTML;
-               emailInput.value = '';
-emailInput.classList.add('success');
+                emailInput.value = '';
+                emailInput.classList.add('success');
+                emailInput.placeholder = lang('footer_thanks');
 
-// Новый многоязычный placeholder
-emailInput.placeholder =
-    typeof window.t === 'function'
-        ? window.t('footer_already_subscribed')
-        : 'Already subscribed ✓';
+                setTimeout(function() { showNewsletterModal(); }, 500);
+                footerShowToast(lang('footer_subscribed_toast'));
 
-// Новый многоязычный toast
-footerShowToast(
-    typeof window.t === 'function'
-        ? window.t('footer_already_toast')
-        : 'Already subscribed!'
-);
+                setTimeout(function() {
+                    emailInput.placeholder = lang('footer_email_placeholder');
+                    emailInput.classList.remove('success');
+                }, 5000);
 
-// Возврат placeholder через 4 секунды
-setTimeout(() => {
-    emailInput.placeholder =
-        typeof window.t === 'function'
-            ? window.t('footer_email_placeholder')
-            : 'Your email';
-    emailInput.classList.remove('success');
-}, 4000);
-
-                return;
-            }
-            
-            // Сохраняем нового подписчика
-            return exp.addDoc(exp.collection(db, 'newsletter'), {
-                email: email,
-                subscribedAt: new Date().toISOString(),
-                source: 'footer',
-                active: true,
-                userAgent: navigator.userAgent.substring(0, 100)
+            }).catch(function(err) {
+                console.error('Newsletter error:', err);
+                subscribeBtn.classList.remove('loading');
+                subscribeBtn.innerHTML = originalHTML;
+                footerShowToast(lang('footer_error_toast'), 'error');
             });
-            
-        }).then(function(docRef) {
-            if (!docRef) return; // уже был return выше (дубль)
-            
-            subscribeBtn.classList.remove('loading');
-            subscribeBtn.innerHTML = originalHTML;
-            
-            emailInput.value = '';
-emailInput.classList.add('success');
 
-// Новый многоязычный placeholder
-emailInput.placeholder =
-    typeof window.t === 'function'
-        ? window.t('footer_thanks')
-        : 'Thank you! ✓';
-
-// Показываем модалку
-setTimeout(function () {
-    showNewsletterModal();
-}, 500);
-
-// Новый многоязычный toast
-footerShowToast(
-    typeof window.t === 'function'
-        ? window.t('footer_subscribed_toast')
-        : 'Subscribed!'
-);
-
-            
+        } else {
             setTimeout(function() {
-                emailInput.placeholder = 'Ваш email';
-                emailInput.classList.remove('success');
-            }, 5000);
-            
-        }).catch(function(err) {
-            console.error('Newsletter error:', err);
-            subscribeBtn.classList.remove('loading');
-            subscribeBtn.innerHTML = originalHTML;
-            footerShowToast('Ошибка. Попробуйте позже.', 'error');
-        });
-        
-    } else {
-        // Firebase недоступен — просто показываем успех визуально
-        setTimeout(function() {
-            subscribeBtn.classList.remove('loading');
-            subscribeBtn.innerHTML = originalHTML;
-            emailInput.value = '';
-            emailInput.placeholder = 'Спасибо! ✓';
-            emailInput.classList.add('success');
-            setTimeout(function() { showNewsletterModal(); }, 500);
-            footerShowToast('Подписка оформлена!');
-            setTimeout(function() {
-                emailInput.placeholder = 'Ваш email';
-                emailInput.classList.remove('success');
-            }, 5000);
-        }, 1000);
+                subscribeBtn.classList.remove('loading');
+                subscribeBtn.innerHTML = originalHTML;
+                emailInput.value = '';
+                emailInput.placeholder = lang('footer_thanks');
+                emailInput.classList.add('success');
+                setTimeout(function() { showNewsletterModal(); }, 500);
+                footerShowToast(lang('footer_subscribed_toast'));
+                setTimeout(function() {
+                    emailInput.placeholder = lang('footer_email_placeholder');
+                    emailInput.classList.remove('success');
+                }, 5000);
+            }, 1000);
+        }
     }
-}
 
     function isValidEmail(email) {
-        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-        return emailRegex.test(email);
+        return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
     }
 
     window.footerSubscribeNewsletter = function(e) {
@@ -2651,9 +2199,7 @@ footerShowToast(
         const modal = document.getElementById('newsletterModal');
         if (modal) {
             modal.style.display = 'flex';
-            setTimeout(() => {
-                modal.classList.add('active');
-            }, 10);
+            setTimeout(() => modal.classList.add('active'), 10);
         }
     }
 
@@ -2661,341 +2207,301 @@ footerShowToast(
         const modal = document.getElementById('newsletterModal');
         if (modal) {
             modal.classList.remove('active');
-            setTimeout(() => {
-                modal.style.display = 'none';
-            }, 300);
+            setTimeout(() => modal.style.display = 'none', 300);
         }
     };
 
-    function initFooterLinks() {
-        const footer = document.getElementById('site-footer');
-        if (!footer) return;
+    // ============ FOOTER STATS ============
 
-        footer.querySelectorAll('a[href^="#"]').forEach(link => {
-            link.addEventListener('click', function(e) {
-                const href = this.getAttribute('href');
-                if (href === '#') return;
-                
-                const targetId = href.substring(1);
-                const targetElement = document.getElementById(targetId);
-                
-                if (targetElement) {
-                    e.preventDefault();
-                    targetElement.scrollIntoView({
-                        behavior: 'smooth',
-                        block: 'start'
-                    });
-                }
-            });
-        });
-    }
-
-       // Замени эту функцию для корректного отображения статистики
     function updateFooterStats() {
-        const userEl = document.getElementById('footerUserCount');
+        const lang      = typeof window.t === 'function' ? window.t : (k) => k;
+        const userEl    = document.getElementById('footerUserCount');
         const projectEl = document.getElementById('footerProjectCount');
 
-        // Количество проектов (фильтруем удаленные)
-        let projectCount = 0;
-        if (typeof window.projects !== 'undefined' && Array.isArray(window.projects)) {
-            projectCount = window.projects.filter(p => !p.deleted).length;
-        }
         if (projectEl) {
+            let projectCount = 0;
+            if (typeof window.projects !== 'undefined' && Array.isArray(window.projects)) {
+                projectCount = window.projects.filter(p => !p.deleted).length;
+            }
             projectEl.textContent = projectCount;
             projectEl.classList.add('text-cyan-400');
         }
 
-                // Количество пользователей — читаем из публичного config/stats
         if (userEl) {
-    // Читаем из config/stats — доступно всем без авторизации
-    function tryReadUserCount(attempt) {
-        attempt = attempt || 1;
-        var db = window.db;
-        var exp = window.__firestoreExports;
-        
-        if (db && exp && exp.doc && exp.getDoc) {
-            exp.getDoc(exp.doc(db, 'config', 'stats')).then(function(snap) {
-                if (snap.exists()) {
-                    var count = snap.data().userCount || 0;
-                    userEl.textContent = count;
-                    if (count > 0) {
-                        userEl.classList.add('text-emerald-400');
-                        userEl.classList.remove('text-slate-400');
+            tryReadUserCount(1);
+        }
+
+        function tryReadUserCount(attempt) {
+            const db  = window.db;
+            const exp = window.__firestoreExports;
+
+            if (db && exp && exp.doc && exp.getDoc) {
+                exp.getDoc(exp.doc(db, 'config', 'stats')).then(function(snap) {
+                    if (snap.exists()) {
+                        const count = snap.data().userCount || 0;
+                        userEl.textContent = count;
+                        if (count > 0) {
+                            userEl.classList.add('text-emerald-400');
+                            userEl.classList.remove('text-slate-400');
+                        }
+                    } else {
+                        userEl.textContent = '0';
                     }
+                }).catch(function() {
+                    userEl.textContent = '0';
+                });
+            } else {
+                if (attempt < 10) {
+                    setTimeout(function() { tryReadUserCount(attempt + 1); }, 500);
                 } else {
                     userEl.textContent = '0';
-                    console.warn('config/stats документ не найден');
                 }
-            }).catch(function(err) {
-                console.warn('Ошибка чтения config/stats:', err.message);
-                userEl.textContent = '0';
-            });
-        } else {
-            // db или экспорты ещё не готовы — повторяем попытку
-            if (attempt < 10) {
-                setTimeout(function() {
-                    tryReadUserCount(attempt + 1);
-                }, 500);
-            } else {
-                userEl.textContent = '0';
-                console.warn('Firebase не инициализирован после 10 попыток');
             }
         }
     }
-    
-    tryReadUserCount(1);
-}
-    }
 
-    // Замени эту функцию, чтобы она всегда открывала новую форму
-    window.openSupportModal = function() {
-        const modal = document.getElementById('supportModal');
-        if (modal) modal.classList.add('active');
-    };
-
-function _tryGetUserCountFromFirebase(userEl) {
-    if (!userEl) return;
-    
-    // Если db недоступен — показываем Гость
-    if (typeof window.db === 'undefined') {
-        userEl.textContent = 'Гость';
-        userEl.classList.remove('text-emerald-400');
-        return;
-    }
-
-    // Пробуем получить количество пользователей
-    try {
-        const firestoreModule = window.__firestoreExports;
-        if (firestoreModule && firestoreModule.getCountFromServer && firestoreModule.collection) {
-            firestoreModule.getCountFromServer(
-                firestoreModule.collection(window.db, 'users')
-            ).then(function(snapshot) {
-                const count = snapshot.data().count;
-                if (count > 0) {
-                    userEl.textContent = count;
-                    userEl.classList.add('text-emerald-400');
-                    userEl.classList.remove('text-slate-400');
-                } else {
-                    userEl.textContent = 'Гость';
-                }
-            }).catch(function() {
-                userEl.textContent = 'Гость';
-            });
-        } else {
-            userEl.textContent = 'Гость';
-        }
-    } catch(e) {
-        userEl.textContent = 'Гость';
-    }
-}
-
-function _updateUserStatusFallback(userEl) {
-    // Fallback: показываем имя/статус текущего пользователя
-    if (!userEl) return;
-    const user = typeof window.currentUser !== 'undefined' ? window.currentUser : null;
-    if (user) {
-        const name = user.displayName || user.email?.split('@')[0] || 'Пользователь';
-        userEl.textContent = name;
-        userEl.classList.add('text-emerald-400');
-        userEl.classList.remove('text-slate-400');
-    } else {
-        userEl.textContent = 'Гость';
-    }
-}
+    // ============ LANGUAGE TOGGLE ============
 
     function updateFooterLanguageButton() {
-        const footerLangBtn = document.getElementById('footerLangBtn');
         const langFlag = document.querySelector('.lang-flag-footer');
         const langText = document.querySelector('.lang-text-footer');
-        
-        if (footerLangBtn && langFlag && langText) {
+        if (langFlag && langText) {
             const currentLang = typeof window.currentLang !== 'undefined' ? window.currentLang : 'ru';
-            const langConfig = currentLang === 'en' ? 
-                { flag: '🇺🇸', text: 'ENG' } : 
-                { flag: '🇷🇺', text: 'РУС' };
-            
-            langFlag.textContent = langConfig.flag;
-            langText.textContent = langConfig.text;
+            langFlag.textContent = currentLang === 'en' ? '🇺🇸' : '🇷🇺';
+            langText.textContent = currentLang === 'en' ? 'ENG' : 'РУС';
         }
     }
 
     window.footerToggleLang = function() {
+        const lang = typeof window.t === 'function' ? window.t : (k) => k;
         if (typeof window.toggleLang === 'function') {
             window.toggleLang();
         } else if (typeof window.setLanguage === 'function') {
             const newLang = window.currentLang === 'ru' ? 'en' : 'ru';
             window.setLanguage(newLang);
         } else {
-            const event = new CustomEvent('footerToggleLang');
-            document.dispatchEvent(event);
+            document.dispatchEvent(new CustomEvent('footerToggleLang'));
         }
-        
         setTimeout(updateFooterLanguageButton, 100);
-        footerShowToast('Язык изменён');
+        footerShowToast(lang('footer_language_changed'));
     };
 
-    function footerShowToast(message, type = 'success') {
+    window.footerScrollToTop = function() {
+        const lang = typeof window.t === 'function' ? window.t : (k) => k;
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+        footerShowToast(lang('footer_scroll_top_toast'));
+    };
+
+    // ============ TOAST ============
+
+    function footerShowToast(message, type) {
+        type = type || 'success';
+
         if (typeof window.showToast === 'function') {
             window.showToast(message);
             return;
         }
 
         let toast = document.getElementById('footer-toast');
-        
         if (!toast) {
             toast = document.createElement('div');
             toast.id = 'footer-toast';
-            toast.className = 'footer-toast';
             toast.style.cssText = `
-                position: fixed;
-                bottom: 20px;
-                right: 20px;
+                position: fixed; bottom: 20px; right: 20px;
                 background: linear-gradient(135deg, #1e293b, #0f172a);
-                border: 1px solid rgba(255, 255, 255, 0.1);
-                color: white;
-                padding: 14px 20px;
-                border-radius: 12px;
-                box-shadow: 0 10px 40px rgba(0, 0, 0, 0.4);
-                transform: translateY(100px);
-                opacity: 0;
-                transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-                z-index: 9999;
-                display: flex;
-                align-items: center;
-                gap: 10px;
-                font-size: 14px;
-                font-family: 'Inter', sans-serif;
+                border: 1px solid rgba(255,255,255,0.1);
+                color: white; padding: 14px 20px; border-radius: 12px;
+                box-shadow: 0 10px 40px rgba(0,0,0,0.4);
+                transform: translateY(100px); opacity: 0;
+                transition: all 0.3s cubic-bezier(0.4,0,0.2,1);
+                z-index: 9999; display: flex; align-items: center; gap: 10px;
+                font-size: 14px; font-family: 'Inter', sans-serif;
             `;
             document.body.appendChild(toast);
         }
 
         const icons = {
-            success: '<i class="fas fa-check-circle" style="color: #10b981;"></i>',
-            error: '<i class="fas fa-exclamation-circle" style="color: #ef4444;"></i>',
-            info: '<i class="fas fa-info-circle" style="color: #3b82f6;"></i>'
+            success: '<i class="fas fa-check-circle" style="color:#10b981;"></i>',
+            error:   '<i class="fas fa-exclamation-circle" style="color:#ef4444;"></i>',
+            info:    '<i class="fas fa-info-circle" style="color:#3b82f6;"></i>'
         };
 
-        toast.innerHTML = icons[type] + message;
+        toast.innerHTML = (icons[type] || icons.success) + message;
         toast.style.transform = 'translateY(0)';
-        toast.style.opacity = '1';
+        toast.style.opacity   = '1';
 
         setTimeout(() => {
             toast.style.transform = 'translateY(100px)';
-            toast.style.opacity = '0';
+            toast.style.opacity   = '0';
         }, 3000);
     }
 
-    // Initialize
-    DOMReady(function() {
-        setTimeout(initFooter, 100);
-    });
+    // ============ STYLES ============
+
+    function addFooterStyles() {
+        if (document.getElementById('footer-styles-v2')) return;
+        const styles = document.createElement('style');
+        styles.id = 'footer-styles-v2';
+        styles.textContent = `
+            .site-footer { font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; color: #e2e8f0; }
+            .footer-bg-gradient, .footer-bg-pattern { pointer-events: none; }
+            .social-link { position: relative; overflow: hidden; }
+            .social-link:active { transform: scale(0.95); }
+            .footer-link { position: relative; padding: 4px 0; transition: all 0.2s ease; }
+            .footer-link:hover { transform: translateX(6px); }
+            .footer-email-input { box-shadow: inset 0 2px 4px rgba(0,0,0,0.1); }
+            .footer-email-input:focus { box-shadow: 0 0 0 3px rgba(34,211,238,0.15), inset 0 2px 4px rgba(0,0,0,0.1); }
+            .footer-email-input.error { border-color: #ef4444 !important; animation: shake 0.5s; }
+            .footer-email-input.success { border-color: #10b981 !important; background: rgba(16,185,129,0.1) !important; }
+            @keyframes shake { 0%,100%{transform:translateX(0)} 25%{transform:translateX(-5px)} 75%{transform:translateX(5px)} }
+            .back-to-top { opacity: 0; visibility: hidden; transition: all 0.3s cubic-bezier(0.4,0,0.2,1); }
+            .back-to-top.visible { opacity: 1; visibility: visible; }
+            .back-to-top:hover { transform: translateY(-3px) scale(1.05) !important; box-shadow: 0 10px 30px rgba(34,211,238,0.4) !important; }
+            .status-dot { animation: statusPulse 2s infinite; }
+            @keyframes statusPulse { 0%,100%{transform:scale(1);opacity:1} 50%{transform:scale(1.2);opacity:0.7} }
+            .page-modal-content { max-width: 700px; width: 95%; max-height: 90vh; overflow: hidden; display: flex; flex-direction: column; border-radius: 1rem; background: rgba(15,23,42,0.98); border: 1px solid rgba(255,255,255,0.1); }
+            .guide-card:hover { transform: translateY(-2px); }
+            .legal-content h3 { font-size:1.1rem; font-weight:700; color:#fff; margin:1.5rem 0 0.75rem; }
+            .legal-content h3:first-child { margin-top:0; }
+            .legal-content h4 { font-size:1rem; font-weight:600; color:#e2e8f0; margin:1.25rem 0 0.5rem; }
+            .legal-content p { color:#cbd5e1; line-height:1.7; margin-bottom:0.75rem; }
+            .legal-content ul { margin:0.5rem 0 1rem 1.5rem; }
+            .legal-content li { color:#cbd5e1; margin-bottom:0.5rem; }
+            .legal-content strong { color:#fff; }
+            .modal-md { max-width: 500px; }
+            .subscribe-btn.loading { pointer-events:none; opacity:0.7; }
+            @keyframes spin { to{transform:rotate(360deg)} }
+            @media (max-width: 768px) {
+                .site-footer .grid { grid-template-columns: 1fr; gap: 2rem; }
+                .site-footer [class*="col-span"] { grid-column: 1 / -1 !important; }
+                .back-to-top { bottom: 5rem; right: 1rem; }
+                .newsletter-form { flex-direction: column; }
+                .subscribe-btn { width: 100%; justify-content: center; }
+                .page-modal-content { width: 98%; max-height: 95vh; }
+            }
+            html { scroll-behavior: smooth; }
+        `;
+        document.head.appendChild(styles);
+    }
+
+    // ============ INITIALIZE ============
+
+    function initializeFooterFunctions() {
+        const footer = document.getElementById('site-footer');
+        if (!footer) return;
+
+        initBackToTop();
+        initNewsletterForm();
+        initFooterLinks();
+        updateFooterLanguageButton();
+        updateFooterStats();
+        setTimeout(updateFooterStats, 2000);
+        setTimeout(updateFooterStats, 5000);
+        setTimeout(updateFooterStats, 10000);
+
+        document.addEventListener('userAuthChanged',  function() { setTimeout(updateFooterStats, 500); });
+        document.addEventListener('projectsLoaded',   function() { setTimeout(updateFooterStats, 300); });
+
+        _initHeaderAvatarClick();
+        console.log('Footer v2.2 initialized');
+    }
+
+    function initBackToTop() {
+        const btn = document.getElementById('backToTop');
+        if (!btn) return;
+        window.addEventListener('scroll', function() {
+            btn.classList.toggle('visible', window.pageYOffset > 400);
+        });
+    }
+
+    function initNewsletterForm() {
+        const form = document.querySelector('.newsletter-form');
+        if (!form) return;
+        form.addEventListener('submit', function(e) {
+            e.preventDefault();
+            handleNewsletterSubscription();
+        });
+    }
+
+    function initFooterLinks() {
+        const footer = document.getElementById('site-footer');
+        if (!footer) return;
+        footer.querySelectorAll('a[href^="#"]').forEach(link => {
+            link.addEventListener('click', function(e) {
+                const href = this.getAttribute('href');
+                if (href === '#') return;
+                const target = document.getElementById(href.substring(1));
+                if (target) { e.preventDefault(); target.scrollIntoView({ behavior: 'smooth', block: 'start' }); }
+            });
+        });
+    }
+
+    // ============ TRANSLATION UPDATE ============
+
+    function updateFooterTranslations() {
+        const footer = document.getElementById('site-footer');
+        if (!footer) return;
+        const lang = typeof window.t === 'function' ? window.t : (k) => k;
+
+        footer.querySelectorAll('[data-footer-translate]').forEach(function(el) {
+            const key        = el.getAttribute('data-footer-translate');
+            const translated = lang(key);
+            if (translated && translated !== key) el.textContent = translated;
+        });
+
+        footer.querySelectorAll('[data-footer-placeholder]').forEach(function(el) {
+            const key        = el.getAttribute('data-footer-placeholder');
+            const translated = lang(key);
+            if (translated && translated !== key) el.placeholder = translated;
+        });
+    }
+
+    document.addEventListener('languageChanged', updateFooterTranslations);
+    document.addEventListener('DOMContentLoaded', function() { setTimeout(updateFooterTranslations, 500); });
+    window.updateFooterTranslations = updateFooterTranslations;
+
+    // ============ HEADER AVATAR CLICK ============
+
+    function _initHeaderAvatarClick() {
+        function openProfile() {
+            if (typeof window.openPageModal === 'function') window.openPageModal('account');
+        }
+
+        function _attach() {
+            const avatar        = document.getElementById('userAvatar');
+            const avatarWrapper = document.getElementById('userAvatarWrapper');
+            const nameEl        = document.getElementById('userName');
+            const nameWrapper   = document.getElementById('userNameWrapper');
+
+            if (avatar)        { avatar.style.cursor        = 'pointer'; avatar.onclick        = openProfile; }
+            if (avatarWrapper) { avatarWrapper.style.cursor = 'pointer'; avatarWrapper.onclick = openProfile; }
+            if (nameEl)        { nameEl.style.cursor        = 'pointer'; nameEl.onclick        = openProfile; }
+            if (nameWrapper)   { nameWrapper.style.cursor   = 'pointer'; nameWrapper.onclick   = openProfile; }
+
+            return !!(avatar || avatarWrapper || nameEl || nameWrapper);
+        }
+
+        if (!_attach()) {
+            let tries    = 0;
+            const interval = setInterval(function() {
+                tries++;
+                if (_attach() || tries >= 20) clearInterval(interval);
+            }, 300);
+        }
+
+        document.addEventListener('userAuthChanged', function() { setTimeout(_attach, 500); });
+    }
+
+    window.openMyAccountModal = function() {
+        if (typeof window.openPageModal === 'function') window.openPageModal('account');
+    };
+
+    // ============ INIT ============
+
+    DOMReady(function() { setTimeout(initFooter, 100); });
 
     if (document.readyState === 'complete' || document.readyState === 'interactive') {
         setTimeout(initFooter, 100);
     }
-// ============ FOOTER TRANSLATION UPDATE ============
 
-function updateFooterTranslations() {
-    const footer = document.getElementById('site-footer');
-    if (!footer) return;
-    
-    const lang = typeof window.t === 'function' ? window.t : (k) => k;
-    
-    // Обновляем все элементы с data-footer-translate
-    footer.querySelectorAll('[data-footer-translate]').forEach(function(el) {
-        const key = el.getAttribute('data-footer-translate');
-        const translated = lang(key);
-        if (translated && translated !== key) {
-            if (el.tagName === 'OPTION') {
-                el.textContent = translated;
-            } else {
-                el.textContent = translated;
-            }
-        }
-    });
-    
-    // Обновляем placeholder для инпутов
-    footer.querySelectorAll('[data-footer-placeholder]').forEach(function(el) {
-        const key = el.getAttribute('data-footer-placeholder');
-        const translated = lang(key);
-        if (translated && translated !== key) {
-            el.placeholder = translated;
-        }
-    });
-}
-
-// Слушаем событие смены языка
-document.addEventListener('languageChanged', function() {
-    updateFooterTranslations();
-});
-
-// Также вешаем на кастомное событие от language.js
-document.addEventListener('DOMContentLoaded', function() {
-    // Обновляем при инициализации
-    setTimeout(updateFooterTranslations, 500);
-});
-
-// Экспортируем для вызова из language.js
-window.updateFooterTranslations = updateFooterTranslations;
-    function _initHeaderAvatarClick() {
-function openProfile() {
-    if (typeof window.openPageModal === 'function') {
-        window.openPageModal('account');
-    }
-}
-
-    function _attach() {
-        // Аватар
-        var avatar = document.getElementById('userAvatar');
-        if (avatar) {
-            avatar.style.cursor = 'pointer';
-            avatar.onclick = openProfile;
-        }
-
-        // Обёртка аватара (div с id userAvatarWrapper)
-        var avatarWrapper = document.getElementById('userAvatarWrapper');
-        if (avatarWrapper) {
-            avatarWrapper.style.cursor = 'pointer';
-            avatarWrapper.onclick = openProfile;
-        }
-
-        // Имя
-        var nameEl = document.getElementById('userName');
-        if (nameEl) {
-            nameEl.style.cursor = 'pointer';
-            nameEl.onclick = openProfile;
-        }
-
-        // Обёртка имени
-        var nameWrapper = document.getElementById('userNameWrapper');
-        if (nameWrapper) {
-            nameWrapper.style.cursor = 'pointer';
-            nameWrapper.onclick = openProfile;
-        }
-
-        return !!(avatar || avatarWrapper || nameEl || nameWrapper);
-    }
-
-    if (!_attach()) {
-        var tries = 0;
-        var interval = setInterval(function() {
-            tries++;
-            if (_attach() || tries >= 20) {
-                clearInterval(interval);
-            }
-        }, 300);
-    }
-
-    // Повторно вешаем после авторизации
-    document.addEventListener('userAuthChanged', function() {
-        setTimeout(_attach, 500);
-    });
-}
-
-// СТАЛО:
-window.openMyAccountModal = function() {
-    if (typeof window.openPageModal === 'function') {
-        window.openPageModal('account');
-    }
-};
 })();
