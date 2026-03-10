@@ -513,6 +513,21 @@ claim_btn_tooltip_cooldown: 'Следующий клейм в 00:00 UTC',
 
     // ============ COUNTRY PICKER ============
     country_manual_input: 'Введите название страны',
+    // ============ MLM РЕФЕРАЛЬНАЯ СИСТЕМА ============
+ref_already_used: 'Вы уже использовали реферальный код',
+passive_income_title: 'Пассивный доход от рефералов',
+passive_invited: 'Приглашено',
+passive_total_earned: 'Заработано',
+passive_pending: 'Ожидает',
+passive_next_payout: 'Следующая выплата',
+passive_paid_this_week: 'Выплачено на этой неделе',
+passive_days_left: 'Через {days} дн. (пн UTC)',
+passive_no_pending: 'Нет накопленного дохода',
+passive_levels_title: 'Структура процентов',
+passive_level: 'Уровень',
+passive_payout_schedule: 'Выплата каждый понедельник в 00:00 UTC',
+passive_payout_toast: 'Пассивный доход начислен',
+passive_credited_to_upstream: 'Начислено вышестоящим по цепочке:',
   },
 
   en: {
@@ -1028,6 +1043,21 @@ claim_btn_tooltip_cooldown: 'Next claim at 00:00 UTC',
 
     // ============ COUNTRY PICKER ============
     country_manual_input: 'Enter country name',
+    // ============ MLM REFERRAL SYSTEM ============
+ref_already_used: 'You have already used a referral code',
+passive_income_title: 'Passive referral income',
+passive_invited: 'Invited',
+passive_total_earned: 'Earned',
+passive_pending: 'Pending',
+passive_next_payout: 'Next payout',
+passive_paid_this_week: 'Paid this week',
+passive_days_left: 'In {days} d. (Mon UTC)',
+passive_no_pending: 'No pending income',
+passive_levels_title: 'Percent structure',
+passive_level: 'Level',
+passive_payout_schedule: 'Payout every Monday at 00:00 UTC',
+passive_payout_toast: 'Passive income credited',
+passive_credited_to_upstream: 'Credited to upstream chain:',
   }
 };
 
