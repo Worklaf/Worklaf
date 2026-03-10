@@ -335,7 +335,13 @@ const translations = {
     footer_account_saved: 'Профиль сохранён!',
     footer_account_saved_local: 'Профиль сохранён локально',
     footer_account_photo: 'Фото обновлено!',
-
+footer_address: 'адрес',
+footer_crypto_wallets: 'Крипто-адреса',
+footer_social_networks: 'Социальные сети',
+footer_solana_placeholder: 'Ваш Solana адрес...',
+footer_evm_hint: '(Ethereum, BSC, Polygon...)',
+footer_evm_label: 'EVM адрес',
+footer_solana_label: 'Solana адрес',
     // ============ FOOTER — ACCOUNT EXTRA FIELDS ============
     footer_address: 'адрес',
     footer_solana_placeholder: 'Ваш Solana адрес...',
@@ -836,7 +842,13 @@ const translations = {
     footer_account_saved: 'Profile saved!',
     footer_account_saved_local: 'Profile saved locally',
     footer_account_photo: 'Photo updated!',
-
+footer_address: 'address',
+footer_crypto_wallets: 'Crypto Addresses',
+footer_social_networks: 'Social Networks',
+footer_solana_placeholder: 'Your Solana address...',
+footer_evm_hint: '(Ethereum, BSC, Polygon...)',
+footer_evm_label: 'EVM Address',
+footer_solana_label: 'Solana Address',
     // ============ FOOTER — ACCOUNT EXTRA FIELDS ============
     footer_address: 'address',
     footer_solana_placeholder: 'Your Solana address...',
