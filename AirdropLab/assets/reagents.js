@@ -1,7 +1,7 @@
 /**
  * ============================================
- * AirdropLab Reagents System v2.0
- * Система ежедневного клейма + MLM рефералы
+ * AirdropLab Reagents System v1.0
+ * Система ежедневного клейма
  * ============================================
  */
 
@@ -24,21 +24,8 @@ const REAGENTS_CONFIG = {
         { days: 180, bonus: 600, labelKey: 'streak_halfyear', color: 'text-amber-400'  },
     ],
 
-    // ── РЕФЕРАЛЬНАЯ СИСТЕМА ──────────────────────────────────────
-    // Бонус при регистрации по коду
-    referralBonus:   50,   // новый пользователь получает
-    referralInviter: 25,   // тот кто пригласил получает
-
-    // Пассивный доход — % от клейма рефералов (3 уровня)
-    // Начисляется раз в неделю, округление вверх от 0.5
-    referralLevels: [
-        { level: 1, percent: 20 },  // прямые рефералы
-        { level: 2, percent: 10 },  // рефералы рефералов
-        { level: 3, percent: 5  },  // третий уровень
-    ],
-
-    // День недели для выплаты пассивного дохода (0=вс, 1=пн ... 6=сб)
-    passivePayoutDay: 1, // каждый понедельник UTC
+    referralBonus:   50,
+    referralNewUser: 25,
 };
 
 // ─────────────────────────────────────────────────────────────────
@@ -54,19 +41,6 @@ function getUTCDateString(date) {
     return d.getUTCFullYear() + '-' +
            String(d.getUTCMonth() + 1).padStart(2, '0') + '-' +
            String(d.getUTCDate()).padStart(2, '0');
-}
-
-// Получить номер UTC недели (YYYY-WNN)
-function getUTCWeekString(date) {
-    const d = date || new Date();
-    const startOfYear = new Date(Date.UTC(d.getUTCFullYear(), 0, 1));
-    const weekNum = Math.ceil(((d - startOfYear) / 86400000 + startOfYear.getUTCDay() + 1) / 7);
-    return d.getUTCFullYear() + '-W' + String(weekNum).padStart(2, '0');
-}
-
-// Округление: 0.5 и выше → вверх, меньше → вниз
-function roundReward(value) {
-    return Math.round(value + 0.0001); // стандартный Math.round: 0.5 → 1
 }
 
 function calcReward(newStreak) {
@@ -151,9 +125,6 @@ async function getClaimStatus(user) {
 
         const reward = calcReward(newStreak);
 
-        // Проверяем пассивный доход от рефералов
-        const passiveInfo = await getPassiveRewardInfo(user, data);
-
         return {
             canClaim,
             streak,
@@ -163,8 +134,7 @@ async function getClaimStatus(user) {
             todayUTC,
             streakBroken,
             reward,
-            nextMilestone: getNextMilestone(canClaim ? newStreak : streak),
-            passiveInfo,
+            nextMilestone: getNextMilestone(canClaim ? newStreak : streak)
         };
 
     } catch(err) {
@@ -183,217 +153,20 @@ async function performClaim(user) {
     if (!status.canClaim) throw new Error(lang('claim_already_title'));
 
     const todayUTC    = getUTCDateString();
-    let newReagents   = status.reagents + status.reward.total;
+    const newReagents = status.reagents + status.reward.total;
 
-    // Обновляем свой баланс и стрик
     await exp.setDoc(
         exp.doc(db, 'users', user.uid),
         {
             reagents:      newReagents,
             streak:        status.newStreak,
             lastClaimDate: todayUTC,
-            lastClaimAt:   new Date().toISOString(),
+            lastClaimAt:   new Date().toISOString()
         },
         { merge: true }
     );
 
-    // Начисляем пассивные проценты апстримам (уровни 1-3)
-    await _creditPassiveToUpstream(user, status.reward.total, exp, db);
-
     return { ...status, newReagents };
-}
-
-
-/**
- * Генерация реферального кода
- */
-function _generateCode(uid) {
-    const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
-    let code = 'AL-';
-    // Используем uid как seed для детерминированности
-    for (let i = 0; i < 6; i++) {
-        const charIndex = uid.charCodeAt(i % uid.length) % chars.length;
-        code += chars[charIndex];
-    }
-    return code;
-}
-
-/**
- * После клейма — начисляем % апстримам (цепочка до 3 уровней)
- * Накапливаем в pendingPassive, выплачиваем раз в неделю
- */
-async function _creditPassiveToUpstream(claimUser, claimedAmount, exp, db) {
-    try {
-        // Получаем свою запись чтобы найти referredBy
-        const mySnap = await exp.getDoc(exp.doc(db, 'users', claimUser.uid));
-        if (!mySnap.exists()) return;
-
-        let currentUid  = claimUser.uid;
-        let currentData = mySnap.data();
-
-        for (const levelCfg of REAGENTS_CONFIG.referralLevels) {
-            const upstreamUid = currentData.referredBy;
-            if (!upstreamUid) break; // цепочка закончилась
-
-            const rawReward     = claimedAmount * (levelCfg.percent / 100);
-            const roundedReward = roundReward(rawReward);
-
-            if (roundedReward <= 0) {
-                // Поднимаемся выше
-                const upSnap = await exp.getDoc(exp.doc(db, 'users', upstreamUid));
-                if (!upSnap.exists()) break;
-                currentUid  = upstreamUid;
-                currentData = upSnap.data();
-                continue;
-            }
-
-            // Добавляем в pendingPassive апстрима
-            const upSnap = await exp.getDoc(exp.doc(db, 'users', upstreamUid));
-            if (!upSnap.exists()) break;
-
-            const upData = upSnap.data();
-
-            await exp.setDoc(
-                exp.doc(db, 'users', upstreamUid),
-                {
-                    // Накапливаем ожидающий пассивный доход
-                    pendingPassive: (upData.pendingPassive || 0) + roundedReward,
-                    // Лог: от кого сколько накопилось на этой неделе
-                    passiveLog: {
-                        ...(upData.passiveLog || {}),
-                        [claimUser.uid]: {
-                            level:      levelCfg.level,
-                            lastAmount: roundedReward,
-                            percent:    levelCfg.percent,
-                        }
-                    }
-                },
-                { merge: true }
-            );
-
-            // Поднимаемся на уровень выше
-            currentUid  = upstreamUid;
-            currentData = upData;
-        }
-    } catch(err) {
-        console.error('[Reagents] _creditPassiveToUpstream error:', err);
-    }
-}
-
-/**
- * Еженедельная выплата пассивного дохода
- * Вызывается при каждом открытии клейм-модалки
- * Если сегодня понедельник UTC и ещё не выплачивали на этой неделе — выплачиваем
- */
-async function _tryWeeklyPassivePayout(user) {
-    const db  = window.db;
-    const exp = window.__firestoreExports;
-    if (!db || !exp || !user) return 0;
-
-    try {
-        const snap = await exp.getDoc(exp.doc(db, 'users', user.uid));
-        if (!snap.exists()) return 0;
-
-        const data           = snap.data();
-        const pendingPassive = data.pendingPassive || 0;
-        if (pendingPassive <= 0) return 0;
-
-        const nowUTC         = new Date();
-        const lastPayoutWeek = data.lastPassivePayoutWeek || '';
-        const currentWeek    = getUTCWeekString(nowUTC);
-
-        // Уже выплатили на этой неделе — пропускаем
-        if (lastPayoutWeek === currentWeek) return 0;
-
-        // Считаем сколько понедельников прошло с последней выплаты
-        const mondaysPassed  = _countMondaysSince(data.lastPassivePayoutAt);
-
-        // Выплачиваем если прошёл хотя бы 1 понедельник
-        // (не важно какой сегодня день)
-        if (mondaysPassed < 1) return 0;
-
-        const payout = Math.ceil(pendingPassive);
-
-        await exp.setDoc(
-            exp.doc(db, 'users', user.uid),
-            {
-                reagents:              (data.reagents || 0) + payout,
-                pendingPassive:        0,
-                passiveLog:            {},
-                lastPassivePayoutWeek: currentWeek,
-                referralEarnings:      (data.referralEarnings || 0) + payout,
-                lastPassivePayoutAt:   new Date().toISOString(),
-                lastPassivePayout:     payout,
-            },
-            { merge: true }
-        );
-
-        console.log(`[Reagents] Passive payout: +${payout} RGT (${mondaysPassed} weeks passed)`);
-        return payout;
-
-    } catch(err) {
-        console.error('[Reagents] _tryWeeklyPassivePayout error:', err);
-        return 0;
-    }
-}
-
-// Считаем сколько понедельников UTC прошло с даты
-function _countMondaysSince(isoDateStr) {
-    if (!isoDateStr) return 99; // если никогда не платили — считаем что давно
-
-    const from = new Date(isoDateStr);
-    const now  = new Date();
-
-    if (isNaN(from.getTime())) return 99;
-
-    // Находим следующий понедельник после from
-    const fromDay   = from.getUTCDay(); // 0=вс,1=пн...
-    const daysToMon = fromDay === 1 ? 7 : (8 - fromDay) % 7; // дней до след. пн
-    const firstMon  = new Date(from);
-    firstMon.setUTCDate(from.getUTCDate() + daysToMon);
-    firstMon.setUTCHours(0, 0, 0, 0);
-
-    if (firstMon > now) return 0; // следующий понедельник ещё не наступил
-
-    // Считаем сколько понедельников между firstMon и сейчас
-    const msPerWeek  = 7 * 24 * 60 * 60 * 1000;
-    const mondaysPassed = Math.floor((now - firstMon) / msPerWeek) + 1;
-
-    return mondaysPassed;
-}
-
-/**
- * Получаем информацию о пассивном доходе для отображения в UI
- */
-async function getPassiveRewardInfo(user, userData) {
-    try {
-        const pendingPassive  = userData.pendingPassive    || 0;
-        const referralEarnings = userData.referralEarnings || 0;
-        const invitedCount    = userData.invitedCount      || 0;
-        const lastPayout      = userData.lastPassivePayout || 0;
-        const lastPayoutWeek  = userData.lastPassivePayoutWeek || '';
-
-        const nowUTC      = new Date();
-        const currentWeek = getUTCWeekString(nowUTC);
-
-        // Считаем дней до следующего понедельника UTC
-        const todayDay   = nowUTC.getUTCDay(); // 0=вс
-        const daysToMon  = todayDay === 0 ? 1 : (8 - todayDay) % 7 || 7;
-        const nextPayout = daysToMon === 7 && lastPayoutWeek === currentWeek
-            ? 7 : daysToMon;
-
-        return {
-            pendingPassive:   Math.round(pendingPassive * 10) / 10,
-            referralEarnings,
-            invitedCount,
-            lastPayout,
-            nextPayoutDays:   nextPayout,
-            paidThisWeek:     lastPayoutWeek === currentWeek,
-        };
-    } catch(err) {
-        return { pendingPassive: 0, referralEarnings: 0, invitedCount: 0,
-                 lastPayout: 0, nextPayoutDays: 0, paidThisWeek: false };
-    }
 }
 
 // ─────────────────────────────────────────────────────────────────
@@ -421,15 +194,6 @@ window.openClaimModal = async function() {
     body.innerHTML = _renderLoading();
     modal.classList.add('active');
     document.body.style.overflow = 'hidden';
-
-    // Пробуем еженедельную выплату пассивного дохода
-    const weeklyPayout = await _tryWeeklyPassivePayout(user);
-    if (weeklyPayout > 0 && typeof window.footerShowToast === 'function') {
-        window.footerShowToast(
-            `💰 ${lang('passive_payout_toast')} +${weeklyPayout} RGT!`,
-            'success'
-        );
-    }
 
     const status = await getClaimStatus(user);
 
@@ -466,6 +230,7 @@ window.doClaim = async function() {
         _showClaimSuccess(result);
         _applyClaimBtnVisual(false);
 
+        // Обновляем баланс в профиле если открыт
         const balEl = document.getElementById('profileReagentBalance');
         if (balEl) {
             balEl.innerHTML = result.newReagents +
@@ -513,7 +278,7 @@ function _renderError(msg) {
 
 function _renderClaimUI(status) {
     const { canClaim, streak, newStreak, reagents, reward,
-            streakBroken, nextMilestone, passiveInfo } = status;
+            streakBroken, nextMilestone } = status;
 
     const prevMilestone = nextMilestone.days - 30 < 0 ? 0 : nextMilestone.days - 30;
     const progressPct   = Math.round(
@@ -525,7 +290,7 @@ function _renderClaimUI(status) {
     return `
     <div class="p-6">
 
-        <!-- Баланс и стрик -->
+        <!-- Заголовок с балансом -->
         <div class="flex items-center justify-between mb-6">
             <div>
                 <div class="text-xs text-slate-500 mb-1">${lang('claim_balance_label')}</div>
@@ -556,10 +321,12 @@ function _renderClaimUI(status) {
         <!-- Дни недели -->
         <div class="mb-5">
             <div class="text-xs text-slate-500 mb-2 text-center">${lang('claim_week_progress')}</div>
-            <div class="flex justify-center gap-1.5">${weekDays}</div>
+            <div class="flex justify-center gap-1.5">
+                ${weekDays}
+            </div>
         </div>
 
-        <!-- Прогресс до бонуса -->
+        <!-- Прогресс до следующего бонуса -->
         <div class="mb-5 bg-slate-800/50 rounded-xl p-3">
             <div class="flex items-center justify-between text-xs mb-2">
                 <span class="text-slate-400">
@@ -616,14 +383,13 @@ function _renderClaimUI(status) {
                 ${lang('claim_next_at')}
                 <span class="text-white font-medium">00:00 UTC</span>
             </div>
-            <div class="text-xs text-slate-500">${_getTimeToMidnightUTC()}</div>
+            <div class="text-xs text-slate-500">
+                ${_getTimeToMidnightUTC()}
+            </div>
         </div>
         `}
 
-        <!-- РЕФЕРАЛЬНЫЙ БЛОК -->
-        ${_renderPassiveBlock(passiveInfo)}
-
-        <!-- Таблица наград стрик -->
+        <!-- Таблица наград -->
         <div class="mt-5 border-t border-slate-700/50 pt-4">
             <div class="text-xs text-slate-500 mb-3 text-center">${lang('claim_rewards_table')}</div>
             <div class="grid grid-cols-2 gap-1.5">
@@ -631,7 +397,8 @@ function _renderClaimUI(status) {
                 <div class="flex items-center justify-between px-3 py-1.5 rounded-lg
                             ${streak >= sb.days
                                 ? 'bg-emerald-900/20 border border-emerald-800/30'
-                                : 'bg-slate-800/30'} text-xs">
+                                : 'bg-slate-800/30'}
+                            text-xs">
                     <span class="${streak >= sb.days ? 'text-emerald-400' : 'text-slate-400'}">
                         ${streak >= sb.days ? '✅' : '🔒'} ${sb.days} ${lang('claim_days_unit')}
                     </span>
@@ -654,87 +421,13 @@ function _renderClaimUI(status) {
     `;
 }
 
-/**
- * Блок пассивного реферального дохода
- */
-function _renderPassiveBlock(passiveInfo) {
-    if (!passiveInfo) return '';
-
-    const { pendingPassive, referralEarnings, invitedCount,
-            lastPayout, nextPayoutDays, paidThisWeek } = passiveInfo;
-
-    const levels = REAGENTS_CONFIG.referralLevels;
-
-    return `
-    <div class="mt-5 border-t border-slate-700/50 pt-4">
-        <div class="flex items-center gap-2 mb-3">
-            <span class="text-base">👥</span>
-            <span class="text-xs font-semibold text-slate-300">${lang('passive_income_title')}</span>
-        </div>
-
-        <!-- Статистика рефов -->
-        <div class="grid grid-cols-3 gap-2 mb-3">
-            <div class="bg-slate-800/40 rounded-lg p-2 text-center">
-                <div class="text-base font-bold text-cyan-400">${invitedCount}</div>
-                <div class="text-[10px] text-slate-500">${lang('passive_invited')}</div>
-            </div>
-            <div class="bg-slate-800/40 rounded-lg p-2 text-center">
-                <div class="text-base font-bold text-emerald-400">${referralEarnings}</div>
-                <div class="text-[10px] text-slate-500">${lang('passive_total_earned')}</div>
-            </div>
-            <div class="bg-slate-800/40 rounded-lg p-2 text-center">
-                <div class="text-base font-bold text-yellow-400">${pendingPassive}</div>
-                <div class="text-[10px] text-slate-500">${lang('passive_pending')}</div>
-            </div>
-        </div>
-
-        <!-- Ожидающая выплата -->
-        <div class="bg-slate-800/30 rounded-xl p-3 mb-3">
-            <div class="flex items-center justify-between mb-2">
-                <span class="text-xs text-slate-400">${lang('passive_next_payout')}</span>
-                <span class="text-xs font-medium ${paidThisWeek ? 'text-emerald-400' : 'text-orange-400'}">
-                    ${paidThisWeek
-                        ? '✅ ' + lang('passive_paid_this_week')
-                        : lang('passive_days_left').replace('{days}', nextPayoutDays)
-                    }
-                </span>
-            </div>
-            ${pendingPassive > 0 ? `
-            <div class="flex items-center gap-2">
-                <div class="flex-1 h-1.5 bg-slate-700 rounded-full overflow-hidden">
-                    <div class="h-full bg-gradient-to-r from-emerald-500 to-cyan-500 rounded-full"
-                         style="width: ${Math.min(((7 - nextPayoutDays) / 7) * 100, 100)}%"></div>
-                </div>
-                <span class="text-xs text-emerald-400 font-medium">+${Math.ceil(pendingPassive)} RGT</span>
-            </div>` : `
-            <div class="text-xs text-slate-600 text-center">${lang('passive_no_pending')}</div>
-            `}
-        </div>
-
-        <!-- Таблица уровней -->
-        <div class="text-[10px] text-slate-600 mb-2 text-center">${lang('passive_levels_title')}</div>
-        <div class="grid grid-cols-3 gap-1.5">
-            ${levels.map(lv => `
-            <div class="bg-slate-800/30 rounded-lg p-2 text-center border border-slate-700/30">
-                <div class="text-xs font-bold text-cyan-400">${lv.percent}%</div>
-                <div class="text-[10px] text-slate-500">
-                    ${lang('passive_level')} ${lv.level}
-                </div>
-            </div>`).join('')}
-        </div>
-        <div class="mt-2 text-[10px] text-slate-600 text-center">
-            ${lang('passive_payout_schedule')}
-        </div>
-    </div>
-    `;
-}
-
 function _showClaimSuccess(result) {
     const body = document.getElementById('claimModalBody');
     if (!body) return;
 
     body.innerHTML = `
     <div class="p-6 text-center">
+        <!-- Анимация -->
         <div class="relative w-24 h-24 mx-auto mb-5">
             <div class="absolute inset-0 rounded-full bg-cyan-500/20 animate-ping"></div>
             <div class="relative w-24 h-24 rounded-full bg-gradient-to-br from-cyan-500/30 to-blue-500/30
@@ -749,6 +442,7 @@ function _showClaimSuccess(result) {
         <div class="text-sm text-red-400 mb-3">${lang('claim_streak_reset')}</div>
         ` : ''}
 
+        <!-- Начислено -->
         <div class="bg-slate-800/50 rounded-xl p-4 mb-4">
             <div class="text-xs text-slate-500 mb-1">${lang('claim_credited')}</div>
             <div class="text-4xl font-black bg-gradient-to-r from-cyan-400 to-blue-400 bg-clip-text text-transparent">
@@ -764,22 +458,7 @@ function _showClaimSuccess(result) {
             </div>` : ''}
         </div>
 
-        <!-- Инфо о пассивном начислении апстримам -->
-        <div class="bg-slate-800/30 rounded-xl p-3 mb-4 text-left">
-            <div class="text-xs text-slate-500 mb-2">${lang('passive_credited_to_upstream')}</div>
-            ${REAGENTS_CONFIG.referralLevels.map(lv => {
-                const reward = roundReward(result.reward.total * lv.percent / 100);
-                return `
-                <div class="flex items-center justify-between text-xs py-1 border-b border-slate-700/30 last:border-0">
-                    <span class="text-slate-400">
-                        ${lang('passive_level')} ${lv.level}
-                        <span class="text-slate-600">(${lv.percent}%)</span>
-                    </span>
-                    <span class="text-emerald-400 font-medium">+${reward} ${lang('reagents_rgt_unit')}</span>
-                </div>`;
-            }).join('')}
-        </div>
-
+        <!-- Статистика -->
         <div class="grid grid-cols-3 gap-3 mb-5">
             <div class="bg-slate-800/30 rounded-lg p-3">
                 <div class="text-lg font-bold text-cyan-400">${result.newReagents}</div>
@@ -813,15 +492,22 @@ function _showClaimSuccess(result) {
 
 function _buildWeekDays(status) {
     const { streak, lastClaim } = status;
-    const dayKeys = ['week_mon','week_tue','week_wed','week_thu','week_fri','week_sat','week_sun'];
+
+    const dayKeys = [
+        'week_mon','week_tue','week_wed',
+        'week_thu','week_fri','week_sat','week_sun'
+    ];
+
     const todayUTCDay = new Date().getUTCDay();
     const todayIdx    = (todayUTCDay + 6) % 7;
 
     return dayKeys.map((key, i) => {
         const dayLabel = lang(key);
+
         let state = 'future';
-        if (i < todayIdx)   state = streak > (todayIdx - i) ? 'done' : 'missed';
+        if (i < todayIdx)  state = streak > (todayIdx - i) ? 'done' : 'missed';
         if (i === todayIdx) state = lastClaim === getUTCDateString() ? 'today-done' : 'today';
+        if (i > todayIdx)  state = 'future';
 
         const colors = {
             'done':       'bg-emerald-500/30 border-emerald-500/50 text-emerald-400',
@@ -831,32 +517,41 @@ function _buildWeekDays(status) {
             'future':     'bg-slate-800/30 border-slate-700/30 text-slate-600',
         };
         const icons = {
-            'done': '✓', 'today': '🧪', 'today-done': '✓',
-            'missed': '✗', 'future': dayLabel.charAt(0),
+            'done':       '✓',
+            'today':      '🧪',
+            'today-done': '✓',
+            'missed':     '✗',
+            'future':     dayLabel.charAt(0),
         };
 
         return `
         <div class="flex flex-col items-center gap-1">
             <div class="w-9 h-9 rounded-xl border flex items-center justify-center text-sm font-bold
-                        ${colors[state]} transition-all">${icons[state]}</div>
+                        ${colors[state]} transition-all">
+                ${icons[state]}
+            </div>
             <span class="text-[10px] text-slate-600">${dayLabel}</span>
         </div>`;
     }).join('');
 }
 
 function _getTimeToMidnightUTC() {
+    const now      = new Date();
     const midnight = new Date();
     midnight.setUTCHours(24, 0, 0, 0);
-    const diff = midnight - new Date();
+    const diff = midnight - now;
+
     const h = Math.floor(diff / 3600000);
     const m = Math.floor((diff % 3600000) / 60000);
-    return lang('claim_time_left').replace('{h}', h).replace('{m}', m);
+
+    return lang('claim_time_left')
+        .replace('{h}', h)
+        .replace('{m}', m);
 }
 
 function _updateHeaderReagents(amount) {
-    document.querySelectorAll('[data-reagents-balance]').forEach(el => {
-        el.textContent = amount + ' ' + lang('reagents_rgt_unit');
-    });
+    const els = document.querySelectorAll('[data-reagents-balance]');
+    els.forEach(el => { el.textContent = amount + ' ' + lang('reagents_rgt_unit'); });
 }
 
 // ─────────────────────────────────────────────────────────────────
@@ -874,10 +569,14 @@ function _ensureClaimModal() {
             <div class="flex items-center justify-between px-6 pt-5 pb-0">
                 <div class="flex items-center gap-3">
                     <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-cyan-500/20 to-blue-500/20
-                                border border-cyan-500/30 flex items-center justify-center text-xl">🧪</div>
+                                border border-cyan-500/30 flex items-center justify-center text-xl">
+                        🧪
+                    </div>
                     <div>
-                        <h3 class="font-bold text-white" id="claimModalTitle">${lang('claim_title')}</h3>
-                        <p class="text-xs text-slate-500" id="claimModalSubtitle">${lang('claim_updated_utc')}</p>
+                        <h3 class="font-bold text-white" id="claimModalTitle">
+                            ${lang('claim_title')}
+                        </h3>
+                       <p class="text-xs text-slate-500" id="claimModalSubtitle">${lang('claim_updated_utc')}</p>
                     </div>
                 </div>
                 <button onclick="closeClaimModal()"
@@ -900,32 +599,48 @@ function _ensureClaimModal() {
 
 function _addClaimStyles() {
     if (document.getElementById('claim-styles')) return;
+
     const style = document.createElement('style');
     style.id = 'claim-styles';
     style.textContent = `
         .claim-modal-overlay {
-            position: fixed; inset: 0;
+            position: fixed;
+            inset: 0;
             background: rgba(0,0,0,0.8);
             backdrop-filter: blur(6px);
             z-index: 9999;
-            display: flex; align-items: center; justify-content: center;
-            opacity: 0; pointer-events: none;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            opacity: 0;
+            pointer-events: none;
             transition: opacity 0.3s ease;
         }
-        .claim-modal-overlay.active { opacity: 1; pointer-events: all; }
+        .claim-modal-overlay.active {
+            opacity: 1;
+            pointer-events: all;
+        }
         .claim-modal-box {
             background: linear-gradient(135deg, #1e2538 0%, #0f172a 100%);
             border: 1px solid rgba(255,255,255,0.08);
             border-radius: 20px;
-            width: 92%; max-width: 420px; max-height: 92vh;
+            width: 92%;
+            max-width: 420px;
+            max-height: 92vh;
             overflow-y: auto;
             transform: translateY(20px) scale(0.97);
             transition: transform 0.3s cubic-bezier(0.4,0,0.2,1);
-            scrollbar-width: thin; scrollbar-color: #334155 transparent;
+            scrollbar-width: thin;
+            scrollbar-color: #334155 transparent;
         }
-        .claim-modal-overlay.active .claim-modal-box { transform: translateY(0) scale(1); }
+        .claim-modal-overlay.active .claim-modal-box {
+            transform: translateY(0) scale(1);
+        }
         .claim-modal-box::-webkit-scrollbar { width: 4px; }
-        .claim-modal-box::-webkit-scrollbar-thumb { background: #334155; border-radius: 2px; }
+        .claim-modal-box::-webkit-scrollbar-thumb {
+            background: #334155;
+            border-radius: 2px;
+        }
     `;
     document.head.appendChild(style);
 }
@@ -939,9 +654,7 @@ var _claimCountdownInterval = null;
 function _applyClaimBtnVisual(canClaim) {
     var btn = document.getElementById('headerClaimBtn');
     if (!btn) return;
-
-    btn.setAttribute('data-claim-available', canClaim ? '1' : '0');
-
+btn.setAttribute('data-claim-available', canClaim ? '1' : '0');
     if (_claimCountdownInterval) {
         clearInterval(_claimCountdownInterval);
         _claimCountdownInterval = null;
@@ -962,70 +675,62 @@ function _applyClaimBtnVisual(canClaim) {
             '<span class="hidden sm:inline font-medium text-xs">' + lang('claim_btn_label') + '</span>' +
             '<span id="claimDot" class="absolute -top-1 -right-1 w-2.5 h-2.5 ' +
             'bg-emerald-400 rounded-full border-2 border-slate-900 animate-pulse"></span>';
+
     } else {
         function getMsToMidnightUTC() {
             var midnight = new Date();
             midnight.setUTCHours(24, 0, 0, 0);
             return midnight - new Date();
         }
+
         function formatTime(ms) {
             if (ms <= 0) return '00:00:00';
-            var s = Math.floor(ms / 1000);
-            return [Math.floor(s/3600), Math.floor((s%3600)/60), s%60]
-                .map(function(v){ return String(v).padStart(2,'0'); }).join(':');
+            var s   = Math.floor(ms / 1000);
+            var h   = Math.floor(s / 3600);
+            var m   = Math.floor((s % 3600) / 60);
+            var sec = s % 60;
+            return [h, m, sec].map(function(v) {
+                return String(v).padStart(2, '0');
+            }).join(':');
         }
+
         function renderCooldown() {
             var remaining = getMsToMidnightUTC();
+
             if (remaining <= 0) {
                 clearInterval(_claimCountdownInterval);
                 _claimCountdownInterval = null;
                 _applyClaimBtnVisual(true);
                 return;
             }
+
             var timeStr = formatTime(remaining);
+
             btn.className = [
                 'relative flex items-center gap-2 px-3 py-2',
                 'bg-slate-800/40 border border-slate-700/40',
-                'rounded-xl text-sm transition-all duration-300 cursor-default'
+                'rounded-xl text-sm',
+                'transition-all duration-300 cursor-default'
             ].join(' ');
             btn.title     = lang('claim_btn_tooltip_cooldown');
             btn.innerHTML =
                 '<span class="text-base" style="opacity:0.4">🧪</span>' +
                 '<div class="hidden sm:flex flex-col items-start leading-none gap-0.5">' +
-                    '<span style="font-size:9px;color:#64748b;text-transform:uppercase;letter-spacing:0.05em">'
-                        + lang('claim_reset_in') + '</span>' +
-                    '<span style="font-size:11px;font-family:monospace;font-weight:700;color:#fb923c">'
-                        + timeStr + '</span>' +
+                    '<span style="font-size:9px;color:#64748b;text-transform:uppercase;' +
+                           'letter-spacing:0.05em">' + lang('claim_reset_in') + '</span>' +
+                    '<span style="font-size:11px;font-family:monospace;font-weight:700;' +
+                           'color:#fb923c">' + timeStr + '</span>' +
                 '</div>' +
-                '<span style="font-size:11px;font-family:monospace;font-weight:700;color:#fb923c" class="sm:hidden">'
-                    + timeStr + '</span>';
+                '<span style="font-size:11px;font-family:monospace;font-weight:700;' +
+                       'color:#fb923c" class="sm:hidden">' + timeStr + '</span>';
         }
+
         renderCooldown();
         _claimCountdownInterval = setInterval(renderCooldown, 1000);
     }
 }
 
 window._applyClaimBtnVisual = _applyClaimBtnVisual;
-
-// ─────────────────────────────────────────────────────────────────
-// ОБНОВЛЕНИЕ ПЕРЕВОДОВ ПРИ СМЕНЕ ЯЗЫКА
-// ─────────────────────────────────────────────────────────────────
-
-function _updateClaimTranslations() {
-    const titleEl = document.getElementById('claimModalTitle');
-    if (titleEl) titleEl.textContent = lang('claim_title');
-
-    const subtitleEl = document.getElementById('claimModalSubtitle');
-    if (subtitleEl) subtitleEl.textContent = lang('claim_updated_utc');
-
-    const btn = document.getElementById('headerClaimBtn');
-    if (btn) {
-        const isAvailable = btn.getAttribute('data-claim-available') === '1';
-        _applyClaimBtnVisual(isAvailable);
-    }
-}
-
-document.addEventListener('languageChanged', _updateClaimTranslations);
 
 // ─────────────────────────────────────────────────────────────────
 // АВТОПРОВЕРКА ПРИ ЗАГРУЗКЕ
@@ -1037,11 +742,13 @@ async function _checkClaimOnLoad() {
         await new Promise(function(r) { setTimeout(r, 500); });
         attempts++;
     }
+
     var user = (window.auth && window.auth.currentUser) || window.currentUser;
     if (!user) return;
 
     var status = await getClaimStatus(user);
     if (!status) return;
+
     _applyClaimBtnVisual(status.canClaim);
 }
 
@@ -1049,23 +756,47 @@ async function _checkClaimOnLoad() {
 // ЭКСПОРТ
 // ─────────────────────────────────────────────────────────────────
 
-
-
-window.openClaimModal  = window.openClaimModal;
-window.closeClaimModal = window.closeClaimModal;
-window.doClaim         = window.doClaim;
-
 window.ReagentsSystem = {
     getClaimStatus,
     performClaim,
     getUTCDateString,
     calcReward,
     getNextMilestone,
-    getPassiveRewardInfo,
     CONFIG: REAGENTS_CONFIG
 };
 
-console.log('🧪 Reagents System v2.0 loaded (MLM referrals)');
+window.openClaimModal  = window.openClaimModal;
+window.closeClaimModal = window.closeClaimModal;
+window.doClaim         = window.doClaim;
+// ─────────────────────────────────────────────────────────────────
+// ОБНОВЛЕНИЕ ПЕРЕВОДОВ ПРИ СМЕНЕ ЯЗЫКА
+// ─────────────────────────────────────────────────────────────────
+
+function _updateClaimTranslations() {
+    // Обновляем заголовок модалки
+    const titleEl = document.getElementById('claimModalTitle');
+    if (titleEl) {
+        titleEl.textContent = lang('claim_title');
+    }
+
+    // Обновляем подзаголовок модалки
+    // ищем по data-атрибуту чтобы не путать с другими .text-xs
+    const subtitleEl = document.getElementById('claimModalSubtitle');
+    if (subtitleEl) {
+        subtitleEl.textContent = lang('claim_updated_utc');
+    }
+
+    // Обновляем кнопку хедера используя сохранённое состояние
+    const btn = document.getElementById('headerClaimBtn');
+    if (btn) {
+        const isAvailable = btn.getAttribute('data-claim-available') === '1';
+        _applyClaimBtnVisual(isAvailable);
+    }
+}
+
+document.addEventListener('languageChanged', _updateClaimTranslations);
+console.log('🧪 Reagents System v1.0 loaded');
+
 setTimeout(_checkClaimOnLoad, 2000);
 setTimeout(_checkClaimOnLoad, 5000);
 
