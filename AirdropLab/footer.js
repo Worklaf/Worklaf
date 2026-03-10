@@ -1380,11 +1380,32 @@
 
     const db  = window.db;
     const exp = window.__firestoreExports;
-    if (!db || !exp) return;
+    if (!db || !exp) {
+        footerShowToast('Firebase not available', 'error');
+        return;
+    }
+
+    // Находим нужные функции — они могут быть в разных местах
+    const getDoc    = exp.getDoc    || window.firestoreGetDoc;
+    const getDocs   = exp.getDocs   || window.firestoreGetDocs;
+    const setDoc    = exp.setDoc    || window.firestoreSetDoc;
+    const doc       = exp.doc       || window.firestoreDoc;
+    const collection = exp.collection || window.firestoreCollection;
+    const query     = exp.query     || window.firestoreQuery;
+    const where     = exp.where     || window.firestoreWhere;
+
+    if (!getDoc || !getDocs || !setDoc || !doc || !collection || !query || !where) {
+        console.error('[Referral] Missing firestore functions:', {
+            getDoc: !!getDoc, getDocs: !!getDocs, setDoc: !!setDoc,
+            doc: !!doc, collection: !!collection, query: !!query, where: !!where
+        });
+        footerShowToast('Firestore functions missing', 'error');
+        return;
+    }
 
     try {
-        // Проверяем свои данные
-        const mySnap = await exp.getDoc(exp.doc(db, 'users', user.uid));
+        // Получаем свои данные
+        const mySnap = await getDoc(doc(db, 'users', user.uid));
         const myData = mySnap.exists() ? mySnap.data() : {};
 
         if (myData.referredBy) {
@@ -1393,12 +1414,8 @@
         }
 
         // Ищем владельца кода
-        const snap = await exp.getDocs(
-            exp.query(
-                exp.collection(db, 'users'),
-                exp.where('referralCode', '==', code)
-            )
-        );
+        const q    = query(collection(db, 'users'), where('referralCode', '==', code));
+        const snap = await getDocs(q);
 
         if (snap.empty) {
             footerShowToast(lang('ref_not_found'), 'error');
@@ -1414,11 +1431,11 @@
             return;
         }
 
-        const batch = exp.writeBatch(db);
+        console.log('[Referral] Applying code:', code, '| Inviter:', inviterId);
 
-        // ✅ НОВЫЙ ЮЗЕР получает +50 RGT (referralBonus)
-        batch.set(
-            exp.doc(db, 'users', user.uid),
+        // ✅ Новый юзер +50 RGT
+        await setDoc(
+            doc(db, 'users', user.uid),
             {
                 referredBy:       inviterId,
                 invitedBy:        inviterId,
@@ -1428,27 +1445,28 @@
                                   || lang('user'),
                 referralCode:     myData.referralCode
                                   || ('AL-' + user.uid.substring(0, 6).toUpperCase()),
-                reagents:         (myData.reagents || 0) + 50,  // ← новый юзер +50
+                reagents:         (myData.reagents || 0) + 50,
                 referralEarnings: myData.referralEarnings || 0,
                 invitedAt:        new Date().toISOString(),
             },
             { merge: true }
         );
 
-        // ✅ ПРИГЛАСИВШИЙ получает +25 RGT (referralInviter)
-        batch.set(
-            exp.doc(db, 'users', inviterId),
+        console.log('[Referral] New user +50 RGT saved');
+
+        // ✅ Пригласивший +25 RGT
+        await setDoc(
+            doc(db, 'users', inviterId),
             {
-                reagents:         (inviterData.reagents     || 0) + 25, // ← пригласивший +25
-                invitedCount:     (inviterData.invitedCount  || 0) + 1,
+                reagents:         (inviterData.reagents        || 0) + 25,
+                invitedCount:     (inviterData.invitedCount     || 0) + 1,
                 referralEarnings: (inviterData.referralEarnings || 0) + 25,
             },
             { merge: true }
         );
 
-        await batch.commit();
+        console.log('[Referral] Inviter +25 RGT saved');
 
-        console.log('[Referral] Applied:', code, '| New user +50, Inviter +25');
         footerShowToast(lang('ref_applied'), 'success');
         input.style.display = 'none';
         setTimeout(function() { initAccountPage(); }, 500);
@@ -2520,5 +2538,12 @@
     if (document.readyState === 'complete' || document.readyState === 'interactive') {
         setTimeout(initFooter, 100);
     }
-
+// Диагностика firestoreExports при загрузке
+window.addEventListener('load', function() {
+    console.log('[Footer] __firestoreExports keys:', 
+        window.__firestoreExports 
+            ? Object.keys(window.__firestoreExports).join(', ') 
+            : 'NOT FOUND'
+    );
+});
 })();
