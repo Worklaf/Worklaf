@@ -246,11 +246,13 @@ window.applyReferralCode = async function(currentUser, code) {
     batch.set(
         exp.doc(db, 'users', currentUser.uid),
         {
-            referredBy:   inviterUid,
-            referralCode: myData.referralCode || _generateCode(currentUser.uid),
-            reagents:     (myData.reagents || 0) + REAGENTS_CONFIG.referralBonus,
-            referralEarnings: myData.referralEarnings || 0,
-            invitedAt:    new Date().toISOString(),
+            referredBy:        inviterUid,   // новое поле для MLM
+        invitedBy:         inviterUid,   // старое поле для совместимости
+        invitedByUid:      inviterUid,   // ещё одно старое поле (видели в данных)
+        referralCode:      myData.referralCode || _generateCode(currentUser.uid),
+        reagents:          (myData.reagents || 0) + REAGENTS_CONFIG.referralBonus,
+        referralEarnings:  myData.referralEarnings || 0,
+        invitedAt:         new Date().toISOString(),
         },
         { merge: true }
     );
@@ -364,42 +366,72 @@ async function _tryWeeklyPassivePayout(user) {
         const snap = await exp.getDoc(exp.doc(db, 'users', user.uid));
         if (!snap.exists()) return 0;
 
-        const data          = snap.data();
+        const data           = snap.data();
         const pendingPassive = data.pendingPassive || 0;
         if (pendingPassive <= 0) return 0;
 
         const nowUTC         = new Date();
-        const todayUTCDay    = nowUTC.getUTCDay(); // 0=вс, 1=пн...
-        const currentWeek    = getUTCWeekString(nowUTC);
         const lastPayoutWeek = data.lastPassivePayoutWeek || '';
+        const currentWeek    = getUTCWeekString(nowUTC);
 
-        // Выплачиваем только в понедельник И если ещё не платили на этой неделе
-        if (todayUTCDay !== REAGENTS_CONFIG.passivePayoutDay) return 0;
+        // Уже выплатили на этой неделе — пропускаем
         if (lastPayoutWeek === currentWeek) return 0;
 
-        const payout = Math.ceil(pendingPassive); // округляем вверх финальную сумму
+        // Считаем сколько понедельников прошло с последней выплаты
+        const mondaysPassed  = _countMondaysSince(data.lastPassivePayoutAt);
+
+        // Выплачиваем если прошёл хотя бы 1 понедельник
+        // (не важно какой сегодня день)
+        if (mondaysPassed < 1) return 0;
+
+        const payout = Math.ceil(pendingPassive);
 
         await exp.setDoc(
             exp.doc(db, 'users', user.uid),
             {
-                reagents:             (data.reagents || 0) + payout,
-                pendingPassive:       0,
-                passiveLog:           {},
+                reagents:              (data.reagents || 0) + payout,
+                pendingPassive:        0,
+                passiveLog:            {},
                 lastPassivePayoutWeek: currentWeek,
-                referralEarnings:     (data.referralEarnings || 0) + payout,
-                lastPassivePayoutAt:  new Date().toISOString(),
-                lastPassivePayout:    payout,
+                referralEarnings:      (data.referralEarnings || 0) + payout,
+                lastPassivePayoutAt:   new Date().toISOString(),
+                lastPassivePayout:     payout,
             },
             { merge: true }
         );
 
-        console.log(`[Reagents] Weekly passive payout: +${payout} RGT`);
+        console.log(`[Reagents] Passive payout: +${payout} RGT (${mondaysPassed} weeks passed)`);
         return payout;
 
     } catch(err) {
         console.error('[Reagents] _tryWeeklyPassivePayout error:', err);
         return 0;
     }
+}
+
+// Считаем сколько понедельников UTC прошло с даты
+function _countMondaysSince(isoDateStr) {
+    if (!isoDateStr) return 99; // если никогда не платили — считаем что давно
+
+    const from = new Date(isoDateStr);
+    const now  = new Date();
+
+    if (isNaN(from.getTime())) return 99;
+
+    // Находим следующий понедельник после from
+    const fromDay   = from.getUTCDay(); // 0=вс,1=пн...
+    const daysToMon = fromDay === 1 ? 7 : (8 - fromDay) % 7; // дней до след. пн
+    const firstMon  = new Date(from);
+    firstMon.setUTCDate(from.getUTCDate() + daysToMon);
+    firstMon.setUTCHours(0, 0, 0, 0);
+
+    if (firstMon > now) return 0; // следующий понедельник ещё не наступил
+
+    // Считаем сколько понедельников между firstMon и сейчас
+    const msPerWeek  = 7 * 24 * 60 * 60 * 1000;
+    const mondaysPassed = Math.floor((now - firstMon) / msPerWeek) + 1;
+
+    return mondaysPassed;
 }
 
 /**
