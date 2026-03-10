@@ -2214,42 +2214,45 @@
         }
     };
 
-    // ============ FOOTER STATS ============
+      // ============ FOOTER STATS ============
 
-    // ============ FOOTER STATS ============
-let _statsUnsubscribe = null;
+    let _statsUnsubscribe = null;
 
-function updateFooterStats() {
-    const userEl    = document.getElementById('footerUserCount');
-    const projectEl = document.getElementById('footerProjectCount');
+    function updateFooterStats() {
+        const userEl    = document.getElementById('footerUserCount');
+        const projectEl = document.getElementById('footerProjectCount');
 
-    // 1. Обновление проектов
-    if (projectEl && typeof window.projects !== 'undefined') {
-        projectEl.textContent = Array.isArray(window.projects) ? window.projects.filter(p => !p.deleted).length : 0;
-        projectEl.classList.add('text-cyan-400');
-    }
-
-    // 2. Обновление пользователей (Realtime)
-    if (userEl) {
-        const db = window.db;
-        const exp = window.__firestoreExports;
-        
-        if (db && exp && exp.doc && exp.onSnapshot) {
-            // Если уже есть подписка, отменяем её
-            if (_statsUnsubscribe) _statsUnsubscribe();
-            
-            // Подписываемся на изменения в реальном времени
-            _statsUnsubscribe = exp.onSnapshot(exp.doc(db, 'config', 'stats'), (snap) => {
-                if (snap.exists()) {
-                    const count = snap.data().userCount || 0;
-                    userEl.textContent = count;
-                    userEl.classList.toggle('text-emerald-400', count > 0);
-                    userEl.classList.toggle('text-slate-400', count <= 0);
-                }
-            });
+        // 1. Обновление проектов
+        if (projectEl && typeof window.projects !== 'undefined') {
+            projectEl.textContent = Array.isArray(window.projects) 
+                ? window.projects.filter(p => !p.deleted).length 
+                : 0;
+            projectEl.classList.add('text-cyan-400');
         }
-    }
-}
+
+        // 2. Обновление пользователей (Realtime)
+        if (userEl) {
+            const db  = window.db;
+            const exp = window.__firestoreExports;
+
+            if (db && exp && exp.doc && exp.onSnapshot) {
+                if (_statsUnsubscribe) _statsUnsubscribe();
+
+                _statsUnsubscribe = exp.onSnapshot(
+                    exp.doc(db, 'config', 'stats'),
+                    function(snap) {
+                        if (snap.exists()) {
+                            const count = snap.data().userCount || 0;
+                            userEl.textContent = count;
+                            userEl.classList.toggle('text-emerald-400', count > 0);
+                            userEl.classList.toggle('text-slate-400',   count <= 0);
+                        }
+                    }
+                );
+            }
+        }
+    }   // ← ЕДИНСТВЕННАЯ закрывающая скобка функции
+
     // ============ LANGUAGE TOGGLE ============
 
     function updateFooterLanguageButton() {
