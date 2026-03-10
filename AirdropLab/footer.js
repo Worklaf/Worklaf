@@ -1301,7 +1301,7 @@ window.closeAccountOverlay = function() {
                     <div class="border-t border-slate-700/50 pt-5">
                         <h4 class="text-sm font-semibold text-slate-300 mb-4 flex items-center gap-2">
                             <i class="fas fa-wallet text-cyan-400"></i>
-                            ${lang('footer_crypto_wallets') || 'Крипто-адреса'}
+                            ${lang('footer_crypto_wallets')}
                         </h4>
                         <div class="space-y-3">
                             <div>
@@ -1358,7 +1358,7 @@ window.closeAccountOverlay = function() {
                             </div>
                             <div>
                                 <label class="block text-xs font-medium text-slate-400 mb-1.5">
-                                    <i class="fab fa-telegram text-sky-500 mr-1"></i>Telegram
+                                    <i class="fas fa-telegram text-sky-500 mr-1"></i>${lang('footer_account_telegram') || 'Telegram'}
                                 </label>
                                 <div class="relative">
                                     <span class="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500 text-xs">@</span>
@@ -1375,11 +1375,11 @@ window.closeAccountOverlay = function() {
 <div class="border-t border-slate-700/50 pt-5">
     <h4 class="text-sm font-semibold text-slate-300 mb-4 flex items-center gap-2">
         <i class="fas fa-user-plus text-emerald-400"></i>
-        Реферальная программа
+        ${lang('account_ref_program')}
     </h4>
     <div class="grid grid-cols-2 gap-3 mb-3">
         <div class="bg-slate-800/50 rounded-xl p-3 border border-slate-700/50">
-            <div class="text-xs text-slate-500 mb-1.5">Ваш реф. код</div>
+            <div class="text-xs text-slate-500 mb-1.5">${lang('account_your_ref_code')}</div>
             <div class="flex items-center gap-2">
                 <code id="profileRefCode"
                       class="text-sm font-mono text-cyan-400 font-bold tracking-wider">
@@ -1392,10 +1392,10 @@ window.closeAccountOverlay = function() {
             </div>
         </div>
         <div class="bg-slate-800/50 rounded-xl p-3 border border-slate-700/50">
-            <div class="text-xs text-slate-500 mb-1.5">Приглашено</div>
+            <div class="text-xs text-slate-500 mb-1.5">${lang('account_invited_count')}</div>
             <div class="text-lg font-bold text-emerald-400" id="profileInvitedCount">
                 ${userData.invitedCount || 0}
-                <span class="text-xs font-normal text-slate-500">чел.</span>
+                <span class="text-xs font-normal text-slate-500">${lang('account_people_short')}</span>
             </div>
         </div>
     </div>
@@ -1403,7 +1403,7 @@ window.closeAccountOverlay = function() {
     ${userData.invitedBy ? `
     <div class="mb-3 text-xs text-slate-500 flex items-center gap-1.5 bg-slate-800/30 rounded-lg px-3 py-2">
         <i class="fas fa-user-check text-emerald-400"></i>
-        Вас пригласил:
+      ${lang('account_invited_by')}
         <span class="text-slate-300 font-medium">${userData.invitedByName || userData.invitedBy}</span>
     </div>` : `
     <div class="mb-3">
@@ -1424,8 +1424,8 @@ window.closeAccountOverlay = function() {
 
     <div class="p-3 bg-emerald-900/20 border border-emerald-800/30 rounded-lg text-xs text-slate-400">
         <i class="fas fa-flask text-emerald-400 mr-1.5"></i>
-        За каждого приглашённого вы получите
-        <span class="text-emerald-400 font-bold">+50 Reagents</span>!
+        ${lang('account_ref_bonus_text')}
+<span class="text-emerald-400 font-bold">${lang('account_ref_bonus_amount')}</span>!
     </div>
 </div>
 
@@ -1433,19 +1433,19 @@ window.closeAccountOverlay = function() {
 <div class="border-t border-slate-700/50 pt-5">
     <h4 class="text-sm font-semibold text-slate-300 mb-4 flex items-center gap-2">
         <span class="text-lg">🧪</span>
-        Reagents
+        ${lang('reagents_section_title')}
     </h4>
     <div class="bg-gradient-to-br from-cyan-900/30 to-blue-900/30 border border-cyan-500/20 rounded-xl p-4">
         <div class="flex items-center justify-between mb-3">
             <div>
-                <div class="text-xs text-slate-400 mb-1">Ваш баланс</div>
+                <div class="text-xs text-slate-400 mb-1">${lang('account_balance_label')}</div>
                 <div class="text-2xl font-black text-cyan-400" id="profileReagentBalance">
                     ${userData.reagents || 0}
-                    <span class="text-sm font-normal text-slate-400 ml-1">RGT</span>
+                    <span class="text-sm font-normal text-slate-400 ml-1">${lang('reagents_rgt_unit')}</span>
                 </div>
             </div>
             <div class="text-right">
-                <div class="text-xs text-slate-400 mb-1">Стрик</div>
+                <div class="text-xs text-slate-400 mb-1">${lang('account_streak_label')}</div>
                 <div class="text-xl font-bold text-orange-400" id="profileStreak">
                     ${userData.streak || 0}
                     <span class="text-xs font-normal text-slate-400">дней</span>
@@ -1456,7 +1456,7 @@ window.closeAccountOverlay = function() {
             id="profileClaimBtn"
             class="w-full py-2.5 rounded-lg text-sm font-bold transition-all
                    bg-gradient-to-r from-cyan-600 to-blue-600 hover:from-cyan-500 hover:to-blue-500 text-white">
-            <i class="fas fa-flask mr-2"></i>Получить Reagents
+           <i class="fas fa-flask mr-2"></i>${lang('account_get_reagents')}
         </button>
     </div>
 </div>
