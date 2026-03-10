@@ -684,6 +684,9 @@
 
     window.openPageModal = function(page) {
         if (page === 'account') {
+            if (document.getElementById('claimModal')) {
+    document.getElementById('claimModal').remove();
+}
             _openAccountOverlay();
             return;
         }
@@ -1226,7 +1229,7 @@
                                         </div>
                                     </div>
                                 </div>
-                                <button type="button" onclick="openClaimModal()" id="profileClaimBtn"
+                               <button type="button" onclick="window._closeAccountOverlay(); openClaimModal();" id="profileClaimBtn"
                                         class="w-full py-2.5 rounded-lg text-sm font-bold transition-all bg-gradient-to-r from-cyan-600 to-blue-600 hover:from-cyan-500 hover:to-blue-500 text-white">
                                     <i class="fas fa-flask mr-2"></i>${lang('account_get_reagents')}
                                 </button>
