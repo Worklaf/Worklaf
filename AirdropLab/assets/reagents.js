@@ -632,107 +632,105 @@ function _renderClaimUI(status) {
             streakBroken, nextMilestone, passiveInfo } = status;
 
     const prevMilestone = nextMilestone.days - 30 < 0 ? 0 : nextMilestone.days - 30;
-    const progressPct   = Math.round(
+    const progressPct   = Math.min(Math.round(
         ((streak - prevMilestone) / (nextMilestone.days - prevMilestone)) * 100
-    );
+    ), 100);
 
     const weekDays = _buildWeekDays(status);
 
     return `
-    <div class="p-6">
+    <div class="p-6 pt-4">
 
-        <!-- Баланс и стрик -->
-        <div class="flex items-center justify-between mb-6">
-            <div>
-                <div class="text-xs text-slate-500 mb-1">${lang('claim_balance_label')}</div>
-                <div class="text-3xl font-black">
-                    <span class="bg-gradient-to-r from-cyan-400 to-blue-400 bg-clip-text text-transparent">
-                        ${reagents}
-                    </span>
-                    <span class="text-sm font-normal text-slate-400 ml-1">${lang('reagents_rgt_unit')}</span>
+        <!-- Баланс и стрик — крупнее -->
+        <div class="flex items-stretch gap-3 mb-5">
+            <div class="flex-1 claim-stat-card">
+                <div class="text-xs text-slate-500 mb-2 uppercase tracking-wide">${lang('claim_balance_label')}</div>
+                <div class="text-3xl font-black bg-gradient-to-r from-cyan-400 to-blue-400 bg-clip-text text-transparent leading-none">
+                    ${reagents}
                 </div>
+                <div class="text-sm text-slate-500 mt-1">${lang('reagents_rgt_unit')}</div>
             </div>
-            <div class="text-right">
-                <div class="text-xs text-slate-500 mb-1">${lang('claim_streak_label')}</div>
-                <div class="text-3xl font-black text-orange-400">
-                    ${streak}
-                    <span class="text-sm font-normal text-slate-400">🔥</span>
-                </div>
+            <div class="flex-1 claim-stat-card">
+                <div class="text-xs text-slate-500 mb-2 uppercase tracking-wide">${lang('claim_streak_label')}</div>
+                <div class="text-3xl font-black text-orange-400 leading-none">${streak}</div>
+                <div class="text-sm text-slate-500 mt-1">🔥 ${lang('claim_days_unit')}</div>
             </div>
         </div>
 
         ${streakBroken ? `
-        <div class="mb-4 p-3 bg-red-900/30 border border-red-800/50 rounded-xl text-center">
-            <div class="text-2xl mb-1">💔</div>
-            <div class="text-red-400 text-sm font-medium">${lang('claim_streak_broken_title')}</div>
-            <div class="text-slate-400 text-xs mt-1">${lang('claim_streak_broken_desc')}</div>
+        <div class="mb-4 p-4 bg-red-900/25 border border-red-700/40 rounded-2xl text-center">
+            <div class="text-3xl mb-2">💔</div>
+            <div class="text-red-400 font-bold">${lang('claim_streak_broken_title')}</div>
+            <div class="text-slate-400 text-sm mt-1">${lang('claim_streak_broken_desc')}</div>
         </div>
         ` : ''}
 
-        <!-- Дни недели -->
+        <!-- Дни недели — крупнее -->
         <div class="mb-5">
-            <div class="text-xs text-slate-500 mb-2 text-center">${lang('claim_week_progress')}</div>
-            <div class="flex justify-center gap-1.5">${weekDays}</div>
+            <div class="text-xs text-slate-500 mb-3 text-center uppercase tracking-wide">${lang('claim_week_progress')}</div>
+            <div class="flex justify-center gap-2">${weekDays}</div>
         </div>
 
         <!-- Прогресс до бонуса -->
-        <div class="mb-5 bg-slate-800/50 rounded-xl p-3">
-            <div class="flex items-center justify-between text-xs mb-2">
-                <span class="text-slate-400">
-                    ${lang('claim_until_bonus').replace('{days}', nextMilestone.days)}
+        <div class="mb-5 bg-slate-800/40 border border-slate-700/30 rounded-2xl p-4">
+            <div class="flex items-center justify-between mb-3">
+                <span class="text-sm text-slate-400">
+                    🎯 ${lang('claim_until_bonus').replace('{days}', nextMilestone.days)}
                 </span>
-                <span class="text-cyan-400 font-medium">
+                <span class="text-sm font-bold text-cyan-400">
                     ${lang('claim_days_left').replace('{days}', nextMilestone.daysLeft)}
                 </span>
             </div>
-            <div class="h-2 bg-slate-700 rounded-full overflow-hidden">
+            <div class="h-2.5 bg-slate-700 rounded-full overflow-hidden">
                 <div class="h-full bg-gradient-to-r from-cyan-500 to-blue-500 rounded-full transition-all"
-                     style="width: ${Math.min(progressPct, 100)}%"></div>
+                     style="width: ${progressPct}%"></div>
             </div>
+            <div class="text-right text-xs text-slate-600 mt-1">${progressPct}%</div>
         </div>
 
         ${canClaim ? `
-        <!-- Награда -->
-        <div class="mb-4 text-center">
-            <div class="text-xs text-slate-500 mb-1">${lang('claim_today_reward')}</div>
-            <div class="flex items-center justify-center gap-2">
-                <span class="text-2xl font-black text-cyan-400">+${reward.total}</span>
-                <span class="text-slate-400">${lang('reagents_rgt_unit')}</span>
-                ${reward.bonus > 0 ? `
-                <span class="text-xs px-2 py-0.5 bg-yellow-500/20 text-yellow-400 rounded-full border border-yellow-500/30">
-                    +${reward.bonus} ${lang('claim_bonus_word')} ${reward.label}
-                </span>` : ''}
+        <!-- Награда + кнопка -->
+        <div class="mb-4 p-4 bg-cyan-900/15 border border-cyan-700/25 rounded-2xl text-center">
+            <div class="text-sm text-slate-400 mb-2">${lang('claim_today_reward')}</div>
+            <div class="flex items-center justify-center gap-3 mb-2">
+                <span class="text-4xl font-black text-cyan-400">+${reward.total}</span>
+                <span class="text-lg text-slate-400">${lang('reagents_rgt_unit')}</span>
             </div>
+            ${reward.bonus > 0 ? `
+            <div class="inline-flex items-center gap-2 px-3 py-1.5 bg-yellow-500/15 text-yellow-400
+                        rounded-full border border-yellow-500/30 text-sm mb-2">
+                ⭐ +${reward.bonus} ${lang('claim_bonus_word')} ${reward.label}
+            </div>` : ''}
             ${newStreak > streak ? `
-            <div class="text-xs text-slate-500 mt-1">
+            <div class="text-sm text-slate-400 mt-1">
                 ${lang('claim_streak_will_be')}
-                <span class="text-orange-400 font-medium">${newStreak} 🔥</span>
+                <span class="text-orange-400 font-bold">${newStreak} 🔥</span>
             </div>` : ''}
         </div>
 
         <button id="claimBtn" onclick="window.doClaim()"
-            class="w-full py-4 rounded-xl text-base font-bold transition-all
+            class="w-full py-5 rounded-2xl text-lg font-black transition-all
                    bg-gradient-to-r from-cyan-500 to-blue-600
                    hover:from-cyan-400 hover:to-blue-500
-                   text-white shadow-lg shadow-cyan-500/25
+                   text-white shadow-xl shadow-cyan-500/20
                    hover:scale-[1.02] active:scale-[0.98]
                    flex items-center justify-center gap-3">
-            <span class="text-xl">🧪</span>
+            <span class="text-2xl">🧪</span>
             ${lang('claim_get_btn')}
         </button>
+
         ` : `
         <!-- Уже клеймил -->
-        <div class="text-center py-4">
+        <div class="text-center py-5 px-4 bg-emerald-900/15 border border-emerald-700/25 rounded-2xl mb-1">
             <div class="w-16 h-16 rounded-full bg-emerald-500/20 border-2 border-emerald-500/40
                         flex items-center justify-center mx-auto mb-3">
                 <i class="fas fa-check text-2xl text-emerald-400"></i>
             </div>
-            <div class="text-emerald-400 font-bold text-lg mb-1">${lang('claim_already_title')}</div>
-            <div class="text-slate-400 text-sm mb-4">
-                ${lang('claim_next_at')}
-                <span class="text-white font-medium">00:00 UTC</span>
+            <div class="text-emerald-400 font-black text-xl mb-1">${lang('claim_already_title')}</div>
+            <div class="text-slate-400 mb-2">
+                ${lang('claim_next_at')} <span class="text-white font-bold">00:00 UTC</span>
             </div>
-            <div class="text-xs text-slate-500">${_getTimeToMidnightUTC()}</div>
+            <div class="text-sm text-slate-500 font-mono">${_getTimeToMidnightUTC()}</div>
         </div>
         `}
 
@@ -740,30 +738,28 @@ function _renderClaimUI(status) {
         ${_renderPassiveBlock(passiveInfo)}
 
         <!-- Таблица наград стрик -->
-        <div class="mt-5 border-t border-slate-700/50 pt-4">
-            <div class="text-xs text-slate-500 mb-3 text-center">${lang('claim_rewards_table')}</div>
-            <div class="grid grid-cols-2 gap-1.5">
+        <div class="mt-5 border-t border-slate-700/40 pt-5">
+            <div class="text-sm font-semibold text-slate-300 mb-3 text-center">${lang('claim_rewards_table')}</div>
+            <div class="grid grid-cols-2 gap-2">
                 ${REAGENTS_CONFIG.streakBonuses.map(sb => `
-                <div class="flex items-center justify-between px-3 py-1.5 rounded-lg
+                <div class="flex items-center justify-between px-3 py-2.5 rounded-xl
                             ${streak >= sb.days
-                                ? 'bg-emerald-900/20 border border-emerald-800/30'
-                                : 'bg-slate-800/30'} text-xs">
-                    <span class="${streak >= sb.days ? 'text-emerald-400' : 'text-slate-400'}">
+                                ? 'bg-emerald-900/20 border border-emerald-700/40'
+                                : 'bg-slate-800/30 border border-slate-700/20'}">
+                    <span class="text-sm ${streak >= sb.days ? 'text-emerald-400' : 'text-slate-400'}">
                         ${streak >= sb.days ? '✅' : '🔒'} ${sb.days} ${lang('claim_days_unit')}
                     </span>
-                    <span class="${streak >= sb.days ? 'text-yellow-400' : 'text-slate-500'} font-medium">
-                        +${sb.bonus} ${lang('reagents_rgt_unit')}
+                    <span class="text-sm font-bold ${streak >= sb.days ? 'text-yellow-400' : 'text-slate-500'}">
+                        +${sb.bonus}
                     </span>
                 </div>`).join('')}
             </div>
-            <div class="mt-2 text-center text-xs text-slate-600">
-                ${lang('claim_after_60')}
-            </div>
+            <div class="mt-3 text-center text-xs text-slate-600">${lang('claim_after_60')}</div>
         </div>
 
         <button onclick="closeClaimModal()"
-            class="w-full mt-4 py-2.5 bg-slate-800 hover:bg-slate-700 rounded-xl
-                   text-sm text-slate-400 hover:text-white transition-colors">
+            class="w-full mt-4 py-3 bg-slate-800/80 hover:bg-slate-700 rounded-xl
+                   text-slate-400 hover:text-white transition-colors font-medium">
             ${lang('claim_close_btn')}
         </button>
     </div>
@@ -810,13 +806,13 @@ function _renderPassiveBlock(passiveInfo) {
         <!-- Заголовок -->
         <div class="flex items-center gap-2 mb-3">
             <span class="text-base">👥</span>
-            <span class="text-xs font-semibold text-slate-300">${lang('passive_income_title')}</span>
+            <span class="text-sm font-bold text-slate-200">${lang('passive_income_title')}</span>
         </div>
 
         <!-- 3 плитки статистики -->
         <div class="grid grid-cols-3 gap-2 mb-3">
             <div class="bg-slate-800/40 rounded-lg p-2.5 text-center">
-                <div class="text-base font-bold text-cyan-400">${invitedCount}</div>
+                <div class="text-xl font-black text-cyan-400">${invitedCount}</div>
                 <div class="text-[10px] text-slate-500">${lang('passive_invited')}</div>
             </div>
             <div class="bg-slate-800/40 rounded-lg p-2.5 text-center">
@@ -1004,22 +1000,25 @@ function _buildWeekDays(status) {
         if (i === todayIdx) state = lastClaim === getUTCDateString() ? 'today-done' : 'today';
 
         const colors = {
-            'done':       'bg-emerald-500/30 border-emerald-500/50 text-emerald-400',
+            'done':       'bg-emerald-500/25 border-emerald-500/50 text-emerald-400',
             'today':      'bg-cyan-500/20 border-cyan-400 text-cyan-400 ring-2 ring-cyan-400/30',
-            'today-done': 'bg-emerald-500/30 border-emerald-400 text-emerald-400 ring-2 ring-emerald-400/30',
-            'missed':     'bg-red-500/10 border-red-800/30 text-red-600',
-            'future':     'bg-slate-800/30 border-slate-700/30 text-slate-600',
+            'today-done': 'bg-emerald-500/25 border-emerald-400 text-emerald-400 ring-2 ring-emerald-400/30',
+            'missed':     'bg-red-500/10 border-red-700/30 text-red-500',
+            'future':     'bg-slate-800/40 border-slate-700/30 text-slate-600',
         };
         const icons = {
-            'done': '✓', 'today': '🧪', 'today-done': '✓',
-            'missed': '✗', 'future': dayLabel.charAt(0),
+            'done':       '✓',
+            'today':      '🧪',
+            'today-done': '✓',
+            'missed':     '✗',
+            'future':     dayLabel.charAt(0).toUpperCase(),
         };
 
         return `
-        <div class="flex flex-col items-center gap-1">
-            <div class="w-9 h-9 rounded-xl border flex items-center justify-center text-sm font-bold
-                        ${colors[state]} transition-all">${icons[state]}</div>
-            <span class="text-[10px] text-slate-600">${dayLabel}</span>
+        <div class="flex flex-col items-center gap-1.5 claim-week-day">
+            <div class="w-10 h-10 rounded-xl border-2 flex items-center justify-center text-base font-bold
+                        ${colors[state]}">${icons[state]}</div>
+            <span class="text-xs text-slate-500">${dayLabel}</span>
         </div>`;
     }).join('');
 }
@@ -1085,31 +1084,54 @@ function _addClaimStyles() {
     style.textContent = `
         .claim-modal-overlay {
             position: fixed; inset: 0;
-            background: rgba(0,0,0,0.8);
-            backdrop-filter: blur(6px);
+            background: rgba(0,0,0,0.85);
+            backdrop-filter: blur(8px);
             z-index: 9999;
             display: flex; align-items: center; justify-content: center;
             opacity: 0; pointer-events: none;
             transition: opacity 0.3s ease;
+            padding: 16px;
         }
         .claim-modal-overlay.active { opacity: 1; pointer-events: all; }
         .claim-modal-box {
-            background: linear-gradient(135deg, #1e2538 0%, #0f172a 100%);
-            border: 1px solid rgba(255,255,255,0.08);
-            border-radius: 20px;
-            width: 92%; max-width: 420px; max-height: 92vh;
+            background: linear-gradient(145deg, #1a2236 0%, #0d1525 100%);
+            border: 1px solid rgba(99,179,237,0.12);
+            border-radius: 24px;
+            width: 100%;
+            max-width: 500px;
+            max-height: 94vh;
             overflow-y: auto;
-            transform: translateY(20px) scale(0.97);
-            transition: transform 0.3s cubic-bezier(0.4,0,0.2,1);
-            scrollbar-width: thin; scrollbar-color: #334155 transparent;
+            transform: translateY(24px) scale(0.96);
+            transition: transform 0.35s cubic-bezier(0.4,0,0.2,1);
+            scrollbar-width: thin;
+            scrollbar-color: #334155 transparent;
+            box-shadow: 0 25px 60px rgba(0,0,0,0.6), 0 0 0 1px rgba(99,179,237,0.05);
         }
         .claim-modal-overlay.active .claim-modal-box { transform: translateY(0) scale(1); }
         .claim-modal-box::-webkit-scrollbar { width: 4px; }
         .claim-modal-box::-webkit-scrollbar-thumb { background: #334155; border-radius: 2px; }
+
+        .claim-stat-card {
+            background: rgba(30,40,60,0.6);
+            border: 1px solid rgba(255,255,255,0.06);
+            border-radius: 14px;
+            padding: 14px 10px;
+            text-align: center;
+            transition: border-color 0.2s;
+        }
+        .claim-stat-card:hover { border-color: rgba(99,179,237,0.2); }
+        .claim-stat-value { font-size: 22px; font-weight: 800; line-height: 1; margin-bottom: 4px; }
+        .claim-stat-label { font-size: 11px; color: #64748b; }
+
+        .claim-week-day { transition: all 0.2s; }
+        .claim-week-day:hover { transform: scale(1.05); }
+
+        @media (max-width: 480px) {
+            .claim-modal-box { max-width: 100%; border-radius: 20px; }
+        }
     `;
     document.head.appendChild(style);
 }
-
 // ─────────────────────────────────────────────────────────────────
 // КНОПКА В ХЕДЕРЕ
 // ─────────────────────────────────────────────────────────────────
