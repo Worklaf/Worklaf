@@ -2250,33 +2250,6 @@ function updateFooterStats() {
         }
     }
 }
-    // Обновление количества пользователей
-    if (userEl) {
-        const db = window.db;
-        const exp = window.__firestoreExports;
-        if (db && exp && exp.doc && exp.getDoc) {
-            exp.getDoc(exp.doc(db, 'config', 'stats'))
-               .then(function(snap) {
-                   if (snap.exists()) {
-                       const count = snap.data().userCount || 0;
-                       userEl.textContent = count;
-                       userEl.classList.toggle('text-emerald-400', count > 0);
-                       userEl.classList.toggle('text-slate-400', count <= 0);
-                   } else {
-                       userEl.textContent = '0';
-                   }
-               })
-               .catch(function(error) {
-                   console.warn("Failed to get user stats:", error);
-                   userEl.textContent = '—';
-               });
-        } else {
-            console.warn("Firestore exports not ready yet for user stats.");
-            // Можно добавить здесь retry через setTimeout
-        }
-    }
-}
-
     // ============ LANGUAGE TOGGLE ============
 
     function updateFooterLanguageButton() {
