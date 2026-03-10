@@ -41,18 +41,15 @@ function getCurrentLang() {
            document.documentElement.lang || 'ru';
 }
 
+function isEn() {
+    return getCurrentLang().startsWith('en');
+}
+
 function getUTCDateString(date) {
     const d = date || new Date();
     return d.getUTCFullYear() + '-' +
            String(d.getUTCMonth() + 1).padStart(2, '0') + '-' +
            String(d.getUTCDate()).padStart(2, '0');
-}
-
-function getUTCWeekString(date) {
-    const d = date || new Date();
-    const startOfYear = new Date(Date.UTC(d.getUTCFullYear(), 0, 1));
-    const weekNum = Math.ceil(((d - startOfYear) / 86400000 + startOfYear.getUTCDay() + 1) / 7);
-    return d.getUTCFullYear() + '-W' + String(weekNum).padStart(2, '0');
 }
 
 function roundReward(value) {
@@ -87,19 +84,19 @@ function getNextMilestone(currentStreak) {
 }
 
 // ─────────────────────────────────────────────────────────────────
-// FAQ — RU + EN
+// FAQ — RU + EN (живут прямо здесь, не нужны в language.js)
 // ─────────────────────────────────────────────────────────────────
 
 function _faqStreakHtml() {
-    const isEn = getCurrentLang().startsWith('en');
-    if (isEn) return `
+    if (isEn()) return `
         <div class="font-semibold text-blue-300 mb-1.5">❓ How does the streak work?</div>
         <div class="text-slate-400 space-y-1">
             <div>• Claim every day before <span class="text-white">00:00 UTC</span> — streak grows</div>
             <div>• Miss a day — streak resets to 0</div>
             <div>• After 7, 30, 60… days in a row — bonus RGT</div>
             <div>• Base reward: <span class="text-cyan-400">+${REAGENTS_CONFIG.dailyBase} RGT</span> per day</div>
-            <div>• Referral code gives new user <span class="text-cyan-400">+${REAGENTS_CONFIG.referralBonus} RGT</span>, you get <span class="text-cyan-400">+${REAGENTS_CONFIG.referralInviter} RGT</span></div>
+            <div>• Referral code gives new user <span class="text-cyan-400">+${REAGENTS_CONFIG.referralBonus} RGT</span>,
+                 you get <span class="text-cyan-400">+${REAGENTS_CONFIG.referralInviter} RGT</span></div>
         </div>`;
     return `
         <div class="font-semibold text-blue-300 mb-1.5">❓ Как работает стрик?</div>
@@ -108,20 +105,21 @@ function _faqStreakHtml() {
             <div>• Пропустили день — стрик сбросится до 0</div>
             <div>• За 7, 30, 60... дней подряд — бонусные RGT</div>
             <div>• База: <span class="text-cyan-400">+${REAGENTS_CONFIG.dailyBase} RGT</span> каждый день</div>
-            <div>• Реф. код даёт новому пользователю <span class="text-cyan-400">+${REAGENTS_CONFIG.referralBonus} RGT</span>, вам — <span class="text-cyan-400">+${REAGENTS_CONFIG.referralInviter} RGT</span></div>
+            <div>• Реф. код даёт новому: <span class="text-cyan-400">+${REAGENTS_CONFIG.referralBonus} RGT</span>,
+                 вам — <span class="text-cyan-400">+${REAGENTS_CONFIG.referralInviter} RGT</span></div>
         </div>`;
 }
 
 function _faqReferralHtml() {
-    const isEn = getCurrentLang().startsWith('en');
-    if (isEn) return `
+    if (isEn()) return `
         <div class="font-semibold text-blue-300 mb-1.5">❓ How do referrals work?</div>
         <div class="text-slate-400 space-y-1">
             <div>• Share your referral code with friends</div>
             <div>• New user gets <span class="text-cyan-400">+${REAGENTS_CONFIG.referralBonus} RGT</span> instantly</div>
             <div>• You get <span class="text-cyan-400">+${REAGENTS_CONFIG.referralInviter} RGT</span> right away</div>
             <div>• Every referral's claim earns you <span class="text-emerald-400">${REAGENTS_CONFIG.referralLevels[0].percent}%</span></div>
-            <div>• Level 2: <span class="text-emerald-400">${REAGENTS_CONFIG.referralLevels[1].percent}%</span> · Level 3: <span class="text-emerald-400">${REAGENTS_CONFIG.referralLevels[2].percent}%</span></div>
+            <div>• Level 2: <span class="text-emerald-400">${REAGENTS_CONFIG.referralLevels[1].percent}%</span>
+                 · Level 3: <span class="text-emerald-400">${REAGENTS_CONFIG.referralLevels[2].percent}%</span></div>
             <div>• Accrual happens <span class="text-white">instantly</span> when you open this window</div>
         </div>`;
     return `
@@ -131,13 +129,14 @@ function _faqReferralHtml() {
             <div>• Новый пользователь получит <span class="text-cyan-400">+${REAGENTS_CONFIG.referralBonus} RGT</span></div>
             <div>• Вы получите <span class="text-cyan-400">+${REAGENTS_CONFIG.referralInviter} RGT</span> сразу</div>
             <div>• Каждый клейм реферала приносит вам <span class="text-emerald-400">${REAGENTS_CONFIG.referralLevels[0].percent}%</span></div>
-            <div>• 2-й уровень: <span class="text-emerald-400">${REAGENTS_CONFIG.referralLevels[1].percent}%</span> · 3-й: <span class="text-emerald-400">${REAGENTS_CONFIG.referralLevels[2].percent}%</span></div>
-            <div>• Начисление происходит <span class="text-white">мгновенно</span> при открытии этого окна</div>
+            <div>• 2-й уровень: <span class="text-emerald-400">${REAGENTS_CONFIG.referralLevels[1].percent}%</span>
+                 · 3-й: <span class="text-emerald-400">${REAGENTS_CONFIG.referralLevels[2].percent}%</span></div>
+            <div>• Начисление — <span class="text-white">мгновенно</span> при открытии окна</div>
         </div>`;
 }
 
 // ─────────────────────────────────────────────────────────────────
-// ОСНОВНАЯ ЛОГИКА КЛЕЙМА
+// FIRESTORE ЛОГИКА
 // ─────────────────────────────────────────────────────────────────
 
 async function getClaimStatus(user) {
@@ -209,17 +208,12 @@ async function performClaim(user) {
     return { ...status, newReagents, bestStreak: newBestStreak };
 }
 
-// ─────────────────────────────────────────────────────────────────
-// РЕФЕРАЛЬНАЯ СИСТЕМА
-// ─────────────────────────────────────────────────────────────────
-
 window.applyReferralCode = async function(currentUser, code) {
     const db = window.db, exp = window.__firestoreExports;
     if (!db || !exp || !currentUser) throw new Error(lang('ref_login_required'));
     if (!/^AL-[A-Z0-9]{6}$/.test(code)) throw new Error(lang('ref_wrong_format'));
 
-    const usersRef  = exp.collection(db, 'users');
-    const q         = exp.query(usersRef, exp.where('referralCode', '==', code));
+    const q         = exp.query(exp.collection(db,'users'), exp.where('referralCode','==',code));
     const querySnap = await exp.getDocs(q);
     if (querySnap.empty) throw new Error(lang('ref_not_found'));
 
@@ -228,19 +222,19 @@ window.applyReferralCode = async function(currentUser, code) {
     const inviterData = inviterDoc.data();
     if (inviterUid === currentUser.uid) throw new Error(lang('ref_own_code'));
 
-    const mySnap = await exp.getDoc(exp.doc(db, 'users', currentUser.uid));
+    const mySnap = await exp.getDoc(exp.doc(db,'users',currentUser.uid));
     const myData = mySnap.exists() ? mySnap.data() : {};
     if (myData.referredBy) throw new Error(lang('ref_already_used'));
 
     const batch = exp.writeBatch(db);
-    batch.set(exp.doc(db, 'users', currentUser.uid), {
+    batch.set(exp.doc(db,'users',currentUser.uid), {
         invitedBy:        inviterUid,
         referralCode:     myData.referralCode || _generateCode(currentUser.uid),
         reagents:         (myData.reagents || 0) + REAGENTS_CONFIG.referralBonus,
         referralEarnings: myData.referralEarnings || 0,
         invitedAt:        new Date().toISOString(),
     }, { merge: true });
-    batch.set(exp.doc(db, 'users', inviterUid), {
+    batch.set(exp.doc(db,'users',inviterUid), {
         reagents:         (inviterData.reagents || 0) + REAGENTS_CONFIG.referralInviter,
         invitedCount:     (inviterData.invitedCount || 0) + 1,
         referralEarnings: (inviterData.referralEarnings || 0) + REAGENTS_CONFIG.referralInviter,
@@ -288,9 +282,7 @@ async function _creditPassiveToUpstream(claimUser, claimedAmount, exp, db) {
             }
             currentData = upData;
         }
-    } catch(err) {
-        console.error('[Reagents] _creditPassiveToUpstream error:', err);
-    }
+    } catch(err) { console.error('[Reagents] _creditPassiveToUpstream error:', err); }
 }
 
 async function _tryPassivePayout(user) {
@@ -311,10 +303,7 @@ async function _tryPassivePayout(user) {
             lastPassivePayout:   payout,
         }, { merge: true });
         return payout;
-    } catch(err) {
-        console.error('[Reagents] _tryPassivePayout error:', err);
-        return 0;
-    }
+    } catch(err) { console.error('[Reagents] _tryPassivePayout error:', err); return 0; }
 }
 
 const _tryWeeklyPassivePayout = _tryPassivePayout;
@@ -326,41 +315,39 @@ async function getPassiveRewardInfo(user, userData) {
             const db = window.db, exp = window.__firestoreExports;
             if (db && exp && exp.getDoc && exp.doc) {
                 try {
-                    const freshSnap = await exp.getDoc(exp.doc(db, 'users', user.uid));
-                    if (freshSnap.exists()) freshData = freshSnap.data();
+                    const s = await exp.getDoc(exp.doc(db, 'users', user.uid));
+                    if (s.exists()) freshData = s.data();
                 } catch(e) {}
             }
         }
-        const pendingPassive   = freshData.pendingPassive   || 0;
-        const referralEarnings = freshData.referralEarnings || 0;
-        const invitedCount     = freshData.invitedCount     || 0;
-        const lastPayout       = freshData.lastPassivePayout   || 0;
-        const lastPayoutAt     = freshData.lastPassivePayoutAt || '';
-        const passiveLog       = freshData.passiveLog || {};
-
+        const passiveLog      = freshData.passiveLog || {};
         const sevenDaysAgo    = Date.now() - 7 * 24 * 60 * 60 * 1000;
         const activeReferrals = Object.values(passiveLog).filter(info => {
             if (!info.lastClaimAt) return false;
             try { return new Date(info.lastClaimAt).getTime() > sevenDaysAgo; } catch(e) { return false; }
         }).length;
-
         const referralDetails = Object.entries(passiveLog).map(([uid, info]) => ({
             uid, level: info.level, lastAmount: info.lastAmount,
             totalAmount: info.totalAmount || info.lastAmount,
             percent: info.percent, lastClaimAt: info.lastClaimAt,
         }));
-
-        return { pendingPassive: Math.round(pendingPassive * 10) / 10,
-                 referralEarnings, invitedCount, lastPayout, lastPayoutAt,
-                 activeReferrals, referralDetails, canPayoutNow: pendingPassive > 0 };
+        return {
+            pendingPassive:   Math.round((freshData.pendingPassive || 0) * 10) / 10,
+            referralEarnings: freshData.referralEarnings || 0,
+            invitedCount:     freshData.invitedCount     || 0,
+            lastPayout:       freshData.lastPassivePayout   || 0,
+            lastPayoutAt:     freshData.lastPassivePayoutAt || '',
+            activeReferrals, referralDetails,
+            canPayoutNow: (freshData.pendingPassive || 0) > 0,
+        };
     } catch(err) {
-        return { pendingPassive: 0, referralEarnings: 0, invitedCount: 0, lastPayout: 0,
-                 lastPayoutAt: '', activeReferrals: 0, referralDetails: [], canPayoutNow: false };
+        return { pendingPassive:0, referralEarnings:0, invitedCount:0, lastPayout:0,
+                 lastPayoutAt:'', activeReferrals:0, referralDetails:[], canPayoutNow:false };
     }
 }
 
 // ─────────────────────────────────────────────────────────────────
-// UI
+// UI — открытие / закрытие / клейм
 // ─────────────────────────────────────────────────────────────────
 
 window.openClaimModal = async function() {
@@ -370,7 +357,6 @@ window.openClaimModal = async function() {
             window.footerShowToast(lang('claim_login_required'), 'error');
         return;
     }
-
     _ensureClaimModal();
     const modal = document.getElementById('claimModal');
     const body  = document.getElementById('claimModalBody');
@@ -438,17 +424,17 @@ window._toggleRefList = function() {
     const preview = document.getElementById('refListPreview');
     const btn     = document.getElementById('refListToggleBtn');
     if (!full || !preview || !btn) return;
-    const isEn = getCurrentLang().startsWith('en');
+    const total = btn.dataset.total || '';
     if (full.style.display === 'none' || full.style.display === '') {
         full.style.display    = 'block';
         preview.style.display = 'none';
-        btn.textContent = isEn ? '▲ Collapse' : '▲ Свернуть';
+        btn.textContent = isEn() ? '▲ Collapse' : '▲ Свернуть';
     } else {
         full.style.display    = 'none';
         preview.style.display = 'block';
-        btn.textContent = isEn
-            ? `▼ Show all (${btn.dataset.total})`
-            : `▼ Показать всех (${btn.dataset.total})`;
+        btn.textContent = isEn()
+            ? `▼ Show all (${total})`
+            : `▼ Показать всех (${total})`;
     }
 };
 
@@ -485,12 +471,11 @@ function _renderClaimUI(status) {
         Math.round(((streak - prevMilestone) / (nextMilestone.days - prevMilestone)) * 100), 100
     );
     const weekDays = _buildWeekDays(status);
+    const en       = isEn();
 
     // ── ЛЕВАЯ КОЛОНКА ────────────────────────────────────────────
     const leftCol = `
-    <div class="claim-left-col">
-
-        <!-- Заголовок + FAQ кнопка -->
+        <!-- Заголовок + FAQ -->
         <div class="col-header">
             <span class="text-lg">🧪</span>
             <div style="flex:1">
@@ -501,7 +486,7 @@ function _renderClaimUI(status) {
                 style="width:22px;height:22px;border-radius:50%;background:rgba(99,179,237,0.1);
                        border:1px solid rgba(99,179,237,0.25);color:#67e8f9;font-size:11px;
                        font-weight:700;cursor:pointer;flex-shrink:0;transition:all 0.2s"
-                title="${getCurrentLang().startsWith('en') ? 'How it works?' : 'Как это работает?'}">i</button>
+                title="${en ? 'How it works?' : 'Как это работает?'}">i</button>
         </div>
 
         <!-- FAQ стрик -->
@@ -516,10 +501,10 @@ function _renderClaimUI(status) {
             <span class="text-xl">✨</span>
             <div>
                 <div class="text-xs font-bold text-emerald-400">
-                    ${getCurrentLang().startsWith('en') ? 'Referral income credited!' : 'Начислено от рефералов!'}
+                    ${en ? 'Referral income credited!' : 'Начислено от рефералов!'}
                 </div>
                 <div class="text-xs text-slate-400">+${_payoutBanner} RGT
-                    ${getCurrentLang().startsWith('en') ? 'added to balance' : 'добавлено к балансу'}
+                    ${en ? 'added to balance' : 'добавлено к балансу'}
                 </div>
             </div>
         </div>` : ''}
@@ -534,12 +519,12 @@ function _renderClaimUI(status) {
             <div class="claim-mini-card">
                 <div class="mini-label">${lang('claim_streak_label')}</div>
                 <div class="mini-value text-orange-400">${streak}</div>
-                <div class="mini-unit">🔥 ${getCurrentLang().startsWith('en') ? 'd.' : 'дн.'}</div>
+                <div class="mini-unit">🔥 ${en ? 'd.' : 'дн.'}</div>
             </div>
-            <div class="claim-mini-card" title="${getCurrentLang().startsWith('en') ? 'Best streak ever' : 'Лучший стрик за всё время'}">
-                <div class="mini-label">${getCurrentLang().startsWith('en') ? 'Record' : 'Рекорд'} 🏆</div>
+            <div class="claim-mini-card" title="${en ? 'Best streak ever' : 'Лучший стрик за всё время'}">
+                <div class="mini-label">${en ? 'Record' : 'Рекорд'} 🏆</div>
                 <div class="mini-value text-yellow-400">${Math.max(bestStreak || 0, streak)}</div>
-                <div class="mini-unit">${getCurrentLang().startsWith('en') ? 'd.' : 'дн.'}</div>
+                <div class="mini-unit">${en ? 'd.' : 'дн.'}</div>
             </div>
         </div>
 
@@ -552,11 +537,13 @@ function _renderClaimUI(status) {
 
         <!-- Дни недели -->
         <div class="mb-4">
-            <div class="text-xs text-slate-500 mb-2 uppercase tracking-wide text-center">${lang('claim_week_progress')}</div>
+            <div class="text-xs text-slate-500 mb-2 uppercase tracking-wide text-center">
+                ${lang('claim_week_progress')}
+            </div>
             <div class="flex justify-between gap-1">${weekDays}</div>
         </div>
 
-        <!-- Прогресс до бонуса + визуальный счётчик -->
+        <!-- Прогресс до бонуса -->
         <div class="mb-4 p-3 bg-slate-800/50 border border-slate-700/30 rounded-xl">
             <div class="flex items-center justify-between mb-2">
                 <span class="text-xs text-slate-400">🎯 ${lang('claim_until_bonus').replace('{days}', nextMilestone.days)}</span>
@@ -567,32 +554,39 @@ function _renderClaimUI(status) {
                      style="width:${progressPct}%"></div>
             </div>
             <div class="flex items-center justify-between mt-2">
-                <span class="text-xs text-slate-600">${progressPct}% ${getCurrentLang().startsWith('en') ? 'done' : 'пройдено'}</span>
+                <span class="text-xs text-slate-600">${progressPct}% ${en ? 'done' : 'пройдено'}</span>
                 <div class="flex items-center gap-1.5">
                     <div style="background:rgba(6,182,212,0.12);border:1px solid rgba(6,182,212,0.25);
                                 border-radius:8px;padding:3px 10px;text-align:center">
-                        <span style="font-size:16px;font-weight:900;color:#22d3ee;line-height:1">${nextMilestone.daysLeft}</span>
+                        <span style="font-size:16px;font-weight:900;color:#22d3ee;line-height:1">
+                            ${nextMilestone.daysLeft}
+                        </span>
                         <span style="font-size:9px;color:#64748b;display:block;margin-top:1px">
-                            ${getCurrentLang().startsWith('en') ? 'd. to bonus' : 'дн. до бонуса'}
+                            ${en ? 'd. to bonus' : 'дн. до бонуса'}
                         </span>
                     </div>
                     <div style="background:rgba(251,191,36,0.12);border:1px solid rgba(251,191,36,0.25);
                                 border-radius:8px;padding:3px 10px;text-align:center">
-                        <span style="font-size:14px;font-weight:900;color:#fbbf24;line-height:1">+${calcReward(nextMilestone.days).bonus}</span>
-                        <span style="font-size:9px;color:#64748b;display:block;margin-top:1px">RGT ${getCurrentLang().startsWith('en') ? 'bonus' : 'бонус'}</span>
+                        <span style="font-size:14px;font-weight:900;color:#fbbf24;line-height:1">
+                            +${calcReward(nextMilestone.days).bonus}
+                        </span>
+                        <span style="font-size:9px;color:#64748b;display:block;margin-top:1px">
+                            RGT ${en ? 'bonus' : 'бонус'}
+                        </span>
                     </div>
                 </div>
             </div>
         </div>
 
         ${canClaim ? `
-        <!-- Награда -->
+        <!-- Награда + кнопка -->
         <div class="mb-3 p-3 bg-cyan-900/15 border border-cyan-700/25 rounded-xl text-center">
             <div class="text-xs text-slate-400 mb-1">${lang('claim_today_reward')}</div>
             <div class="text-3xl font-black text-cyan-400">+${reward.total}</div>
             <div class="text-sm text-slate-400">${lang('reagents_rgt_unit')}</div>
             ${reward.bonus > 0 ? `
-            <div class="mt-2 inline-flex items-center gap-1.5 px-2.5 py-1 bg-yellow-500/15 text-yellow-400 rounded-full border border-yellow-500/30 text-xs">
+            <div class="mt-2 inline-flex items-center gap-1.5 px-2.5 py-1 bg-yellow-500/15
+                        text-yellow-400 rounded-full border border-yellow-500/30 text-xs">
                 ⭐ +${reward.bonus} ${reward.label}
             </div>` : ''}
             ${newStreak > streak ? `
@@ -625,7 +619,9 @@ function _renderClaimUI(status) {
 
         <!-- Таблица стрик бонусов -->
         <div class="mt-4 pt-4 border-t border-slate-700/40">
-            <div class="text-xs font-semibold text-slate-400 mb-2 text-center">${lang('claim_rewards_table')}</div>
+            <div class="text-xs font-semibold text-slate-400 mb-2 text-center">
+                ${lang('claim_rewards_table')}
+            </div>
             <div class="grid grid-cols-2 gap-1.5">
                 ${REAGENTS_CONFIG.streakBonuses.map(sb => `
                 <div class="flex items-center justify-between px-2.5 py-2 rounded-lg
@@ -635,23 +631,24 @@ function _renderClaimUI(status) {
                     <span class="text-xs ${streak >= sb.days ? 'text-emerald-400' : 'text-slate-400'}">
                         ${streak >= sb.days ? '✅' : '🔒'} ${sb.days}${lang('claim_days_unit')}
                     </span>
-                    <span class="text-xs font-bold ${streak >= sb.days ? 'text-yellow-400' : 'text-slate-500'}">+${sb.bonus}</span>
+                    <span class="text-xs font-bold ${streak >= sb.days ? 'text-yellow-400' : 'text-slate-500'}">
+                        +${sb.bonus}
+                    </span>
                 </div>`).join('')}
             </div>
             <div class="mt-2 text-center text-xs text-slate-600">${lang('claim_after_60')}</div>
-        </div>
-    </div>`;
+        </div>`;
 
     // ── ПРАВАЯ КОЛОНКА ───────────────────────────────────────────
     const rightCol = _renderPassiveBlock(passiveInfo, referralCode);
 
     return `
     <div class="claim-two-col">
-        ${leftCol}
+        <div class="claim-left-col">${leftCol}</div>
         <div class="claim-divider"></div>
         <div class="claim-right-col">${rightCol}</div>
     </div>
-    <div class="px-4 pb-4">
+    <div class="claim-footer">
         <button onclick="closeClaimModal()"
             class="w-full py-2.5 bg-slate-800/80 hover:bg-slate-700 rounded-xl
                    text-slate-400 hover:text-white transition-colors text-sm font-medium">
@@ -670,13 +667,13 @@ function _renderPassiveBlock(passiveInfo, referralCode) {
     const { referralEarnings, invitedCount, lastPayout, lastPayoutAt,
             activeReferrals, referralDetails } = passiveInfo;
     const levels = REAGENTS_CONFIG.referralLevels;
-    const isEn   = getCurrentLang().startsWith('en');
+    const en     = isEn();
 
     let lastPayoutStr = '—';
     if (lastPayoutAt) {
         try {
             lastPayoutStr = new Date(lastPayoutAt).toLocaleDateString('ru-RU',
-                { day: '2-digit', month: '2-digit', year: 'numeric' });
+                { day:'2-digit', month:'2-digit', year:'numeric' });
         } catch(e) { lastPayoutStr = lastPayoutAt.substring(0, 10); }
     }
 
@@ -686,7 +683,7 @@ function _renderPassiveBlock(passiveInfo, referralCode) {
         try { return new Date(ref.lastClaimAt).getTime() > sevenDaysAgo; } catch(e) { return false; }
     }).length;
 
-    // ── Топ рефералов ──────────────────────────────────────
+    // Топ рефералов
     const allRefs = [...(referralDetails || [])]
         .sort((a, b) => (b.totalAmount || 0) - (a.totalAmount || 0));
     const top3    = allRefs.slice(0, 3);
@@ -697,9 +694,9 @@ function _renderPassiveBlock(passiveInfo, referralCode) {
         if (ref.lastClaimAt) {
             try {
                 const diff = Date.now() - new Date(ref.lastClaimAt).getTime();
-                if      (diff < 3600000)  timeStr = Math.floor(diff/60000)    + (isEn ? ' min' : ' мин');
-                else if (diff < 86400000) timeStr = Math.floor(diff/3600000)  + (isEn ? ' h'   : ' ч');
-                else                       timeStr = Math.floor(diff/86400000) + (isEn ? ' d'   : ' дн');
+                if      (diff < 3600000)  timeStr = Math.floor(diff/60000)    + (en ? ' min' : ' мин');
+                else if (diff < 86400000) timeStr = Math.floor(diff/3600000)  + (en ? ' h'   : ' ч');
+                else                       timeStr = Math.floor(diff/86400000) + (en ? ' d'   : ' дн');
             } catch(e) {}
         }
         const medals = ['🥇','🥈','🥉','4️⃣','5️⃣','6️⃣','7️⃣','8️⃣','9️⃣'];
@@ -708,28 +705,27 @@ function _renderPassiveBlock(passiveInfo, referralCode) {
             <div class="flex items-center gap-1.5">
                 <span style="font-size:13px">${medals[idx] || '·'}</span>
                 <span class="text-xs px-1.5 py-0.5 rounded bg-cyan-500/20 text-cyan-400 font-bold">
-                    ${isEn ? 'Lv.' : 'Ур.'}${ref.level}
+                    ${en ? 'Lv.' : 'Ур.'}${ref.level}
                 </span>
                 <span class="text-xs text-slate-500 font-mono">${ref.uid.substring(0, 8)}…</span>
             </div>
             <div class="flex items-center gap-1.5">
-                ${timeStr ? `<span class="text-xs text-slate-600">${timeStr} ${isEn ? 'ago' : 'назад'}</span>` : ''}
+                ${timeStr ? `<span class="text-xs text-slate-600">${timeStr} ${en ? 'ago' : 'назад'}</span>` : ''}
                 <span class="text-xs text-emerald-400 font-bold">+${ref.totalAmount || ref.lastAmount}</span>
             </div>
         </div>`;
     }
 
-    // ── График 7 дней ──────────────────────────────────────
+    // График 7 дней
     const dayLabelsRu = ['Вс','Пн','Вт','Ср','Чт','Пт','Сб'];
     const dayLabelsEn = ['Su','Mo','Tu','We','Th','Fr','Sa'];
     const dayLabels   = [];
     const dayAmounts  = [];
-
     for (let i = 6; i >= 0; i--) {
         const d = new Date();
         d.setUTCDate(d.getUTCDate() - i);
         const dayStr = getUTCDateString(d);
-        dayLabels.push((isEn ? dayLabelsEn : dayLabelsRu)[d.getUTCDay()]);
+        dayLabels.push((en ? dayLabelsEn : dayLabelsRu)[d.getUTCDay()]);
         let amount = 0;
         for (const ref of (referralDetails || [])) {
             if (!ref.lastClaimAt) continue;
@@ -747,7 +743,8 @@ function _renderPassiveBlock(passiveInfo, referralCode) {
         const isToday = i === 6;
         return `
         <div style="display:flex;flex-direction:column;align-items:center;gap:3px;flex:1">
-            <div style="font-size:9px;color:${dayAmounts[i] > 0 ? '#34d399' : '#475569'};font-weight:600;min-height:12px;text-align:center">
+            <div style="font-size:9px;color:${dayAmounts[i] > 0 ? '#34d399' : '#475569'};
+                        font-weight:600;min-height:12px;text-align:center">
                 ${dayAmounts[i] > 0 ? '+' + dayAmounts[i] : ''}
             </div>
             <div style="width:100%;background:rgba(30,41,59,0.8);border-radius:4px;height:40px;
@@ -763,18 +760,18 @@ function _renderPassiveBlock(passiveInfo, referralCode) {
     }).join('');
 
     return `
-    <!-- Заголовок правой колонки + FAQ -->
+    <!-- Заголовок + FAQ -->
     <div class="col-header">
         <span class="text-lg">👥</span>
         <div style="flex:1">
             <div class="text-sm font-bold text-white">${lang('passive_income_title')}</div>
-            <div class="text-xs text-slate-500">MLM · 3 ${isEn ? 'levels' : 'уровня'}</div>
+            <div class="text-xs text-slate-500">MLM · 3 ${en ? 'levels' : 'уровня'}</div>
         </div>
         <button onclick="_toggleFaq('faqReferral')"
             style="width:22px;height:22px;border-radius:50%;background:rgba(99,179,237,0.1);
                    border:1px solid rgba(99,179,237,0.25);color:#67e8f9;font-size:11px;
                    font-weight:700;cursor:pointer;flex-shrink:0;transition:all 0.2s"
-            title="${isEn ? 'How referrals work?' : 'Как работают рефералы?'}">i</button>
+            title="${en ? 'How referrals work?' : 'Как работают рефералы?'}">i</button>
     </div>
 
     <!-- FAQ рефералы -->
@@ -786,7 +783,7 @@ function _renderPassiveBlock(passiveInfo, referralCode) {
     <!-- Реферальный код -->
     <div class="mb-3 p-3 bg-slate-800/40 border border-slate-700/30 rounded-xl">
         <div class="text-xs text-slate-400 mb-2 flex items-center gap-1.5">
-            🔗 <span>${isEn ? 'Your referral code' : 'Ваш реферальный код'}</span>
+            🔗 <span>${en ? 'Your referral code' : 'Ваш реферальный код'}</span>
         </div>
         <div class="flex items-center gap-2">
             <div style="flex:1;background:rgba(15,23,42,0.6);border:1px solid rgba(99,179,237,0.2);
@@ -800,14 +797,14 @@ function _renderPassiveBlock(passiveInfo, referralCode) {
                        border:1px solid rgba(6,182,212,0.3);color:#67e8f9;cursor:pointer;
                        display:flex;align-items:center;justify-content:center;font-size:13px;
                        transition:all 0.2s;flex-shrink:0"
-                title="${isEn ? 'Copy' : 'Скопировать'}">
+                title="${en ? 'Copy' : 'Скопировать'}">
                 <i class="fas fa-copy"></i>
             </button>
         </div>
         <div class="text-xs text-slate-600 mt-1.5">
-            ${isEn
-                ? `Invited gets +${REAGENTS_CONFIG.referralBonus} RGT, you get +${REAGENTS_CONFIG.referralInviter} RGT`
-                : `Приглашённый получит +${REAGENTS_CONFIG.referralBonus} RGT, вы — +${REAGENTS_CONFIG.referralInviter} RGT`}
+            ${en
+                ? `Invited gets +${REAGENTS_CONFIG.referralBonus} RGT · you get +${REAGENTS_CONFIG.referralInviter} RGT`
+                : `Приглашённый получит +${REAGENTS_CONFIG.referralBonus} RGT · вы — +${REAGENTS_CONFIG.referralInviter} RGT`}
         </div>
     </div>
 
@@ -819,7 +816,7 @@ function _renderPassiveBlock(passiveInfo, referralCode) {
         </div>
         <div class="claim-mini-card">
             <div class="mini-value text-blue-400">${recentActive}</div>
-            <div class="mini-label">${isEn ? 'Active 7d.' : 'Активны<br>7 дн.'}</div>
+            <div class="mini-label">${en ? 'Active 7d.' : 'Активны<br>7 дн.'}</div>
         </div>
         <div class="claim-mini-card">
             <div class="mini-value text-emerald-400">${referralEarnings}</div>
@@ -830,64 +827,68 @@ function _renderPassiveBlock(passiveInfo, referralCode) {
     <!-- Итого заработано -->
     <div class="p-3 bg-slate-800/40 border border-slate-700/30 rounded-xl mb-3">
         <div class="flex items-center justify-between mb-1.5">
-            <span class="text-xs text-slate-300 font-medium">💰 ${isEn ? 'Total from referrals' : 'Всего от рефералов'}</span>
+            <span class="text-xs text-slate-300 font-medium">
+                💰 ${en ? 'Total from referrals' : 'Всего от рефералов'}
+            </span>
             <span class="text-sm font-black text-emerald-400">+${referralEarnings} RGT</span>
         </div>
         ${lastPayout > 0 ? `
         <div class="flex items-center justify-between pt-1.5 border-t border-slate-700/30">
             <span class="text-xs text-slate-500">
-                ${isEn ? 'Last payout' : 'Посл. начисление'} ${lastPayoutStr}
+                ${en ? 'Last payout' : 'Посл. начисление'} ${lastPayoutStr}
             </span>
             <span class="text-xs text-emerald-500 font-medium">+${lastPayout} RGT</span>
         </div>` : `
         <div class="text-xs text-slate-600 text-center">
-            ${isEn
+            ${en
                 ? 'Income appears when referrals claim'
                 : 'Начисления появятся когда рефералы сделают клейм'}
         </div>`}
     </div>
 
-    <!-- График активности 7 дней -->
+    <!-- График 7 дней -->
     <div class="mb-3 p-3 bg-slate-800/30 border border-slate-700/25 rounded-xl">
         <div class="text-xs text-slate-400 font-medium mb-2">
-            📊 ${isEn ? 'Income last 7 days' : 'Доход за 7 дней'}
+            📊 ${en ? 'Income last 7 days' : 'Доход за 7 дней'}
         </div>
         <div style="display:flex;gap:4px;align-items:flex-end">
             ${chartBars}
         </div>
     </div>
 
-    <!-- Топ рефералов (топ 3 + развернуть) -->
+    <!-- Топ рефералов -->
     ${allRefs.length > 0 ? `
     <div class="mb-3">
-        <div class="text-xs text-slate-400 font-medium mb-1.5">🏆 ${isEn ? 'Top referrals' : 'Топ рефералов'}</div>
-        <!-- Превью: топ 3 -->
+        <div class="text-xs text-slate-400 font-medium mb-1.5">
+            🏆 ${en ? 'Top referrals' : 'Топ рефералов'}
+        </div>
         <div id="refListPreview" class="space-y-1">
             ${top3.map((ref, idx) => _refRowHtml(ref, idx)).join('')}
         </div>
-        <!-- Все (скрыто) -->
         ${hasMore ? `
-        <div id="refListFull" style="display:none" class="space-y-1">
+        <div id="refListFull" style="display:none" class="space-y-1 mt-1">
             ${allRefs.map((ref, idx) => _refRowHtml(ref, idx)).join('')}
         </div>
         <button id="refListToggleBtn"
             data-total="${allRefs.length}"
             onclick="_toggleRefList()"
-            class="w-full mt-1.5 py-1.5 text-xs text-slate-500 hover:text-slate-300
-                   bg-slate-800/40 hover:bg-slate-700/40 rounded-lg border border-slate-700/30
-                   transition-colors cursor-pointer">
-            ▼ ${isEn ? `Show all (${allRefs.length})` : `Показать всех (${allRefs.length})`}
+            class="w-full mt-2 py-1.5 text-xs text-slate-500 hover:text-slate-300
+                   bg-slate-800/40 hover:bg-slate-700/40 rounded-lg
+                   border border-slate-700/30 transition-colors cursor-pointer">
+            ▼ ${en ? `Show all (${allRefs.length})` : `Показать всех (${allRefs.length})`}
         </button>` : ''}
     </div>
     ` : `
     <div class="mb-3 py-4 bg-slate-800/20 rounded-xl border border-dashed border-slate-700/40 text-center">
         <div class="text-2xl mb-1">🔗</div>
         <div class="text-xs text-slate-500">
-            ${isEn ? 'Invite referrals —<br>their claims bring you income' : 'Пригласи рефералов —<br>их клеймы приносят доход'}
+            ${en
+                ? 'Invite referrals —<br>their claims bring you income'
+                : 'Пригласи рефералов —<br>их клеймы приносят доход'}
         </div>
     </div>`}
 
-    <!-- Таблица процентов уровней -->
+    <!-- Таблица уровней -->
     <div class="text-xs text-slate-500 mb-2 text-center font-medium">${lang('passive_levels_title')}</div>
     <div class="grid grid-cols-3 gap-1.5">
         ${levels.map(lv => `
@@ -903,12 +904,11 @@ function _renderPassiveBlock(passiveInfo, referralCode) {
 // ─────────────────────────────────────────────────────────────────
 
 function _showClaimSuccess(result) {
-    const body  = document.getElementById('claimModalBody');
+    const body = document.getElementById('claimModalBody');
     if (!body) return;
-    const isEn  = getCurrentLang().startsWith('en');
-
+    const en = isEn();
     body.innerHTML = `
-    <div class="p-6 text-center">
+    <div class="p-6 text-center" style="overflow-y:auto">
         <div class="relative w-20 h-20 mx-auto mb-4">
             <div class="absolute inset-0 rounded-full bg-cyan-500/20 animate-ping"></div>
             <div class="relative w-20 h-20 rounded-full bg-gradient-to-br from-cyan-500/30 to-blue-500/30
@@ -917,7 +917,6 @@ function _showClaimSuccess(result) {
         <h3 class="text-2xl font-black text-white mb-1">${lang('claim_success_title')}</h3>
         ${result.streakBroken
             ? `<div class="text-sm text-red-400 mb-3">${lang('claim_streak_reset')}</div>` : ''}
-
         <div class="bg-slate-800/50 rounded-xl p-4 mb-4">
             <div class="text-xs text-slate-500 mb-1">${lang('claim_credited')}</div>
             <div class="text-4xl font-black bg-gradient-to-r from-cyan-400 to-blue-400 bg-clip-text text-transparent">
@@ -930,13 +929,13 @@ function _showClaimSuccess(result) {
                 <i class="fas fa-star"></i> ${result.reward.label} — +${result.reward.bonus} ${lang('reagents_rgt_unit')}!
             </div>` : ''}
         </div>
-
         <div class="bg-slate-800/30 rounded-xl p-3 mb-4 text-left">
             <div class="text-xs text-slate-500 mb-2">${lang('passive_credited_to_upstream')}</div>
             ${REAGENTS_CONFIG.referralLevels.map(lv => {
                 const r = roundReward(result.reward.total * lv.percent / 100);
                 return `
-                <div class="flex items-center justify-between text-xs py-1 border-b border-slate-700/30 last:border-0">
+                <div class="flex items-center justify-between text-xs py-1
+                            border-b border-slate-700/30 last:border-0">
                     <span class="text-slate-400">
                         ${lang('passive_level')} ${lv.level}
                         <span class="text-slate-600">(${lv.percent}%)</span>
@@ -945,7 +944,6 @@ function _showClaimSuccess(result) {
                 </div>`;
             }).join('')}
         </div>
-
         <div class="grid grid-cols-4 gap-2 mb-4">
             <div class="bg-slate-800/30 rounded-xl p-3">
                 <div class="text-base font-black text-cyan-400">${result.newReagents}</div>
@@ -957,19 +955,17 @@ function _showClaimSuccess(result) {
             </div>
             <div class="bg-slate-800/30 rounded-xl p-3">
                 <div class="text-base font-black text-yellow-400">${result.bestStreak || result.newStreak}🏆</div>
-                <div class="text-xs text-slate-500">${isEn ? 'Record' : 'Рекорд'}</div>
+                <div class="text-xs text-slate-500">${en ? 'Record' : 'Рекорд'}</div>
             </div>
             <div class="bg-slate-800/30 rounded-xl p-3">
                 <div class="text-base font-black text-emerald-400">${result.nextMilestone.daysLeft}</div>
                 <div class="text-xs text-slate-500">${lang('claim_to_bonus_short')}</div>
             </div>
         </div>
-
         <div class="text-xs text-slate-500 mb-4">
             ${lang('claim_next_claim')}
             <span class="text-white font-medium">00:00 UTC</span> · ${_getTimeToMidnightUTC()}
         </div>
-
         <button onclick="closeClaimModal()"
             class="w-full py-3 bg-gradient-to-r from-cyan-600 to-blue-600
                    hover:from-cyan-500 hover:to-blue-500 rounded-xl font-bold text-white transition-all">
@@ -1002,13 +998,9 @@ function _buildWeekDays(status) {
             'future':     'bg-slate-800/40 border-slate-700/30 text-slate-600',
         };
         const icons = {
-            'done':       '✓',
-            'today':      '🧪',
-            'today-done': '✓',
-            'missed':     '✗',
-            'future':     dayLabel.charAt(0).toUpperCase(),
+            'done':'✓', 'today':'🧪', 'today-done':'✓', 'missed':'✗',
+            'future': dayLabel.charAt(0).toUpperCase(),
         };
-
         return `
         <div class="flex flex-col items-center gap-1">
             <div class="w-8 h-8 rounded-lg border-2 flex items-center justify-center text-xs font-bold ${colors[state]}">
@@ -1036,6 +1028,10 @@ function _updateHeaderReagents(amount) {
 
 // ─────────────────────────────────────────────────────────────────
 // МОДАЛКА + СТИЛИ
+// Ключевое решение скролла на ПК:
+//   .claim-modal-box — flex-колонка с фиксированной высотой
+//   .claim-two-col   — flex:1 + min-height:0 → колонки скроллятся
+//   .claim-footer    — flex-shrink:0 → всегда видна
 // ─────────────────────────────────────────────────────────────────
 
 function _ensureClaimModal() {
@@ -1079,126 +1075,189 @@ function _addClaimStyles() {
     const style = document.createElement('style');
     style.id = 'claim-styles';
     style.textContent = `
-        /* ── Оверлей ── */
+
+        /* ══════════════════════════════════════════════
+           ОВЕРЛЕЙ
+        ══════════════════════════════════════════════ */
         .claim-modal-overlay {
-            position:fixed;inset:0;
-            background:rgba(0,0,0,0.85);
-            backdrop-filter:blur(10px);
-            z-index:9999;
-            display:flex;align-items:center;justify-content:center;
-            opacity:0;pointer-events:none;
-            transition:opacity 0.3s ease;
-            padding:12px;
+            position: fixed;
+            inset: 0;
+            background: rgba(0,0,0,0.85);
+            backdrop-filter: blur(10px);
+            z-index: 9999;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 12px;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.3s ease;
         }
-        .claim-modal-overlay.active { opacity:1;pointer-events:all; }
+        .claim-modal-overlay.active {
+            opacity: 1;
+            pointer-events: all;
+        }
 
-        /* ── Окно ── */
+        /* ══════════════════════════════════════════════
+           ОКНО — flex-колонка, высота = 90vh (ПК)
+           Это обеспечивает работу overflow в детях
+        ══════════════════════════════════════════════ */
         .claim-modal-box {
-            background:linear-gradient(145deg,#171f30 0%,#0c1220 100%);
-            border:1px solid rgba(99,179,237,0.1);
-            border-radius:20px;
-            width:100%;max-width:860px;
-            /* Фиксированная высота — скролл внутри колонок */
-            height:88vh;max-height:88vh;
-            overflow:hidden;
-            display:flex;flex-direction:column;
-            transform:translateY(20px) scale(0.97);
-            transition:transform 0.3s cubic-bezier(0.4,0,0.2,1);
-            box-shadow:0 30px 80px rgba(0,0,0,0.7),0 0 0 1px rgba(99,179,237,0.04);
+            background: linear-gradient(145deg, #171f30 0%, #0c1220 100%);
+            border: 1px solid rgba(99,179,237,0.1);
+            border-radius: 20px;
+            width: 100%;
+            max-width: 860px;
+            /* ВАЖНО: явная высота, не max-height — иначе flex-child
+               не может получить реальный размер для overflow */
+            height: 90vh;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;        /* окно не скроллит само */
+            transform: translateY(20px) scale(0.97);
+            transition: transform 0.3s cubic-bezier(0.4,0,0.2,1);
+            box-shadow: 0 30px 80px rgba(0,0,0,0.7),
+                        0 0 0 1px rgba(99,179,237,0.04);
         }
-        .claim-modal-overlay.active .claim-modal-box { transform:translateY(0) scale(1); }
+        .claim-modal-overlay.active .claim-modal-box {
+            transform: translateY(0) scale(1);
+        }
 
-        /* ── Шапка ── */
+        /* ══════════════════════════════════════════════
+           ШАПКА — фиксированная, не сжимается
+        ══════════════════════════════════════════════ */
         .claim-modal-header {
-            display:flex;align-items:center;justify-content:space-between;
-            padding:16px 20px 14px;
-            border-bottom:1px solid rgba(255,255,255,0.05);
-            flex-shrink:0;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 16px 20px 14px;
+            border-bottom: 1px solid rgba(255,255,255,0.05);
+            flex-shrink: 0;          /* не сжимается */
         }
 
-        /* ── Двухколоночная сетка ── */
+        /* ══════════════════════════════════════════════
+           ТЕЛО — занимает всё свободное место
+           claimModalBody содержит .claim-two-col + .claim-footer
+        ══════════════════════════════════════════════ */
+        #claimModalBody {
+            flex: 1;
+            min-height: 0;           /* КЛЮЧЕВО: без этого flex-child не даёт overflow */
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        /* ══════════════════════════════════════════════
+           ДВУХКОЛОНОЧНАЯ СЕТКА — занимает оставшееся
+        ══════════════════════════════════════════════ */
         .claim-two-col {
-            display:grid;
-            grid-template-columns:1fr 1px 1fr;
-            gap:0;
-            flex:1;       /* занимает всё доступное место */
-            min-height:0; /* нужно для работы overflow в children */
-            overflow:hidden;
+            display: grid;
+            grid-template-columns: 1fr 1px 1fr;
+            flex: 1;                 /* растягивается */
+            min-height: 0;           /* КЛЮЧЕВО */
+            overflow: hidden;        /* колонки скроллят сами */
         }
 
-        /* ── Колонки — каждая скроллится независимо ── */
+        /* ══════════════════════════════════════════════
+           КОЛОНКИ — каждая скроллится независимо
+        ══════════════════════════════════════════════ */
         .claim-left-col {
-            padding:16px 18px;
-            overflow-y:auto;
-            overflow-x:hidden;
-            -webkit-overflow-scrolling:touch;
-            scrollbar-width:thin;
-            scrollbar-color:#334155 transparent;
+            padding: 16px 18px;
+            overflow-y: auto;
+            overflow-x: hidden;
+            -webkit-overflow-scrolling: touch;
+            scrollbar-width: thin;
+            scrollbar-color: #334155 transparent;
         }
-        .claim-left-col::-webkit-scrollbar  { width:3px; }
-        .claim-left-col::-webkit-scrollbar-thumb { background:#334155;border-radius:2px; }
+        .claim-left-col::-webkit-scrollbar       { width: 3px; }
+        .claim-left-col::-webkit-scrollbar-thumb { background: #334155; border-radius: 2px; }
 
-        .claim-divider { background:rgba(255,255,255,0.05);width:1px;flex-shrink:0; }
+        .claim-divider {
+            background: rgba(255,255,255,0.05);
+            width: 1px;
+            flex-shrink: 0;
+        }
 
         .claim-right-col {
-            padding:16px 18px;
-            overflow-y:auto;
-            overflow-x:hidden;
-            -webkit-overflow-scrolling:touch;
-            scrollbar-width:thin;
-            scrollbar-color:#334155 transparent;
+            padding: 16px 18px;
+            overflow-y: auto;
+            overflow-x: hidden;
+            -webkit-overflow-scrolling: touch;
+            scrollbar-width: thin;
+            scrollbar-color: #334155 transparent;
         }
-        .claim-right-col::-webkit-scrollbar { width:3px; }
-        .claim-right-col::-webkit-scrollbar-thumb { background:#334155;border-radius:2px; }
+        .claim-right-col::-webkit-scrollbar       { width: 3px; }
+        .claim-right-col::-webkit-scrollbar-thumb { background: #334155; border-radius: 2px; }
 
-        /* ── Мини-карточки ── */
+        /* ══════════════════════════════════════════════
+           ФУТЕР — кнопка «Закрыть», всегда видна
+        ══════════════════════════════════════════════ */
+        .claim-footer {
+            padding: 10px 16px 14px;
+            border-top: 1px solid rgba(255,255,255,0.04);
+            flex-shrink: 0;          /* не сжимается */
+            background: linear-gradient(145deg, #171f30, #0c1220);
+        }
+
+        /* ══════════════════════════════════════════════
+           КОМПОНЕНТЫ
+        ══════════════════════════════════════════════ */
         .claim-mini-card {
-            background:rgba(30,40,60,0.55);
-            border:1px solid rgba(255,255,255,0.05);
-            border-radius:10px;padding:10px 8px;text-align:center;
-            transition:border-color 0.2s;
+            background: rgba(30,40,60,0.55);
+            border: 1px solid rgba(255,255,255,0.05);
+            border-radius: 10px;
+            padding: 10px 8px;
+            text-align: center;
+            transition: border-color 0.2s;
         }
-        .claim-mini-card:hover { border-color:rgba(99,179,237,0.2); }
-        .mini-value { font-size:20px;font-weight:800;line-height:1;margin-bottom:3px; }
-        .mini-label { font-size:10px;color:#64748b;line-height:1.3; }
-        .mini-unit  { font-size:10px;color:#475569;margin-top:2px; }
+        .claim-mini-card:hover { border-color: rgba(99,179,237,0.2); }
+        .mini-value { font-size: 20px; font-weight: 800; line-height: 1; margin-bottom: 3px; }
+        .mini-label { font-size: 10px; color: #64748b; line-height: 1.3; }
+        .mini-unit  { font-size: 10px; color: #475569; margin-top: 2px; }
 
-        /* ── Заголовок колонки ── */
         .col-header {
-            display:flex;align-items:center;gap:8px;
-            margin-bottom:14px;padding-bottom:10px;
-            border-bottom:1px solid rgba(255,255,255,0.05);
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-bottom: 14px;
+            padding-bottom: 10px;
+            border-bottom: 1px solid rgba(255,255,255,0.05);
         }
 
-        /* ── Кнопка закрыть / нижняя ── */
-        #claimModalBody > div:last-child { flex-shrink:0; }
-
-        /* ── Мобильные ── */
-        @media(max-width:640px) {
+        /* ══════════════════════════════════════════════
+           МОБИЛЬНЫЕ (≤ 640px)
+           Окно скроллит целиком, колонки — в поток
+        ══════════════════════════════════════════════ */
+        @media (max-width: 640px) {
             .claim-modal-box {
-                border-radius:16px;
-                /* На мобиле — высота по содержимому, скролл через всё окно */
-                height:auto;
-                max-height:92vh;
+                border-radius: 16px;
+                /* На мобиле высота по содержимому */
+                height: auto;
+                max-height: 92vh;
+                overflow-y: auto;
+                -webkit-overflow-scrolling: touch;
+            }
+            #claimModalBody {
+                display: block;      /* обычный поток */
+                overflow: visible;
             }
             .claim-two-col {
-                /* Одна колонка, скролл через claim-modal-box */
-                display:block;
-                overflow:visible;
+                display: block;      /* одна колонка */
+                overflow: visible;
             }
             .claim-left-col,
             .claim-right-col {
-                overflow-y:visible;
-                overflow-x:visible;
-                -webkit-overflow-scrolling:auto;
-                padding:14px 16px;
+                overflow-y: visible;
+                overflow-x: visible;
+                padding: 14px 16px;
             }
-            .claim-divider { width:100%;height:1px; }
-
-            /* Весь скролл — через само окно */
-            .claim-modal-box {
-                overflow-y:auto;
-                -webkit-overflow-scrolling:touch;
+            .claim-divider {
+                width: 100%;
+                height: 1px;
+            }
+            .claim-footer {
+                position: sticky;
+                bottom: 0;
             }
         }
     `;
@@ -1282,15 +1341,12 @@ window._applyClaimBtnVisual = _applyClaimBtnVisual;
 // ─────────────────────────────────────────────────────────────────
 
 function _updateClaimTranslations() {
-    const titleEl = document.getElementById('claimModalTitle');
-    if (titleEl) titleEl.textContent = lang('claim_title');
-    const subtitleEl = document.getElementById('claimModalSubtitle');
-    if (subtitleEl) subtitleEl.textContent = lang('claim_updated_utc');
+    const t = document.getElementById('claimModalTitle');
+    if (t) t.textContent = lang('claim_title');
+    const s = document.getElementById('claimModalSubtitle');
+    if (s) s.textContent = lang('claim_updated_utc');
     const btn = document.getElementById('headerClaimBtn');
-    if (btn) {
-        const isAvailable = btn.getAttribute('data-claim-available') === '1';
-        _applyClaimBtnVisual(isAvailable);
-    }
+    if (btn) _applyClaimBtnVisual(btn.getAttribute('data-claim-available') === '1');
 }
 document.addEventListener('languageChanged', _updateClaimTranslations);
 
@@ -1314,7 +1370,6 @@ window.closeClaimModal = window.closeClaimModal;
 window.doClaim         = window.doClaim;
 
 console.log('🧪 Reagents System v2.2 loaded');
-
 setTimeout(_checkClaimOnLoad, 2000);
 setTimeout(_checkClaimOnLoad, 5000);
 
