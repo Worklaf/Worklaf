@@ -318,7 +318,7 @@ function _generateCode(uid) {
  */
 async function _creditPassiveToUpstream(claimUser, claimedAmount, exp, db) {
     try {
-        const mySnap = await exp.getDoc(exp.doc(db, 'users', claimUser.uid));
+        const mySnap = await exp.getDoc(exp.doc(db, 'users', claimUser.uid), { source: 'server' });
         if (!mySnap.exists()) {
             console.warn('[Reagents] upstream: mySnap not exists for', claimUser.uid);
             return;
@@ -339,7 +339,7 @@ async function _creditPassiveToUpstream(claimUser, claimedAmount, exp, db) {
                 break;
             }
 
-            const upSnap = await exp.getDoc(exp.doc(db, 'users', upstreamUid));
+            const upSnap = await exp.getDoc(exp.doc(db, 'users', upstreamUid), { source: 'server' });
             if (!upSnap.exists()) {
                 console.warn('[Reagents] upSnap not exists for', upstreamUid);
                 break;
