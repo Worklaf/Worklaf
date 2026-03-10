@@ -2217,51 +2217,54 @@
     // ============ FOOTER STATS ============
 
     function updateFooterStats() {
-        const lang      = typeof window.t === 'function' ? window.t : (k) => k;
-        const userEl    = document.getElementById('footerUserCount');
-        const projectEl = document.getElementById('footerProjectCount');
+    const lang      = typeof window.t === 'function' ? window.t : (k) => k;
+    const userEl    = document.getElementById('footerUserCount');
+    const projectEl = document.getElementById('footerProjectCount');
 
-        if (projectEl) {
-            let projectCount = 0;
-            if (typeof window.projects !== 'undefined' && Array.isArray(window.projects)) {
-                projectCount = window.projects.filter(p => !p.deleted).length;
-            }
+    // Обновление количества проектов
+    if (projectEl) {
+        if (typeof window.projects !== 'undefined' && Array.isArray(window.projects)) {
+            const projectCount = window.projects.filter(p => !p.deleted).length;
             projectEl.textContent = projectCount;
             projectEl.classList.add('text-cyan-400');
-        }
-
-        if (userEl) {
-            tryReadUserCount(1);
-        }
-
-        function tryReadUserCount(attempt) {
-            const db  = window.db;
-            const exp = window.__firestoreExports;
-
-            if (db && exp && exp.doc && exp.getDoc) {
-                exp.getDoc(exp.doc(db, 'config', 'stats')).then(function(snap) {
-                    if (snap.exists()) {
-                        const count = snap.data().userCount || 0;
-                        userEl.textContent = count;
-                        if (count > 0) {
-                            userEl.classList.add('text-emerald-400');
-                            userEl.classList.remove('text-slate-400');
-                        }
-                    } else {
-                        userEl.textContent = '0';
-                    }
-                }).catch(function() {
-                    userEl.textContent = '0';
-                });
-            } else {
-                if (attempt < 10) {
-                    setTimeout(function() { tryReadUserCount(attempt + 1); }, 500);
-                } else {
-                    userEl.textContent = '0';
+        } else {
+            // Можно подписаться на события из main.js или использовать кэш
+            setTimeout(() => {
+                if (typeof window.projects !== 'undefined' && Array.isArray(window.projects)) {
+                    const projectCount = window.projects.filter(p => !p.deleted).length;
+                    projectEl.textContent = projectCount;
+                    projectEl.classList.add('text-cyan-400');
                 }
-            }
+            }, 1000); // Ждём немного, если данные ещё загружаются
         }
     }
+
+    // Обновление количества пользователей
+    if (userEl) {
+        const db = window.db;
+        const exp = window.__firestoreExports;
+        if (db && exp && exp.doc && exp.getDoc) {
+            exp.getDoc(exp.doc(db, 'config', 'stats'))
+               .then(function(snap) {
+                   if (snap.exists()) {
+                       const count = snap.data().userCount || 0;
+                       userEl.textContent = count;
+                       userEl.classList.toggle('text-emerald-400', count > 0);
+                       userEl.classList.toggle('text-slate-400', count <= 0);
+                   } else {
+                       userEl.textContent = '0';
+                   }
+               })
+               .catch(function(error) {
+                   console.warn("Failed to get user stats:", error);
+                   userEl.textContent = '—';
+               });
+        } else {
+            console.warn("Firestore exports not ready yet for user stats.");
+            // Можно добавить здесь retry через setTimeout
+        }
+    }
+}
 
     // ============ LANGUAGE TOGGLE ============
 
@@ -2401,7 +2404,7 @@
         setTimeout(updateFooterStats, 2000);
         setTimeout(updateFooterStats, 5000);
         setTimeout(updateFooterStats, 10000);
-
+        document.addEventListener('projectsLoaded', updateFooterStats);
         document.addEventListener('userAuthChanged',  function() { setTimeout(updateFooterStats, 500); });
         document.addEventListener('projectsLoaded',   function() { setTimeout(updateFooterStats, 300); });
 
