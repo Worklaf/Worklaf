@@ -490,9 +490,13 @@ const _tryWeeklyPassivePayout = _tryPassivePayout;
 // ─────────────────────────────────────────────────────────────────
 
 window.openClaimModal = async function() {
+    console.log('=== openClaimModal called ===');
+    
     const user = (window.auth && window.auth.currentUser)
                  || window.currentUser
                  || null;
+
+    console.log('user:', user ? user.uid : 'NULL');
 
     if (!user) {
         if (typeof window.footerShowToast === 'function') {
@@ -505,27 +509,27 @@ window.openClaimModal = async function() {
 
     const modal = document.getElementById('claimModal');
     const body  = document.getElementById('claimModalBody');
+    console.log('modal:', modal, 'body:', body);
     if (!modal || !body) return;
 
     body.innerHTML = _renderLoading();
     modal.classList.add('active');
     document.body.style.overflow = 'hidden';
 
-    // ИСПРАВЛЕНО: выплачиваем накопленное при любом заходе (не только в пн)
+    console.log('=== calling _tryPassivePayout ===');
     const payout = await _tryPassivePayout(user);
-    if (payout > 0 && typeof window.footerShowToast === 'function') {
-        window.footerShowToast(
-            `💰 ${lang('passive_payout_toast')} +${payout} RGT!`,
-            'success'
-        );
-    }
+    console.log('payout result:', payout);
 
+    console.log('=== calling getClaimStatus ===');
     const status = await getClaimStatus(user);
+    console.log('status:', status);
 
     if (!status) {
         body.innerHTML = _renderError(lang('claim_load_error'));
         return;
     }
+
+    console.log('passiveInfo from status:', status.passiveInfo);
 
     body.innerHTML = _renderClaimUI(status);
 };
