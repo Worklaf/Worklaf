@@ -305,45 +305,47 @@ async function _creditPassiveToUpstream(claimUser, claimedAmount, exp, db) {
             const upstreamUid = currentData.referredBy;
             if (!upstreamUid) break; // цепочка закончилась
 
-            const rawReward     = claimedAmount * (levelCfg.percent / 100);
-            const roundedReward = roundReward(rawReward);
-
-            if (roundedReward <= 0) {
-                // Поднимаемся выше
-                const upSnap = await exp.getDoc(exp.doc(db, 'users', upstreamUid));
-                if (!upSnap.exists()) break;
-                currentUid  = upstreamUid;
-                currentData = upSnap.data();
-                continue;
-            }
-
-            // Добавляем в pendingPassive апстрима
+            // Загружаем данные апстрима
             const upSnap = await exp.getDoc(exp.doc(db, 'users', upstreamUid));
             if (!upSnap.exists()) break;
 
             const upData = upSnap.data();
 
-            await exp.setDoc(
-                exp.doc(db, 'users', upstreamUid),
-                {
-                    // Накапливаем ожидающий пассивный доход
-                    pendingPassive: (upData.pendingPassive || 0) + roundedReward,
-                    // Лог: от кого сколько накопилось на этой неделе
-                    passiveLog: {
-                        ...(upData.passiveLog || {}),
-                        [claimUser.uid]: {
-                            level:      levelCfg.level,
-                            lastAmount: roundedReward,
-                            percent:    levelCfg.percent,
+            const rawReward     = claimedAmount * (levelCfg.percent / 100);
+            const roundedReward = roundReward(rawReward);
+
+            if (roundedReward > 0) {
+                // Добавляем в pendingPassive апстрима
+                const currentPending = upData.pendingPassive || 0;
+
+                // Лог: кто и сколько принёс на этой неделе
+                const existingLog = upData.passiveLog || {};
+                const existingFromUser = existingLog[claimUser.uid] || {};
+
+                await exp.setDoc(
+                    exp.doc(db, 'users', upstreamUid),
+                    {
+                        pendingPassive: currentPending + roundedReward,
+                        passiveLog: {
+                            ...existingLog,
+                            [claimUser.uid]: {
+                                level:       levelCfg.level,
+                                lastAmount:  roundedReward,
+                                totalAmount: (existingFromUser.totalAmount || 0) + roundedReward,
+                                percent:     levelCfg.percent,
+                                lastClaimAt: new Date().toISOString(),
+                            }
                         }
-                    }
-                },
-                { merge: true }
-            );
+                    },
+                    { merge: true }
+                );
+
+                console.log(`[Reagents] Level ${levelCfg.level} passive: +${roundedReward} RGT → ${upstreamUid}`);
+            }
 
             // Поднимаемся на уровень выше
             currentUid  = upstreamUid;
-            currentData = upData;
+            currentData = upData; // ИСПРАВЛЕНО: теперь берём данные апстрима для следующей итерации
         }
     } catch(err) {
         console.error('[Reagents] _creditPassiveToUpstream error:', err);
@@ -355,7 +357,7 @@ async function _creditPassiveToUpstream(claimUser, claimedAmount, exp, db) {
  * Вызывается при каждом открытии клейм-модалки
  * Если сегодня понедельник UTC и ещё не выплачивали на этой неделе — выплачиваем
  */
-async function _tryWeeklyPassivePayout(user) {
+async function _tryPassivePayout(user) {
     const db  = window.db;
     const exp = window.__firestoreExports;
     if (!db || !exp || !user) return 0;
@@ -364,78 +366,100 @@ async function _tryWeeklyPassivePayout(user) {
         const snap = await exp.getDoc(exp.doc(db, 'users', user.uid));
         if (!snap.exists()) return 0;
 
-        const data          = snap.data();
+        const data           = snap.data();
         const pendingPassive = data.pendingPassive || 0;
         if (pendingPassive <= 0) return 0;
 
-        const nowUTC         = new Date();
-        const todayUTCDay    = nowUTC.getUTCDay(); // 0=вс, 1=пн...
-        const currentWeek    = getUTCWeekString(nowUTC);
-        const lastPayoutWeek = data.lastPassivePayoutWeek || '';
-
-        // Выплачиваем только в понедельник И если ещё не платили на этой неделе
-        if (todayUTCDay !== REAGENTS_CONFIG.passivePayoutDay) return 0;
-        if (lastPayoutWeek === currentWeek) return 0;
-
-        const payout = Math.ceil(pendingPassive); // округляем вверх финальную сумму
+        // Выплачиваем всё накопленное — без ограничений по дням
+        const payout = Math.ceil(pendingPassive);
 
         await exp.setDoc(
             exp.doc(db, 'users', user.uid),
             {
-                reagents:             (data.reagents || 0) + payout,
-                pendingPassive:       0,
-                passiveLog:           {},
-                lastPassivePayoutWeek: currentWeek,
-                referralEarnings:     (data.referralEarnings || 0) + payout,
-                lastPassivePayoutAt:  new Date().toISOString(),
-                lastPassivePayout:    payout,
+                reagents:            (data.reagents || 0) + payout,
+                pendingPassive:      0,
+                passiveLog:          {},
+                referralEarnings:    (data.referralEarnings || 0) + payout,
+                lastPassivePayoutAt: new Date().toISOString(),
+                lastPassivePayout:   payout,
             },
             { merge: true }
         );
 
-        console.log(`[Reagents] Weekly passive payout: +${payout} RGT`);
+        console.log(`[Reagents] Passive payout: +${payout} RGT`);
         return payout;
 
     } catch(err) {
-        console.error('[Reagents] _tryWeeklyPassivePayout error:', err);
+        console.error('[Reagents] _tryPassivePayout error:', err);
         return 0;
     }
 }
 
-/**
- * Получаем информацию о пассивном доходе для отображения в UI
- */
-async function getPassiveRewardInfo(user, userData) {
+// Оставляем старое имя как алиас для совместимости
+const _tryWeeklyPassivePayout = _tryPassivePayout;async function getPassiveRewardInfo(user, userData) {
     try {
-        const pendingPassive  = userData.pendingPassive    || 0;
-        const referralEarnings = userData.referralEarnings || 0;
-        const invitedCount    = userData.invitedCount      || 0;
-        const lastPayout      = userData.lastPassivePayout || 0;
-        const lastPayoutWeek  = userData.lastPassivePayoutWeek || '';
+        // Перечитываем свежие данные из Firestore для актуального pendingPassive
+        let freshData = userData;
+        if (user) {
+            const db  = window.db;
+            const exp = window.__firestoreExports;
+            if (db && exp && exp.getDoc && exp.doc) {
+                try {
+                    const freshSnap = await exp.getDoc(exp.doc(db, 'users', user.uid));
+                    if (freshSnap.exists()) {
+                        freshData = freshSnap.data();
+                    }
+                } catch(e) {
+                    // fallback на переданный userData
+                    freshData = userData;
+                }
+            }
+        }
 
-        const nowUTC      = new Date();
-        const currentWeek = getUTCWeekString(nowUTC);
+        const pendingPassive   = freshData.pendingPassive    || 0;
+        const referralEarnings = freshData.referralEarnings  || 0;
+        const invitedCount     = freshData.invitedCount      || 0;
+        const lastPayout       = freshData.lastPassivePayout || 0;
+        const lastPayoutAt     = freshData.lastPassivePayoutAt || '';
 
-        // Считаем дней до следующего понедельника UTC
-        const todayDay   = nowUTC.getUTCDay(); // 0=вс
-        const daysToMon  = todayDay === 0 ? 1 : (8 - todayDay) % 7 || 7;
-        const nextPayout = daysToMon === 7 && lastPayoutWeek === currentWeek
-            ? 7 : daysToMon;
+        // Считаем passiveLog — сколько рефералов клеймили и принесли доход
+        const passiveLog       = freshData.passiveLog || {};
+        const activeReferrals  = Object.keys(passiveLog).length;
+
+        // Детализация по рефералам из лога
+        const referralDetails = Object.entries(passiveLog).map(([uid, info]) => ({
+            uid,
+            level:       info.level,
+            lastAmount:  info.lastAmount,
+            totalAmount: info.totalAmount || info.lastAmount,
+            percent:     info.percent,
+            lastClaimAt: info.lastClaimAt,
+        }));
 
         return {
             pendingPassive:   Math.round(pendingPassive * 10) / 10,
             referralEarnings,
             invitedCount,
             lastPayout,
-            nextPayoutDays:   nextPayout,
-            paidThisWeek:     lastPayoutWeek === currentWeek,
+            lastPayoutAt,
+            activeReferrals,
+            referralDetails,
+            // Нет ограничений по дням — выплата при любом заходе
+            canPayoutNow: pendingPassive > 0,
         };
     } catch(err) {
-        return { pendingPassive: 0, referralEarnings: 0, invitedCount: 0,
-                 lastPayout: 0, nextPayoutDays: 0, paidThisWeek: false };
+        return {
+            pendingPassive:   0,
+            referralEarnings: 0,
+            invitedCount:     0,
+            lastPayout:       0,
+            lastPayoutAt:     '',
+            activeReferrals:  0,
+            referralDetails:  [],
+            canPayoutNow:     false,
+        };
     }
 }
-
 // ─────────────────────────────────────────────────────────────────
 // UI — МОДАЛКА КЛЕЙМА
 // ─────────────────────────────────────────────────────────────────
@@ -462,11 +486,11 @@ window.openClaimModal = async function() {
     modal.classList.add('active');
     document.body.style.overflow = 'hidden';
 
-    // Пробуем еженедельную выплату пассивного дохода
-    const weeklyPayout = await _tryWeeklyPassivePayout(user);
-    if (weeklyPayout > 0 && typeof window.footerShowToast === 'function') {
+    // ИСПРАВЛЕНО: выплачиваем накопленное при любом заходе (не только в пн)
+    const payout = await _tryPassivePayout(user);
+    if (payout > 0 && typeof window.footerShowToast === 'function') {
         window.footerShowToast(
-            `💰 ${lang('passive_payout_toast')} +${weeklyPayout} RGT!`,
+            `💰 ${lang('passive_payout_toast')} +${payout} RGT!`,
             'success'
         );
     }
@@ -700,56 +724,137 @@ function _renderClaimUI(status) {
 function _renderPassiveBlock(passiveInfo) {
     if (!passiveInfo) return '';
 
-    const { pendingPassive, referralEarnings, invitedCount,
-            lastPayout, nextPayoutDays, paidThisWeek } = passiveInfo;
+    const {
+        pendingPassive,
+        referralEarnings,
+        invitedCount,
+        lastPayout,
+        lastPayoutAt,
+        activeReferrals,
+        referralDetails,
+        canPayoutNow,
+    } = passiveInfo;
 
     const levels = REAGENTS_CONFIG.referralLevels;
+
+    let lastPayoutStr = '—';
+    if (lastPayoutAt) {
+        try {
+            lastPayoutStr = new Date(lastPayoutAt).toLocaleDateString('ru-RU', {
+                day: '2-digit', month: '2-digit', year: 'numeric'
+            });
+        } catch(e) { lastPayoutStr = lastPayoutAt.substring(0, 10); }
+    }
 
     return `
     <div class="mt-5 border-t border-slate-700/50 pt-4">
         <div class="flex items-center gap-2 mb-3">
             <span class="text-base">👥</span>
             <span class="text-xs font-semibold text-slate-300">${lang('passive_income_title')}</span>
+            ${canPayoutNow ? `
+            <span class="ml-auto text-[10px] px-2 py-0.5 bg-emerald-500/20 text-emerald-400
+                          border border-emerald-500/30 rounded-full animate-pulse">
+                ✨ Готово к выплате
+            </span>` : ''}
         </div>
 
-        <!-- Статистика рефов -->
-        <div class="grid grid-cols-3 gap-2 mb-3">
-            <div class="bg-slate-800/40 rounded-lg p-2 text-center">
+        <!-- 4 плитки статистики -->
+        <div class="grid grid-cols-2 gap-2 mb-3">
+            <div class="bg-slate-800/40 rounded-lg p-2.5 text-center">
                 <div class="text-base font-bold text-cyan-400">${invitedCount}</div>
                 <div class="text-[10px] text-slate-500">${lang('passive_invited')}</div>
             </div>
-            <div class="bg-slate-800/40 rounded-lg p-2 text-center">
+            <div class="bg-slate-800/40 rounded-lg p-2.5 text-center">
+                <div class="text-base font-bold text-blue-400">${activeReferrals || 0}</div>
+                <div class="text-[10px] text-slate-500">Клеймили (7 дн.)</div>
+            </div>
+            <div class="bg-slate-800/40 rounded-lg p-2.5 text-center">
                 <div class="text-base font-bold text-emerald-400">${referralEarnings}</div>
                 <div class="text-[10px] text-slate-500">${lang('passive_total_earned')}</div>
             </div>
-            <div class="bg-slate-800/40 rounded-lg p-2 text-center">
-                <div class="text-base font-bold text-yellow-400">${pendingPassive}</div>
+            <div class="bg-slate-800/40 rounded-lg p-2.5 text-center border ${canPayoutNow
+                ? 'border-emerald-500/40 bg-emerald-900/20'
+                : 'border-slate-700/30'}">
+                <div class="text-base font-bold ${canPayoutNow ? 'text-yellow-400' : 'text-slate-400'}">
+                    ${pendingPassive > 0 ? '+' : ''}${Math.ceil(pendingPassive)}
+                </div>
                 <div class="text-[10px] text-slate-500">${lang('passive_pending')}</div>
             </div>
         </div>
 
-        <!-- Ожидающая выплата -->
+        <!-- Блок выплаты -->
         <div class="bg-slate-800/30 rounded-xl p-3 mb-3">
+            ${canPayoutNow ? `
             <div class="flex items-center justify-between mb-2">
-                <span class="text-xs text-slate-400">${lang('passive_next_payout')}</span>
-                <span class="text-xs font-medium ${paidThisWeek ? 'text-emerald-400' : 'text-orange-400'}">
-                    ${paidThisWeek
-                        ? '✅ ' + lang('passive_paid_this_week')
-                        : lang('passive_days_left').replace('{days}', nextPayoutDays)
-                    }
-                </span>
+                <span class="text-xs text-slate-300 font-medium">💰 Накоплено к выплате</span>
+                <span class="text-sm font-bold text-yellow-400">+${Math.ceil(pendingPassive)} RGT</span>
             </div>
-            ${pendingPassive > 0 ? `
-            <div class="flex items-center gap-2">
-                <div class="flex-1 h-1.5 bg-slate-700 rounded-full overflow-hidden">
-                    <div class="h-full bg-gradient-to-r from-emerald-500 to-cyan-500 rounded-full"
-                         style="width: ${Math.min(((7 - nextPayoutDays) / 7) * 100, 100)}%"></div>
-                </div>
-                <span class="text-xs text-emerald-400 font-medium">+${Math.ceil(pendingPassive)} RGT</span>
-            </div>` : `
-            <div class="text-xs text-slate-600 text-center">${lang('passive_no_pending')}</div>
+            <div class="text-[10px] text-emerald-500/70 mb-2">
+                ✅ Будет начислено автоматически при следующем открытии модалки
+            </div>
+            <div class="w-full h-1.5 bg-slate-700 rounded-full overflow-hidden">
+                <div class="h-full bg-gradient-to-r from-emerald-500 to-cyan-500 rounded-full w-full"></div>
+            </div>
+            ` : `
+            <div class="flex items-center justify-between">
+                <span class="text-xs text-slate-400">Ожидание клеймов рефералов</span>
+                <span class="text-xs text-slate-600">0 RGT</span>
+            </div>
+            <div class="text-[10px] text-slate-600 text-center mt-2">${lang('passive_no_pending')}</div>
             `}
+
+            ${lastPayout > 0 ? `
+            <div class="flex items-center justify-between mt-2 pt-2 border-t border-slate-700/30">
+                <span class="text-[10px] text-slate-600">Последняя выплата ${lastPayoutStr}</span>
+                <span class="text-[10px] text-emerald-500">+${lastPayout} RGT</span>
+            </div>
+            ` : ''}
         </div>
+
+        <!-- Детализация по рефералам из лога -->
+        ${referralDetails && referralDetails.length > 0 ? `
+        <div class="mb-3">
+            <div class="text-[10px] text-slate-500 mb-1.5">📋 Активные рефералы (принесли доход)</div>
+            <div class="space-y-1 max-h-24 overflow-y-auto">
+                ${referralDetails.map(ref => {
+                    let timeStr = '';
+                    if (ref.lastClaimAt) {
+                        try {
+                            const d = new Date(ref.lastClaimAt);
+                            const diff = Date.now() - d.getTime();
+                            if (diff < 3600000)      timeStr = Math.floor(diff/60000) + ' мин назад';
+                            else if (diff < 86400000) timeStr = Math.floor(diff/3600000) + ' ч назад';
+                            else                       timeStr = Math.floor(diff/86400000) + ' дн назад';
+                        } catch(e) {}
+                    }
+                    return `
+                    <div class="flex items-center justify-between px-2.5 py-1.5 bg-slate-800/40 rounded-lg">
+                        <div class="flex items-center gap-2">
+                            <span class="text-[10px] px-1.5 py-0.5 rounded bg-cyan-500/20 text-cyan-400 font-bold">
+                                Ур.${ref.level}
+                            </span>
+                            <span class="text-[10px] text-slate-500 font-mono">
+                                ${ref.uid.substring(0, 8)}...
+                            </span>
+                        </div>
+                        <div class="flex items-center gap-2">
+                            ${timeStr ? `<span class="text-[9px] text-slate-600">${timeStr}</span>` : ''}
+                            <span class="text-[10px] text-emerald-400 font-medium">
+                                +${ref.totalAmount || ref.lastAmount} RGT
+                            </span>
+                        </div>
+                    </div>`;
+                }).join('')}
+            </div>
+        </div>
+        ` : `
+        <div class="mb-3 text-center py-3 bg-slate-800/20 rounded-xl border border-dashed border-slate-700/40">
+            <div class="text-xl mb-1">🔗</div>
+            <div class="text-[10px] text-slate-600">
+                Пригласи рефералов — их клеймы будут<br>приносить тебе пассивный доход
+            </div>
+        </div>
+        `}
 
         <!-- Таблица уровней -->
         <div class="text-[10px] text-slate-600 mb-2 text-center">${lang('passive_levels_title')}</div>
@@ -762,8 +867,13 @@ function _renderPassiveBlock(passiveInfo) {
                 </div>
             </div>`).join('')}
         </div>
-        <div class="mt-2 text-[10px] text-slate-600 text-center">
-            ${lang('passive_payout_schedule')}
+
+        <!-- Подсказка про накопления -->
+        <div class="mt-2 p-2 bg-blue-900/15 border border-blue-800/25 rounded-lg">
+            <div class="text-[10px] text-slate-500 text-center leading-relaxed">
+                💡 Накопления <span class="text-blue-400">не сгорают</span> — 
+                выплата происходит автоматически при каждом открытии этого окна
+            </div>
         </div>
     </div>
     `;
