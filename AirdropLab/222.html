@@ -2009,14 +2009,16 @@ onAuthStateChanged(auth, async function(user) {
         const currentCount = configSnap.exists() ? (configSnap.data().userCount || 0) : 0;
         
         // Проверяем есть ли уже этот пользователь в счётчике
-        const userRef = doc(db, "users", user.uid);
-        const userSnap = await getDoc(userRef);
-        if (!userSnap.exists() || !userSnap.data().counted) {
-            // Новый пользователь — увеличиваем счётчик
-            await setDoc(configRef, { userCount: currentCount + 1 }, { merge: true });
-            // Помечаем что уже посчитан
-            await setDoc(userRef, { counted: true }, { merge: true });
-        }
+        // Проверяем, посчитан ли пользователь
+const userRefForStats = doc(db, "users", user.uid);
+const userSnapForStats = await getDoc(userRefForStats);
+
+if (!userSnapForStats.exists() || !userSnapForStats.data().counted) {
+    // Вызываем вашу функцию инкремента
+    await incrementUserCount(); 
+    // Помечаем в базе пользователя, чтобы не считать его второй раз
+    await setDoc(userRefForStats, { counted: true }, { merge: true });
+}
     } catch(e) {
         console.log('Counter update skip:', e);
     }
@@ -3381,6 +3383,25 @@ function detectNewActivities() {
 setTimeout(() => {
   detectNewActivities();
 }, 1000);
+    // Эту функцию нужно вызывать СРАЗУ ПОСЛЕ успешной регистрации
+async function incrementUserCount() {
+    const db = window.db;
+    const exp = window.__firestoreExports;
+    if (!db || !exp || !exp.increment) return; // Добавили проверку наличия increment
+
+    try {
+        const statsRef = exp.doc(db, 'config', 'stats');
+        await exp.setDoc(statsRef, {
+            userCount: exp.increment(1) // Используем функцию из экспортов
+        }, { merge: true });
+        console.log("Счётчик пользователей увеличен автоматически");
+    } catch (e) {
+        console.error("Ошибка при обновлении счётчика:", e);
+    }
+}
+
+// Пример вызова (вставь туда, где у тебя логика регистрации):
+// createUserWithEmailAndPassword(...).then(() => { incrementUserCount(); });
 </script>
 </body>
 </html>
