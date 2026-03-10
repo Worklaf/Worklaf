@@ -1088,7 +1088,7 @@
                                     <label class="block text-xs font-medium text-slate-400 mb-1.5 flex items-center gap-1.5">
                                         <span class="w-5 h-5 rounded-full bg-blue-500/20 flex items-center justify-center text-xs font-bold text-blue-400">Ξ</span>
                                         EVM ${lang('footer_address')}
-                                        <span class="text-slate-600">(Ethereum, BSC, Polygon...)</span>
+                                        <span class="text-slate-600">${lang('footer_evm_hint')}</span>
                                     </label>
                                     <input type="text" id="profileEvmAddress" value="${userData.evmAddress || ''}"
                                            placeholder="0x..."
@@ -1097,7 +1097,7 @@
                                 <div>
                                     <label class="block text-xs font-medium text-slate-400 mb-1.5 flex items-center gap-1.5">
                                         <span class="w-5 h-5 rounded-full bg-purple-500/20 flex items-center justify-center text-xs font-bold text-purple-400">◎</span>
-                                        Solana ${lang('footer_address')}
+                                        ${lang('footer_solana_label')}
                                     </label>
                                     <input type="text" id="profileSolAddress" value="${userData.solAddress || ''}"
                                            placeholder="${lang('footer_solana_placeholder')}"
