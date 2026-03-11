@@ -11,7 +11,8 @@
     <link rel="stylesheet" href="styles.css">
     <!-- languages.js ДОЛЖЕН загружаться ПЕРЕД основным скриптом -->
     <script src="languages.js"></script>
-     <script src="footer.js"></script>
+    <script src="assets/reagents.js"></script>
+     
    <style>
        #langBtn {
   display: flex;
@@ -316,6 +317,31 @@
         </div>
       </div>
       <div class="flex gap-2 items-center">
+          <!-- КНОПКА КЛЕЙМА — добавь рядом с уведомлениями -->
+<button 
+    onclick="window.openClaimModal()" 
+    id="headerClaimBtn"
+    title="Ежедневные Reagents"
+    class="relative flex items-center gap-2 px-3 py-2 
+           bg-gradient-to-r from-cyan-600/20 to-blue-600/20 
+           hover:from-cyan-600/40 hover:to-blue-600/40
+           border border-cyan-500/30 hover:border-cyan-400/60
+           rounded-xl text-sm text-cyan-400 hover:text-white 
+           transition-all group">
+    
+    <!-- Иконка колбы -->
+    <span class="text-base">🧪</span>
+    
+    <!-- Надпись (скрывается на мобиле) -->
+    <span class="hidden sm:inline font-medium text-xs">Клейм</span>
+    
+    <!-- Индикатор "доступен клейм" — зелёная точка -->
+    <span id="claimDot" 
+          class="absolute -top-1 -right-1 w-2.5 h-2.5 
+                 bg-emerald-400 rounded-full border-2 border-slate-900
+                 hidden animate-pulse">
+    </span>
+</button>
         <div id="notificationPanel" class="relative">
           <button onclick="showNotifications()" class="relative p-2.5 text-slate-400 hover:text-cyan-400 transition-all rounded-xl hover:bg-cyan-500/10 group border border-transparent hover:border-cyan-500/30">
             <i class="fas fa-bell text-lg group-hover:animate-bounce"></i>
@@ -348,14 +374,43 @@
             <button onclick="openLoginModal()" class="px-4 py-2 bg-gradient-to-r from-cyan-600 to-blue-600 hover:from-cyan-500 hover:to-blue-500 rounded-xl text-sm font-bold flex items-center gap-2"><i class="fas fa-sign-in-alt"></i><span data-translate="login">Вход</span></button>
           </div>
           <div id="loggedInView" class="hidden flex items-center gap-3">
-            <div class="text-right hidden sm:block">
-              <div id="userName" class="text-xs font-bold text-white">Researcher</div>
-              <div class="text-[10px] text-emerald-400 flex items-center justify-end gap-1.5" data-translate="in_system">
-                <span class="relative flex h-1.5 w-1.5"><span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span><span class="relative inline-flex rounded-full h-1.5 w-1.5 bg-emerald-400"></span></span>В системе</div>
-            </div>
-            <div class="relative group"><div class="absolute -inset-1 bg-gradient-to-r from-cyan-500 to-blue-500 rounded-full blur opacity-50 group-hover:opacity-75"></div><img id="userAvatar" src="" class="relative w-10 h-10 rounded-full object-cover border-2 border-cyan-500/50"></div>
-            <button onclick="logout()" class="p-2 text-slate-400 hover:text-red-400 rounded-lg hover:bg-red-500/10"><i class="fas fa-sign-out-alt"></i></button>
-          </div>
+    <!-- Имя — кликабельно -->
+    <div class="text-right hidden sm:block cursor-pointer"
+         id="userNameWrapper"
+         title="Редактировать профиль">
+        <div id="userName"
+             class="text-xs font-bold text-white hover:text-cyan-400 transition-colors">
+            Researcher
+        </div>
+        <div class="text-[10px] text-emerald-400 flex items-center justify-end gap-1.5">
+            <span class="relative flex h-1.5 w-1.5">
+                <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                <span class="relative inline-flex rounded-full h-1.5 w-1.5 bg-emerald-400"></span>
+            </span>
+            <span data-translate="in_system">В системе</span>
+        </div>
+    </div>
+
+    <!-- Аватар — кликабельный -->
+    <div class="relative group cursor-pointer"
+         id="userAvatarWrapper"
+         title="Редактировать профиль">
+        <div class="absolute -inset-1 bg-gradient-to-r from-cyan-500 to-blue-500 rounded-full blur opacity-50 group-hover:opacity-75 transition-opacity"></div>
+        <img id="userAvatar"
+             src=""
+             class="relative w-10 h-10 rounded-full object-cover border-2 border-cyan-500/50 group-hover:border-cyan-400 transition-all">
+        <!-- Иконка карандаша при наведении -->
+        <div class="absolute inset-0 rounded-full bg-slate-900/60 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center pointer-events-none">
+            <i class="fas fa-pen text-white text-[9px]"></i>
+        </div>
+    </div>
+
+    <button onclick="logout()"
+            class="p-2 text-slate-400 hover:text-red-400 rounded-lg hover:bg-red-500/10 transition-all"
+            title="Выйти">
+        <i class="fas fa-sign-out-alt"></i>
+    </button>
+</div>
         </div>
       </div>
     </div>
@@ -811,24 +866,83 @@
 
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
-import { getAuth, signInWithPopup, GoogleAuthProvider, TwitterAuthProvider, signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
-import { getFirestore, collection, doc, setDoc, getDoc, getDocs, updateDoc, deleteDoc, onSnapshot, query, where, orderBy, addDoc, serverTimestamp, arrayUnion, getCountFromServer } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+
+// ✅ Добавлен updateProfile
+import { 
+    getAuth, 
+    signInWithPopup, 
+    GoogleAuthProvider, 
+    TwitterAuthProvider, 
+    signInWithEmailAndPassword, 
+    createUserWithEmailAndPassword, 
+    signOut, 
+    onAuthStateChanged,
+    updateProfile          // ← ДОБАВЛЕНО
+} from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
+
+import { 
+    getFirestore, 
+    collection, 
+    doc, 
+    setDoc, 
+    getDoc, 
+    getDocs, 
+    updateDoc, 
+    deleteDoc, 
+    onSnapshot, 
+    query, 
+    where, 
+    orderBy, 
+    addDoc, 
+    serverTimestamp, 
+    arrayUnion, 
+    getCountFromServer,
+    increment
+} from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
 const firebaseConfig = {
-  apiKey: "AIzaSyBdXGYg2t8DJBrQHCC80-pFerZU9PWmSCk",
-  authDomain: "testnet-hub.firebaseapp.com",
-  projectId: "testnet-hub",
-  storageBucket: "testnet-hub.firebasestorage.app",
-  messagingSenderId: "497813176653",
-  appId: "1:497813176653:web:089188fdd1555d76cd7704"
+    apiKey: "AIzaSyBdXGYg2t8DJBrQHCC80-pFerZU9PWmSCk",
+    authDomain: "testnet-hub.firebaseapp.com",
+    projectId: "testnet-hub",
+    storageBucket: "testnet-hub.firebasestorage.app",
+    messagingSenderId: "497813176653",
+    appId: "1:497813176653:web:089188fdd1555d76cd7704"
 };
 
 const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const db = getFirestore(app);
-window.db = db;
-window.__firestoreExports = { collection, getCountFromServer, addDoc, getDocs, doc, getDoc, query, where };
 
+// Глобальные переменные
+window.db = db;
+window.auth = auth;
+
+// ✅ Все нужные функции Firestore
+window.__firestoreExports = { 
+    collection, 
+    getCountFromServer, 
+    addDoc, 
+    getDocs, 
+    doc, 
+    getDoc, 
+    setDoc,
+    updateDoc,
+    deleteDoc,
+    onSnapshot,
+    query, 
+    where,
+    orderBy,
+    serverTimestamp,
+    arrayUnion,
+    increment
+};
+
+// ✅ Auth функции с updateProfile
+window.__authExports = {
+    updateProfile,
+    signOut,
+    onAuthStateChanged
+};
 const STORAGE_KEY = 'arc_tracker_v3';
 const COMPLETED_KEY = 'arc_completed_v1';
 const NEW_ACTIVITIES_KEY = 'arc_new_activities_v1';
@@ -1879,6 +1993,21 @@ onAuthStateChanged(auth, async function(user) {
         const data = userDoc.data();
         userFavorites = data.favorites || [];
         userCompleted = data.completed || [];
+          // Внутри onAuthStateChanged, после строки с userFavorites/userCompleted
+try {
+    const userRefForStats = doc(db, "users", user.uid);
+    const userSnapForStats = await getDoc(userRefForStats);
+
+    if (!userSnapForStats.exists() || !userSnapForStats.data().counted) {
+        await incrementUserCount();
+        await setDoc(userRefForStats, { counted: true }, { merge: true });
+        console.log("✅ New user counted:", user.uid);
+    } else {
+        console.log("ℹ️ User already counted:", user.uid);
+    }
+} catch(e) {
+    console.log('Counter update skip:', e);
+}
         if (data.arcGuideStats) { arcData = { ...arcData, ...data.arcGuideStats }; localStorage.setItem(STORAGE_KEY, JSON.stringify(arcData)); }
       } else { await setDoc(userRef, { favorites: [], completed: [], arcGuideStats: {} }); }
     } catch (e) { console.error('Error:', e); }
@@ -1897,14 +2026,16 @@ onAuthStateChanged(auth, async function(user) {
         const currentCount = configSnap.exists() ? (configSnap.data().userCount || 0) : 0;
         
         // Проверяем есть ли уже этот пользователь в счётчике
-        const userRef = doc(db, "users", user.uid);
-        const userSnap = await getDoc(userRef);
-        if (!userSnap.exists() || !userSnap.data().counted) {
-            // Новый пользователь — увеличиваем счётчик
-            await setDoc(configRef, { userCount: currentCount + 1 }, { merge: true });
-            // Помечаем что уже посчитан
-            await setDoc(userRef, { counted: true }, { merge: true });
-        }
+        // Проверяем, посчитан ли пользователь
+const userRefForStats = doc(db, "users", user.uid);
+const userSnapForStats = await getDoc(userRefForStats);
+
+if (!userSnapForStats.exists() || !userSnapForStats.data().counted) {
+    // Вызываем вашу функцию инкремента
+    await incrementUserCount(); 
+    // Помечаем в базе пользователя, чтобы не считать его второй раз
+    await setDoc(userRefForStats, { counted: true }, { merge: true });
+}
     } catch(e) {
         console.log('Counter update skip:', e);
     }
@@ -3269,6 +3400,22 @@ function detectNewActivities() {
 setTimeout(() => {
   detectNewActivities();
 }, 1000);
+    // Эту функцию нужно вызывать СРАЗУ ПОСЛЕ успешной регистрации
+async function incrementUserCount() {
+    try {
+        const statsRef = doc(db, 'config', 'stats');
+        await setDoc(statsRef, {
+            userCount: increment(1)
+        }, { merge: true });
+        console.log("✅ User count incremented");
+    } catch (e) {
+        console.error("❌ incrementUserCount error:", e);
+    }
+}
+
+// Пример вызова (вставь туда, где у тебя логика регистрации):
+// createUserWithEmailAndPassword(...).then(() => { incrementUserCount(); });
 </script>
+    <script src="footer.js"></script>
 </body>
 </html>
