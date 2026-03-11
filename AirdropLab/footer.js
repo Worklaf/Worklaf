@@ -1207,34 +1207,32 @@
                         </div>
 
                         <!-- Reagents Balance -->
-                        <div class="border-t border-slate-700/50 pt-5">
-                            <h4 class="text-sm font-semibold text-slate-300 mb-4 flex items-center gap-2">
-                                <span class="text-lg">🧪</span>
-                                ${lang('reagents_section_title')}
-                            </h4>
-                            <div class="bg-gradient-to-br from-cyan-900/30 to-blue-900/30 border border-cyan-500/20 rounded-xl p-4">
-                                <div class="flex items-center justify-between mb-3">
-                                    <div>
-                                        <div class="text-xs text-slate-400 mb-1">${lang('account_balance_label')}</div>
-                                        <div class="text-2xl font-black text-cyan-400" id="profileReagentBalance">
-                                            ${userData.reagents || 0}
-                                            <span class="text-sm font-normal text-slate-400 ml-1">${lang('reagents_rgt_unit')}</span>
-                                        </div>
-                                    </div>
-                                    <div class="text-right">
-                                        <div class="text-xs text-slate-400 mb-1">${lang('account_streak_label')}</div>
-                                        <div class="text-xl font-bold text-orange-400" id="profileStreak">
-                                            ${userData.streak || 0}
-                                            <span class="text-xs font-normal text-slate-400">${lang('account_days_short')}</span>
-                                        </div>
-                                    </div>
-                                </div>
-                               <button type="button" onclick="window._closeAccountOverlay(); openClaimModal();" id="profileClaimBtn"
-                                        class="w-full py-2.5 rounded-lg text-sm font-bold transition-all bg-gradient-to-r from-cyan-600 to-blue-600 hover:from-cyan-500 hover:to-blue-500 text-white">
-                                    <i class="fas fa-flask mr-2"></i>${lang('account_get_reagents')}
-                                </button>
-                            </div>
+        <div class="border-t border-slate-700/50 pt-5">
+            <h4 class="text-sm font-semibold text-slate-300 mb-4 flex items-center gap-2">
+                <span class="text-lg">🧪</span>
+                ${lang('reagents_section_title')}
+            </h4>
+            <div class="bg-gradient-to-br from-cyan-900/30 to-blue-900/30 border border-cyan-500/20 rounded-xl p-4">
+                <div class="flex items-center justify-between mb-3">
+                    <div>
+                        <div class="text-xs text-slate-400 mb-1">${lang('account_balance_label')}</div>
+                        <div class="text-2xl font-black text-cyan-400" id="profileReagentBalance">
+                            ${lang('account_loading')}
                         </div>
+                    </div>
+                    <div class="text-right">
+                        <div class="text-xs text-slate-400 mb-1">${lang('account_streak_label')}</div>
+                        <div class="text-xl font-bold text-orange-400" id="profileStreak">
+                            ${lang('account_loading')}
+                        </div>
+                    </div>
+                </div>
+               <button type="button" onclick="window._closeAccountOverlay(); openClaimModal();" id="profileClaimBtn"
+                        class="w-full py-2.5 rounded-lg text-sm font-bold transition-all bg-gradient-to-r from-cyan-600 to-blue-600 hover:from-cyan-500 hover:to-blue-500 text-white">
+                    <i class="fas fa-flask mr-2"></i>${lang('account_get_reagents')}
+                </button>
+            </div>
+        </div>
 
                         <!-- Action Buttons -->
                         <div class="flex gap-3 pt-4">
@@ -1268,99 +1266,127 @@
 
     // ============ INIT ACCOUNT PAGE ============
 
-    function initAccountPage() {
-        const lang = typeof window.t === 'function' ? window.t : (k) => k;
-        const user = typeof window.currentUser !== 'undefined' ? window.currentUser : null;
-        if (!user) return;
+    // ============ INIT ACCOUNT PAGE ============
 
-        const db  = window.db;
-        const exp = window.__firestoreExports;
+function initAccountPage() {
+    const lang = typeof window.t === 'function' ? window.t : (k) => k;
+    const user = typeof window.currentUser !== 'undefined' ? window.currentUser : null;
+    if (!user) return;
 
-        if (db && exp && exp.doc && exp.getDoc && exp.setDoc) {
-            exp.getDoc(exp.doc(db, 'users', user.uid)).then(async function(snap) {
-                let rootData = {};
-                let profile  = {};
+    const db  = window.db;
+    const exp = window.__firestoreExports;
 
-                if (snap.exists()) {
-                    rootData = snap.data();
-                    profile  = rootData.profile || rootData || {};
-                }
+    if (db && exp && exp.doc && exp.getDoc && exp.setDoc) {
+        exp.getDoc(exp.doc(db, 'users', user.uid)).then(async function(snap) {
+            let rootData = {};
+            let profile  = {};
 
-                const local  = JSON.parse(localStorage.getItem('userProfileData') || '{}');
-                const merged = Object.assign({}, local, profile);
+            if (snap.exists()) {
+                rootData = snap.data();
+                profile  = rootData.profile || rootData || {};
+            }
 
-                if (!merged.referralCode && !rootData.referralCode) {
-                    const code = 'AL-' + user.uid.substring(0, 6).toUpperCase();
-                    merged.referralCode = code;
-                    try {
-                        await exp.setDoc(exp.doc(db, 'users', user.uid), { referralCode: code }, { merge: true });
-                    } catch(e) { console.warn('Ref code save error:', e); }
-                } else {
-                    merged.referralCode = merged.referralCode || rootData.referralCode;
-                }
+            const local  = JSON.parse(localStorage.getItem('userProfileData') || '{}');
+            const merged = Object.assign({}, local, profile);
 
-                merged.invitedCount  = rootData.invitedCount  || 0;
-                merged.invitedBy     = rootData.invitedBy     || '';
-                merged.invitedByName = rootData.invitedByName || '';
+            if (!merged.referralCode && !rootData.referralCode) {
+                const code = 'AL-' + user.uid.substring(0, 6).toUpperCase();
+                merged.referralCode = code;
+                try {
+                    await exp.setDoc(exp.doc(db, 'users', user.uid), { referralCode: code }, { merge: true });
+                } catch(e) { console.warn('Ref code save error:', e); }
+            } else {
+                merged.referralCode = merged.referralCode || rootData.referralCode;
+            }
 
-                window.userProfileData = merged;
-                _fillAccountForm(merged);
+            merged.invitedCount  = rootData.invitedCount  || 0;
+            merged.invitedBy     = rootData.invitedBy     || '';
+            merged.invitedByName = rootData.invitedByName || '';
+            
+            // ✅ ДОБАВЛЯЕМ РЕАЛЬНЫЕ ДАННЫЕ ИЗ FIRESTORE
+            merged.reagents = rootData.reagents || 0;
+            merged.streak = rootData.streak || 0;
 
-                const refEl = document.getElementById('profileRefCode');
-                if (refEl) refEl.textContent = merged.referralCode || 'AL-' + user.uid.substring(0,6).toUpperCase();
+            window.userProfileData = merged;
+            _fillAccountForm(merged);
 
-                const invEl = document.getElementById('profileInvitedCount');
-                if (invEl) invEl.innerHTML = (merged.invitedCount || 0) + ' <span class="text-xs font-normal text-slate-500">' + lang('account_people_short') + '</span>';
+            const refEl = document.getElementById('profileRefCode');
+            if (refEl) refEl.textContent = merged.referralCode || 'AL-' + user.uid.substring(0,6).toUpperCase();
 
-            }).catch(function(err) {
-                console.warn('Profile load error:', err);
-                const local = JSON.parse(localStorage.getItem('userProfileData') || '{}');
-                _fillAccountForm(local);
-            });
-        }
+            const invEl = document.getElementById('profileInvitedCount');
+            if (invEl) invEl.innerHTML = (merged.invitedCount || 0) + ' <span class="text-xs font-normal text-slate-500">' + lang('account_people_short') + '</span>';
+            
+            // ✅ ОБНОВЛЯЕМ РЕАГЕНТЫ И СТРИК
+            const balEl = document.getElementById('profileReagentBalance');
+            if (balEl) {
+                balEl.innerHTML = merged.reagents + ' <span class="text-sm font-normal text-slate-400 ml-1">' + lang('reagents_rgt_unit') + '</span>';
+            }
+
+            const streakEl = document.getElementById('profileStreak');
+            if (streakEl) {
+                streakEl.innerHTML = merged.streak + ' <span class="text-xs font-normal text-slate-400">' + lang('account_days_short') + '</span>';
+            }
+
+        }).catch(function(err) {
+            console.warn('Profile load error:', err);
+            const local = JSON.parse(localStorage.getItem('userProfileData') || '{}');
+            _fillAccountForm(local);
+            
+            // Если ошибка — показываем локальные данные
+            const balEl = document.getElementById('profileReagentBalance');
+            const streakEl = document.getElementById('profileStreak');
+            if (balEl) balEl.innerHTML = (local.reagents || 0) + ' <span class="text-sm font-normal text-slate-400 ml-1">' + lang('reagents_rgt_unit') + '</span>';
+            if (streakEl) streakEl.innerHTML = (local.streak || 0) + ' <span class="text-xs font-normal text-slate-400">' + lang('account_days_short') + '</span>';
+        });
     }
+}
 
     function _fillAccountForm(profile) {
-        if (!profile) return;
-        const lang = typeof window.t === 'function' ? window.t : (k) => k;
+    if (!profile) return;
+    const lang = typeof window.t === 'function' ? window.t : (k) => k;
 
-        const set = function(id, val) {
-            const el = document.getElementById(id);
-            if (el && val !== undefined && val !== null) el.value = val;
-        };
+    const set = function(id, val) {
+        const el = document.getElementById(id);
+        if (el && val !== undefined && val !== null) el.value = val;
+    };
 
-        set('profileFirstName',  profile.firstName);
-        set('profileLastName',   profile.lastName);
-        set('profileUsername',   profile.username);
-        set('profileTelegram',   profile.telegram);
-        set('profileBirthdate',  profile.birthdate);
-        set('profileBio',        profile.bio);
-        set('profileEvmAddress', profile.evmAddress);
-        set('profileSolAddress', profile.solAddress);
-        set('profileDiscord',    profile.discord);
-        set('profileCity',       profile.city);
+    set('profileFirstName',  profile.firstName);
+    set('profileLastName',   profile.lastName);
+    set('profileUsername',   profile.username);
+    set('profileTelegram',   profile.telegram);
+    set('profileBirthdate',  profile.birthdate);
+    set('profileBio',        profile.bio);
+    set('profileEvmAddress', profile.evmAddress);
+    set('profileSolAddress', profile.solAddress);
+    set('profileDiscord',    profile.discord);
+    set('profileCity',       profile.city);
 
-        const twEl = document.getElementById('profileTwitter');
-        if (twEl && profile.twitter) twEl.value = profile.twitter.replace('@', '');
+    const twEl = document.getElementById('profileTwitter');
+    if (twEl && profile.twitter) twEl.value = profile.twitter.replace('@', '');
 
-        if (profile.gender) {
-            const radio = document.querySelector(`input[name="gender"][value="${profile.gender}"]`);
-            if (radio) radio.checked = true;
-        }
-
-        if (profile.countryName || profile.country) {
-            const searchInput = document.getElementById('countrySearchInput');
-            const hiddenInput = document.getElementById('profileCountry');
-            if (searchInput) searchInput.value = profile.countryName || profile.country;
-            if (hiddenInput) hiddenInput.value  = profile.country || '';
-        }
-
-        const balEl = document.getElementById('profileReagentBalance');
-        if (balEl) balEl.innerHTML = (profile.reagents || 0) + ' <span class="text-sm font-normal text-slate-400 ml-1">' + lang('reagents_rgt_unit') + '</span>';
-
-        const streakEl = document.getElementById('profileStreak');
-        if (streakEl) streakEl.innerHTML = (profile.streak || 0) + ' <span class="text-xs font-normal text-slate-400">' + lang('account_days_short') + '</span>';
+    if (profile.gender) {
+        const radio = document.querySelector(`input[name="gender"][value="${profile.gender}"]`);
+        if (radio) radio.checked = true;
     }
+
+    if (profile.countryName || profile.country) {
+        const searchInput = document.getElementById('countrySearchInput');
+        const hiddenInput = document.getElementById('profileCountry');
+        if (searchInput) searchInput.value = profile.countryName || profile.country;
+        if (hiddenInput) hiddenInput.value  = profile.country || '';
+    }
+
+    // ✅ ИСПОЛЬЗУЕМ РЕАЛЬНЫЕ ДАННЫЕ ИЗ FIRESTORE
+    const balEl = document.getElementById('profileReagentBalance');
+    if (balEl) {
+        balEl.innerHTML = (profile.reagents || 0) + ' <span class="text-sm font-normal text-slate-400 ml-1">' + lang('reagents_rgt_unit') + '</span>';
+    }
+
+    const streakEl = document.getElementById('profileStreak');
+    if (streakEl) {
+        streakEl.innerHTML = (profile.streak || 0) + ' <span class="text-xs font-normal text-slate-400">' + lang('account_days_short') + '</span>';
+    }
+}
 
     // ============ REFERRAL CODE ============
 
