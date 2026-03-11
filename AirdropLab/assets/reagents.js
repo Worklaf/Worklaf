@@ -1,6 +1,7 @@
 /**
  * ============================================
- * AirdropLab Reagents System v2.2
+ * AirdropLab Reagents System v2.3
+ * Добавлено: начисление за заполнение профиля
  * ============================================
  */
 
@@ -26,6 +27,22 @@ const REAGENTS_CONFIG = {
         { level: 3, percent: 5  },
     ],
     passivePayoutDay: 1,
+    // ✅ НОВОЕ: начисления за профиль (13 полей × 10 RGT)
+    profileFields: [
+        { key: 'firstName',  reward: 10 },
+        { key: 'lastName',   reward: 10 },
+        { key: 'birthdate',  reward: 10 },
+        { key: 'gender',     reward: 10 },
+        { key: 'bio',        reward: 10 },
+        { key: 'city',       reward: 10 },
+        { key: 'country',    reward: 10 },
+        { key: 'username',   reward: 10 },
+        { key: 'twitter',    reward: 10 },
+        { key: 'discord',    reward: 10 },
+        { key: 'telegram',   reward: 10 },
+        { key: 'evmAddress', reward: 10 },
+        { key: 'solAddress', reward: 10 },
+    ],
 };
 
 // ─────────────────────────────────────────────────────────────────
@@ -83,11 +100,25 @@ function getNextMilestone(currentStreak) {
     return { days: next, daysLeft: next - currentStreak };
 }
 
+// ✅ НОВОЕ: расчет бонуса за профиль
+function calcProfileBonus(profileData) {
+    if (!profileData) return 0;
+    let bonus = 0;
+    REAGENTS_CONFIG.profileFields.forEach(field => {
+        const val = profileData[field.key];
+        if (val && String(val).trim()) {
+            bonus += field.reward;
+        }
+    });
+    return bonus;
+}
+
 // ─────────────────────────────────────────────────────────────────
-// FAQ — RU + EN (живут прямо здесь, не нужны в language.js)
+// FAQ — RU + EN (живут прямо здесь)
 // ─────────────────────────────────────────────────────────────────
 
 function _faqStreakHtml() {
+    const maxProfileBonus = REAGENTS_CONFIG.profileFields.length * 10;
     if (isEn()) return `
         <div class="font-semibold text-blue-300 mb-1.5">❓ How does the streak work?</div>
         <div class="text-slate-400 space-y-1">
@@ -97,6 +128,7 @@ function _faqStreakHtml() {
             <div>• Base reward: <span class="text-cyan-400">+${REAGENTS_CONFIG.dailyBase} RGT</span> per day</div>
             <div>• Referral code gives new user <span class="text-cyan-400">+${REAGENTS_CONFIG.referralBonus} RGT</span>,
                  you get <span class="text-cyan-400">+${REAGENTS_CONFIG.referralInviter} RGT</span></div>
+            <div>• Complete profile: <span class="text-emerald-400">+10 RGT</span> for each field (13 fields = up to <span class="text-emerald-400">+${maxProfileBonus} RGT</span>)</div>
         </div>`;
     return `
         <div class="font-semibold text-blue-300 mb-1.5">❓ Как работает стрик?</div>
@@ -107,6 +139,7 @@ function _faqStreakHtml() {
             <div>• База: <span class="text-cyan-400">+${REAGENTS_CONFIG.dailyBase} RGT</span> каждый день</div>
             <div>• Реф. код даёт новому: <span class="text-cyan-400">+${REAGENTS_CONFIG.referralBonus} RGT</span>,
                  вам — <span class="text-cyan-400">+${REAGENTS_CONFIG.referralInviter} RGT</span></div>
+            <div>• Заполните профиль: <span class="text-emerald-400">+10 RGT</span> за каждое поле (13 полей = до <span class="text-emerald-400">+${maxProfileBonus} RGT</span>)</div>
         </div>`;
 }
 
@@ -206,6 +239,48 @@ async function performClaim(user) {
 
     await _creditPassiveToUpstream(user, status.reward.total, exp, db);
     return { ...status, newReagents, bestStreak: newBestStreak };
+}
+
+// ✅ НОВОЕ: проверка и начисление профиля
+async function checkAndAwardProfileBonus(user) {
+    const db = window.db, exp = window.__firestoreExports;
+    if (!db || !exp || !user) return 0;
+
+    try {
+        const snap = await exp.getDoc(exp.doc(db, 'users', user.uid));
+        if (!snap.exists()) return 0;
+
+        const userData = snap.data();
+        const profile = userData.profile || {};
+
+        // Какие поля уже были отмечены как начисленные
+        const awardedFields = userData.awardedProfileFields || [];
+        let totalBonus = 0;
+        let newAwardedFields = [...awardedFields];
+
+        for (const field of REAGENTS_CONFIG.profileFields) {
+            const val = profile[field.key];
+            // Если поле заполнено И его еще не начисляли
+            if (val && String(val).trim() && !awardedFields.includes(field.key)) {
+                totalBonus += field.reward;
+                newAwardedFields.push(field.key);
+            }
+        }
+
+        if (totalBonus > 0) {
+            const currentReagents = userData.reagents || 0;
+            await exp.setDoc(exp.doc(db, 'users', user.uid), {
+                reagents: currentReagents + totalBonus,
+                awardedProfileFields: newAwardedFields,
+                lastProfileCheck: new Date().toISOString(),
+            }, { merge: true });
+        }
+
+        return totalBonus;
+    } catch(err) {
+        console.error('[Reagents] checkAndAwardProfileBonus error:', err);
+        return 0;
+    }
 }
 
 window.applyReferralCode = async function(currentUser, code) {
@@ -367,9 +442,12 @@ window.openClaimModal = async function() {
     document.body.style.overflow = 'hidden';
 
     const payout = await _tryPassivePayout(user);
+    // ✅ НОВОЕ: проверяем бонус за профиль
+    const profileBonus = await checkAndAwardProfileBonus(user);
     const status = await getClaimStatus(user);
     if (!status) { body.innerHTML = _renderError(lang('claim_load_error')); return; }
     if (payout > 0) status._payoutBanner = payout;
+    if (profileBonus > 0) status._profileBonus = profileBonus;
 
     body.innerHTML = _renderClaimUI(status);
 };
@@ -464,7 +542,7 @@ function _renderError(msg) {
 
 function _renderClaimUI(status) {
     const { canClaim, streak, newStreak, reagents, reward, streakBroken,
-            nextMilestone, passiveInfo, bestStreak, referralCode, _payoutBanner } = status;
+            nextMilestone, passiveInfo, bestStreak, referralCode, _payoutBanner, _profileBonus } = status;
 
     const prevMilestone = nextMilestone.days - 30 < 0 ? 0 : nextMilestone.days - 30;
     const progressPct   = Math.min(
@@ -495,7 +573,7 @@ function _renderClaimUI(status) {
             ${_faqStreakHtml()}
         </div>
 
-        <!-- Баннер автовыплаты -->
+        <!-- Баннер автовыплаты пассива -->
         ${_payoutBanner ? `
         <div class="mb-3 p-3 bg-emerald-900/25 border border-emerald-600/40 rounded-xl flex items-center gap-2.5">
             <span class="text-xl">✨</span>
@@ -505,6 +583,20 @@ function _renderClaimUI(status) {
                 </div>
                 <div class="text-xs text-slate-400">+${_payoutBanner} RGT
                     ${en ? 'added to balance' : 'добавлено к балансу'}
+                </div>
+            </div>
+        </div>` : ''}
+
+        <!-- Баннер профиля -->
+        ${_profileBonus ? `
+        <div class="mb-3 p-3 bg-yellow-900/25 border border-yellow-600/40 rounded-xl flex items-center gap-2.5">
+            <span class="text-xl">✓</span>
+            <div>
+                <div class="text-xs font-bold text-yellow-400">
+                    ${en ? 'Profile fields completed!' : 'Поля профиля заполнены!'}
+                </div>
+                <div class="text-xs text-slate-400">+${_profileBonus} RGT
+                    ${en ? 'profile bonus' : 'бонус профиля'}
                 </div>
             </div>
         </div>` : ''}
@@ -1028,10 +1120,6 @@ function _updateHeaderReagents(amount) {
 
 // ─────────────────────────────────────────────────────────────────
 // МОДАЛКА + СТИЛИ
-// Ключевое решение скролла на ПК:
-//   .claim-modal-box — flex-колонка с фиксированной высотой
-//   .claim-two-col   — flex:1 + min-height:0 → колонки скроллятся
-//   .claim-footer    — flex-shrink:0 → всегда видна
 // ─────────────────────────────────────────────────────────────────
 
 function _ensureClaimModal() {
@@ -1100,7 +1188,6 @@ function _addClaimStyles() {
 
         /* ══════════════════════════════════════════════
            ОКНО — flex-колонка, высота = 90vh (ПК)
-           Это обеспечивает работу overflow в детях
         ══════════════════════════════════════════════ */
         .claim-modal-box {
             background: linear-gradient(145deg, #171f30 0%, #0c1220 100%);
@@ -1108,12 +1195,10 @@ function _addClaimStyles() {
             border-radius: 20px;
             width: 100%;
             max-width: 860px;
-            /* ВАЖНО: явная высота, не max-height — иначе flex-child
-               не может получить реальный размер для overflow */
             height: 90vh;
             display: flex;
             flex-direction: column;
-            overflow: hidden;        /* окно не скроллит само */
+            overflow: hidden;
             transform: translateY(20px) scale(0.97);
             transition: transform 0.3s cubic-bezier(0.4,0,0.2,1);
             box-shadow: 0 30px 80px rgba(0,0,0,0.7),
@@ -1124,7 +1209,7 @@ function _addClaimStyles() {
         }
 
         /* ══════════════════════════════════════════════
-           ШАПКА — фиксированная, не сжимается
+           ШАПКА
         ══════════════════════════════════════════════ */
         .claim-modal-header {
             display: flex;
@@ -1132,34 +1217,33 @@ function _addClaimStyles() {
             justify-content: space-between;
             padding: 16px 20px 14px;
             border-bottom: 1px solid rgba(255,255,255,0.05);
-            flex-shrink: 0;          /* не сжимается */
+            flex-shrink: 0;
         }
 
         /* ══════════════════════════════════════════════
-           ТЕЛО — занимает всё свободное место
-           claimModalBody содержит .claim-two-col + .claim-footer
+           ТЕЛО
         ══════════════════════════════════════════════ */
         #claimModalBody {
             flex: 1;
-            min-height: 0;           /* КЛЮЧЕВО: без этого flex-child не даёт overflow */
+            min-height: 0;
             display: flex;
             flex-direction: column;
             overflow: hidden;
         }
 
         /* ══════════════════════════════════════════════
-           ДВУХКОЛОНОЧНАЯ СЕТКА — занимает оставшееся
+           ДВУХКОЛОНОЧНАЯ СЕТКА
         ══════════════════════════════════════════════ */
         .claim-two-col {
             display: grid;
             grid-template-columns: 1fr 1px 1fr;
-            flex: 1;                 /* растягивается */
-            min-height: 0;           /* КЛЮЧЕВО */
-            overflow: hidden;        /* колонки скроллят сами */
+            flex: 1;
+            min-height: 0;
+            overflow: hidden;
         }
 
         /* ══════════════════════════════════════════════
-           КОЛОНКИ — каждая скроллится независимо
+           КОЛОНКИ
         ══════════════════════════════════════════════ */
         .claim-left-col {
             padding: 16px 18px;
@@ -1190,12 +1274,12 @@ function _addClaimStyles() {
         .claim-right-col::-webkit-scrollbar-thumb { background: #334155; border-radius: 2px; }
 
         /* ══════════════════════════════════════════════
-           ФУТЕР — кнопка «Закрыть», всегда видна
+           ФУТЕР
         ══════════════════════════════════════════════ */
         .claim-footer {
             padding: 10px 16px 14px;
             border-top: 1px solid rgba(255,255,255,0.04);
-            flex-shrink: 0;          /* не сжимается */
+            flex-shrink: 0;
             background: linear-gradient(145deg, #171f30, #0c1220);
         }
 
@@ -1226,23 +1310,21 @@ function _addClaimStyles() {
 
         /* ══════════════════════════════════════════════
            МОБИЛЬНЫЕ (≤ 640px)
-           Окно скроллит целиком, колонки — в поток
         ══════════════════════════════════════════════ */
         @media (max-width: 640px) {
             .claim-modal-box {
                 border-radius: 16px;
-                /* На мобиле высота по содержимому */
                 height: auto;
                 max-height: 92vh;
                 overflow-y: auto;
                 -webkit-overflow-scrolling: touch;
             }
             #claimModalBody {
-                display: block;      /* обычный поток */
+                display: block;
                 overflow: visible;
             }
             .claim-two-col {
-                display: block;      /* одна колонка */
+                display: block;
                 overflow: visible;
             }
             .claim-left-col,
@@ -1364,12 +1446,13 @@ async function _checkClaimOnLoad() {
 }
 
 window.ReagentsSystem  = { getClaimStatus, performClaim, getUTCDateString, calcReward,
-                            getNextMilestone, getPassiveRewardInfo, CONFIG: REAGENTS_CONFIG };
+                            getNextMilestone, getPassiveRewardInfo, checkAndAwardProfileBonus,
+                            calcProfileBonus, CONFIG: REAGENTS_CONFIG };
 window.openClaimModal  = window.openClaimModal;
 window.closeClaimModal = window.closeClaimModal;
 window.doClaim         = window.doClaim;
 
-console.log('🧪 Reagents System v2.2 loaded');
+console.log('🧪 Reagents System v2.3 loaded (profile bonuses included)');
 setTimeout(_checkClaimOnLoad, 2000);
 setTimeout(_checkClaimOnLoad, 5000);
 
