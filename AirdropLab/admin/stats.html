@@ -659,108 +659,147 @@ async function loadUsers() {
     setTableMsg(
         '<div class="flex flex-col items-center gap-3">' +
         '<i class="fas fa-spinner fa-spin text-blue-400 text-2xl"></i>' +
-        '<span class="text-slate-400">Загрузка пользователей и рефералов...</span>' +
-        '</div>', false
+        '<span class="text-slate-400">Загрузка пользователей...</span>' +
+        '<div class="w-48 h-1.5 bg-slate-800 rounded-full overflow-hidden">' +
+        '<div class="h-full bg-blue-500 rounded-full loading-bar" style="width:0%;transition:width 8s linear"></div>' +
+        '</div></div>', false
     );
+    setTimeout(function(){ var b = document.querySelector('.loading-bar'); if(b) b.style.width='90%'; }, 50);
 
+    var snap;
+    try { snap = await fbGetDocs(fbCol(fbDb, "users")); }
+    catch(e) { setTableMsg('Ошибка: ' + e.code + ' — ' + e.message, true); throw e; }
+
+    if (snap.size === 0) {
+        setTableMsg('Нет пользователей', true);
+        updateStatCards([], new Set());
+        renderActivityChart([]); renderTopUsers([]); renderCountriesChart([]);
+        renderReferralsStats([]); renderTopReferrers([]);
+        return;
+    }
+
+    // ✅ НОВОЕ: Загружаем коллекцию referrals для получения точных дат
+    var referralsSnap;
+    var referralsDates = {};
     try {
-        // Параллельно загружаем пользователей и новую коллекцию рефералов
-        const [usersSnap, referralsSnap] = await Promise.all([
-            fbGetDocs(fbCol(fbDb, "users")),
-            fbGetDocs(fbCol(fbDb, "referrals"))
-        ]);
-
-        if (usersSnap.size === 0) {
-            setTableMsg('Нет пользователей', true);
-            return;
-        }
-
-        // Создаем карту рефералов для быстрого доступа по дате
-        // Ключ: UID приглашенного, Значение: данные из коллекции referrals
-        const referralsInfoMap = {};
-        referralsSnap.forEach(doc => {
-            const data = doc.data();
-            referralsInfoMap[data.userId] = {
-                date: data.createdAt?.toDate() || new Date(data.timestamp),
-                inviterId: data.invitedBy
-            };
-        });
-
-        const now = new Date();
-        const ms30min = 30 * 60 * 1000;
-        const countriesSet = new Set();
-        allUsers = [];
-
-        // Обработка пользователей
-        usersSnap.forEach(docSnap => {
-            const raw = docSnap.data();
-            const uid = docSnap.id;
-
-            const toDate = (val) => {
-                if (!val) return null;
-                if (typeof val.toDate === 'function') return val.toDate();
-                return new Date(val);
-            };
-
-            const lastLogin = toDate(raw.lastLogin);
-            const firstLogin = toDate(raw.firstLogin);
-            
-            // ✅ ГЛАВНОЕ ИЗМЕНЕНИЕ: Берем дату из коллекции referrals, если она там есть
-            // Если нет - берем старое поле invitedAt из профиля
-            const refInfo = referralsInfoMap[uid];
-            const invitedAtDate = refInfo ? refInfo.date : toDate(raw.invitedAt);
-
-            const profile = raw.profile || {};
-            const countryName = profile.countryName || raw.countryName || raw.country || '';
-            if (countryName) countriesSet.add(countryName);
-
-            allUsers.push({
-                id: uid,
-                email: raw.email || '—',
-                displayName: (raw.displayName || [profile.firstName, profile.lastName].filter(Boolean).join(' ') || 'Аноним').trim(),
-                photoURL: raw.photoURL || '',
-                provider: raw.provider || 'unknown',
-                firstLogin, lastLogin, 
-                isOnline: !!(lastLogin && (now - lastLogin) < ms30min),
-                totalClicks: 0, // будет посчитано в buildProjectStats
-                country: countryName,
-                referralCode: raw.referralCode || '',
-                invitedCount: raw.invitedCount || 0,
-                invitedBy: raw.invitedBy || '',
-                invitedByName: raw.invitedByName || '',
-                invitedAt: invitedAtDate, // Используем найденную дату
-                reagents: raw.reagents || 0,
-                streak: raw.streak || 0,
-                invitedUsers: [],
-                raw
-            });
-        });
-
-        // Строим дерево приглашенных
-        allUsers.forEach(u => {
-            if (u.invitedBy) {
-                const inviter = allUsers.find(inv => inv.id === u.invitedBy);
-                if (inviter) inviter.invitedUsers.push(u);
+        referralsSnap = await fbGetDocs(fbCol(fbDb, "referrals"));
+        referralsSnap.forEach(function(doc) {
+            var d = doc.data();
+            if (d.userId && d.createdAt) {
+                referralsDates[d.userId] = typeof d.createdAt.toDate === 'function' 
+                    ? d.createdAt.toDate() 
+                    : new Date(d.createdAt);
             }
         });
-
-        allUsers.sort((a,b) => (b.lastLogin||0) - (a.lastLogin||0));
-        filteredUsers = [...allUsers];
-
-        // Обновляем UI
-        updateStatCards(allUsers, countriesSet);
-        renderActivityChart(allUsers);
-        renderTopUsers(allUsers);
-        renderTopReferrers(allUsers);
-        renderCountriesChart(allUsers);
-        renderReferralsStats(allUsers);
-        renderTableHead();
-        renderTable();
-        updateTimestamp();
     } catch(e) {
-        console.error('Error loading data:', e);
-        setTableMsg('Ошибка: ' + e.message, true);
+        console.warn('Ошибка загрузки коллекции referrals:', e);
+        // Продолжаем работу, если коллекция еще не создана
     }
+
+    var now     = new Date();
+    var ms30min = 30 * 60 * 1000;
+    var countriesSet = new Set();
+    allUsers = [];
+
+    snap.forEach(function(docSnap) {
+        var raw = docSnap.data();
+        var uid = docSnap.id;
+
+        var toDate = function(val) {
+            if (!val) return null;
+            if (typeof val.toDate === 'function') return val.toDate();
+            if (val instanceof Date) return val;
+            var p = new Date(val); return isNaN(p.getTime()) ? null : p;
+        };
+
+        var lastLogin  = toDate(raw.lastLogin);
+        var firstLogin = toDate(raw.firstLogin);
+        var isOnline   = !!(lastLogin && (now - lastLogin) < ms30min);
+
+        var guideStats = raw.arcGuideStats || {};
+        var totalClicks = 0, topProjectId = null, topProjectClicks = 0;
+        Object.keys(guideStats).forEach(function(pid) {
+            var cl = Number((guideStats[pid] || {}).totalClicks || 0);
+            totalClicks += cl;
+            if (cl > topProjectClicks) { topProjectClicks = cl; topProjectId = pid; }
+        });
+
+        var profile  = raw.profile  || {};
+        var userData = raw.userData || {};
+
+        var firstName = profile.firstName  || raw.firstName  || userData.firstName  || '';
+        var lastName  = profile.lastName   || raw.lastName   || userData.lastName   || '';
+        var username  = profile.username   || raw.username   || userData.username   || '';
+        var telegram  = profile.telegram   || raw.telegram   || userData.telegram   || '';
+        var birthdate = profile.birthdate  || raw.birthdate  || userData.birthdate  || '';
+        var gender    = profile.gender     || raw.gender     || userData.gender     || '';
+        var bio       = profile.bio        || raw.bio        || userData.bio        || '';
+        var city      = profile.city       || raw.city       || userData.city       || '';
+        var twitter   = profile.twitter    || raw.twitter    || userData.twitter    || '';
+        var discord   = profile.discord    || raw.discord    || userData.discord    || '';
+        var evmAddress = profile.evmAddress || raw.evmAddress || '';
+        var solAddress = profile.solAddress || raw.solAddress || '';
+        var countryCode = profile.country     || raw.country     || userData.country     || '';
+        var countryName = profile.countryName || raw.countryName || userData.countryName || countryCode;
+
+        if (countryName) countriesSet.add(countryName);
+
+        var displayName = (raw.displayName || [firstName, lastName].filter(Boolean).join(' ') || 'Аноним').trim() || 'Аноним';
+
+        // ✅ ГЛАВНОЕ ИЗМЕНЕНИЕ: Берем дату из referrals, если есть, иначе из старого поля
+        var invitedAtDate = referralsDates[uid] || toDate(raw.invitedAt) || '';
+
+        allUsers.push({
+            id:            uid,
+            email:         raw.email    || '—',
+            displayName,
+            photoURL:      raw.photoURL || '',
+            provider:      raw.provider || 'unknown',
+            firstLogin,    lastLogin,    isOnline,
+            totalClicks,   topProjectId, topProjectClicks,
+            completedCount: Array.isArray(raw.completed) ? raw.completed.length : 0,
+            favoritesCount: Array.isArray(raw.favorites) ? raw.favorites.length : 0,
+            profileFilled:  !!(firstName || lastName || username || telegram || countryCode),
+            firstName, lastName, username, telegram, birthdate, gender, bio,
+            city, twitter, discord, evmAddress, solAddress,
+            country: countryName, countryCode,
+            referralCode:  raw.referralCode  || '',
+            invitedCount:  raw.invitedCount  || 0,
+            invitedBy:     raw.invitedBy     || '',
+            invitedByName: raw.invitedByName || '',
+            invitedAt:     invitedAtDate,    // ✅ Используем найденную дату
+            reagents:      raw.reagents      || 0,
+            streak:        raw.streak        || 0,
+            invitedUsers:  [],   // заполним ниже
+            raw
+        });
+    });
+
+    // ✅ Строим карту рефералов ПОСЛЕ того как allUsers заполнен
+    var referralsMap = {};
+    allUsers.forEach(function(u) {
+        if (u.invitedBy) {
+            if (!referralsMap[u.invitedBy]) referralsMap[u.invitedBy] = [];
+            referralsMap[u.invitedBy].push(u);
+        }
+    });
+    allUsers.forEach(function(u) {
+        u.invitedUsers = referralsMap[u.id] || [];
+    });
+
+    allUsers.sort(function(a,b){ return (b.lastLogin||0)-(a.lastLogin||0); });
+    filteredUsers = allUsers.slice();
+
+    updateStatCards(allUsers, countriesSet);
+    renderActivityChart(allUsers);
+    renderTopUsers(allUsers);
+    renderTopReferrers(allUsers);
+    renderCountriesChart(allUsers);
+    renderReferralsStats(allUsers);
+    renderTableHead();
+    renderTable();
+    updateTimestamp();
+    updateCount();
 }
 
 async function buildProjectStats() {
