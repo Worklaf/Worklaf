@@ -1365,86 +1365,128 @@
     // ============ REFERRAL CODE ============
 
     window.applyReferralCodeFooter = async function() {
-        const lang  = typeof window.t === 'function' ? window.t : (k) => k;
-        const input = document.getElementById('profileInviteCode');
-        if (!input) return;
+    const lang  = typeof window.t === 'function' ? window.t : (k) => k;
+    const input = document.getElementById('profileInviteCode');
+    if (!input) return;
 
-        const code = input.value.trim().toUpperCase();
-        if (!code || !code.startsWith('AL-')) {
-            footerShowToast(lang('ref_wrong_format'), 'error');
+    const code = input.value.trim().toUpperCase();
+    if (!code || !code.startsWith('AL-')) {
+        footerShowToast(lang('ref_wrong_format'), 'error');
+        return;
+    }
+
+    const user = typeof window.currentUser !== 'undefined' ? window.currentUser : null;
+    if (!user) {
+        footerShowToast(lang('ref_login_required'), 'error');
+        return;
+    }
+
+    const db  = window.db;
+    const exp = window.__firestoreExports;
+    if (!db || !exp) return;
+
+    try {
+        const snap = await exp.getDocs(
+            exp.query(
+                exp.collection(db, 'users'),
+                exp.where('referralCode', '==', code)
+            )
+        );
+
+        if (snap.empty) {
+            footerShowToast(lang('ref_not_found'), 'error');
             return;
         }
 
-        const user = typeof window.currentUser !== 'undefined' ? window.currentUser : null;
-        if (!user) {
-            footerShowToast(lang('ref_login_required'), 'error');
+        const inviterDoc  = snap.docs[0];
+        const inviterId   = inviterDoc.id;
+        const inviterData = inviterDoc.data();
+
+        if (inviterId === user.uid) {
+            footerShowToast(lang('ref_own_code'), 'error');
             return;
         }
 
-        const db  = window.db;
-        const exp = window.__firestoreExports;
-        if (!db || !exp) return;
+        // Проверяем, есть ли уже приглашение от этого пригласившего
+        const existingRef = await exp.getDocs(
+            exp.query(
+                exp.collection(db, 'referrals'),
+                exp.where('userId', '==', user.uid),
+                exp.where('invitedBy', '==', inviterId)
+            )
+        );
 
-        try {
-            const snap = await exp.getDocs(
-                exp.query(
-                    exp.collection(db, 'users'),
-                    exp.where('referralCode', '==', code)
-                )
-            );
-
-            if (snap.empty) {
-                footerShowToast(lang('ref_not_found'), 'error');
-                return;
-            }
-
-            const inviterDoc  = snap.docs[0];
-            const inviterId   = inviterDoc.id;
-            const inviterData = inviterDoc.data();
-
-            if (inviterId === user.uid) {
-                footerShowToast(lang('ref_own_code'), 'error');
-                return;
-            }
-
-            await exp.setDoc(
-                exp.doc(db, 'users', user.uid),
-                {
-                    invitedBy:    inviterId,
-                    invitedByName: inviterData.displayName || inviterData.profile?.firstName || lang('user')
-                },
-                { merge: true }
-            );
-
-            const currentReagents = inviterData.reagents    || 0;
-            const currentInvited  = inviterData.invitedCount || 0;
-
-            await exp.setDoc(
-                exp.doc(db, 'users', inviterId),
-                { reagents: currentReagents + 25, invitedCount: currentInvited + 1 },
-                { merge: true }
-            );
-
-            const mySnap     = await exp.getDoc(exp.doc(db, 'users', user.uid));
-            const myData     = mySnap.exists() ? mySnap.data() : {};
-            const myReagents = myData.reagents || 0;
-
-            await exp.setDoc(
-                exp.doc(db, 'users', user.uid),
-                { reagents: myReagents + 50 },
-                { merge: true }
-            );
-
-            footerShowToast(lang('ref_applied'), 'success');
-            input.style.display = 'none';
-            setTimeout(function() { initAccountPage(); }, 500);
-
-        } catch(err) {
-            console.error('Referral error:', err);
-            footerShowToast(lang('ref_error') + err.message, 'error');
+        if (!existingRef.empty) {
+            footerShowToast(lang('ref_already_applied'), 'error');
+            return;
         }
-    };
 
+        // Обновляем документ пользователя
+        await exp.setDoc(
+            exp.doc(db, 'users', user.uid),
+            {
+                invitedBy:    inviterId,
+                invitedByName: inviterData.displayName || inviterData.profile?.firstName || lang('user')
+            },
+            { merge: true }
+        );
+
+        // ✅ СОЗДАЕМ ЗАПИСЬ В КОЛЛЕКЦИИ referrals
+        const now = new Date();
+        await exp.addDoc(
+            exp.collection(db, 'referrals'),
+            {
+                userId:        user.uid,
+                userName:      user.displayName || user.email,
+                userPhoto:     user.photoURL || '',
+                invitedBy:     inviterId,
+                invitedByName: inviterData.displayName || inviterData.profile?.firstName || lang('user'),
+                createdAt:     now,
+                timestamp:     now.toISOString(),
+                status:        'active'
+            }
+        );
+
+        // Обновляем счетчик приглашенных для пригласившего
+        const currentInvited  = inviterData.invitedCount || 0;
+
+        await exp.setDoc(
+            exp.doc(db, 'users', inviterId),
+            { invitedCount: currentInvited + 1 },
+            { merge: true }
+        );
+
+        // Начисляем бонусы
+        const mySnap     = await exp.getDoc(exp.doc(db, 'users', user.uid));
+        const myData     = mySnap.exists() ? mySnap.data() : {};
+        const myReagents = myData.reagents || 0;
+
+        // Бонус приглашенному (50 reagents)
+        await exp.setDoc(
+            exp.doc(db, 'users', user.uid),
+            { reagents: myReagents + 50 },
+            { merge: true }
+        );
+
+        // Бонус пригласившему (25 reagents)
+        const inviterReagents = inviterData.reagents || 0;
+        await exp.setDoc(
+            exp.doc(db, 'users', inviterId),
+            { reagents: inviterReagents + 25 },
+            { merge: true }
+        );
+
+        footerShowToast(lang('ref_applied'), 'success');
+        input.style.display = 'none';
+        setTimeout(function() { 
+            initAccountPage(); 
+        }, 500);
+
+    } catch(err) {
+        console.error('Referral error:', err);
+        footerShowToast(lang('ref_error') + ' ' + err.message, 'error');
+    }
+};
     // ============ COUNTRY PICKER ============
 
     window.filterCountryList = function(query) {
