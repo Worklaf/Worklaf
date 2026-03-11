@@ -8,6 +8,21 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
+        .copy-uid-btn {
+    padding: 4px 8px;
+    border-radius: 6px;
+    transition: all 0.2s;
+    cursor: pointer;
+}
+
+.copy-uid-btn:hover {
+    background: rgba(59, 130, 246, 0.2);
+}
+
+.copy-uid-btn.success {
+    background: rgba(16, 185, 129, 0.3);
+    color: #10b981;
+}
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
         body {
             font-family: 'Inter', sans-serif;
@@ -1230,10 +1245,9 @@ window.openProfile = function(userId) {
             '<div class="flex-1 min-w-0">' +
                 '<div class="flex items-center gap-2 mb-1">' +
                     '<h3 class="text-xl font-bold">'+esc(user.displayName)+'</h3>' +
-                    '<button onclick="copyAccountUID(\''+user.id+'\')" title="Скопировать UID" ' +
-                            'class="text-slate-400 hover:text-white transition-colors">' +
-                        '<i class="fas fa-copy text-sm"></i>' +
-                    '</button>' +
+                    '<button onclick="window.copyAccountUID(\''+user.id+'\')" title="Скопировать UID" class="text-slate-400 hover:text-white transition-colors">' +
+    '<i class="fas fa-copy text-sm"></i>' +
+'</button>' +
                 '</div>' +
                 '<div class="flex items-center gap-2 text-xs text-slate-400">' +
                     '<span class="font-mono bg-slate-800 px-2 py-0.5 rounded cursor-pointer" onclick="copyAccountUID(\''+user.id+'\')">' +
@@ -1258,10 +1272,9 @@ window.openProfile = function(userId) {
                             '<code id="profileUID" class="text-sm font-mono text-cyan-400 select-all cursor-pointer">' +
                                 user.id +
                             '</code>' +
-                            '<button onclick="copyAccountUID(\''+user.id+'\')" ' +
-                                    'class="text-cyan-400 hover:text-cyan-300 transition-colors">' +
-                                '<i class="fas fa-copy text-xs"></i>' +
-                            '</button>' +
+                            '<button onclick="window.copyAccountUID(\''+user.id+'\')" class="text-cyan-400 hover:text-cyan-300 transition-colors">' +
+    '<i class="fas fa-copy text-xs"></i>' +
+'</button>' +
                         '</div>' +
                     '</div>' +
                 '</div>' +
@@ -1544,6 +1557,46 @@ window.exportCSV = function() {
 };
 
 // ── ВСПОМОГАТЕЛЬНЫЕ ───────────────────────────────────────────────
+    window.copyAccountUID = function(userId) {
+    const lang = typeof window.t === 'function' ? window.t : (k) => k;
+
+    // Создаем временный input элемент
+    const tempInput = document.createElement('input');
+    tempInput.value = userId;
+    document.body.appendChild(tempInput);
+
+    // Выделяем текст в input
+    tempInput.select();
+    tempInput.setSelectionRange(0, 99999); // Для мобильных устройств
+
+    try {
+        // Копируем текст в буфер обмена
+        const successful = document.execCommand('copy');
+
+        // Показываем уведомление об успехе
+        const btn = document.querySelector('#profileUID + button');
+        if (btn) {
+            const originalHTML = btn.innerHTML;
+            btn.innerHTML = '<i class="fas fa-check text-xs"></i>';
+            btn.classList.add('bg-emerald-600');
+            btn.classList.remove('bg-slate-700');
+
+            setTimeout(function() {
+                btn.innerHTML = originalHTML;
+                btn.classList.remove('bg-emerald-600');
+                btn.classList.add('bg-slate-700');
+            }, 2000);
+        }
+
+        footerShowToast(lang('copied') || 'UID скопирован', 'success');
+    } catch (err) {
+        console.error('Ошибка копирования:', err);
+        footerShowToast(lang('copy_failed') || 'Не удалось скопировать', 'error');
+    } finally {
+        // Удаляем временный input
+        document.body.removeChild(tempInput);
+    }
+};
 function setText(id, val) {
     var el = document.getElementById(id);
     if (el) el.textContent = String(val);
