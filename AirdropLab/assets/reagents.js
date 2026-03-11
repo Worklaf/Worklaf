@@ -1,7 +1,11 @@
 /**
  * ============================================
- * AirdropLab Reagents System v2.3
- * Добавлено: начисление за заполнение профиля
+ * AirdropLab Reagents System v2.4
+ * Добавлено:
+ * - Накопление пассива за весь период
+ * - Уведомления о начислениях
+ * - Точность 2 знака после запятой
+ * - Дни без входа в статистике
  * ============================================
  */
 
@@ -27,7 +31,6 @@ const REAGENTS_CONFIG = {
         { level: 3, percent: 5  },
     ],
     passivePayoutDay: 1,
-    // ✅ НОВОЕ: начисления за профиль (13 полей × 10 RGT)
     profileFields: [
         { key: 'firstName',  reward: 10 },
         { key: 'lastName',   reward: 10 },
@@ -69,8 +72,9 @@ function getUTCDateString(date) {
            String(d.getUTCDate()).padStart(2, '0');
 }
 
+// ✅ ИЗМЕНЕНО: точное округление с 2 знаками после запятой
 function roundReward(value) {
-    return Math.round(value + 0.0001);
+    return Math.round(value * 100) / 100;
 }
 
 function calcReward(newStreak) {
@@ -100,7 +104,6 @@ function getNextMilestone(currentStreak) {
     return { days: next, daysLeft: next - currentStreak };
 }
 
-// ✅ НОВОЕ: расчет бонуса за профиль
 function calcProfileBonus(profileData) {
     if (!profileData) return 0;
     let bonus = 0;
@@ -113,8 +116,25 @@ function calcProfileBonus(profileData) {
     return bonus;
 }
 
+// ✅ НОВОЕ: подсчет дней без входа
+function _calculateDaysOffline(lastProcessedDate) {
+    if (!lastProcessedDate) return 0;
+    
+    try {
+        const last = new Date(lastProcessedDate + 'T00:00:00Z');
+        const today = new Date();
+        today.setUTCHours(0, 0, 0, 0);
+        
+        const diff = today - last;
+        const days = Math.floor(diff / (1000 * 60 * 60 * 24));
+        return Math.max(0, days);
+    } catch(e) {
+        return 0;
+    }
+}
+
 // ─────────────────────────────────────────────────────────────────
-// FAQ — RU + EN (живут прямо здесь)
+// FAQ — RU + EN
 // ─────────────────────────────────────────────────────────────────
 
 function _faqStreakHtml() {
@@ -129,6 +149,7 @@ function _faqStreakHtml() {
             <div>• Referral code gives new user <span class="text-cyan-400">+${REAGENTS_CONFIG.referralBonus} RGT</span>,
                  you get <span class="text-cyan-400">+${REAGENTS_CONFIG.referralInviter} RGT</span></div>
             <div>• Complete profile: <span class="text-emerald-400">+10 RGT</span> for each field (13 fields = up to <span class="text-emerald-400">+${maxProfileBonus} RGT</span>)</div>
+            <div>• Passive income accumulates daily, credited when you visit</div>
         </div>`;
     return `
         <div class="font-semibold text-blue-300 mb-1.5">❓ Как работает стрик?</div>
@@ -140,6 +161,7 @@ function _faqStreakHtml() {
             <div>• Реф. код даёт новому: <span class="text-cyan-400">+${REAGENTS_CONFIG.referralBonus} RGT</span>,
                  вам — <span class="text-cyan-400">+${REAGENTS_CONFIG.referralInviter} RGT</span></div>
             <div>• Заполните профиль: <span class="text-emerald-400">+10 RGT</span> за каждое поле (13 полей = до <span class="text-emerald-400">+${maxProfileBonus} RGT</span>)</div>
+            <div>• Пассивный доход накапливается ежедневно, начисляется при входе</div>
         </div>`;
 }
 
@@ -153,7 +175,7 @@ function _faqReferralHtml() {
             <div>• Every referral's claim earns you <span class="text-emerald-400">${REAGENTS_CONFIG.referralLevels[0].percent}%</span></div>
             <div>• Level 2: <span class="text-emerald-400">${REAGENTS_CONFIG.referralLevels[1].percent}%</span>
                  · Level 3: <span class="text-emerald-400">${REAGENTS_CONFIG.referralLevels[2].percent}%</span></div>
-            <div>• Accrual happens <span class="text-white">instantly</span> when you open this window</div>
+            <div>• Income accumulates daily, credited when you visit</div>
         </div>`;
     return `
         <div class="font-semibold text-blue-300 mb-1.5">❓ Как работают рефералы?</div>
@@ -164,7 +186,7 @@ function _faqReferralHtml() {
             <div>• Каждый клейм реферала приносит вам <span class="text-emerald-400">${REAGENTS_CONFIG.referralLevels[0].percent}%</span></div>
             <div>• 2-й уровень: <span class="text-emerald-400">${REAGENTS_CONFIG.referralLevels[1].percent}%</span>
                  · 3-й: <span class="text-emerald-400">${REAGENTS_CONFIG.referralLevels[2].percent}%</span></div>
-            <div>• Начисление — <span class="text-white">мгновенно</span> при открытии окна</div>
+            <div>• Доход накапливается ежедневно, начисляется при входе</div>
         </div>`;
 }
 
@@ -241,7 +263,6 @@ async function performClaim(user) {
     return { ...status, newReagents, bestStreak: newBestStreak };
 }
 
-// ✅ НОВОЕ: проверка и начисление профиля
 async function checkAndAwardProfileBonus(user) {
     const db = window.db, exp = window.__firestoreExports;
     if (!db || !exp || !user) return 0;
@@ -252,15 +273,12 @@ async function checkAndAwardProfileBonus(user) {
 
         const userData = snap.data();
         const profile = userData.profile || {};
-
-        // Какие поля уже были отмечены как начисленные
         const awardedFields = userData.awardedProfileFields || [];
         let totalBonus = 0;
         let newAwardedFields = [...awardedFields];
 
         for (const field of REAGENTS_CONFIG.profileFields) {
             const val = profile[field.key];
-            // Если поле заполнено И его еще не начисляли
             if (val && String(val).trim() && !awardedFields.includes(field.key)) {
                 totalBonus += field.reward;
                 newAwardedFields.push(field.key);
@@ -280,6 +298,85 @@ async function checkAndAwardProfileBonus(user) {
     } catch(err) {
         console.error('[Reagents] checkAndAwardProfileBonus error:', err);
         return 0;
+    }
+}
+
+// ✅ НОВОЕ: проверка и обработка пассивного дохода за весь период
+async function _checkAndProcessDailyPassiveRewards(user) {
+    const db = window.db, exp = window.__firestoreExports;
+    if (!db || !exp || !user) return null;
+
+    try {
+        const snap = await exp.getDoc(exp.doc(db, 'users', user.uid));
+        if (!snap.exists()) return null;
+
+        const userData = snap.data();
+        const lastProcessedDate = userData.lastPassiveProcessDate || '';
+        const todayUTC = getUTCDateString();
+
+        // Если уже обработано сегодня — вернём уведомление
+        if (lastProcessedDate === todayUTC) {
+            return userData.passiveRewardNotification || null;
+        }
+
+        // ✅ Собираем ВСЕ накопления с момента последней обработки
+        let totalPayout = userData.pendingPassive || 0;
+        const passiveLog = userData.passiveLog || {};
+
+        let notification = null;
+
+        if (totalPayout > 0) {
+            // ✅ Точное округление: 2 знака после запятой
+            const payout = Math.round(totalPayout * 100) / 100;
+            const referralsCount = Object.keys(passiveLog).length;
+            const daysOffline = _calculateDaysOffline(lastProcessedDate);
+
+            notification = {
+                amount: payout,
+                timestamp: new Date().toISOString(),
+                read: false,
+                referralsCount: referralsCount,
+                daysOffline: daysOffline,
+            };
+
+            // ✅ Переводим ВСЕ pendingPassive в reagents
+            await exp.setDoc(exp.doc(db, 'users', user.uid), {
+                reagents: (userData.reagents || 0) + payout,
+                pendingPassive: 0,
+                referralEarnings: (userData.referralEarnings || 0) + payout,
+                lastPassivePayoutAt: new Date().toISOString(),
+                lastPassivePayout: payout,
+                passiveRewardNotification: notification,
+                lastPassiveProcessDate: todayUTC,
+            }, { merge: true });
+        } else {
+            // Если нет pendingPassive, просто обновляем дату обработки
+            await exp.setDoc(exp.doc(db, 'users', user.uid), {
+                lastPassiveProcessDate: todayUTC,
+            }, { merge: true });
+        }
+
+        return notification;
+
+    } catch(err) {
+        console.error('[Reagents] _checkAndProcessDailyPassiveRewards error:', err);
+        return null;
+    }
+}
+
+// Функция для отметки уведомления как прочитанного
+async function _markPassiveNotificationRead(user) {
+    const db = window.db, exp = window.__firestoreExports;
+    if (!db || !exp || !user) return;
+
+    try {
+        await exp.setDoc(exp.doc(db, 'users', user.uid), {
+            passiveRewardNotification: {
+                read: true
+            }
+        }, { merge: true });
+    } catch(err) {
+        console.error('[Reagents] _markPassiveNotificationRead error:', err);
     }
 }
 
@@ -325,6 +422,7 @@ function _generateCode(uid) {
     return code;
 }
 
+// ✅ ИЗМЕНЕНО: используем точное округление
 async function _creditPassiveToUpstream(claimUser, claimedAmount, exp, db) {
     try {
         const mySnap = await exp.getDoc(exp.doc(db, 'users', claimUser.uid), { source: 'server' });
@@ -337,7 +435,10 @@ async function _creditPassiveToUpstream(claimUser, claimedAmount, exp, db) {
             const upSnap = await exp.getDoc(exp.doc(db, 'users', upstreamUid), { source: 'server' });
             if (!upSnap.exists()) break;
             const upData        = upSnap.data();
-            const roundedReward = roundReward(claimedAmount * (levelCfg.percent / 100));
+            // ✅ ТОЧНОЕ ВЫЧИСЛЕНИЕ: 10% от 10 = 1.00, 5% от 10 = 0.50
+            const preciseReward = claimedAmount * (levelCfg.percent / 100);
+            const roundedReward = roundReward(preciseReward);
+            
             if (roundedReward > 0) {
                 const existingLog      = upData.passiveLog || {};
                 const existingFromUser = existingLog[claimUser.uid] || {};
@@ -359,29 +460,6 @@ async function _creditPassiveToUpstream(claimUser, claimedAmount, exp, db) {
         }
     } catch(err) { console.error('[Reagents] _creditPassiveToUpstream error:', err); }
 }
-
-async function _tryPassivePayout(user) {
-    const db = window.db, exp = window.__firestoreExports;
-    if (!db || !exp || !user) return 0;
-    try {
-        const snap = await exp.getDoc(exp.doc(db, 'users', user.uid));
-        if (!snap.exists()) return 0;
-        const data           = snap.data();
-        const pendingPassive = data.pendingPassive || 0;
-        if (pendingPassive <= 0) return 0;
-        const payout = Math.ceil(pendingPassive);
-        await exp.setDoc(exp.doc(db, 'users', user.uid), {
-            reagents:            (data.reagents || 0) + payout,
-            pendingPassive:      0,
-            referralEarnings:    (data.referralEarnings || 0) + payout,
-            lastPassivePayoutAt: new Date().toISOString(),
-            lastPassivePayout:   payout,
-        }, { merge: true });
-        return payout;
-    } catch(err) { console.error('[Reagents] _tryPassivePayout error:', err); return 0; }
-}
-
-const _tryWeeklyPassivePayout = _tryPassivePayout;
 
 async function getPassiveRewardInfo(user, userData) {
     try {
@@ -441,12 +519,18 @@ window.openClaimModal = async function() {
     modal.classList.add('active');
     document.body.style.overflow = 'hidden';
 
-    const payout = await _tryPassivePayout(user);
-    // ✅ НОВОЕ: проверяем бонус за профиль
+    // ✅ НОВОЕ: проверяем и обрабатываем пассивный доход за весь период
+    const passiveNotification = await _checkAndProcessDailyPassiveRewards(user);
+    
     const profileBonus = await checkAndAwardProfileBonus(user);
     const status = await getClaimStatus(user);
+    
     if (!status) { body.innerHTML = _renderError(lang('claim_load_error')); return; }
-    if (payout > 0) status._payoutBanner = payout;
+    
+    if (passiveNotification && passiveNotification.amount > 0) {
+        status._passiveNotification = passiveNotification;
+    }
+    
     if (profileBonus > 0) status._profileBonus = profileBonus;
 
     body.innerHTML = _renderClaimUI(status);
@@ -542,7 +626,7 @@ function _renderError(msg) {
 
 function _renderClaimUI(status) {
     const { canClaim, streak, newStreak, reagents, reward, streakBroken,
-            nextMilestone, passiveInfo, bestStreak, referralCode, _payoutBanner, _profileBonus } = status;
+            nextMilestone, passiveInfo, bestStreak, referralCode, _profileBonus, _passiveNotification } = status;
 
     const prevMilestone = nextMilestone.days - 30 < 0 ? 0 : nextMilestone.days - 30;
     const progressPct   = Math.min(
@@ -573,17 +657,26 @@ function _renderClaimUI(status) {
             ${_faqStreakHtml()}
         </div>
 
-        <!-- Баннер автовыплаты пассива -->
-        ${_payoutBanner ? `
+        <!-- ✅ НОВОЕ: Уведомление о пассивном доходе за весь период -->
+        ${_passiveNotification ? `
         <div class="mb-3 p-3 bg-emerald-900/25 border border-emerald-600/40 rounded-xl flex items-center gap-2.5">
-            <span class="text-xl">✨</span>
+            <span class="text-xl">💰</span>
             <div>
                 <div class="text-xs font-bold text-emerald-400">
-                    ${en ? 'Referral income credited!' : 'Начислено от рефералов!'}
+                    ${en ? 'Passive income credited!' : 'Пассивный доход начислен!'}
                 </div>
-                <div class="text-xs text-slate-400">+${_payoutBanner} RGT
-                    ${en ? 'added to balance' : 'добавлено к балансу'}
+                <div class="text-xs text-slate-400">
+                    +${_passiveNotification.amount.toFixed(2)} RGT
+                    ${en 
+                        ? `from ${_passiveNotification.referralsCount} referral${_passiveNotification.referralsCount !== 1 ? 's' : ''}`
+                        : `от ${_passiveNotification.referralsCount} реферала`}
                 </div>
+                ${_passiveNotification.daysOffline > 1 ? `
+                <div class="text-xs text-emerald-500 mt-1">
+                    ${en 
+                        ? `📅 Accumulated for ${_passiveNotification.daysOffline} days`
+                        : `📅 Накоплено за ${_passiveNotification.daysOffline} дней`}
+                </div>` : ''}
             </div>
         </div>` : ''}
 
@@ -803,7 +896,7 @@ function _renderPassiveBlock(passiveInfo, referralCode) {
             </div>
             <div class="flex items-center gap-1.5">
                 ${timeStr ? `<span class="text-xs text-slate-600">${timeStr} ${en ? 'ago' : 'назад'}</span>` : ''}
-                <span class="text-xs text-emerald-400 font-bold">+${ref.totalAmount || ref.lastAmount}</span>
+                <span class="text-xs text-emerald-400 font-bold">+${(ref.totalAmount || ref.lastAmount).toFixed(2)}</span>
             </div>
         </div>`;
     }
@@ -837,7 +930,7 @@ function _renderPassiveBlock(passiveInfo, referralCode) {
         <div style="display:flex;flex-direction:column;align-items:center;gap:3px;flex:1">
             <div style="font-size:9px;color:${dayAmounts[i] > 0 ? '#34d399' : '#475569'};
                         font-weight:600;min-height:12px;text-align:center">
-                ${dayAmounts[i] > 0 ? '+' + dayAmounts[i] : ''}
+                ${dayAmounts[i] > 0 ? '+' + dayAmounts[i].toFixed(2) : ''}
             </div>
             <div style="width:100%;background:rgba(30,41,59,0.8);border-radius:4px;height:40px;
                         display:flex;align-items:flex-end;overflow:hidden">
@@ -911,7 +1004,7 @@ function _renderPassiveBlock(passiveInfo, referralCode) {
             <div class="mini-label">${en ? 'Active 7d.' : 'Активны<br>7 дн.'}</div>
         </div>
         <div class="claim-mini-card">
-            <div class="mini-value text-emerald-400">${referralEarnings}</div>
+            <div class="mini-value text-emerald-400">${referralEarnings.toFixed(2)}</div>
             <div class="mini-label">${lang('passive_total_earned')}</div>
         </div>
     </div>
@@ -922,14 +1015,14 @@ function _renderPassiveBlock(passiveInfo, referralCode) {
             <span class="text-xs text-slate-300 font-medium">
                 💰 ${en ? 'Total from referrals' : 'Всего от рефералов'}
             </span>
-            <span class="text-sm font-black text-emerald-400">+${referralEarnings} RGT</span>
+            <span class="text-sm font-black text-emerald-400">+${referralEarnings.toFixed(2)} RGT</span>
         </div>
         ${lastPayout > 0 ? `
         <div class="flex items-center justify-between pt-1.5 border-t border-slate-700/30">
             <span class="text-xs text-slate-500">
                 ${en ? 'Last payout' : 'Посл. начисление'} ${lastPayoutStr}
             </span>
-            <span class="text-xs text-emerald-500 font-medium">+${lastPayout} RGT</span>
+                       <span class="text-xs text-emerald-500 font-medium">+${lastPayout.toFixed(2)} RGT</span>
         </div>` : `
         <div class="text-xs text-slate-600 text-center">
             ${en
@@ -999,6 +1092,13 @@ function _showClaimSuccess(result) {
     const body = document.getElementById('claimModalBody');
     if (!body) return;
     const en = isEn();
+    
+    // ✅ Отметить уведомление как прочитанное
+    const user = (window.auth && window.auth.currentUser) || window.currentUser;
+    if (user) {
+        _markPassiveNotificationRead(user);
+    }
+
     body.innerHTML = `
     <div class="p-6 text-center" style="overflow-y:auto">
         <div class="relative w-20 h-20 mx-auto mb-4">
@@ -1032,7 +1132,7 @@ function _showClaimSuccess(result) {
                         ${lang('passive_level')} ${lv.level}
                         <span class="text-slate-600">(${lv.percent}%)</span>
                     </span>
-                    <span class="text-emerald-400 font-medium">+${r} ${lang('reagents_rgt_unit')}</span>
+                    <span class="text-emerald-400 font-medium">+${r.toFixed(2)} ${lang('reagents_rgt_unit')}</span>
                 </div>`;
             }).join('')}
         </div>
@@ -1452,7 +1552,7 @@ window.openClaimModal  = window.openClaimModal;
 window.closeClaimModal = window.closeClaimModal;
 window.doClaim         = window.doClaim;
 
-console.log('🧪 Reagents System v2.3 loaded (profile bonuses included)');
+console.log('🧪 Reagents System v2.4 loaded (passive accumulation, 2-decimal precision)');
 setTimeout(_checkClaimOnLoad, 2000);
 setTimeout(_checkClaimOnLoad, 5000);
 
