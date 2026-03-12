@@ -472,6 +472,60 @@
   </aside>
 
   <main class="flex-1">
+      <!-- МОБИЛЬНЫЕ ФИЛЬТРЫ -->
+<div class="filters-mobile-container">
+    <button class="filters-toggle-btn" onclick="toggleFiltersMobile()">
+        <i class="fas fa-filter"></i>
+        <span>Фильтры</span>
+    </button>
+    <div id="activeFiltersTags" class="active-filters-tags"></div>
+</div>
+
+<!-- ПАНЕЛЬ ФИЛЬТРОВ (модальная) -->
+<div id="filtersPanelMobile" class="filters-panel-mobile">
+    <div class="filters-panel-content">
+        <div class="filters-panel-header">
+            <h3 class="filters-panel-title">Фильтры</h3>
+            <button class="filters-panel-close" onclick="toggleFiltersMobile()">×</button>
+        </div>
+        
+        <!-- СТАТУСЫ -->
+        <div class="filters-section-mobile">
+            <div class="filters-section-title">
+                <i class="fas fa-play-circle"></i> Статус
+            </div>
+            <label class="filter-item">
+                <input type="checkbox" value="active" onchange="updateMobileFilters()">
+                <span>Активные</span>
+                <span class="filter-count" id="count-active">0</span>
+            </label>
+            <label class="filter-item">
+                <input type="checkbox" value="soon" onchange="updateMobileFilters()">
+                <span>Скоро</span>
+                <span class="filter-count" id="count-soon">0</span>
+            </label>
+            <label class="filter-item">
+                <input type="checkbox" value="ended" onchange="updateMobileFilters()">
+                <span>Завершённые</span>
+                <span class="filter-count" id="count-ended">0</span>
+            </label>
+        </div>
+        
+        <!-- КАТЕГОРИИ -->
+        <div class="filters-section-mobile">
+            <div class="filters-section-title">
+                <i class="fas fa-tag"></i> Категории
+            </div>
+            <div id="mobileCategories"></div>
+        </div>
+        
+        <!-- ДЕЙСТВИЯ -->
+        <div class="filters-panel-actions">
+            <button class="btn-reset-filters" onclick="resetMobileFilters()">Сбросить</button>
+            <button class="btn-apply-filters" onclick="applyMobileFilters()">Применить</button>
+        </div>
+    </div>
+</div>
     <div class="mb-6 flex flex-col md:flex-row gap-3 items-center justify-between">
       <div id="projects" class="relative flex-1 w-full md:max-w-md scroll-mt-24">
         <i class="fas fa-search absolute left-3 top-1/2 -translate-y-1/2 text-slate-400"></i>
@@ -3412,9 +3466,63 @@ async function incrementUserCount() {
         console.error("❌ incrementUserCount error:", e);
     }
 }
+// ========== МОБИЛЬНЫЕ ФИЛЬТРЫ ==========
+function toggleFiltersMobile() {
+    const panel = document.getElementById('filtersPanelMobile');
+    const btn = document.querySelector('.filters-toggle-btn');
+    if (panel && btn) {
+        panel.classList.toggle('active');
+        btn.classList.toggle('active');
+    }
+}
 
-// Пример вызова (вставь туда, где у тебя логика регистрации):
-// createUserWithEmailAndPassword(...).then(() => { incrementUserCount(); });
+function updateMobileFilters() {
+    const checks = document.querySelectorAll('#filtersPanelMobile input[type="checkbox"]:checked');
+    const tags = document.getElementById('activeFiltersTags');
+    tags.innerHTML = Array.from(checks).map(cb => `
+        <div class="filter-tag">
+            ${cb.value}
+            <button onclick="removeMobileFilter('${cb.value}')">×</button>
+        </div>
+    `).join('');
+}
+
+function removeMobileFilter(value) {
+    const cb = document.querySelector(`#filtersPanelMobile input[value="${value}"]`);
+    if (cb) { cb.checked = false; updateMobileFilters(); }
+}
+
+function applyMobileFilters() {
+    const statuses = Array.from(document.querySelectorAll('#filtersPanelMobile input[type="checkbox"]:checked'))
+        .map(cb => cb.value);
+    currentFilters.statuses = statuses;
+    applyFilters(null, true);
+    toggleFiltersMobile();
+}
+
+function resetMobileFilters() {
+    document.querySelectorAll('#filtersPanelMobile input[type="checkbox"]').forEach(cb => cb.checked = false);
+    updateMobileFilters();
+    currentFilters.statuses = [];
+    applyFilters(null, true);
+}
+
+// Заполняем категории в мобильной панели
+function populateMobileCategories() {
+    const container = document.getElementById('mobileCategories');
+    if (!container) return;
+    const allCats = getAllCategoriesWithCounts(projects);
+    container.innerHTML = allCats.map(([cat, count]) => `
+        <label class="filter-item">
+            <input type="checkbox" value="${cat}" onchange="updateMobileFilters()">
+            <span>${cat}</span>
+            <span class="filter-count">${count}</span>
+        </label>
+    `).join('');
+}
+
+// Вызови после загрузки данных
+document.addEventListener('projectsLoaded', populateMobileCategories);
 </script>
     <script src="footer.js"></script>
 </body>
