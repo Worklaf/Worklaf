@@ -1908,26 +1908,95 @@ function importArcJSON(file){
 // ===========================
 // GITHUB UPLOAD
 // ===========================
-async function githubGetSha(path,token){
-    const r=await fetch(`https://api.github.com/repos/${GITHUB_OWNER}/${GITHUB_REPO}/contents/${path}?ref=${GITHUB_BRANCH}`,{headers:{'Authorization':`Bearer ${token}`,'Accept':'application/vnd.github+json'}});
-    if(r.status===404) return null; if(!r.ok) throw new Error(`GitHub GET failed: ${r.status}`);
-    return (await r.json()).sha||null;
+// ===========================
+// GITHUB UPLOAD (FIXED)
+// ===========================
+async function githubGetSha(path, token) {
+    const r = await fetch(
+        `https://api.github.com/repos/${GITHUB_OWNER}/${GITHUB_REPO}/contents/${path}?ref=${GITHUB_BRANCH}&_=${Date.now()}`,
+        { headers: { 'Authorization': `Bearer ${token}`, 'Accept': 'application/vnd.github+json' } }
+    );
+    if (r.status === 404) return null;
+    if (!r.ok) throw new Error(`GitHub GET failed: ${r.status}`);
+    const data = await r.json();
+    return data.sha || null;
 }
-function encodeContent(obj){ return btoa(unescape(encodeURIComponent(JSON.stringify(obj,null,2)))); }
 
-async function uploadToGithub(){
-    const token=prompt('Enter GitHub Personal Access Token (with repo rights)'); if(!token) return;
-    showToast('Uploading to GitHub...','info');
-    try{
-        const [itemsSha,editsSha]=await Promise.all([githubGetSha(GITHUB_ITEMS_PATH,token),githubGetSha(GITHUB_EDITS_PATH,token)]);
-        const headers={'Authorization':`Bearer ${token}`,'Accept':'application/vnd.github+json','Content-Type':'application/json'};
-        const [r1,r2]=await Promise.all([
-            fetch(`https://api.github.com/repos/${GITHUB_OWNER}/${GITHUB_REPO}/contents/${GITHUB_ITEMS_PATH}`,{method:'PUT',headers,body:JSON.stringify({message:'Update arc_shared_items',content:encodeContent(userItemsData),branch:GITHUB_BRANCH,sha:itemsSha||undefined})}),
-            fetch(`https://api.github.com/repos/${GITHUB_OWNER}/${GITHUB_REPO}/contents/${GITHUB_EDITS_PATH}`,{method:'PUT',headers,body:JSON.stringify({message:'Update arc_shared_edits',content:encodeContent({editsOverride}),branch:GITHUB_BRANCH,sha:editsSha||undefined})})
-        ]);
-        if(!r1.ok||!r2.ok) throw new Error('Upload failed');
-        showToast('Uploaded to GitHub!','success');
-    }catch(e){ showToast('GitHub error: '+e.message,'error'); }
+// Загрузка одного файла с авторетраем при 409
+async function githubPutFile(path, token, content, message, maxRetries = 3) {
+    for (let attempt = 1; attempt <= maxRetries; attempt++) {
+        // ✅ Получаем СВЕЖИЙ SHA перед каждой попыткой
+        const sha = await githubGetSha(path, token);
+        
+        const body = { message, content, branch: GITHUB_BRANCH };
+        if (sha) body.sha = sha; // если файл существует — включаем sha
+
+        const r = await fetch(
+            `https://api.github.com/repos/${GITHUB_OWNER}/${GITHUB_REPO}/contents/${path}`,
+            {
+                method: 'PUT',
+                headers: {
+                    'Authorization': `Bearer ${token}`,
+                    'Accept': 'application/vnd.github+json',
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(body)
+            }
+        );
+
+        if (r.ok) return true;
+
+        // ✅ 409 = SHA устарел → ждём и повторяем
+        if (r.status === 409 && attempt < maxRetries) {
+            console.warn(`⚠️ 409 Conflict (попытка ${attempt}/${maxRetries}), обновляем SHA...`);
+            await new Promise(res => setTimeout(res, 800 * attempt));
+            continue;
+        }
+
+        // Другие ошибки — читаем детали
+        let errMsg = `HTTP ${r.status}`;
+        try { const d = await r.json(); errMsg = d.message || errMsg; } catch(e) {}
+        throw new Error(errMsg);
+    }
+    throw new Error('Превышено число попыток');
+}
+
+async function uploadToGithub() {
+    const token = prompt('Введи GitHub Personal Access Token (с правами repo)');
+    if (!token) return;
+
+    const btn = document.getElementById('githubUploadBtn');
+    const origHtml = btn ? btn.innerHTML : '';
+    if (btn) { btn.disabled = true; btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Загрузка...'; }
+
+    showToast('Загрузка на GitHub...', 'info');
+
+    try {
+        // ✅ Загружаем ПОСЛЕДОВАТЕЛЬНО (не параллельно) — избегаем гонок
+        await githubPutFile(
+            GITHUB_ITEMS_PATH,
+            token,
+            encodeContent(userItemsData),
+            'Update arc_shared_items'
+        );
+        showToast('✅ Items файл загружен', 'success');
+
+        await githubPutFile(
+            GITHUB_EDITS_PATH,
+            token,
+            encodeContent({ editsOverride }),
+            'Update arc_shared_edits'
+        );
+        showToast('✅ Edits файл загружен', 'success');
+
+        showToast('🎉 Всё загружено на GitHub!', 'success');
+
+    } catch (e) {
+        console.error('GitHub upload error:', e);
+        showToast('❌ GitHub ошибка: ' + e.message, 'error');
+    } finally {
+        if (btn) { btn.disabled = false; btn.innerHTML = origHtml; }
+    }
 }
 
 // ===========================
