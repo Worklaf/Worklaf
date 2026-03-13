@@ -484,9 +484,42 @@
             <option value="10">10</option><option value="20">20</option><option value="30">30</option><option value="50">50</option><option value="100">100</option>
           </select>
         </div>
-        <select onchange="sortProjects(this.value)" id="sortSelect" class="bg-slate-800/50 border border-slate-700 rounded-xl px-4 text-sm focus:border-blue-500 outline-none">
-          <option value="latest" data-translate="newest_first">Сначала новые</option><option value="priority" data-translate="by_priority">По приоритету</option><option value="name" data-translate="by_name">По названию</option>
-        </select>
+        <select onchange="sortProjects(this.value)" id="sortSelect" 
+        class="bg-slate-800/50 border border-slate-700 rounded-xl px-4 text-sm focus:border-blue-500 outline-none">
+  <option value="added">📅 По дате добавления</option>
+  <option value="latest">🔄 По дате активности</option>
+  <option value="priority">⭐ По приоритету</option>
+  <option value="name">🔤 По названию</option>
+</select>
+
+<!-- ===== DATE FILTER ===== -->
+<div class="flex items-center gap-1 bg-slate-800/50 border border-slate-700 
+            rounded-xl px-2 py-1.5 flex-shrink-0" id="dateFilterContainer"
+     title="Фильтр по дате добавления">
+  <i class="fas fa-calendar-alt text-slate-500 text-xs px-1"></i>
+  <select id="dateFilterDay" onchange="applyDateFilter()" 
+          class="bg-transparent text-xs text-slate-300 outline-none cursor-pointer" 
+          style="max-width:46px">
+    <option value="">День</option>
+  </select>
+  <span class="text-slate-600 text-[10px]">/</span>
+  <select id="dateFilterMonth" onchange="applyDateFilter()" 
+          class="bg-transparent text-xs text-slate-300 outline-none cursor-pointer"
+          style="max-width:66px">
+    <option value="">Мес.</option>
+  </select>
+  <span class="text-slate-600 text-[10px]">/</span>
+  <select id="dateFilterYear" onchange="applyDateFilter()" 
+          class="bg-transparent text-xs text-slate-300 outline-none cursor-pointer"
+          style="max-width:54px">
+    <option value="">Год</option>
+  </select>
+  <button onclick="clearDateFilter()" id="clearDateFilterBtn" 
+          class="hidden text-red-400 hover:text-red-300 ml-1 text-xs px-1" 
+          title="Сбросить">
+    <i class="fas fa-times"></i>
+  </button>
+</div>
       </div>
     </div>
     <div id="publicInfo" class="mb-4 p-3 bg-blue-900/20 border border-blue-800/50 rounded-lg text-sm text-blue-300 flex items-center gap-2"><i class="fas fa-info-circle"></i><span data-translate="info_click_project">Нажмите на <strong>название проекта</strong> для подробной информации или на <strong>"Гайд"</strong> для выполнения.</span></div>
@@ -975,7 +1008,8 @@ let pendingLinkInsert = null;
 let currentEditingActivities = [];
 let editingActivityId = null;
 let mainProjectCategories = [];
-let currentSortType = 'latest';
+let currentSortType = 'added';
+let dateFilter = { day: '', month: '', year: '' };
 
 // English data source flag
 let useEnglishData = false;
@@ -2166,7 +2200,9 @@ setTimeout(() => {
   
   const select = document.getElementById('itemsPerPageSelect');
   if(select) select.value = itemsPerPage;
-  
+    initDateFilter();
+  const sortEl = document.getElementById('sortSelect');
+  if (sortEl) sortEl.value = currentSortType;
   const promptInput = document.getElementById('promptInput');
   if(promptInput) {
     promptInput.addEventListener('keydown', function(e) { if (e.key === 'Enter') { e.preventDefault(); window.confirmLinkInsert(); } });
@@ -2405,6 +2441,15 @@ function getFilteredProjects(search) {
     }
     if (currentFilters.categories.length > 0) { if (!p.categories) return false; if (!p.categories.some(function(c) { return currentFilters.categories.includes(c); })) return false; }
     if (search) { if (!p.name.toLowerCase().includes(search.toLowerCase()) && !(p.description && p.description.toLowerCase().includes(search.toLowerCase()))) return false; }
+          // ===== ФИЛЬТР ПО ДАТЕ ДОБАВЛЕНИЯ =====
+    if (dateFilter.day || dateFilter.month || dateFilter.year) {
+      const created = p.createdAt ? new Date(p.createdAt) : null;
+      if (!created) return false;
+      if (dateFilter.year  && created.getFullYear()    !== parseInt(dateFilter.year))  return false;
+      if (dateFilter.month && (created.getMonth() + 1) !== parseInt(dateFilter.month)) return false;
+      if (dateFilter.day   && created.getDate()        !== parseInt(dateFilter.day))   return false;
+    }
+    return true;
     return true;
   });
 }
@@ -2548,13 +2593,24 @@ window.filterProjects = function(status) {
   applyFilters(null, true);
 };
 
-window.resetFilters = function() { currentFilters = { status: 'all', categories: [] }; document.getElementById('searchInput').value = ''; applyFilters(); };
+window.resetFilters = function() { currentFilters = { status: 'all', categories: [] }; document.getElementById('searchInput').value = ''; window.clearDateFilter?.(); applyFilters(); };
 
 window.sortProjects = function(by) {
   currentSortType = by;
-  if (by === 'name') projects.sort(function(a, b) { return a.name.localeCompare(b.name); });
-  else if (by === 'priority') projects.sort(function(a, b) { return (b.priority === 'high' ? 1 : 0) - (a.priority === 'high' ? 1 : 0); });
-  else if (by === 'latest') projects.sort(function(a, b) { const aDate = getLatestActivityDate(a); const bDate = getLatestActivityDate(b); return new Date(bDate || 0).getTime() - new Date(aDate || 0).getTime(); });
+  if (by === 'name') 
+    projects.sort((a, b) => a.name.localeCompare(b.name));
+  else if (by === 'priority') 
+    projects.sort((a, b) => (b.priority === 'high' ? 1 : 0) - (a.priority === 'high' ? 1 : 0));
+  else if (by === 'latest') 
+    projects.sort((a, b) => {
+      const aDate = getLatestActivityDate(a);
+      const bDate = getLatestActivityDate(b);
+      return new Date(bDate || 0).getTime() - new Date(aDate || 0).getTime();
+    });
+  else if (by === 'added')  // ← НОВЫЙ
+    projects.sort((a, b) => 
+      new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime()
+    );
   applyFilters();
 };
 
@@ -3350,7 +3406,56 @@ window.toggleLang = function() {
     }
   }
 };
+// ===== DATE FILTER FUNCTIONS =====
+function initDateFilter() {
+  const dayEl   = document.getElementById('dateFilterDay');
+  const monthEl = document.getElementById('dateFilterMonth');
+  const yearEl  = document.getElementById('dateFilterYear');
+  if (!dayEl || !monthEl || !yearEl) return;
 
+  // Дни 1–31
+  for (let d = 1; d <= 31; d++) {
+    const o = document.createElement('option');
+    o.value = d;
+    o.textContent = String(d).padStart(2, '0');
+    dayEl.appendChild(o);
+  }
+
+  // Месяцы
+  const months = ['Янв','Фев','Мар','Апр','Май','Июн',
+                  'Июл','Авг','Сен','Окт','Ноя','Дек'];
+  months.forEach((m, i) => {
+    const o = document.createElement('option');
+    o.value = i + 1; o.textContent = m;
+    monthEl.appendChild(o);
+  });
+
+  // Годы (текущий → 2023)
+  for (let y = new Date().getFullYear(); y >= 2023; y--) {
+    const o = document.createElement('option');
+    o.value = y; o.textContent = y;
+    yearEl.appendChild(o);
+  }
+}
+
+window.applyDateFilter = function() {
+  dateFilter.day   = document.getElementById('dateFilterDay').value;
+  dateFilter.month = document.getElementById('dateFilterMonth').value;
+  dateFilter.year  = document.getElementById('dateFilterYear').value;
+  const hasFilter = dateFilter.day || dateFilter.month || dateFilter.year;
+  document.getElementById('clearDateFilterBtn')?.classList.toggle('hidden', !hasFilter);
+  applyFilters(null, true);
+};
+
+window.clearDateFilter = function() {
+  dateFilter = { day: '', month: '', year: '' };
+  ['dateFilterDay','dateFilterMonth','dateFilterYear'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.value = '';
+  });
+  document.getElementById('clearDateFilterBtn')?.classList.add('hidden');
+  applyFilters(null, true);
+};
 console.log('App initialized');
     // Добавь эту функцию для определения новых активностей по датам
 function detectNewActivities() {
