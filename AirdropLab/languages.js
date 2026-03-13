@@ -1291,5 +1291,5 @@ function updateDateFilterMonths() {
 // Экспорт глобальных переменных
 window.currentLang = currentLang;
 window.translations = translations;
-
+window.setLanguage = setLanguage;
 
