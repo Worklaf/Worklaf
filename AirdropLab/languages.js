@@ -34,8 +34,8 @@ const translations = {
     date_day:   'День',
     date_month: 'Мес.',
     date_year:  'Год',
-    by_priority: 'По приоритету',
-    by_name: 'По названию',
+    by_priority: '⭐ По приоритету',
+    by_name: '🔤 По названию',
     info_click_project: 'Нажмите на название проекта для подробной информации или на "Гайд" для выполнения.',
     guest_warning: 'Вы не вошли в аккаунт. Избранное и выполненные задания сохраняются только в этом браузере.',
     loading_projects: 'Загрузка проектов...',
@@ -568,8 +568,8 @@ passive_credited_to_upstream: 'Начислено вышестоящим по ц
     date_day:   'Day',
     date_month: 'Mo.',
     date_year:  'Year',
-    by_priority: 'By priority',
-    by_name: 'By name',
+    by_priority: '⭐ By priority',
+    by_name: '🔤 By name',
     info_click_project: 'Click on the project name for details or "Guide" to start.',
     guest_warning: 'You are not logged in. Favorites and completed tasks are saved only in this browser.',
     loading_projects: 'Loading projects...',
@@ -1096,9 +1096,6 @@ function setLanguage(lang) {
 
     // Обновляем переводы модального окна обратной связи
     updateFeedbackModalTranslations();
-    if (typeof window.initDateFilter === 'function') {
-    window.initDateFilter();
-  }
 document.dispatchEvent(new CustomEvent('languageChanged', { detail: { lang: lang } }));
     return true;
   }
@@ -1164,6 +1161,10 @@ if (typeof window.updateFooterTranslations === 'function') {
 }
   // Обновляем динамические модальные окна
   updateFeedbackModalTranslations();
+  // УДАЛИ эти строки из setLanguage:
+if (typeof window.initDateFilter === 'function') {
+    window.initDateFilter();
+}
 }
 
 // Обновление переводов в модальных окнах feedback
