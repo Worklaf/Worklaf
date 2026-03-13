@@ -12,7 +12,7 @@
     if (!container) return;
 
     container.innerHTML = `
-      <header class="sticky top-0 z-50 relative overflow-hidden">
+     <header class="relative overflow-hidden">
         <div class="absolute inset-0 bg-gradient-to-r from-slate-900 via-cyan-900/20 to-slate-900"></div>
         <div class="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNDAiIGhlaWdodD0iNDAiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+PGNpcmNsZSBjeD0iMjAiIGN5PSIyMCIgcj0iMSIgZmlsbD0icmdiYSgzNCwyMTEsMjM4LDAuMSkiLz48L3N2Zz4=')] opacity-50"></div>
         <div class="absolute inset-0 backdrop-blur-xl bg-slate-900/85 border-b border-cyan-500/20"></div>
@@ -184,7 +184,7 @@
       </header>
 
       <!-- ===== CRYPTORANK TICKER ===== -->
-      <div class="sticky top-[72px] z-40 bg-[#0b0f19]/95 backdrop-blur-md border-b border-slate-700/50">
+      <div class="bg-[#0b0f19]/95 backdrop-blur-md border-b border-slate-700/50">
         <div class="max-w-[1600px] mx-auto px-4 py-1">
           <div id="cr-widget-marquee"
                data-coins="bitcoin,ethereum,tether,ripple,cardano"
