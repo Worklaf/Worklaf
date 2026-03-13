@@ -218,8 +218,16 @@ function syncHeaderHeight() {
     }
 }
 
-// После загрузки шрифтов и виджета
-setTimeout(syncHeaderHeight, 200);
+const headerEl = document.getElementById('site-header');
+if (headerEl) {
+    if (window.ResizeObserver) {
+        new ResizeObserver(syncHeaderHeight).observe(headerEl);
+    } else {
+        setTimeout(syncHeaderHeight, 100);
+        setTimeout(syncHeaderHeight, 500);
+        setTimeout(syncHeaderHeight, 1500);
+    }
+}
 window.addEventListener('resize', syncHeaderHeight);
 
   }
