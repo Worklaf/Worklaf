@@ -486,10 +486,10 @@
         </div>
         <select onchange="sortProjects(this.value)" id="sortSelect" 
         class="bg-slate-800/50 border border-slate-700 rounded-xl px-4 text-sm focus:border-blue-500 outline-none">
-  <option value="added">📅 По дате добавления</option>
-  <option value="latest">🔄 По дате активности</option>
-  <option value="priority">⭐ По приоритету</option>
-  <option value="name">🔤 По названию</option>
+  <option value="added"    data-translate="by_added_date">📅 По дате добавления</option>
+  <option value="latest"   data-translate="by_activity_date">🔄 По дате активности</option>
+  <option value="priority" data-translate="by_priority">⭐ По приоритету</option>
+  <option value="name"     data-translate="by_name">🔤 По названию</option>
 </select>
 
 <!-- ===== DATE FILTER ===== -->
@@ -500,25 +500,26 @@
   <select id="dateFilterDay" onchange="applyDateFilter()" 
           class="bg-transparent text-xs text-slate-300 outline-none cursor-pointer" 
           style="max-width:46px">
-    <option value="">День</option>
+    <option value="" data-translate="date_day">День</option>
   </select>
   <span class="text-slate-600 text-[10px]">/</span>
   <select id="dateFilterMonth" onchange="applyDateFilter()" 
           class="bg-transparent text-xs text-slate-300 outline-none cursor-pointer"
           style="max-width:66px">
-    <option value="">Мес.</option>
+    <option value="" data-translate="date_month">Мес.</option>
   </select>
   <span class="text-slate-600 text-[10px]">/</span>
   <select id="dateFilterYear" onchange="applyDateFilter()" 
           class="bg-transparent text-xs text-slate-300 outline-none cursor-pointer"
           style="max-width:54px">
-    <option value="">Год</option>
+    <option value="" data-translate="date_year">Год</option>
   </select>
-  <button onclick="clearDateFilter()" id="clearDateFilterBtn" 
-          class="hidden text-red-400 hover:text-red-300 ml-1 text-xs px-1" 
-          title="Сбросить">
+  <button onclick="clearDateFilter()" id="clearDateFilterBtn"
+        data-translate="reset_filters"
+        class="hidden text-red-400 hover:text-red-300 ml-1 text-xs px-1"
+        title="Сбросить">
     <i class="fas fa-times"></i>
-  </button>
+</button>
 </div>
       </div>
     </div>
@@ -3413,31 +3414,37 @@ function initDateFilter() {
   const yearEl  = document.getElementById('dateFilterYear');
   if (!dayEl || !monthEl || !yearEl) return;
 
-  // Дни 1–31
+  // Сохраняем текущие значения
+  const savedDay   = dayEl.value;
+  const savedMonth = monthEl.value;
+  const savedYear  = yearEl.value;
+
+  // Очищаем и перестраиваем
+  dayEl.innerHTML   = `<option value="">${t('date_day')}</option>`;
+  monthEl.innerHTML = `<option value="">${t('date_month')}</option>`;
+  yearEl.innerHTML  = `<option value="">${t('date_year')}</option>`;
+
   for (let d = 1; d <= 31; d++) {
-    const o = document.createElement('option');
-    o.value = d;
-    o.textContent = String(d).padStart(2, '0');
-    dayEl.appendChild(o);
+    dayEl.innerHTML += `<option value="${d}">${String(d).padStart(2,'0')}</option>`;
   }
 
-  // Месяцы
-  const months = ['Янв','Фев','Мар','Апр','Май','Июн',
-                  'Июл','Авг','Сен','Окт','Ноя','Дек'];
+  // Месяцы с переводом
+  const monthsRu = ['Янв','Фев','Мар','Апр','Май','Июн','Июл','Авг','Сен','Окт','Ноя','Дек'];
+  const monthsEn = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  const months = (window.currentLang === 'en') ? monthsEn : monthsRu;
   months.forEach((m, i) => {
-    const o = document.createElement('option');
-    o.value = i + 1; o.textContent = m;
-    monthEl.appendChild(o);
+    monthEl.innerHTML += `<option value="${i+1}">${m}</option>`;
   });
 
-  // Годы (текущий → 2023)
   for (let y = new Date().getFullYear(); y >= 2023; y--) {
-    const o = document.createElement('option');
-    o.value = y; o.textContent = y;
-    yearEl.appendChild(o);
+    yearEl.innerHTML += `<option value="${y}">${y}</option>`;
   }
-}
 
+  // Восстанавливаем значения
+  dayEl.value   = savedDay;
+  monthEl.value = savedMonth;
+  yearEl.value  = savedYear;
+}
 window.applyDateFilter = function() {
   dateFilter.day   = document.getElementById('dateFilterDay').value;
   dateFilter.month = document.getElementById('dateFilterMonth').value;
