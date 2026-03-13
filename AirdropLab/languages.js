@@ -1161,10 +1161,7 @@ if (typeof window.updateFooterTranslations === 'function') {
 }
   // Обновляем динамические модальные окна
   updateFeedbackModalTranslations();
-  // УДАЛИ эти строки из setLanguage:
-if (typeof window.initDateFilter === 'function') {
-    window.initDateFilter();
-}
+  updateDateFilterMonths();
 }
 
 // Обновление переводов в модальных окнах feedback
@@ -1259,7 +1256,38 @@ document.addEventListener('DOMContentLoaded', function() {
     loadEnglishProjects();
   }
 });
+// Обновляем месяцы в фильтре дат без полной перестройки
+function updateDateFilterMonths() {
+  const monthEl = document.getElementById('dateFilterMonth');
+  const dayEl   = document.getElementById('dateFilterDay');
+  const yearEl  = document.getElementById('dateFilterYear');
 
+  const monthsRu = ['Янв','Фев','Мар','Апр','Май','Июн','Июл','Авг','Сен','Окт','Ноя','Дек'];
+  const monthsEn = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  const months = currentLang === 'en' ? monthsEn : monthsRu;
+
+  if (monthEl) {
+    const saved = monthEl.value;
+    // Обновляем только текст опций 1-12
+    monthEl.querySelectorAll('option:not([value=""])').forEach((opt, i) => {
+      if (months[i]) opt.textContent = months[i];
+    });
+    // Placeholder переведётся через data-translate, но обновим и здесь
+    const placeholder = monthEl.querySelector('option[value=""]');
+    if (placeholder) placeholder.textContent = t('date_month');
+    monthEl.value = saved;
+  }
+
+  // Placeholder для дня и года
+  if (dayEl) {
+    const ph = dayEl.querySelector('option[value=""]');
+    if (ph) ph.textContent = t('date_day');
+  }
+  if (yearEl) {
+    const ph = yearEl.querySelector('option[value=""]');
+    if (ph) ph.textContent = t('date_year');
+  }
+}
 // Экспорт глобальных переменных
 window.currentLang = currentLang;
 window.translations = translations;
