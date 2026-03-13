@@ -210,6 +210,18 @@
       if (typeof updateLanguageButton === 'function') updateLanguageButton();
       if (typeof updateAllTranslations === 'function') updateAllTranslations();
     }, 0);
+    // Синхронизируем CSS-переменную с реальной высотой хедера
+function syncHeaderHeight() {
+    const h = document.getElementById('site-header');
+    if (h) {
+        document.documentElement.style.setProperty('--header-h', h.offsetHeight + 'px');
+    }
+}
+
+// После загрузки шрифтов и виджета
+setTimeout(syncHeaderHeight, 200);
+window.addEventListener('resize', syncHeaderHeight);
+
   }
 
   if (document.readyState === 'loading') {
