@@ -29,7 +29,11 @@ const translations = {
     all_categories: 'Все категории',
     search_placeholder: 'Поиск проектов...',
     per_page: 'На странице:',
-    newest_first: 'Сначала новые',
+    by_added_date:    '📅 По дате добавления',
+    by_activity_date: '🔄 По дате активности',
+    date_day:   'День',
+    date_month: 'Мес.',
+    date_year:  'Год',
     by_priority: 'По приоритету',
     by_name: 'По названию',
     info_click_project: 'Нажмите на название проекта для подробной информации или на "Гайд" для выполнения.',
@@ -559,7 +563,11 @@ passive_credited_to_upstream: 'Начислено вышестоящим по ц
     all_categories: 'All categories',
     search_placeholder: 'Search projects...',
     per_page: 'Per page:',
-    newest_first: 'Newest first',
+    by_added_date:    '📅 By date added',
+    by_activity_date: '🔄 By activity date',
+    date_day:   'Day',
+    date_month: 'Mo.',
+    date_year:  'Year',
     by_priority: 'By priority',
     by_name: 'By name',
     info_click_project: 'Click on the project name for details or "Guide" to start.',
@@ -1088,6 +1096,9 @@ function setLanguage(lang) {
 
     // Обновляем переводы модального окна обратной связи
     updateFeedbackModalTranslations();
+    if (typeof window.initDateFilter === 'function') {
+    window.initDateFilter();
+  }
 document.dispatchEvent(new CustomEvent('languageChanged', { detail: { lang: lang } }));
     return true;
   }
