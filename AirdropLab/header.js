@@ -444,71 +444,67 @@
       if (deskLang) new MutationObserver(syncLang).observe(deskLang, { attributes: true, subtree: true, childList: true, characterData: true });
       setTimeout(syncLang, 200);
       setTimeout(syncLang, 600);
-      // ── 7. Claim button countdown sync (FINAL, NO DUPLICATES) ──
+      // ── 7. Claim button countdown sync ──
 var deskClaim = document.getElementById('headerClaimBtn');
 var mobClaim  = document.getElementById('mobClaimBtn');
 
 function syncClaimBtn() {
     if (!deskClaim || !mobClaim) return;
 
-    // Берём ТОЛЬКО ОДНУ строку текста с десктопа
-    // textContent работает даже если элемент display:none
-    var raw = (deskClaim.textContent || '').replace(/\s+/g, ' ').trim();
+    // Читаем ТОЛЬКО один span с лейблом — исключает дублирование
+    var labelText = '';
+    var allSpans = Array.from(deskClaim.querySelectorAll('span'));
+    for (var i = 0; i < allSpans.length; i++) {
+        var s = allSpans[i];
+        // Пропускаем: эмодзи-span, точку-индикатор, абсолютные элементы
+        if (s.id === 'claimDot') continue;
+        if (s.classList.contains('text-base')) continue;
+        if (s.classList.contains('absolute')) continue;
+        var t = s.textContent.trim();
+        if (t) { labelText = t; break; } // берём ПЕРВЫЙ подходящий — стоп
+    }
 
-    // Убираем эмодзи, но НЕ трогаем текст
-    var cleanText = raw.replace(/[🧪⏳]/g, '').trim();
+    // Запасной вариант: regex выдёргивает ТОЛЬКО первое совпадение
+    if (!labelText) {
+        var m = (deskClaim.textContent || '').match(
+            /((?:сброс через|reset\s*(?:through|in|через)?)[^🧪⏳]{0,60}(?:\d{1,2}:\d{2}:\d{2}|\d+\s*ч))/i
+        );
+        if (m) labelText = m[1].replace(/\s+/g, ' ').trim();
+    }
 
-    // Определяем режим отсчёта
-    var isCounting =
-        deskClaim.disabled ||
-        cleanText.toLowerCase().includes('сброс') ||
-        cleanText.toLowerCase().includes('reset') ||
-        /\d+:\d{2}/.test(cleanText);
+    var isCounting = deskClaim.disabled
+        || /\d+:\d{2}/.test(labelText)
+        || labelText.toLowerCase().includes('сброс')
+        || labelText.toLowerCase().includes('reset');
 
-    if (isCounting && cleanText) {
-        // ✅ ОДИН источник текста → НЕТ дублирования
-        mobClaim.innerHTML =
-            '🧪 <span style="font-size:11px;white-space:nowrap;">' +
-            cleanText +
-            '</span>';
-
+    if (isCounting && labelText) {
+        mobClaim.innerHTML = '🧪 <span style="font-size:10px;color:inherit;">'
+            + labelText + '</span>';
         mobClaim.style.opacity = '0.65';
         mobClaim.style.cursor  = 'pointer';
-
-        // Кнопка остаётся кликабельной (модалка реагентов)
-        mobClaim.onclick = function () {
+        mobClaim.onclick = function() {
             if (window.openClaimModal) window.openClaimModal();
         };
 
-    } else {
-        // Клейм доступен
+    } else if (!isCounting) {
         var lbl = (window.currentLang === 'en') ? 'Claim' : 'Клейм';
-
-        mobClaim.innerHTML =
-            '🧪 <span style="font-size:11px;" data-translate="claim_btn_label">' +
-            lbl +
-            '</span>';
-
+        mobClaim.innerHTML = '🧪 <span id="mobClaimSpan" style="font-size:11px;"'
+            + ' data-translate="claim_btn_label">' + lbl + '</span>';
         mobClaim.style.opacity = '';
-        mobClaim.style.cursor  = 'pointer';
-
-        mobClaim.onclick = function () {
+        mobClaim.style.cursor  = '';
+        mobClaim.onclick = function() {
             if (window.openClaimModal) window.openClaimModal();
         };
     }
 }
 
-// Следим за изменениями десктопной кнопки
 if (deskClaim) {
     new MutationObserver(syncClaimBtn).observe(deskClaim, {
-        childList: true,
-        subtree: true,
-        attributes: true,
-        characterData: true
+        childList: true, subtree: true,
+        attributes: true, characterData: true
     });
 }
 
-// Обновляем раз в секунду → живой отсчёт
 setInterval(syncClaimBtn, 1000);
 syncClaimBtn();
     }
