@@ -203,6 +203,34 @@
 </div>
       </div>
     </div>
+          <!-- ══ MOBILE: Фильтр + Категории (только телефон) ══ -->
+<div id="mobPanelRow" class="md:hidden">
+
+  <button class="mob-panel-btn mob-filter-btn" id="mobFilterToggle"
+          onclick="window.toggleMobSlide('filter')">
+    <i class="fas fa-sliders-h" style="font-size:11px;"></i>
+    <span>Фильтр</span>
+    <i class="fas fa-chevron-down mob-chevron"></i>
+  </button>
+
+  <button class="mob-panel-btn mob-cat-btn" id="mobCatToggle"
+          onclick="window.toggleMobSlide('cat')">
+    <i class="fas fa-tags" style="font-size:11px;"></i>
+    <span>Категории</span>
+    <i class="fas fa-chevron-down mob-chevron"></i>
+  </button>
+
+</div>
+
+<!-- Панель Фильтр -->
+<div class="mob-slide-panel md:hidden" id="mobFilterSlide">
+  <div class="mob-slide-inner" id="mobFilterInner"></div>
+</div>
+
+<!-- Панель Категории -->
+<div class="mob-slide-panel md:hidden" id="mobCatSlide">
+  <div class="mob-slide-inner" id="mobCatInner"></div>
+</div>
           </div>
     <div id="publicInfo" class="mb-4 p-3 bg-blue-900/20 border border-blue-800/50 rounded-lg text-sm text-blue-300 flex items-center gap-2"><i class="fas fa-info-circle"></i><span data-translate="info_click_project">Нажмите на <strong>название проекта</strong> для подробной информации или на <strong>"Гайд"</strong> для выполнения.</span></div>
     <div id="guestWarning" class="hidden mb-4 p-3 bg-yellow-900/20 border border-yellow-700/50 rounded-lg text-sm text-yellow-500 flex items-center gap-2"><i class="fas fa-exclamation-triangle"></i><span data-translate="guest_warning">Вы не вошли в аккаунт. Избранное и выполненные задания сохраняются только в этом браузере.</span></div>
@@ -3242,5 +3270,128 @@ async function incrementUserCount() {
 </script>
     <script src="footer.js"></script>
     <script src="referral-prompt.js"></script>
+    <script>
+// ══ MOBILE SLIDE PANELS ══
+
+window.toggleMobSlide = function(type) {
+    var isFilter = type === 'filter';
+    var panel    = document.getElementById(isFilter ? 'mobFilterSlide' : 'mobCatSlide');
+    var btn      = document.getElementById(isFilter ? 'mobFilterToggle' : 'mobCatToggle');
+    var other    = document.getElementById(isFilter ? 'mobCatSlide'   : 'mobFilterSlide');
+    var otherBtn = document.getElementById(isFilter ? 'mobCatToggle'  : 'mobFilterToggle');
+    if (!panel) return;
+
+    var opening = !panel.classList.contains('open');
+
+    // Закрываем другую панель
+    if (other)    { other.classList.remove('open'); }
+    if (otherBtn) { otherBtn.classList.remove('open'); }
+
+    // Переключаем текущую
+    panel.classList.toggle('open', opening);
+    btn.classList.toggle('open', opening);
+
+    // Строим содержимое при первом открытии
+    if (opening) {
+        if (isFilter) buildMobFilter();
+        else          buildMobCat();
+    }
+};
+
+/* ── Строим панель Фильтр ── */
+function buildMobFilter() {
+    var inner = document.getElementById('mobFilterInner');
+    if (!inner || inner.dataset.built) return;
+
+    // Берём ссылки из десктопного сайдбара
+    var src = document.querySelectorAll('.sidebar-link[data-filter], aside .sidebar-link');
+
+    if (src.length > 0) {
+        inner.innerHTML = '';
+        src.forEach(function(link) {
+            var mob = link.cloneNode(true);
+            mob.removeAttribute('id');
+            mob.classList.toggle('active', link.classList.contains('active'));
+            // Закрываем панель после выбора фильтра
+            mob.addEventListener('click', function() {
+                setTimeout(function() {
+                    document.getElementById('mobFilterSlide').classList.remove('open');
+                    document.getElementById('mobFilterToggle').classList.remove('open');
+                }, 250);
+            });
+            inner.appendChild(mob);
+        });
+    } else {
+        // Запасной вариант если сайдбар не найден
+        var items = [
+            { filter:'',          icon:'fa-border-all',   label:'Все' },
+            { filter:'active',    icon:'fa-play-circle',  label:'Активные' },
+            { filter:'today',     icon:'fa-star',         label:'Новые' },
+            { filter:'favorites', icon:'fa-heart',        label:'В работе' },
+            { filter:'completed', icon:'fa-check-circle', label:'Готово' },
+            { filter:'ended',     icon:'fa-stop-circle',  label:'Завершённые' },
+        ];
+        inner.innerHTML = items.map(function(f) {
+            return '<div class="sidebar-link" data-filter="' + f.filter + '"'
+                 + ' onclick="typeof filterProjects===\'function\'&&filterProjects(\''
+                 + f.filter + '\');document.getElementById(\'mobFilterSlide\')'
+                 + '.classList.remove(\'open\');document.getElementById(\'mobFilterToggle\')'
+                 + '.classList.remove(\'open\')">'
+                 + '<i class="fas ' + f.icon + '"></i> ' + f.label + '</div>';
+        }).join('');
+    }
+
+    inner.dataset.built = '1';
+    syncMobActive();
+}
+
+/* ── Строим панель Категории ── */
+function buildMobCat() {
+    var inner = document.getElementById('mobCatInner');
+    if (!inner || inner.dataset.built) return;
+
+    var src = document.getElementById('categoriesAccordion');
+    if (src) {
+        inner.innerHTML = '';
+        var clone = src.cloneNode(true);
+        clone.id = 'mobCatAccordion';
+        // Раскрываем сразу
+        clone.style.maxHeight = 'none';
+        clone.style.opacity   = '1';
+        clone.style.overflow  = 'visible';
+        clone.classList.add('open');
+        inner.appendChild(clone);
+    } else {
+        inner.innerHTML = '<div style="color:#64748b;font-size:12px;padding:8px;text-align:center;">'
+            + '<i class="fas fa-tags" style="margin-right:6px;"></i>Категории загружаются...</div>';
+        // Повторяем позже
+        setTimeout(function() {
+            inner.removeAttribute('data-built');
+            buildMobCat();
+        }, 1500);
+    }
+
+    inner.dataset.built = '1';
+}
+
+/* ── Синхронизация активных фильтров ── */
+function syncMobActive() {
+    var deskLinks = document.querySelectorAll('.sidebar-link[data-filter]');
+    var mobLinks  = document.querySelectorAll('#mobFilterInner .sidebar-link');
+    deskLinks.forEach(function(dl, i) {
+        if (mobLinks[i]) {
+            mobLinks[i].classList.toggle('active', dl.classList.contains('active'));
+        }
+    });
+}
+
+// MutationObserver следит за изменением active в сайдбаре
+setTimeout(function() {
+    document.querySelectorAll('.sidebar-link').forEach(function(link) {
+        new MutationObserver(syncMobActive)
+            .observe(link, { attributes: true, attributeFilter: ['class'] });
+    });
+}, 1500);
+</script>
 </body>
 </html>
