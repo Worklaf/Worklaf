@@ -618,6 +618,10 @@ const db = getFirestore(app);
 window.db = db;
 window.auth = auth;
 
+    let _resolveAuthReady;
+window.__authReady  = new Promise(r => { _resolveAuthReady = r; });
+window.waitForAuth  = () => window.__authReady;
+window.whenUserReady = cb => window.__authReady.then(u => { if (u) cb(u); });
 // ✅ Все нужные функции Firestore
 window.__firestoreExports = { 
     collection, 
@@ -1681,116 +1685,126 @@ async function syncLocalStorageToFirestore(userId) {
 }
 
 onAuthStateChanged(auth, async function(user) {
-  if (user) {
-    currentUser = user;
-    await saveUserData(user);
-    await syncLocalStorageToFirestore(user.uid);
-    document.getElementById('generalFeedbackPanel').classList.remove('hidden');
-    initFeedbacksListener(user.uid);
-    if (user.uid === "SAkz4mdW9reDaIsvqigCNZhEKJR2") activateAdminMode();
-    try {
-      const userRef = doc(db, "users", user.uid);
-      const userDoc = await getDoc(userRef);
-      if (userDoc.exists()) {
-        const data = userDoc.data();
-        userFavorites = data.favorites || [];
-        userCompleted = data.completed || [];
-          // Внутри onAuthStateChanged, после строки с userFavorites/userCompleted
-try {
-    const userRefForStats = doc(db, "users", user.uid);
-    const userSnapForStats = await getDoc(userRefForStats);
 
-    if (!userSnapForStats.exists() || !userSnapForStats.data().counted) {
-        await incrementUserCount();
-        await setDoc(userRefForStats, { counted: true }, { merge: true });
-        console.log("✅ New user counted:", user.uid);
-    } else {
-        console.log("ℹ️ User already counted:", user.uid);
+    // ✅ ДОБАВИТЬ — резолвим промис ОДИН РАЗ при первом срабатывании
+    if (_resolveAuthReady) {
+        _resolveAuthReady(user || null);
+        _resolveAuthReady = null;
+        window.__currentAuthUser = user || null;
     }
-} catch(e) {
-    console.log('Counter update skip:', e);
-}
-        if (data.arcGuideStats) { arcData = { ...arcData, ...data.arcGuideStats }; localStorage.setItem(STORAGE_KEY, JSON.stringify(arcData)); }
-      } else { await setDoc(userRef, { favorites: [], completed: [], arcGuideStats: {} }); }
-    } catch (e) { console.error('Error:', e); }
-    document.getElementById('loggedOutView').classList.add('hidden');
-    document.getElementById('loggedInView').classList.remove('hidden');
-    document.getElementById('guestWarning').classList.add('hidden');
-    document.getElementById('userAvatar').src = user.photoURL || 'https://ui-avatars.com/api/?name=' + (user.email || 'User') + '&background=random';
-    document.getElementById('userName').textContent = user.displayName || user.email.split('@')[0];
+
+    if (user) {
+        currentUser = user;
+        window.currentUser = user;
+        await saveUserData(user);
+        await syncLocalStorageToFirestore(user.uid);
+        document.getElementById('generalFeedbackPanel').classList.remove('hidden');
+        initFeedbacksListener(user.uid);
+        if (user.uid === "SAkz4mdW9reDaIsvqigCNZhEKJR2") activateAdminMode();
+
+        try {
+            const userRef  = doc(db, "users", user.uid);
+            const userDoc  = await getDoc(userRef);
+            if (userDoc.exists()) {
+                const data = userDoc.data();
+                userFavorites = data.favorites  || [];
+                userCompleted = data.completed  || [];
+
+                // ✅ ОСТАВИТЬ ТОЛЬКО ОДНУ ПРОВЕРКУ счётчика (убрать дубль ниже)
+                if (!data.counted) {
+                    await incrementUserCount();
+                    await setDoc(userRef, { counted: true }, { merge: true });
+                }
+
+                if (data.arcGuideStats) {
+                    arcData = { ...arcData, ...data.arcGuideStats };
+                    localStorage.setItem(STORAGE_KEY, JSON.stringify(arcData));
+                }
+            } else {
+                await setDoc(userRef, { favorites: [], completed: [], arcGuideStats: {} });
+            }
+        } catch (e) { console.error('Error:', e); }
+
+        document.getElementById('loggedOutView').classList.add('hidden');
+        document.getElementById('loggedInView').classList.remove('hidden');
+        document.getElementById('guestWarning').classList.add('hidden');
+        document.getElementById('userAvatar').src = user.photoURL
+            || 'https://ui-avatars.com/api/?name=' + (user.email || 'User') + '&background=random';
+        document.getElementById('userName').textContent = user.displayName || user.email.split('@')[0];
+
         initUserSync(user.uid);
-    initNotificationsListener(user.uid);
-    applyFilters();
-          // Обновляем счётчик пользователей в config
-    try {
-        const configRef = doc(db, "config", "stats");
-        const configSnap = await getDoc(configRef);
-        const currentCount = configSnap.exists() ? (configSnap.data().userCount || 0) : 0;
-        
-        // Проверяем есть ли уже этот пользователь в счётчике
-        // Проверяем, посчитан ли пользователь
-const userRefForStats = doc(db, "users", user.uid);
-const userSnapForStats = await getDoc(userRefForStats);
+        initNotificationsListener(user.uid);
 
-if (!userSnapForStats.exists() || !userSnapForStats.data().counted) {
-    // Вызываем вашу функцию инкремента
-    await incrementUserCount(); 
-    // Помечаем в базе пользователя, чтобы не считать его второй раз
-    await setDoc(userRefForStats, { counted: true }, { merge: true });
-}
-    } catch(e) {
-        console.log('Counter update skip:', e);
+        // ✅ Загружаем состояние hero из Firestore
+        await loadHeroStateFromFirestore(user.uid);
+
+        applyFilters();
+
+        // ✅ Уведомляем другие модули
+        document.dispatchEvent(new CustomEvent('userAuthChanged', { detail: { user } }));
+        document.dispatchEvent(new CustomEvent('authStateReady',  { detail: { user } }));
+
+    } else {
+        currentUser   = null;
+        window.currentUser = null;
+        userFavorites = [];
+        userCompleted = [];
+
+        document.getElementById('generalFeedbackPanel').classList.add('hidden');
+        if (notificationsUnsubscribe)   { notificationsUnsubscribe();   notificationsUnsubscribe   = null; }
+        if (adminFeedbacksUnsubscribe)  { adminFeedbacksUnsubscribe();  adminFeedbacksUnsubscribe  = null; }
+
+        notifications = []; unreadNotificationsCount = 0; updateNotificationBadge();
+        document.getElementById('loggedOutView').classList.remove('hidden');
+        document.getElementById('loggedInView').classList.add('hidden');
+        document.getElementById('guestWarning').classList.remove('hidden');
+
+        arcData       = JSON.parse(localStorage.getItem(STORAGE_KEY) || '{}');
+        userCompleted = JSON.parse(localStorage.getItem(COMPLETED_KEY) || '[]');
+
+        applyFilters();
+
+        document.dispatchEvent(new CustomEvent('userAuthChanged', { detail: { user: null } }));
+        document.dispatchEvent(new CustomEvent('authStateReady',  { detail: { user: null } }));
     }
-    
-    // Уведомляем футер что авторизация изменилась
-    window.currentUser = user;
-    setTimeout(function() {
-      document.dispatchEvent(new CustomEvent('userAuthChanged'));
-    }, 500);
-  } else {
-    currentUser = null; userFavorites = []; userCompleted = [];
-    document.getElementById('generalFeedbackPanel').classList.add('hidden');
-    if (notificationsUnsubscribe) { notificationsUnsubscribe(); notificationsUnsubscribe = null; }
-    if (adminFeedbacksUnsubscribe) { adminFeedbacksUnsubscribe(); adminFeedbacksUnsubscribe = null; }
-    notifications = []; unreadNotificationsCount = 0; updateNotificationBadge();
-    document.getElementById('loggedOutView').classList.remove('hidden');
-    document.getElementById('loggedInView').classList.add('hidden');
-    document.getElementById('guestWarning').classList.remove('hidden');
-        arcData = JSON.parse(localStorage.getItem(STORAGE_KEY)) || [];
-    userCompleted = JSON.parse(localStorage.getItem(COMPLETED_KEY) || []);
-    applyFilters();
-    
-    // Уведомляем футер о разлогине
-    window.currentUser = null;
-    document.dispatchEvent(new CustomEvent('userAuthChanged'));
-  }
 });
-
+        
 function initUserSync(uid) {
-  const userRef = doc(db, "users", uid);
-  onSnapshot(userRef, function(docSnap) {
-    if (docSnap.exists()) {
-      const data = docSnap.data();
-      let cloudFavorites = data.favorites || [];
-      let localStorageFavorites = JSON.parse(localStorage.getItem('favorites_backup')) || [];
-      let mergedFavorites = [...new Set([...cloudFavorites, ...localStorageFavorites])];
-      if (JSON.stringify(cloudFavorites) !== JSON.stringify(mergedFavorites)) localStorage.setItem('favorites_backup', JSON.stringify(mergedFavorites));
-      userFavorites = mergedFavorites;
-      let cloudCompleted = data.completed || [];
-      let localStorageCompleted = JSON.parse(localStorage.getItem(COMPLETED_KEY)) || [];
-      let mergedCompleted = [...new Set([...cloudCompleted, ...localStorageCompleted])];
-      if (JSON.stringify(cloudCompleted) !== JSON.stringify(mergedCompleted)) localStorage.setItem(COMPLETED_KEY, JSON.stringify(mergedCompleted));
-      userCompleted = mergedCompleted;
-      if (data.arcGuideStats) {
-        let cloudArcData = data.arcGuideStats;
-        let localArcData = JSON.parse(localStorage.getItem(STORAGE_KEY)) || {};
-        let mergedArcData = { ...localArcData, ...cloudArcData };
-        localStorage.setItem(STORAGE_KEY, JSON.stringify(mergedArcData));
-        arcData = mergedArcData;
-      }
-      applyFilters();
-    }
-  });
+    const userRef = doc(db, "users", uid);
+
+    // ✅ Дебаунс чтобы не перерисовывать при каждом мелком изменении
+    let syncTimer = null;
+
+    onSnapshot(userRef, function(docSnap) {
+        if (!docSnap.exists()) return;
+        const data = docSnap.data();
+
+        // Мёрджим favorites
+        const cloudFav   = data.favorites  || [];
+        const localFav   = JSON.parse(localStorage.getItem('favorites_backup') || '[]');
+        const mergedFav  = [...new Set([...cloudFav, ...localFav])];
+        userFavorites    = mergedFav;
+        localStorage.setItem('favorites_backup', JSON.stringify(mergedFav));
+
+        // Мёрджим completed
+        const cloudComp  = data.completed  || [];
+        const localComp  = JSON.parse(localStorage.getItem(COMPLETED_KEY) || '[]');
+        const mergedComp = [...new Set([...cloudComp, ...localComp])];
+        userCompleted    = mergedComp;
+        localStorage.setItem(COMPLETED_KEY, JSON.stringify(mergedComp));
+
+        // Мёрджим arcData
+        if (data.arcGuideStats) {
+            const localArc  = JSON.parse(localStorage.getItem(STORAGE_KEY) || '{}');
+            const mergedArc = { ...localArc, ...data.arcGuideStats };
+            localStorage.setItem(STORAGE_KEY, JSON.stringify(mergedArc));
+            arcData = mergedArc;
+        }
+
+        // ✅ Дебаунс 300ms — не перерисовываем чаще чем нужно
+        clearTimeout(syncTimer);
+        syncTimer = setTimeout(() => applyFilters(), 300);
+    });
 }
 
 window.toggleComplete = async function(uid, aid) {
@@ -3028,10 +3042,21 @@ window.saveProject = async function(e) {
   if (currentUser && currentUser.uid === "SAkz4mdW9reDaIsvqigCNZhEKJR2") await createLocalBackup();
 };
 
-window.addEventListener('load', function() {
-  const loadingScreen = document.getElementById('loading-screen');
-  if (loadingScreen) { loadingScreen.style.opacity = '0'; setTimeout(() => { loadingScreen.style.display = 'none'; }, 500); }
+window.__authReady.then(() => {
+    const loadingScreen = document.getElementById('loading-screen');
+    if (loadingScreen) {
+        loadingScreen.style.opacity = '0';
+        setTimeout(() => { loadingScreen.style.display = 'none'; }, 500);
+    }
 });
+// Но не дольше 4 секунд в любом случае
+setTimeout(() => {
+    const ls = document.getElementById('loading-screen');
+    if (ls && ls.style.display !== 'none') {
+        ls.style.opacity = '0';
+        setTimeout(() => { ls.style.display = 'none'; }, 500);
+    }
+}, 4000);
 
 let isHeroCollapsed = false;
 function initHeroState() { const savedState = localStorage.getItem('heroCollapsed'); if (savedState === 'true') collapseHero(false); }
@@ -3195,5 +3220,6 @@ async function incrementUserCount() {
 // createUserWithEmailAndPassword(...).then(() => { incrementUserCount(); });
 </script>
     <script src="footer.js"></script>
+    <script src="referral-prompt.js"></script>
 </body>
 </html>
