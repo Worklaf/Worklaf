@@ -2198,7 +2198,19 @@ function getLatestActivityDate(project) {
   const latestActivity = project.activities.filter(a => a.date).sort((a, b) => new Date(b.date) - new Date(a.date))[0];
   return latestActivity && latestActivity.date ? latestActivity.date : (project.lastUpdated || project.createdAt);
 }
+function getLastContentAddedDate(project) {
+    const projectTs = new Date(project.createdAt || 0).getTime();
+    if (!project.activities || !project.activities.length) return projectTs;
 
+    // act.createdAt — когда активность была добавлена (не её дата начала!)
+    // Старые активности без createdAt дают 0, не влияют на порядок
+    const maxActTs = project.activities.reduce((max, act) => {
+        const ts = new Date(act.createdAt || 0).getTime();
+        return ts > max ? ts : max;
+    }, 0);
+
+    return Math.max(projectTs, maxActTs);
+}
 function isNewProject(dateString) {
   if (!dateString) return false;
   const created = new Date(dateString);
@@ -2348,10 +2360,9 @@ window.sortProjects = function(by) {
       const bDate = getLatestActivityDate(b);
       return new Date(bDate || 0).getTime() - new Date(aDate || 0).getTime();
     });
-  else if (by === 'added')  // ← НОВЫЙ
-    projects.sort((a, b) => 
-      new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime()
-    );
+  else if (by === 'added')
+    // ← Теперь по дате ДОБАВЛЕНИЯ (проекта или активности в систему)
+    projects.sort((a, b) => getLastContentAddedDate(b) - getLastContentAddedDate(a));
   applyFilters();
 };
 
@@ -2532,6 +2543,12 @@ window.saveActivityData = function() {
   const title = document.getElementById('actName').value;
   if (!title) { showToast('Введите название'); return; }
   const selectedCats = Array.from(document.querySelectorAll('.act-cat-checkbox:checked')).map(cb => cb.value);
+
+  // ← Сохраняем createdAt: для новой — сейчас, для редактируемой — оригинальный
+  const existingAct = editingActivityId
+    ? currentEditingActivities.find(a => a.id === editingActivityId)
+    : null;
+
   const actData = {
     id: editingActivityId || 'act_' + Date.now(),
     title: title,
@@ -2539,8 +2556,10 @@ window.saveActivityData = function() {
     endDate: document.getElementById('actEndDate').value,
     categories: selectedCats.length > 0 ? selectedCats : mainProjectCategories,
     description: document.getElementById('actRichDesc').value,
-    status: 'active'
+    status: 'active',
+    createdAt: existingAct?.createdAt || new Date().toISOString() // ← ДОБАВИТЬ
   };
+
   if (editingActivityId) {
     const idx = currentEditingActivities.findIndex(a => a.id === editingActivityId);
     if (idx !== -1) currentEditingActivities[idx] = actData;
