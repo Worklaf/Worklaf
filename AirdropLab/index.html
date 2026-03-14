@@ -640,10 +640,7 @@ import {
     serverTimestamp, 
     arrayUnion, 
     getCountFromServer,
-    increment,
-    initializeFirestore,
-    persistentLocalCache,
-    persistentMultipleTabManager,
+    increment
 } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
 const firebaseConfig = {
@@ -657,22 +654,7 @@ const firebaseConfig = {
 
 const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
-let db;
-try {
-    db = initializeFirestore(app, {
-        localCache: persistentLocalCache({
-            tabManager: persistentMultipleTabManager()
-        })
-    });
-    console.log('✅ Firestore: IndexedDB кэш включён');
-} catch(e) {
-    db = getFirestore(app);
-    console.warn('⚠️ Кэш недоступен:', e.message);
-}
-
-// Статус соединения
-window.addEventListener('online',  () => showToast('🌐 Соединение восстановлено'));
-window.addEventListener('offline', () => showToast('⚠️ Нет сети — данные сохраняются локально'))
+const db = getFirestore(app);
 
 // Глобальные переменные
 window.db = db;
@@ -848,41 +830,25 @@ function isActivityNew(projectId, activityId) {
   return (newActivitiesData[projectId] || []).includes(activityId);
 }
 
-async function checkAndAutoEndActivities() {
+function checkAndAutoEndActivities() {
   const now = new Date();
-  const nowDateOnly = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-
-  for (const project of projects) {
-    if (!project.activities || !project.activities.length) continue;
-
-    let changed = false;
-
+  let hasChanges = false;
+  projects.forEach(project => {
+    if (!project.activities || project.activities.length === 0) return;
     project.activities.forEach(act => {
-      if (act.status === 'ended' || !act.endDate) return;
-      const ed = new Date(act.endDate);
-      const edOnly = new Date(ed.getFullYear(), ed.getMonth(), ed.getDate());
-      if (nowDateOnly >= edOnly) {
-        act.status = 'ended';
-        changed = true;
+      if (act.status === 'ended') return;
+      if (act.endDate) {
+        const endDate = new Date(act.endDate);
+        const nowDateOnly = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+        const endDateOnly = new Date(endDate.getFullYear(), endDate.getMonth(), endDate.getDate());
+        if (nowDateOnly >= endDateOnly) {
+          act.status = 'ended';
+          hasChanges = true;
+        }
       }
     });
-
-    // Сохраняем в Firestore (try/catch — у не-админов нет прав на запись,
-    // но отображение всё равно будет корректным из памяти)
-    if (changed) {
-      try {
-        await setDoc(
-          doc(db, 'projects', project.id),
-          { activities: project.activities },
-          { merge: true }
-        );
-      } catch (e) {
-        // не-админ: тихо игнорируем, статус в памяти уже изменён
-      }
-    }
-  }
-
-  applyFilters();
+  });
+  if (hasChanges) applyFilters();
 }
 
 function isProjectUnvisited(project) {
@@ -2012,94 +1978,74 @@ setTimeout(() => {
 let firstDataLoadComplete = false;
 
 window.loadData = async function() {
-  if (useEnglishData) return;
-
-  let firestoreLoaded = false;
-
-  // ── Запасной вариант: если Firestore не ответил за 5 сек — показываем JSON временно
-  const fallbackTimer = setTimeout(async () => {
-    if (firestoreLoaded || projects.length > 0) return;
-    try {
-      const response = await fetch(EXTERNAL_DATA_URL);
-      if (!response.ok) return;
-      const data = await response.json();
-      if (data.projects && projects.length === 0) {
-        projects = data.projects.map(normalizeData);
-        if (data.categories) categories = data.categories;
-        window.projects = projects;
-        sortProjects(currentSortType);
-        applyFilters();
-        console.log('📂 JSON fallback (временно — Firestore ещё загружается)');
-      }
-    } catch (e) { console.log('JSON недоступен:', e); }
-  }, 5000);
-
-  // ── Основной и единственный источник истины: Firestore
-  onSnapshot(
-    query(collection(db, "projects"), where("deleted", "==", false)),
-    function(snapshot) {
-      if (useEnglishData) return;
-
-      clearTimeout(fallbackTimer); // JSON больше не нужен
-      firestoreLoaded = true;
-
-      // ✅ Полная замена из Firestore (не merge с JSON!)
-      const fsProjects = [];
-      snapshot.forEach(function(docSnap) {
-        const p = docSnap.data();
-        if (!p.deleted) fsProjects.push(normalizeData(p));
-      });
-
-      // Сохраняем удалённые если загружены для админа
-      const deletedProjects = projects.filter(p => p.deleted);
-      projects = [...fsProjects, ...deletedProjects];
-
-      window.projects = projects;
-      sortProjects(currentSortType);
-      checkAndAutoEndActivities();
-      applyFilters();
-      document.dispatchEvent(new CustomEvent('projectsLoaded'));
-      console.log('✅ Firestore:', fsProjects.length, 'проектов');
-    },
-    function(error) {
-      // Firestore вернул ошибку → грузим JSON немедленно
-      console.error('Firestore error:', error);
-      clearTimeout(fallbackTimer);
-      if (projects.length === 0) {
-        fetch(EXTERNAL_DATA_URL)
-          .then(r => r.json())
-          .then(data => {
-            if (data.projects) {
-              projects = data.projects.map(normalizeData);
-              if (data.categories) categories = data.categories;
-              window.projects = projects;
-              sortProjects(currentSortType);
-              applyFilters();
-              console.log('📂 JSON как резерв (Firestore недоступен)');
-            }
-          })
-          .catch(() => {});
-      }
-    }
-  );
-
-  // Удалённые проекты для админа
-  if (isAdminMode) {
-    onSnapshot(
-      query(collection(db, "projects"), where("deleted", "==", true)),
-      function(snapshot) {
-        if (useEnglishData) return;
-        snapshot.forEach(function(docSnap) {
-          const p = normalizeData(docSnap.data());
-          if (!projects.find(x => x.id === p.id)) projects.push(p);
-        });
-        applyFilters();
-      }
-    );
+  // Skip if using English data
+  if (useEnglishData) {
+    console.log('Using English data, skipping default load');
+    return;
   }
-
+  
+    try {
+    const response = await fetch(EXTERNAL_DATA_URL);
+    if (response.ok) {
+      const data = await response.json();
+      if(data.projects) projects = data.projects.map(normalizeData);
+      if(data.categories) categories = data.categories;
+    }
+  } catch (e) { 
+    console.log('JSON load error', e); 
+  }
+  
+  if (projects.length > 0) {
+    // Экспортируем для футера
+    window.projects = projects;
+    sortProjects(currentSortType);
+    // Сообщаем футеру
+    document.dispatchEvent(new CustomEvent('projectsLoaded'));
+  }
+  
+  // Подписываемся на обновления Firestore
+    const unsubscribe = onSnapshot(query(collection(db, "projects"), where("deleted", "==", false)), function(snapshot) {
+    if (useEnglishData) return; // Skip if using English data
+    
+    snapshot.forEach(function(docSnap) {
+      const fireProject = docSnap.data();
+      const idx = projects.findIndex(function(p) { return p.id === fireProject.id; });
+      if (idx !== -1) {
+        projects[idx] = { ...projects[idx], ...fireProject };
+      } else if (!fireProject.deleted) {
+        projects.push(normalizeData(fireProject));
+      }
+    });
+    
+    // Экспортируем проекты глобально для футера
+    window.projects = projects;
+    
+    sortProjects(currentSortType);
+    applyFilters();
+    
+    // Уведомляем футер что проекты загружены
+    document.dispatchEvent(new CustomEvent('projectsLoaded'));
+  });
+  
+  if (isAdminMode) {
+    onSnapshot(query(collection(db, "projects"), where("deleted", "==", true)), function(snapshot) {
+      if (useEnglishData) return;
+      
+      snapshot.forEach(function(docSnap) {
+        const fireProject = docSnap.data();
+        const idx = projects.findIndex(function(p) { return p.id === fireProject.id; });
+        if (idx !== -1) {
+          projects[idx] = { ...projects[idx], ...fireProject };
+        } else {
+          projects.push(normalizeData(fireProject));
+        }
+      });
+      applyFilters();
+    });
+  }
+  
   firstDataLoadComplete = true;
-  setTimeout(() => detectNewActivities(), 1000);
+    detectNewActivities();
 };
 
 function normalizeData(project) {
