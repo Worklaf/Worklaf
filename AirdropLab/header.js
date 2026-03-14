@@ -444,54 +444,45 @@
       if (deskLang) new MutationObserver(syncLang).observe(deskLang, { attributes: true, subtree: true, childList: true, characterData: true });
       setTimeout(syncLang, 200);
       setTimeout(syncLang, 600);
-      // ── 7. Claim button countdown sync ──
+     // ── 7. Claim button — визуальный индикатор состояния ──
 var deskClaim = document.getElementById('headerClaimBtn');
 var mobClaim  = document.getElementById('mobClaimBtn');
 
 function syncClaimBtn() {
     if (!deskClaim || !mobClaim) return;
 
-    // Читаем ТОЛЬКО один span с лейблом — исключает дублирование
-    var labelText = '';
-    var allSpans = Array.from(deskClaim.querySelectorAll('span'));
-    for (var i = 0; i < allSpans.length; i++) {
-        var s = allSpans[i];
-        // Пропускаем: эмодзи-span, точку-индикатор, абсолютные элементы
-        if (s.id === 'claimDot') continue;
-        if (s.classList.contains('text-base')) continue;
-        if (s.classList.contains('absolute')) continue;
-        var t = s.textContent.trim();
-        if (t) { labelText = t; break; } // берём ПЕРВЫЙ подходящий — стоп
-    }
+    var txt = deskClaim.textContent || '';
+    var isClaimed = deskClaim.disabled
+        || /\d+:\d{2}/.test(txt)
+        || txt.toLowerCase().includes('сброс')
+        || txt.toLowerCase().includes('reset');
 
-    // Запасной вариант: regex выдёргивает ТОЛЬКО первое совпадение
-    if (!labelText) {
-        var m = (deskClaim.textContent || '').match(
-            /((?:сброс через|reset\s*(?:through|in|через)?)[^🧪⏳]{0,60}(?:\d{1,2}:\d{2}:\d{2}|\d+\s*ч))/i
-        );
-        if (m) labelText = m[1].replace(/\s+/g, ' ').trim();
-    }
-
-    var isCounting = deskClaim.disabled
-        || /\d+:\d{2}/.test(labelText)
-        || labelText.toLowerCase().includes('сброс')
-        || labelText.toLowerCase().includes('reset');
-
-    if (isCounting && labelText) {
-        mobClaim.innerHTML = '🧪 <span style="font-size:10px;color:inherit;">'
-            + labelText + '</span>';
-        mobClaim.style.opacity = '0.65';
-        mobClaim.style.cursor  = 'pointer';
+    if (isClaimed) {
+        // ── СОСТОЯНИЕ: уже клеймил сегодня ──
+        var lbl = (window.currentLang === 'en') ? 'Claimed' : 'Готово';
+        mobClaim.innerHTML = '🔒 <span style="font-size:11px;">' + lbl + '</span>';
+        mobClaim.style.cssText += [
+            'background:rgba(71,85,105,0.2)',
+            'border-color:rgba(71,85,105,0.35)',
+            'color:#64748b',
+            'cursor:pointer'
+        ].join(';');
         mobClaim.onclick = function() {
             if (window.openClaimModal) window.openClaimModal();
         };
 
-    } else if (!isCounting) {
+    } else {
+        // ── СОСТОЯНИЕ: можно клеймить ──
         var lbl = (window.currentLang === 'en') ? 'Claim' : 'Клейм';
         mobClaim.innerHTML = '🧪 <span id="mobClaimSpan" style="font-size:11px;"'
             + ' data-translate="claim_btn_label">' + lbl + '</span>';
-        mobClaim.style.opacity = '';
-        mobClaim.style.cursor  = '';
+        mobClaim.style.cssText += [
+            'background:rgba(8,145,178,0.2)',
+            'border-color:rgba(34,211,238,0.3)',
+            'color:#22d3ee',
+            'cursor:pointer',
+            'opacity:1'
+        ].join(';');
         mobClaim.onclick = function() {
             if (window.openClaimModal) window.openClaimModal();
         };
@@ -505,7 +496,7 @@ if (deskClaim) {
     });
 }
 
-setInterval(syncClaimBtn, 1000);
+setInterval(syncClaimBtn, 5000); // достаточно раз в 5 сек — не нужна секунда
 syncClaimBtn();
     }
 
