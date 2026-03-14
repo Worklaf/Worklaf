@@ -33,84 +33,83 @@
 
     /* ── Проверка ──────────────────────────────── */
     async function checkUser(user) {
-        if (shown) return;
-        if (localStorage.getItem('rl_ref_done_' + user.uid)) return;
+    if (shown) return;
 
-        const { doc, getDoc } = window.__firestoreExports;
-        try {
-            const snap = await getDoc(doc(window.db, 'users', user.uid));
-            if (snap.exists()) {
-                const d = snap.data();
-                // Используем то же поле что и в footer.js
-                if (d.invitedBy || d.refModalDismissed) {
-                    localStorage.setItem('rl_ref_done_' + user.uid, '1');
-                    return;
-                }
-            }
-        } catch { return; }
+    // Пропустил в этой сессии — не показываем до следующего обновления
+    if (sessionStorage.getItem('alr_skipped_' + user.uid)) return;
 
-        shown = true;
-        injectStyles();
-        renderModal();
-    }
+    const { doc, getDoc } = window.__firestoreExports;
+    try {
+        const snap = await getDoc(doc(window.db, 'users', user.uid));
+        if (snap.exists()) {
+            const d = snap.data();
+            // Есть реферал → никогда не показываем
+            if (d.invitedBy) return;
+        }
+    } catch { return; }
+
+    // Нет invitedBy → показываем
+    shown = true;
+    injectStyles();
+    renderModal();
+}
 
     /* ── Вызов footer-функции без дублирования ─
        1. Создаём temp #profileInviteCode input
        2. Вызываем applyReferralCodeFooter()
        3. Проверяем результат по полю invitedBy   */
-    async function callFooterApply(code) {
-        // Создаём временный input который читает applyReferralCodeFooter()
-        let tempInp = document.getElementById('profileInviteCode');
-        let created = false;
-        if (!tempInp) {
-            tempInp = document.createElement('input');
-            tempInp.type = 'hidden';
-            tempInp.id   = 'profileInviteCode';
-            document.body.appendChild(tempInp);
-            created = true;
-        }
-        const prevVal  = tempInp.value;
-        tempInp.value  = code;
+    /* ── waitForReady и bootstrap — без изменений ── */
 
-        return new Promise(resolve => {
-            const origToast = window.showToast;
-            let done = false;
-
-            const cleanup = async () => {
-                if (done) return;
-                done = true;
-                window.showToast = origToast;
-                if (created && tempInp.parentNode) tempInp.remove();
-                else if (!created) tempInp.value = prevVal;
-
-                // Проверяем Firestore — поле invitedBy (как в footer.js)
-                try {
-                    const user = window.auth?.currentUser;
-                    if (user) {
-                        const { doc, getDoc } = window.__firestoreExports;
-                        await delay(400); // даём время записи
-                        const snap = await getDoc(doc(window.db, 'users', user.uid));
-                        if (snap.exists() && snap.data().invitedBy) {
-                            return resolve({ ok: true });
-                        }
-                    }
-                } catch (_) {}
-                resolve({ ok: false });
-            };
-
-            // Перехватываем showToast как сигнал завершения
-            window.showToast = function (msg) {
-                origToast?.call(this, msg);
-                cleanup();
-            };
-
-            // Таймаут-страховка
-            setTimeout(cleanup, 9000);
-
-            // Вызываем функцию из footer.js — она сама пишет в Firestore
-            window.applyReferralCodeFooter();
-        });
+/* ── callFooterApply — убираем старый localStorage ──
+   Оставляем только проверку Firestore              */
+async function callFooterApply(code) {
+    let tempInp = document.getElementById('profileInviteCode');
+    let created = false;
+    if (!tempInp) {
+        tempInp = document.createElement('input');
+        tempInp.type = 'hidden';
+        tempInp.id   = 'profileInviteCode';
+        document.body.appendChild(tempInp);
+        created = true;
     }
+    const prevVal = tempInp.value;
+    tempInp.value = code;
+
+    return new Promise(resolve => {
+        const origToast = window.showToast;
+        let done = false;
+
+        const cleanup = async () => {
+            if (done) return;
+            done = true;
+            window.showToast = origToast;
+            if (created && tempInp.parentNode) tempInp.remove();
+            else if (!created) tempInp.value = prevVal;
+
+            // Проверяем только Firestore
+            try {
+                const user = window.auth?.currentUser;
+                if (user) {
+                    const { doc, getDoc } = window.__firestoreExports;
+                    await new Promise(r => setTimeout(r, 500));
+                    const snap = await getDoc(doc(window.db, 'users', user.uid));
+                    if (snap.exists() && snap.data().invitedBy) {
+                        return resolve({ ok: true });
+                    }
+                }
+            } catch (_) {}
+            resolve({ ok: false });
+        };
+
+        window.showToast = function (msg) {
+            origToast?.call(this, msg);
+            cleanup();
+        };
+
+        setTimeout(cleanup, 9000);
+        window.applyReferralCodeFooter();
+    });
+}
 
     const delay = ms => new Promise(r => setTimeout(r, ms));
 
@@ -278,45 +277,41 @@
         }
     };
 
-    window.__alrSkip = async () => {
-        const user = window.auth?.currentUser;
-        if (user) {
-            localStorage.setItem('rl_ref_done_' + user.uid, '1');
-            try {
-                const { doc, setDoc } = window.__firestoreExports;
-                await setDoc(doc(window.db, 'users', user.uid),
-                    { refModalDismissed: true }, { merge: true });
-            } catch (_) {}
-        }
-        closeModal();
-    };
+    window.__alrSkip = () => {
+    const user = window.auth?.currentUser;
+    if (user) {
+        sessionStorage.setItem('alr_skipped_' + user.uid, '1');
+    }
+    closeModal();
+};
 
     window.__alrClose = closeModal;
 
     /* ── Экран успеха ───────────────────────────── */
-    function showSuccess(code) {
-        const user = window.auth?.currentUser;
-        if (user) localStorage.setItem('rl_ref_done_' + user.uid, '1');
-
-        const inner = document.querySelector(`#${MODAL_ID} .alr-inner`);
-        if (!inner) return;
-        inner.innerHTML = `
-        <div class="alr-ok">
-          <div class="alr-ok-ring">
-            <div class="alr-ok-ico"><i class="fas fa-check"></i></div>
-          </div>
-          <h3>🎊 Код активирован!</h3>
-          <p>Код <b style="color:#22d3ee">${code}</b> успешно применён</p>
-          <div class="alr-ok-row"><i class="fas fa-vial"></i> +50 RGT начислено вам!</div>
-          <div class="alr-ok-row alr-ok-row--b"><i class="fas fa-user-friends"></i> +25 RGT начислено другу</div>
-          <button onclick="window.__alrClose()" class="alr-apply"
-                  style="flex:none;width:100%;padding:15px;margin-top:12px">
-            Начать исследование <i class="fas fa-rocket"></i>
-          </button>
-        </div>`;
-        confetti();
-        setTimeout(closeModal, 6000);
-    }
+    /* ── Успешное применение кода ───────────────────
+   localStorage не нужен — Firestore invitedBy
+   теперь является единственным источником истины  */
+function showSuccess(code) {
+    // НЕ пишем в localStorage — Firestore сам защитит от повтора
+    const inner = document.querySelector(`#${MODAL_ID} .alr-inner`);
+    if (!inner) return;
+    inner.innerHTML = `
+    <div class="alr-ok">
+      <div class="alr-ok-ring">
+        <div class="alr-ok-ico"><i class="fas fa-check"></i></div>
+      </div>
+      <h3>🎊 Код активирован!</h3>
+      <p>Код <b style="color:#22d3ee">${code}</b> успешно применён</p>
+      <div class="alr-ok-row"><i class="fas fa-vial"></i> +50 RGT начислено вам!</div>
+      <div class="alr-ok-row alr-ok-row--b"><i class="fas fa-user-friends"></i> +25 RGT начислено другу</div>
+      <button onclick="window.__alrClose()" class="alr-apply"
+              style="flex:none;width:100%;padding:15px;margin-top:12px">
+        Начать исследование <i class="fas fa-rocket"></i>
+      </button>
+    </div>`;
+    confetti();
+    setTimeout(closeModal, 6000);
+}
 
     /* ── Конфетти ───────────────────────────────── */
     function confetti() {
