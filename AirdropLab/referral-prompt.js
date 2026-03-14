@@ -177,9 +177,9 @@
 <div class="alr-card" id="${MODAL_ID}_card">
   <div class="alr-glow-border"></div>
 
-  <button class="alr-lang-btn" id="${MODAL_ID}_lang" onclick="window.__alrToggleLang()">
-    <span class="alr-lang-dot" id="${MODAL_ID}_dot"></span>ENG
-  </button>
+  <button class="alr-lang-btn alr-lang-btn--active" id="${MODAL_ID}_lang" onclick="window.__alrToggleLang()">
+    <span class="alr-lang-dot alr-lang-dot--active" id="${MODAL_ID}_dot"></span>ENG
+</button>
 
   <div class="alr-inner">
     <div class="alr-head">
@@ -263,38 +263,41 @@
 
     /* ── Переключатель языка ────────────────────── */
     window.__alrToggleLang = function () {
-        modalLang    = modalLang === 'ru' ? 'en' : 'ru';
-        const isEn   = modalLang === 'en';
-        const dot    = document.getElementById(MODAL_ID + '_dot');
-        const btn    = document.getElementById(MODAL_ID + '_lang');
-        if (dot) dot.style.background  = isEn ? '#22c55e' : '#ef4444';
-        if (btn) btn.style.color       = isEn ? '#22c55e' : '#ef4444';
-        if (btn) btn.style.borderColor = isEn ? 'rgba(34,197,94,.4)' : 'rgba(239,68,68,.4)';
+    modalLang  = modalLang === 'ru' ? 'en' : 'ru';
+    const isEn = modalLang === 'en';
 
-        const upd = (id, val) => {
-            const el = document.getElementById(MODAL_ID + '_' + id);
-            if (el) el.textContent = val;
-        };
-        const updH = (id, val) => {
-            const el = document.getElementById(MODAL_ID + '_' + id);
-            if (el) el.innerHTML = val;
-        };
+    const dot = document.getElementById(MODAL_ID + '_dot');
+    const btn = document.getElementById(MODAL_ID + '_lang');
 
-        upd('titleTxt', tr('title'));
-        updH('sub',     tr('subtitle').replace('\n','<br>'));
-        upd('bYou',     tr('bonusYou'));
-        upd('bFrd',     tr('bonusFriend'));
-        upd('rec',      tr('recommended'));
-        upd('autLbl',   tr('authorLabel'));
-        upd('useTxt',   tr('useBtn'));
-        upd('or',       tr('orEnter'));
-        upd('skipBtn',  tr('skipBtn'));
-        upd('applyTxt', tr('applyBtn'));
-        upd('foot',     tr('footnote'));
+    // Зелёный = EN включён, Красный = EN выключен (RU)
+    if (dot) {
+        dot.style.background = isEn ? '#22c55e' : '#ef4444';
+        dot.style.boxShadow  = isEn ? '0 0 8px #22c55e' : '0 0 8px #ef4444';
+    }
+    if (btn) {
+        btn.style.color       = isEn ? '#22c55e' : '#ef4444';
+        btn.style.borderColor = isEn ? 'rgba(34,197,94,.4)' : 'rgba(239,68,68,.4)';
+    }
 
-        const inp = document.getElementById(MODAL_ID + '_inp');
-        if (inp) inp.placeholder = tr('placeholder');
-    };
+    // ... обновление текстов остаётся без изменений
+    const upd = (id, val) => { const el = document.getElementById(MODAL_ID + '_' + id); if (el) el.textContent = val; };
+    const updH = (id, val) => { const el = document.getElementById(MODAL_ID + '_' + id); if (el) el.innerHTML = val; };
+
+    upd('titleTxt', tr('title'));
+    updH('sub',     tr('subtitle').replace('\n','<br>'));
+    upd('bYou',     tr('bonusYou'));
+    upd('bFrd',     tr('bonusFriend'));
+    upd('rec',      tr('recommended'));
+    upd('autLbl',   tr('authorLabel'));
+    upd('useTxt',   tr('useBtn'));
+    upd('or',       tr('orEnter'));
+    upd('skipBtn',  tr('skipBtn'));
+    upd('applyTxt', tr('applyBtn'));
+    upd('foot',     tr('footnote'));
+
+    const inp = document.getElementById(MODAL_ID + '_inp');
+    if (inp) inp.placeholder = tr('placeholder');
+};
 
     /* ── Canvas частицы ─────────────────────────── */
     function initCanvas() {
@@ -518,9 +521,11 @@
 .alr-ok p{color:#94a3b8;font-size:.83rem;margin:0 0 14px}
 .alr-ok-row{background:rgba(16,185,129,.09);border:1px solid rgba(16,185,129,.22);border-radius:11px;padding:10px 16px;margin-bottom:8px;font-size:.79rem;font-weight:700;color:#34d399;display:flex;align-items:center;justify-content:center;gap:8px}
 .alr-ok-row--b{background:rgba(34,211,238,.07);border-color:rgba(34,211,238,.2);color:#22d3ee}
-.alr-lang-btn{position:absolute;top:14px;right:14px;z-index:10;background:rgba(4,8,20,.9);border:1px solid rgba(239,68,68,.4);border-radius:8px;color:#ef4444;font-size:.65rem;font-weight:900;letter-spacing:.1em;padding:5px 10px 5px 8px;cursor:pointer;display:flex;align-items:center;gap:6px;transition:all .25s}
-.alr-lang-btn:hover{background:rgba(10,20,40,.95);transform:scale(1.05)}
-.alr-lang-dot{width:7px;height:7px;border-radius:50%;background:#ef4444;transition:background .25s;box-shadow:0 0 6px #ef4444;flex-shrink:0}
+.alr-lang-btn{position:absolute;top:13px;right:13px;z-index:10;background:rgba(4,8,20,.9);border:1px solid rgba(239,68,68,.4);border-radius:10px;color:#ef4444;font-size:.72rem;font-weight:900;letter-spacing:.12em;padding:7px 13px 7px 10px;cursor:pointer;display:flex;align-items:center;gap:7px;transition:all .25s}
+.alr-lang-btn:hover{background:rgba(10,20,40,.95);transform:scale(1.06)}
+.alr-lang-dot{width:8px;height:8px;border-radius:50%;background:#ef4444;transition:background .25s;box-shadow:0 0 8px #ef4444;flex-shrink:0}
+.alr-lang-btn--active{border-color:rgba(34,197,94,.4)!important;color:#22c55e!important}
+.alr-lang-dot--active{background:#22c55e!important;box-shadow:0 0 8px #22c55e!important}
 @keyframes alrFly{0%{transform:translateY(0) rotate(0) scale(1);opacity:1}100%{transform:translateY(-65vh) rotate(800deg) scale(0);opacity:0}}
 .alr-conf{position:fixed;bottom:40%;z-index:100001;pointer-events:none;animation:alrFly ease-out forwards}
 @media(max-width:480px){
