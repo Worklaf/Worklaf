@@ -809,12 +809,27 @@ function isClickedToday(projectId) {
 }
 
 function hasNewActivities(projectId) {
-  const newActs = newActivitiesData[projectId] || [];
-  return newActs.length > 0;
+  return getNewActivitiesCount(projectId) > 0;
 }
 
 function getNewActivitiesCount(projectId) {
-  return (newActivitiesData[projectId] || []).length;
+  const newActs = newActivitiesData[projectId] || [];
+  if (newActs.length === 0) return 0;
+
+  const project = projects.find(p => p.id === projectId);
+
+  return newActs.filter(actId => {
+    // Завершена пользователем — не считаем новой
+    if (userCompleted.includes(projectId + '_' + actId)) return false;
+
+    // Активность со статусом ended — не считаем новой
+    if (project && project.activities) {
+      const act = project.activities.find(a => a.id === actId);
+      if (act && act.status === 'ended') return false;
+    }
+
+    return true;
+  }).length;
 }
 
 function markActivityAsViewed(projectId, activityId) {
@@ -1870,16 +1885,39 @@ window.toggleComplete = async function(uid, aid) {
   const btn = event.currentTarget;
   const idx = userCompleted.indexOf(uniqueId);
   let newCompleted = [...userCompleted];
-  if (idx > -1) { newCompleted.splice(idx, 1); btn.classList.remove('active'); showToast('Отмечено как незавершённое'); } 
-  else { newCompleted.push(uniqueId); btn.classList.add('active'); createSuccessRipple(btn); showToast('Задача завершена!'); }
+
+  if (idx > -1) {
+    newCompleted.splice(idx, 1);
+    btn.classList.remove('active');
+    showToast('Отмечено как незавершённое');
+  } else {
+    newCompleted.push(uniqueId);
+    btn.classList.add('active');
+    createSuccessRipple(btn);
+    showToast('Задача завершена!');
+
+    // ✅ Снимаем пометку NEW при завершении (только для активностей, не для проекта)
+    if (aid !== 'project') {
+      markActivityAsViewed(uid, aid);
+    }
+  }
+
   userCompleted = newCompleted;
   localStorage.setItem(COMPLETED_KEY, JSON.stringify(newCompleted));
+
   if (currentDetailId === uid) openDetail(uid);
   applyFilters();
+
   if (currentUser) {
-    try { const userRef = doc(db, "users", currentUser.uid); await setDoc(userRef, { favorites: userFavorites, completed: userCompleted }, { merge: true }); } catch (error) { console.error('Error:', error); }
+    try {
+      const userRef = doc(db, "users", currentUser.uid);
+      await setDoc(userRef, { favorites: userFavorites, completed: userCompleted }, { merge: true });
+    } catch (error) {
+      console.error('Error:', error);
+    }
   }
 };
+
 
 function createHeartParticles(button) {
   const rect = button.getBoundingClientRect();
@@ -3290,41 +3328,51 @@ function detectNewActivities() {
   const now = new Date();
   const weekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
 
+  // ✅ Сначала чистим ended и completed из newActivitiesData
+  projects.forEach(project => {
+    if (!newActivitiesData[project.id]) return;
+    newActivitiesData[project.id] = newActivitiesData[project.id].filter(actId => {
+      if (userCompleted.includes(project.id + '_' + actId)) return false;
+      if (project.activities) {
+        const act = project.activities.find(a => a.id === actId);
+        if (act && act.status === 'ended') return false;
+      }
+      return true;
+    });
+  });
+  localStorage.setItem(NEW_ACTIVITIES_KEY, JSON.stringify(newActivitiesData));
+
+  // Далее основная логика обнаружения новых активностей
   projects.forEach(project => {
     if (project.activities && project.activities.length > 0) {
       project.activities.forEach(act => {
-
-        // ✅ ГЛАВНОЕ ИСПРАВЛЕНИЕ: уже просмотренные — пропускаем
         if (isActivityViewed(project.id, act.id)) return;
+        if (userCompleted.includes(project.id + '_' + act.id)) return;
+        if (act.status === 'ended') return; // ✅ ended не помечаем
 
         let isNew = false;
-
         if (act.createdAt) {
-          const createdDate = new Date(act.createdAt);
-          if (createdDate >= weekAgo && createdDate <= now) isNew = true;
+          const d = new Date(act.createdAt);
+          if (d >= weekAgo && d <= now) isNew = true;
         }
-
         if (!isNew && act.date) {
-          const actDate = new Date(act.date);
-          if (actDate >= weekAgo && actDate <= now) isNew = true;
+          const d = new Date(act.date);
+          if (d >= weekAgo && d <= now) isNew = true;
         }
-
         if (isNew) addNewActivity(project.id, act.id);
       });
     }
 
-    // Новый проект за последнюю неделю
     if (project.createdAt) {
-      const createdDate = new Date(project.createdAt);
-      if (createdDate >= weekAgo && createdDate <= now) {
-        if (project.activities) {
-          project.activities.forEach(act => {
-            // ✅ Тоже проверяем просмотренные
-            if (!isActivityViewed(project.id, act.id)) {
-              addNewActivity(project.id, act.id);
-            }
-          });
-        }
+      const d = new Date(project.createdAt);
+      if (d >= weekAgo && d <= now && project.activities) {
+        project.activities.forEach(act => {
+          if (!isActivityViewed(project.id, act.id) &&
+              !userCompleted.includes(project.id + '_' + act.id) &&
+              act.status !== 'ended') { // ✅ ended не помечаем
+            addNewActivity(project.id, act.id);
+          }
+        });
       }
     }
   });
