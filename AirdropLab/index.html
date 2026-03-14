@@ -3288,43 +3288,47 @@ console.log('App initialized');
     // Добавь эту функцию для определения новых активностей по датам
 function detectNewActivities() {
   const now = new Date();
-  const weekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000); // 7 дней назад
-  
+  const weekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+
   projects.forEach(project => {
-    // Проверяем новые активности
     if (project.activities && project.activities.length > 0) {
       project.activities.forEach(act => {
-        if (act.date) {
-          const actDate = new Date(act.date);
-          if (actDate >= weekAgo && actDate <= now) {
-            // Активность добавлена за последнюю неделю - считаем новой
-            addNewActivity(project.id, act.id);
-          }
-        }
-        // Также проверяем по createdAt если есть
+
+        // ✅ ГЛАВНОЕ ИСПРАВЛЕНИЕ: уже просмотренные — пропускаем
+        if (isActivityViewed(project.id, act.id)) return;
+
+        let isNew = false;
+
         if (act.createdAt) {
           const createdDate = new Date(act.createdAt);
-          if (createdDate >= weekAgo && createdDate <= now) {
-            addNewActivity(project.id, act.id);
-          }
+          if (createdDate >= weekAgo && createdDate <= now) isNew = true;
         }
+
+        if (!isNew && act.date) {
+          const actDate = new Date(act.date);
+          if (actDate >= weekAgo && actDate <= now) isNew = true;
+        }
+
+        if (isNew) addNewActivity(project.id, act.id);
       });
     }
-    
-    // Проверяем новый проект (создан за последние 7 дней)
+
+    // Новый проект за последнюю неделю
     if (project.createdAt) {
       const createdDate = new Date(project.createdAt);
       if (createdDate >= weekAgo && createdDate <= now) {
-        // Проект новый - добавляем все активности как новые
         if (project.activities) {
           project.activities.forEach(act => {
-            addNewActivity(project.id, act.id);
+            // ✅ Тоже проверяем просмотренные
+            if (!isActivityViewed(project.id, act.id)) {
+              addNewActivity(project.id, act.id);
+            }
           });
         }
       }
     }
   });
-  
+
   applyFilters();
 }
 
