@@ -1,5 +1,8 @@
 // ============================================================
-// header.js — Универсальный хедер AirdropLab (Mobile-Friendly)
+// header.js — Универсальный хедер AirdropLab
+// Подключение:
+//   1. В <head>: <script src="header.js"></script> (после languages.js)
+//   2. В <body>: <div id="site-header"></div>
 // ============================================================
 
 (function () {
@@ -9,15 +12,15 @@
     if (!container) return;
 
     container.innerHTML = `
-     <header class="relative overflow-hidden">
+     <header class="relative overflow-hidden w-full max-w-[100vw]">
         <div class="absolute inset-0 bg-gradient-to-r from-slate-900 via-cyan-900/20 to-slate-900"></div>
         <div class="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNDAiIGhlaWdodD0iNDAiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+PGNpcmNsZSBjeD0iMjAiIGN5PSIyMCIgcj0iMSIgZmlsbD0icmdiYSgzNCwyMTEsMjM4LDAuMSkiLz48L3N2Zz4=')] opacity-50"></div>
         <div class="absolute inset-0 backdrop-blur-xl bg-slate-900/85 border-b border-cyan-500/20"></div>
 
-        <div class="relative max-w-[1600px] mx-auto px-3 sm:px-4 py-2 sm:py-3">
+        <div class="relative max-w-[1600px] mx-auto px-3 sm:px-4 py-2 sm:py-3 box-border">
 
           <!-- ── Главная строка ── -->
-          <div class="flex items-center justify-between gap-1.5 sm:gap-3">
+          <div class="flex items-center justify-between gap-1.5 sm:gap-3 min-w-0">
 
             <!-- Логотип -->
             <div class="flex items-center gap-2 sm:gap-4 flex-shrink-0">
@@ -38,9 +41,9 @@
                   </svg>
                 </div>
               </div>
-              <div>
+              <div class="min-w-0">
                 <div class="flex items-center gap-1.5 sm:gap-2">
-                  <h1 class="text-base sm:text-2xl font-black tracking-tight leading-none">
+                  <h1 class="text-base sm:text-2xl font-black tracking-tight leading-none truncate">
                     <span class="bg-gradient-to-r from-cyan-400 via-blue-400 to-cyan-300 bg-clip-text text-transparent">Airdrop</span><span class="text-white">Lab</span>
                   </h1>
                   <span class="hidden sm:inline px-2 py-0.5 bg-cyan-500/20 border border-cyan-400/30 rounded-md text-[10px] font-bold text-cyan-300 uppercase tracking-wider">v2.0</span>
@@ -56,7 +59,7 @@
             </div>
 
             <!-- Статистика — только Desktop (md+) -->
-            <div class="hidden md:flex gap-4 lg:gap-5 text-sm">
+            <div class="hidden md:flex gap-4 lg:gap-5 text-sm flex-shrink-0">
               <div class="text-center group cursor-pointer relative" onclick="typeof filterProjects==='function'&&filterProjects('active')">
                 <div class="absolute inset-0 bg-emerald-500/10 rounded-lg blur-sm opacity-0 group-hover:opacity-100 transition-opacity"></div>
                 <div class="relative px-2 lg:px-3 py-1">
@@ -205,9 +208,10 @@
       </header>
 
       <!-- ===== CRYPTORANK TICKER ===== -->
-      <div style="max-width:100vw;overflow:hidden;background:rgba(11,15,25,0.95);border-bottom:1px solid rgba(51,65,85,0.5);backdrop-filter:blur(12px);">
-  <div style="max-width:min(1600px,100%);margin:0 auto;padding:4px 12px;overflow:hidden;">
-    <div id="cr-widget-marquee"
+      <!-- ВАЖНО: жестко ограничиваем ширину, чтобы тикер не распирал страницу -->
+      <div style="max-width: 100vw; overflow: hidden; background: rgba(11,15,25,0.95); border-bottom: 1px solid rgba(51,65,85,0.5);">
+        <div style="max-width: 1600px; margin: 0 auto; padding: 4px 12px; overflow: hidden; box-sizing: border-box;">
+          <div id="cr-widget-marquee"
                data-coins="bitcoin,ethereum,tether,ripple,cardano"
                data-theme="dark"
                data-show-symbol="true"
@@ -231,8 +235,7 @@
       if (typeof updateAllTranslations === 'function') updateAllTranslations();
     }, 0);
 
-    // ── Синхронизация мобильных статов с десктопными ──
-    // Используем MutationObserver чтобы не трогать основной JS
+    // Синхронизация мобильных статов
     function syncMobileStats() {
       const pairs = [
         ['statActive',    'mStatActive'],
@@ -244,7 +247,7 @@
         const from = document.getElementById(fromId);
         const to   = document.getElementById(toId);
         if (!from || !to) return;
-        to.textContent = from.textContent; // начальная синхронизация
+        to.textContent = from.textContent;
         new MutationObserver(function() {
           to.textContent = from.textContent;
         }).observe(from, { childList: true, characterData: true, subtree: true });
@@ -252,7 +255,7 @@
     }
     setTimeout(syncMobileStats, 400);
 
-    // ── Высота хедера → CSS-переменная ──
+    // Высота хедера -> CSS переменная
     function syncHeaderHeight() {
       const h = document.getElementById('site-header');
       if (h) document.documentElement.style.setProperty('--header-h', h.offsetHeight + 'px');
