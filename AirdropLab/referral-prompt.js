@@ -12,7 +12,7 @@
     // ❌ БЫЛО: повторные объявления const MODAL_ID и let shown — SyntaxError!
 
     /* ── Переводы ───────────────────────────────── */
-    let modalLang = 'ru';
+    let modalLang = 'en';
 
     const MODAL_TRANSLATIONS = {
         ru: {
