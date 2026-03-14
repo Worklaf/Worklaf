@@ -14,16 +14,15 @@
 
     /* ── Ждём footer.js + Firebase ─────────────── */
     function waitForReady(cb, limit = 15000) {
-        const t0 = Date.now();
-        const id = setInterval(() => {
-            if (window.auth &&
-                window.__authExports?.onAuthStateChanged &&
-                window.__firestoreExports &&
-                typeof window.applyReferralCodeFooter === 'function') {
-                clearInterval(id); cb();
-            } else if (Date.now() - t0 > limit) { clearInterval(id); }
-        }, 300);
-    }
+    const t0 = Date.now();
+    const id = setInterval(() => {
+        if (window.auth &&
+            window.__authExports?.onAuthStateChanged &&
+            window.__firestoreExports) {
+            clearInterval(id); cb();
+        } else if (Date.now() - t0 > limit) { clearInterval(id); }
+    }, 300);
+}
 
     function bootstrap() {
         window.__authExports.onAuthStateChanged(window.auth, user => {
@@ -35,25 +34,16 @@
     async function checkUser(user) {
     if (shown) return;
 
-    // Пропустил в этой сессии — не показываем до следующего обновления
-    if (sessionStorage.getItem('alr_skipped_' + user.uid)) return;
-
     const { doc, getDoc } = window.__firestoreExports;
     try {
         const snap = await getDoc(doc(window.db, 'users', user.uid));
-        if (snap.exists()) {
-            const d = snap.data();
-            // Есть реферал → никогда не показываем
-            if (d.invitedBy) return;
-        }
+        if (snap.exists() && snap.data().invitedBy) return;
     } catch { return; }
 
-    // Нет invitedBy → показываем
     shown = true;
     injectStyles();
     renderModal();
 }
-
     /* ── Вызов footer-функции без дублирования ─
        1. Создаём temp #profileInviteCode input
        2. Вызываем applyReferralCodeFooter()
@@ -63,6 +53,20 @@
 /* ── callFooterApply — убираем старый localStorage ──
    Оставляем только проверку Firestore              */
 async function callFooterApply(code) {
+    if (typeof window.applyReferralCodeFooter !== 'function') {
+        await new Promise(resolve => {
+            const check = setInterval(() => {
+                if (typeof window.applyReferralCodeFooter === 'function') {
+                    clearInterval(check); resolve();
+                }
+            }, 150);
+            setTimeout(() => { clearInterval(check); resolve(); }, 5000);
+        });
+    }
+
+    if (typeof window.applyReferralCodeFooter !== 'function') {
+        throw new Error('Footer не загружен');
+    }
     let tempInp = document.getElementById('profileInviteCode');
     let created = false;
     if (!tempInp) {
@@ -278,10 +282,6 @@ async function callFooterApply(code) {
     };
 
     window.__alrSkip = () => {
-    const user = window.auth?.currentUser;
-    if (user) {
-        sessionStorage.setItem('alr_skipped_' + user.uid, '1');
-    }
     closeModal();
 };
 
@@ -378,7 +378,7 @@ function showSuccess(code) {
 .alr-title{font-size:1.45rem;font-weight:800;color:#f1f5f9;margin:0 0 8px;line-height:1.22;letter-spacing:-.02em}
 .alr-brand{background:linear-gradient(90deg,#22d3ee,#60a5fa,#22d3ee);background-size:200% auto;-webkit-background-clip:text;-webkit-text-fill-color:transparent;animation:alrShimmer 3s linear infinite}
 @keyframes alrShimmer{to{background-position:200% center}}
-.alr-sub{color:#475569;font-size:.78rem;line-height:1.55;margin:0}
+.alr-sub{color:#94a3b8;font-size:.78rem;line-height:1.55;margin:0}
 
 /* Bonus */
 .alr-bonus{display:flex;align-items:center;justify-content:center;gap:10px;background:rgba(16,185,129,.07);border:1px solid rgba(16,185,129,.18);border-radius:14px;padding:11px 16px;margin-bottom:16px}
@@ -405,7 +405,7 @@ function showSuccess(code) {
 /* Sep */
 .alr-sep{display:flex;align-items:center;gap:10px;margin-bottom:13px}
 .alr-sep::before,.alr-sep::after{content:'';flex:1;height:1px;background:linear-gradient(90deg,transparent,rgba(51,65,85,.5),transparent)}
-.alr-sep span{font-size:.67rem;color:#2d3f52;white-space:nowrap}
+..alr-sep span{font-size:.67rem;color:#64748b;white-space:nowrap}
 
 /* Input */
 .alr-inp-wrap{position:relative;margin-bottom:6px}
@@ -414,11 +414,11 @@ function showSuccess(code) {
 .alr-wrap--err::after{background:linear-gradient(90deg,#ef4444,#f87171)!important;left:0!important;right:0!important}
 @keyframes alrWS{0%,100%{transform:translateX(0)}25%{transform:translateX(-7px)}75%{transform:translateX(7px)}}
 .alr-wrap--err{animation:alrWS .4s ease}
-.alr-inp-ico{position:absolute;left:14px;top:50%;transform:translateY(-50%);color:#1e3040;font-size:12px;pointer-events:none;z-index:1;transition:color .25s}
+.alr-inp-ico{position:absolute;left:14px;top:50%;transform:translateY(-50%);color:#475569;font-size:12px;pointer-events:none;z-index:1;transition:color .25s}
 .alr-inp-wrap:focus-within .alr-inp-ico{color:#22d3ee}
 .alr-inp{width:100%;box-sizing:border-box;background:rgba(4,8,20,.95);border:1px solid rgba(30,48,64,.8);border-radius:13px;padding:14px 40px;color:#f1f5f9;font-size:.9rem;font-family:'Courier New',monospace;letter-spacing:.07em;outline:none;transition:border-color .2s}
 .alr-inp:focus{border-color:rgba(34,211,238,.35)}
-.alr-inp::placeholder{color:#0d1e2c;font-family:'Inter',sans-serif;letter-spacing:0;font-size:.78rem}
+.alr-inp::placeholder{color:#475569;font-family:'Inter',sans-serif;letter-spacing:0;font-size:.78rem}
 .alr-inp-x{position:absolute;right:12px;top:50%;transform:translateY(-50%);width:24px;height:24px;border-radius:50%;background:rgba(51,65,85,.45);border:none;color:#64748b;display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:9px;transition:all .2s}
 .alr-inp-x:hover{background:rgba(239,68,68,.28);color:#f87171}
 
@@ -433,7 +433,7 @@ function showSuccess(code) {
 .alr-apply{flex:2;padding:13px;border:none;border-radius:13px;background:linear-gradient(130deg,#22d3ee,#3b82f6);color:#040c18;font-size:.83rem;font-weight:800;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;box-shadow:0 4px 24px rgba(34,211,238,.22);transition:transform .2s,box-shadow .2s,filter .2s}
 .alr-apply:hover:not(:disabled){transform:translateY(-2px);box-shadow:0 9px 32px rgba(34,211,238,.38);filter:brightness(1.07)}
 .alr-apply:disabled{opacity:.6;cursor:not-allowed}
-.alr-foot{text-align:center;color:#1a2e40;font-size:.66rem;margin-top:12px;display:flex;align-items:center;justify-content:center;gap:5px}
+.alr-foot{text-align:center;color:#64748b;font-size:.66rem;margin-top:12px;display:flex;align-items:center;justify-content:center;gap:5px}
 
 /* Success */
 .alr-ok{text-align:center;padding:8px 0}
