@@ -830,25 +830,41 @@ function isActivityNew(projectId, activityId) {
   return (newActivitiesData[projectId] || []).includes(activityId);
 }
 
-function checkAndAutoEndActivities() {
+async function checkAndAutoEndActivities() {
   const now = new Date();
-  let hasChanges = false;
-  projects.forEach(project => {
-    if (!project.activities || project.activities.length === 0) return;
+  const nowDateOnly = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+
+  for (const project of projects) {
+    if (!project.activities || !project.activities.length) continue;
+
+    let changed = false;
+
     project.activities.forEach(act => {
-      if (act.status === 'ended') return;
-      if (act.endDate) {
-        const endDate = new Date(act.endDate);
-        const nowDateOnly = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-        const endDateOnly = new Date(endDate.getFullYear(), endDate.getMonth(), endDate.getDate());
-        if (nowDateOnly >= endDateOnly) {
-          act.status = 'ended';
-          hasChanges = true;
-        }
+      if (act.status === 'ended' || !act.endDate) return;
+      const ed = new Date(act.endDate);
+      const edOnly = new Date(ed.getFullYear(), ed.getMonth(), ed.getDate());
+      if (nowDateOnly >= edOnly) {
+        act.status = 'ended';
+        changed = true;
       }
     });
-  });
-  if (hasChanges) applyFilters();
+
+    // Сохраняем в Firestore (try/catch — у не-админов нет прав на запись,
+    // но отображение всё равно будет корректным из памяти)
+    if (changed) {
+      try {
+        await setDoc(
+          doc(db, 'projects', project.id),
+          { activities: project.activities },
+          { merge: true }
+        );
+      } catch (e) {
+        // не-админ: тихо игнорируем, статус в памяти уже изменён
+      }
+    }
+  }
+
+  applyFilters();
 }
 
 function isProjectUnvisited(project) {
@@ -2021,7 +2037,7 @@ window.loadData = async function() {
     window.projects = projects;
     
     sortProjects(currentSortType);
-    applyFilters();
+        checkAndAutoEndActivities();
     
     // Уведомляем футер что проекты загружены
     document.dispatchEvent(new CustomEvent('projectsLoaded'));
