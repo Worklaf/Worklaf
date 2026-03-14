@@ -445,69 +445,56 @@
       setTimeout(syncLang, 200);
       setTimeout(syncLang, 600);
       // ── 7. Claim button countdown sync ──
-var deskClaim    = document.getElementById('headerClaimBtn');
-var mobClaim     = document.getElementById('mobClaimBtn');
-var mobClaimSpan = null;
+var deskClaim = document.getElementById('headerClaimBtn');
+var mobClaim  = document.getElementById('mobClaimBtn');
 
 function syncClaimBtn() {
     if (!deskClaim || !mobClaim) return;
 
-    // Проверяем активен ли отсчёт
-    var isCounting = deskClaim.disabled;
-    if (!isCounting) {
-        var raw = (deskClaim.textContent || '').replace(/\s+/g, ' ').trim();
-        isCounting = /\d{1,2}[h:ч]\s*\d/.test(raw)
-            || /\d+:\d{2}/.test(raw)
-            || raw.toLowerCase().includes('сброс')
-            || raw.toLowerCase().includes('reset');
-    }
+    // textContent работает даже когда родитель display:none (mobile)
+    var btnText = deskClaim.textContent || '';
+
+    var isCounting = deskClaim.disabled
+        || /\d+:\d{2}/.test(btnText)
+        || btnText.toLowerCase().includes('сброс')
+        || btnText.toLowerCase().includes('reset');
 
     if (isCounting) {
-        // Берём текст только из ПЕРВОГО подходящего span — без дублирования
-        var countdownText = '';
-        var allSpans = Array.from(deskClaim.querySelectorAll('span'));
-        for (var i = 0; i < allSpans.length; i++) {
-            var s = allSpans[i];
-            if (s.id === 'claimDot') continue;         // пропускаем точку
-            var t = s.textContent.trim();
-            if (t && t !== '🧪' && t !== '⏳' && t.length > 2) {
-                countdownText = t;
-                break;                                  // берём только первый
-            }
-        }
-        // Запасной вариант
-        if (!countdownText) {
-            countdownText = (deskClaim.textContent || '')
-                .replace(/[🧪⏳]/g, '').replace(/\s+/g, ' ').trim();
-        }
+        // Убираем эмодзи и текст точки-индикатора, оставляем только текст отсчёта
+        var dotEl = document.getElementById('claimDot');
+        var dotText = dotEl ? dotEl.textContent : '';
 
-        // Полностью перезаписываем innerHTML — исключает дублирование
-        mobClaim.innerHTML = '⏳ <span style="font-size:11px;">' + countdownText + '</span>';
-        mobClaim.style.opacity       = '0.65';
-        mobClaim.style.cursor        = 'default';
-        mobClaim.style.pointerEvents = '';        // ← кнопка остаётся кликабельной
-        mobClaim.disabled            = false;
+        var countdownText = btnText
+            .replace(dotText, '')
+            .replace(/🧪/g, '')
+            .replace(/⏳/g, '')
+            .replace(/\s+/g, ' ')
+            .trim();
+
+        if (!countdownText) countdownText = 'Сброс...';
+
+        // 🧪 как на десктопе, не ⏳
+        mobClaim.innerHTML = '🧪 <span style="font-size:10px;color:inherit;">'
+            + countdownText + '</span>';
+        mobClaim.style.opacity = '0.65';
+        mobClaim.style.cursor  = 'pointer';
         mobClaim.onclick = function() {
             if (window.openClaimModal) window.openClaimModal();
         };
 
     } else {
-        // Клейм доступен — восстанавливаем исходный вид
         var lbl = (window.currentLang === 'en') ? 'Claim' : 'Клейм';
-        mobClaim.innerHTML = '🧪 <span id="mobClaimSpan" style="font-size:11px;" data-translate="claim_btn_label">'
-            + lbl + '</span>';
-        mobClaim.style.opacity       = '';
-        mobClaim.style.cursor        = '';
-        mobClaim.style.pointerEvents = '';
-        mobClaim.disabled            = false;
+        mobClaim.innerHTML = '🧪 <span id="mobClaimSpan" style="font-size:11px;"'
+            + ' data-translate="claim_btn_label">' + lbl + '</span>';
+        mobClaim.style.opacity = '';
+        mobClaim.style.cursor  = '';
         mobClaim.onclick = function() {
             if (window.openClaimModal) window.openClaimModal();
         };
     }
-
-    mobClaimSpan = document.getElementById('mobClaimSpan');
 }
 
+// MutationObserver — срабатывает когда десктоп меняет текст
 if (deskClaim) {
     new MutationObserver(syncClaimBtn).observe(deskClaim, {
         childList: true, subtree: true,
@@ -515,6 +502,7 @@ if (deskClaim) {
     });
 }
 
+// setInterval — обновляет текст каждую секунду (живой отсчёт)
 setInterval(syncClaimBtn, 1000);
 syncClaimBtn();
     }
