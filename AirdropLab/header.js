@@ -214,19 +214,19 @@
 
           <!-- Строка 2: Статистика (scrollable) -->
           <div class="flex md:hidden mob-stats-row overflow-x-auto">
-            <div class="mob-stat-item" onclick="typeof filterProjects==='function'&&filterProjects('active')">
+            <div class="mob-stat-item" data-filter="active" onclick="typeof filterProjects==='function'&&filterProjects('active')">
               <span class="mob-stat-num" style="color:#34d399;" id="mobStatActive">0</span>
               <span class="mob-stat-lbl" data-translate="active">Акт.</span>
             </div>
-            <div class="mob-stat-item" onclick="typeof filterProjects==='function'&&filterProjects('today')">
+            <div class="mob-stat-item" data-filter="today" onclick="typeof filterProjects==='function'&&filterProjects('today')">
               <span class="mob-stat-num" style="color:#22d3ee;" id="mobStatToday">0</span>
               <span class="mob-stat-lbl" data-translate="new">Нов.</span>
             </div>
-            <div class="mob-stat-item" onclick="typeof filterProjects==='function'&&filterProjects('favorites')">
+            <div class="mob-stat-item" data-filter="favorites" onclick="typeof filterProjects==='function'&&filterProjects('favorites')">
               <span class="mob-stat-num" style="color:#fb923c;" id="mobStatFavorites">0</span>
               <span class="mob-stat-lbl" data-translate="in_work">Раб.</span>
             </div>
-            <div class="mob-stat-item" onclick="typeof filterProjects==='function'&&filterProjects('completed')">
+            <div class="mob-stat-item" data-filter="completed" onclick="typeof filterProjects==='function'&&filterProjects('completed')">
               <span class="mob-stat-num" style="color:#60a5fa;" id="mobStatCompleted">0</span>
               <span class="mob-stat-lbl" data-translate="done">Гот.</span>
             </div>
