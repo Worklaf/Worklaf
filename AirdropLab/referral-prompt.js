@@ -269,19 +269,13 @@
     const dot = document.getElementById(MODAL_ID + '_dot');
     const btn = document.getElementById(MODAL_ID + '_lang');
 
-    // Зелёный = EN включён, Красный = EN выключен (RU)
-    if (dot) {
-        dot.style.background = isEn ? '#22c55e' : '#ef4444';
-        dot.style.boxShadow  = isEn ? '0 0 8px #22c55e' : '0 0 8px #ef4444';
-    }
-    if (btn) {
-        btn.style.color       = isEn ? '#22c55e' : '#ef4444';
-        btn.style.borderColor = isEn ? 'rgba(34,197,94,.4)' : 'rgba(239,68,68,.4)';
-    }
+    // ✅ Переключаем классы вместо inline-стилей
+    // (inline стили не могут перебить !important из CSS)
+    if (dot) dot.classList.toggle('alr-lang-dot--active', isEn);
+    if (btn) btn.classList.toggle('alr-lang-btn--active', isEn);
 
-    // ... обновление текстов остаётся без изменений
-    const upd = (id, val) => { const el = document.getElementById(MODAL_ID + '_' + id); if (el) el.textContent = val; };
-    const updH = (id, val) => { const el = document.getElementById(MODAL_ID + '_' + id); if (el) el.innerHTML = val; };
+    const upd  = (id, val) => { const el = document.getElementById(MODAL_ID + '_' + id); if (el) el.textContent = val; };
+    const updH = (id, val) => { const el = document.getElementById(MODAL_ID + '_' + id); if (el) el.innerHTML   = val; };
 
     upd('titleTxt', tr('title'));
     updH('sub',     tr('subtitle').replace('\n','<br>'));
@@ -523,9 +517,9 @@
 .alr-ok-row--b{background:rgba(34,211,238,.07);border-color:rgba(34,211,238,.2);color:#22d3ee}
 .alr-lang-btn{position:absolute;top:13px;right:13px;z-index:10;background:rgba(4,8,20,.9);border:1px solid rgba(239,68,68,.4);border-radius:10px;color:#ef4444;font-size:.72rem;font-weight:900;letter-spacing:.12em;padding:7px 13px 7px 10px;cursor:pointer;display:flex;align-items:center;gap:7px;transition:all .25s}
 .alr-lang-btn:hover{background:rgba(10,20,40,.95);transform:scale(1.06)}
-.alr-lang-dot{width:8px;height:8px;border-radius:50%;background:#ef4444;transition:background .25s;box-shadow:0 0 8px #ef4444;flex-shrink:0}
-.alr-lang-btn--active{border-color:rgba(34,197,94,.4)!important;color:#22c55e!important}
-.alr-lang-dot--active{background:#22c55e!important;box-shadow:0 0 8px #22c55e!important}
+.alr-lang-dot{width:8px;height:8px;border-radius:50%;background:#ef4444;box-shadow:0 0 8px #ef4444;transition:all .25s;flex-shrink:0}
+.alr-lang-btn.alr-lang-btn--active{border-color:rgba(34,197,94,.4);color:#22c55e}
+.alr-lang-dot.alr-lang-dot--active{background:#22c55e;box-shadow:0 0 8px #22c55e}
 @keyframes alrFly{0%{transform:translateY(0) rotate(0) scale(1);opacity:1}100%{transform:translateY(-65vh) rotate(800deg) scale(0);opacity:0}}
 .alr-conf{position:fixed;bottom:40%;z-index:100001;pointer-events:none;animation:alrFly ease-out forwards}
 @media(max-width:480px){
