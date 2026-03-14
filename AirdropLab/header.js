@@ -448,4 +448,17 @@
       if (window.ResizeObserver) {
         new ResizeObserver(syncHeaderHeight).observe(headerEl);
       } else {
-        [100,
+                [100, 500, 1500].forEach(function(t) { setTimeout(syncHeaderHeight, t); });
+      }
+    }
+    window.addEventListener('resize', syncHeaderHeight);
+    setTimeout(syncHeaderHeight, 0);
+  }
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', injectHeader);
+  } else {
+    injectHeader();
+  }
+
+})();
