@@ -1,10 +1,6 @@
 // ============================================================
-// header.js — Универсальный хедер AirdropLab
-// Подключение:
-//   1. В <head>: <script src="header.js"></script> (после languages.js)
-//   2. В <body>: <div id="site-header"></div>
+// header.js — AirdropLab Header (Mobile-Fixed)
 // ============================================================
-
 (function () {
 
   function injectHeader() {
@@ -12,28 +8,26 @@
     if (!container) return;
 
     container.innerHTML = `
-     <header class="relative overflow-hidden w-full max-w-[100vw]">
+      <header style="position:relative;overflow:hidden;">
         <div class="absolute inset-0 bg-gradient-to-r from-slate-900 via-cyan-900/20 to-slate-900"></div>
-        <div class="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNDAiIGhlaWdodD0iNDAiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+PGNpcmNsZSBjeD0iMjAiIGN5PSIyMCIgcj0iMSIgZmlsbD0icmdiYSgzNCwyMTEsMjM4LDAuMSkiLz48L3N2Zz4=')] opacity-50"></div>
         <div class="absolute inset-0 backdrop-blur-xl bg-slate-900/85 border-b border-cyan-500/20"></div>
 
-        <div class="relative max-w-[1600px] mx-auto px-3 sm:px-4 py-2 sm:py-3 box-border">
+        <div class="relative px-3 sm:px-4 py-2 sm:py-3" style="max-width:min(1600px,100%);margin:0 auto;">
 
-          <!-- ── Главная строка ── -->
-          <div class="flex items-center justify-between gap-1.5 sm:gap-3 min-w-0">
+          <!-- ── Строка 1: Лого + Кнопки ── -->
+          <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;min-width:0;">
 
             <!-- Логотип -->
-            <div class="flex items-center gap-2 sm:gap-4 flex-shrink-0">
-              <div class="relative group">
-                <div class="absolute inset-0 bg-gradient-to-r from-cyan-500 to-blue-500 rounded-2xl blur-lg opacity-50 group-hover:opacity-75 transition-opacity animate-pulse"></div>
-                <div class="relative w-9 h-9 sm:w-14 sm:h-14 rounded-xl sm:rounded-2xl bg-gradient-to-br from-slate-800 to-slate-900 border-2 border-cyan-400/50 flex items-center justify-center transform group-hover:scale-110 transition-transform shadow-xl shadow-cyan-500/30">
-                  <svg class="w-5 h-5 sm:w-8 sm:h-8" viewBox="0 0 24 24" fill="none">
-                    <path d="M9 3h6M12 3v5M8 8l-2 8c-.5 2 1 4 3 4h6c2 0 3.5-2 3-4l-2-8" stroke="url(#hGrad1)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+            <div style="display:flex;align-items:center;gap:8px;flex-shrink:0;">
+              <div style="position:relative;">
+                <div style="position:absolute;inset:0;background:linear-gradient(to right,#06b6d4,#3b82f6);border-radius:14px;filter:blur(8px);opacity:0.5;"></div>
+                <div style="position:relative;width:36px;height:36px;border-radius:12px;background:linear-gradient(135deg,#1e293b,#0f172a);border:2px solid rgba(34,211,238,0.5);display:flex;align-items:center;justify-content:center;">
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
+                    <path d="M9 3h6M12 3v5M8 8l-2 8c-.5 2 1 4 3 4h6c2 0 3.5-2 3-4l-2-8" stroke="url(#hg)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
                     <circle cx="10" cy="14" r="1" fill="#22d3ee" opacity="0.6"><animate attributeName="cy" values="14;12;14" dur="2s" repeatCount="indefinite"/></circle>
                     <circle cx="14" cy="16" r="1" fill="#06b6d4" opacity="0.8"><animate attributeName="cy" values="16;13;16" dur="2.5s" repeatCount="indefinite"/></circle>
-                    <circle cx="12" cy="15" r="0.5" fill="#22d3ee"><animate attributeName="cy" values="15;11;15" dur="1.8s" repeatCount="indefinite"/></circle>
                     <defs>
-                      <linearGradient id="hGrad1" x1="0%" y1="0%" x2="0%" y2="100%">
+                      <linearGradient id="hg" x1="0%" y1="0%" x2="0%" y2="100%">
                         <stop offset="0%" style="stop-color:#22d3ee"/>
                         <stop offset="100%" style="stop-color:#06b6d4"/>
                       </linearGradient>
@@ -41,138 +35,122 @@
                   </svg>
                 </div>
               </div>
-              <div class="min-w-0">
-                <div class="flex items-center gap-1.5 sm:gap-2">
-                  <h1 class="text-base sm:text-2xl font-black tracking-tight leading-none truncate">
-                    <span class="bg-gradient-to-r from-cyan-400 via-blue-400 to-cyan-300 bg-clip-text text-transparent">Airdrop</span><span class="text-white">Lab</span>
+              <div>
+                <div style="display:flex;align-items:center;gap:6px;">
+                  <h1 style="font-size:clamp(14px,4vw,22px);font-weight:900;line-height:1;margin:0;">
+                    <span style="background:linear-gradient(to right,#22d3ee,#60a5fa,#22d3ee);-webkit-background-clip:text;-webkit-text-fill-color:transparent;">Airdrop</span><span style="color:white;">Lab</span>
                   </h1>
-                  <span class="hidden sm:inline px-2 py-0.5 bg-cyan-500/20 border border-cyan-400/30 rounded-md text-[10px] font-bold text-cyan-300 uppercase tracking-wider">v2.0</span>
+                  <span style="display:none;" class="sm:inline px-1.5 py-0.5 bg-cyan-500/20 border border-cyan-400/30 rounded text-[9px] font-bold text-cyan-300 uppercase">v2.0</span>
                 </div>
-                <p class="hidden sm:flex text-[11px] text-slate-400 mt-0.5 items-center gap-2 font-medium">
-                  <span class="relative flex h-2 w-2">
-                    <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
-                    <span class="relative inline-flex rounded-full h-2 w-2 bg-emerald-400 shadow-lg shadow-emerald-400/50"></span>
+                <p style="font-size:10px;color:#64748b;margin:1px 0 0;display:flex;align-items:center;gap:4px;" class="hidden sm:flex">
+                  <span style="position:relative;display:inline-flex;width:7px;height:7px;">
+                    <span style="position:absolute;inset:0;border-radius:50%;background:#34d399;animation:ping 1s cubic-bezier(0,0,0.2,1) infinite;opacity:0.75;"></span>
+                    <span style="position:relative;width:7px;height:7px;border-radius:50%;background:#34d399;"></span>
                   </span>
                   <span id="modeIndicator" data-translate="experimental_zone">Экспериментальная зона</span>
                 </p>
               </div>
             </div>
 
-            <!-- Статистика — только Desktop (md+) -->
-            <div class="hidden md:flex gap-4 lg:gap-5 text-sm flex-shrink-0">
-              <div class="text-center group cursor-pointer relative" onclick="typeof filterProjects==='function'&&filterProjects('active')">
-                <div class="absolute inset-0 bg-emerald-500/10 rounded-lg blur-sm opacity-0 group-hover:opacity-100 transition-opacity"></div>
-                <div class="relative px-2 lg:px-3 py-1">
-                  <div class="text-xl lg:text-2xl font-black bg-gradient-to-br from-emerald-400 to-emerald-600 bg-clip-text text-transparent" id="statActive">0</div>
-                  <div class="text-slate-400 text-[10px] uppercase tracking-wider font-bold group-hover:text-emerald-400 transition-colors" data-translate="active">Активных</div>
-                </div>
+            <!-- Статистика — только desktop (md+) -->
+            <div class="al-desk-stats hidden md:flex" style="gap:12px;">
+              <div style="text-align:center;cursor:pointer;padding:4px 10px;border-radius:8px;transition:background 0.2s;" onclick="typeof filterProjects==='function'&&filterProjects('active')" onmouseover="this.style.background='rgba(16,185,129,0.1)'" onmouseout="this.style.background='transparent'">
+                <div style="font-size:20px;font-weight:900;background:linear-gradient(135deg,#34d399,#059669);-webkit-background-clip:text;-webkit-text-fill-color:transparent;" id="statActive">0</div>
+                <div style="font-size:9px;color:#64748b;text-transform:uppercase;font-weight:700;" data-translate="active">Акт.</div>
               </div>
-              <div class="text-center group cursor-pointer relative" onclick="typeof filterProjects==='function'&&filterProjects('today')">
-                <div class="absolute inset-0 bg-cyan-500/10 rounded-lg blur-sm opacity-0 group-hover:opacity-100 transition-opacity"></div>
-                <div class="relative px-2 lg:px-3 py-1">
-                  <div class="text-xl lg:text-2xl font-black bg-gradient-to-br from-cyan-400 to-cyan-600 bg-clip-text text-transparent" id="statToday">0</div>
-                  <div class="text-slate-400 text-[10px] uppercase tracking-wider font-bold group-hover:text-cyan-400 transition-colors" data-translate="new">Новых</div>
-                </div>
+              <div style="text-align:center;cursor:pointer;padding:4px 10px;border-radius:8px;transition:background 0.2s;" onclick="typeof filterProjects==='function'&&filterProjects('today')" onmouseover="this.style.background='rgba(34,211,238,0.1)'" onmouseout="this.style.background='transparent'">
+                <div style="font-size:20px;font-weight:900;background:linear-gradient(135deg,#22d3ee,#0891b2);-webkit-background-clip:text;-webkit-text-fill-color:transparent;" id="statToday">0</div>
+                <div style="font-size:9px;color:#64748b;text-transform:uppercase;font-weight:700;" data-translate="new">Нов.</div>
               </div>
-              <div class="text-center group cursor-pointer relative" onclick="typeof filterProjects==='function'&&filterProjects('favorites')">
-                <div class="absolute inset-0 bg-orange-500/10 rounded-lg blur-sm opacity-0 group-hover:opacity-100 transition-opacity"></div>
-                <div class="relative px-2 lg:px-3 py-1">
-                  <div class="text-xl lg:text-2xl font-black bg-gradient-to-br from-orange-400 to-orange-600 bg-clip-text text-transparent" id="statFavorites">0</div>
-                  <div class="text-slate-400 text-[10px] uppercase tracking-wider font-bold group-hover:text-orange-400 transition-colors" data-translate="in_work">В работе</div>
-                </div>
+              <div style="text-align:center;cursor:pointer;padding:4px 10px;border-radius:8px;transition:background 0.2s;" onclick="typeof filterProjects==='function'&&filterProjects('favorites')" onmouseover="this.style.background='rgba(249,115,22,0.1)'" onmouseout="this.style.background='transparent'">
+                <div style="font-size:20px;font-weight:900;background:linear-gradient(135deg,#fb923c,#ea580c);-webkit-background-clip:text;-webkit-text-fill-color:transparent;" id="statFavorites">0</div>
+                <div style="font-size:9px;color:#64748b;text-transform:uppercase;font-weight:700;" data-translate="in_work">Раб.</div>
               </div>
-              <div class="text-center group cursor-pointer relative" onclick="typeof filterProjects==='function'&&filterProjects('completed')">
-                <div class="absolute inset-0 bg-blue-500/10 rounded-lg blur-sm opacity-0 group-hover:opacity-100 transition-opacity"></div>
-                <div class="relative px-2 lg:px-3 py-1">
-                  <div class="text-xl lg:text-2xl font-black bg-gradient-to-br from-blue-400 to-blue-600 bg-clip-text text-transparent" id="statCompleted">0</div>
-                  <div class="text-slate-400 text-[10px] uppercase tracking-wider font-bold group-hover:text-blue-400 transition-colors" data-translate="done">Готово</div>
-                </div>
+              <div style="text-align:center;cursor:pointer;padding:4px 10px;border-radius:8px;transition:background 0.2s;" onclick="typeof filterProjects==='function'&&filterProjects('completed')" onmouseover="this.style.background='rgba(59,130,246,0.1)'" onmouseout="this.style.background='transparent'">
+                <div style="font-size:20px;font-weight:900;background:linear-gradient(135deg,#60a5fa,#2563eb);-webkit-background-clip:text;-webkit-text-fill-color:transparent;" id="statCompleted">0</div>
+                <div style="font-size:9px;color:#64748b;text-transform:uppercase;font-weight:700;" data-translate="done">Гот.</div>
               </div>
             </div>
 
-            <!-- Кнопки справа -->
-            <div class="flex gap-1 sm:gap-2 items-center flex-shrink-0">
+            <!-- Кнопки -->
+            <div style="display:flex;align-items:center;gap:4px;flex-shrink:0;">
 
-              <!-- Клейм Reagents -->
+              <!-- Клейм -->
               <button onclick="window.openClaimModal&&window.openClaimModal()" id="headerClaimBtn"
-                class="relative flex items-center gap-1 p-1.5 sm:gap-2 sm:px-3 sm:py-2
-                       bg-gradient-to-r from-cyan-600/20 to-blue-600/20
-                       hover:from-cyan-600/40 hover:to-blue-600/40
-                       border border-cyan-500/30 hover:border-cyan-400/60
-                       rounded-xl text-cyan-400 hover:text-white transition-all">
-                <span class="text-sm sm:text-base">🧪</span>
-                <span class="hidden sm:inline font-medium text-xs" data-translate="claim_btn_label">Клейм</span>
-                <span id="claimDot" class="absolute -top-1 -right-1 w-2.5 h-2.5 bg-emerald-400 rounded-full border-2 border-slate-900 hidden animate-pulse"></span>
+                style="position:relative;display:flex;align-items:center;gap:4px;padding:6px 8px;background:linear-gradient(135deg,rgba(8,145,178,0.2),rgba(37,99,235,0.2));border:1px solid rgba(34,211,238,0.3);border-radius:10px;color:#22d3ee;cursor:pointer;transition:all 0.2s;font-size:13px;">
+                <span>🧪</span>
+                <span style="font-size:11px;font-weight:600;" class="hidden sm:inline" data-translate="claim_btn_label">Клейм</span>
+                <span id="claimDot" style="display:none;position:absolute;top:-3px;right:-3px;width:8px;height:8px;background:#34d399;border-radius:50%;border:2px solid #0b0f19;"></span>
               </button>
 
               <!-- Уведомления -->
-              <div id="notificationPanel" class="relative">
+              <div id="notificationPanel" style="position:relative;">
                 <button onclick="typeof showNotifications==='function'&&showNotifications()"
-                  class="relative p-1.5 sm:p-2.5 text-slate-400 hover:text-cyan-400 transition-all rounded-xl hover:bg-cyan-500/10 border border-transparent hover:border-cyan-500/30">
-                  <i class="fas fa-bell text-sm sm:text-lg"></i>
-                  <span id="notificationBadge" class="absolute -top-1 -right-1 w-4 h-4 sm:w-5 sm:h-5 bg-gradient-to-r from-red-500 to-orange-500 rounded-full text-[9px] sm:text-xs flex items-center justify-center hidden font-bold shadow-lg">0</span>
+                  style="position:relative;padding:7px;color:#94a3b8;background:transparent;border:1px solid transparent;border-radius:10px;cursor:pointer;transition:all 0.2s;font-size:15px;"
+                  onmouseover="this.style.color='#22d3ee';this.style.background='rgba(34,211,238,0.1)';this.style.borderColor='rgba(34,211,238,0.3)'"
+                  onmouseout="this.style.color='#94a3b8';this.style.background='transparent';this.style.borderColor='transparent'">
+                  <i class="fas fa-bell"></i>
+                  <span id="notificationBadge" style="display:none;position:absolute;top:-4px;right:-4px;min-width:16px;height:16px;background:linear-gradient(135deg,#ef4444,#f97316);border-radius:999px;font-size:9px;font-weight:700;color:white;display:none;align-items:center;justify-content:center;padding:0 3px;">0</span>
                 </button>
               </div>
 
               <!-- Feedback -->
-              <div id="generalFeedbackPanel" class="hidden">
+              <div id="generalFeedbackPanel" style="display:none;position:relative;">
                 <button onclick="typeof openFeedbackListModal==='function'&&openFeedbackListModal()"
-                  class="relative p-1.5 sm:p-2.5 text-slate-400 hover:text-purple-400 transition-all rounded-xl hover:bg-purple-500/10 border border-transparent hover:border-purple-500/30">
-                  <i class="fas fa-comment-dots text-sm sm:text-lg"></i>
-                  <span id="feedbackBadge" class="absolute -top-1 -right-1 w-4 h-4 sm:w-5 sm:h-5 bg-gradient-to-r from-purple-500 to-pink-500 rounded-full text-[9px] sm:text-xs flex items-center justify-center hidden font-bold">0</span>
+                  style="position:relative;padding:7px;color:#94a3b8;background:transparent;border:1px solid transparent;border-radius:10px;cursor:pointer;transition:all 0.2s;font-size:15px;"
+                  onmouseover="this.style.color='#c084fc';this.style.background='rgba(139,92,246,0.1)';this.style.borderColor='rgba(139,92,246,0.3)'"
+                  onmouseout="this.style.color='#94a3b8';this.style.background='transparent';this.style.borderColor='transparent'">
+                  <i class="fas fa-comment-dots"></i>
+                  <span id="feedbackBadge" style="display:none;position:absolute;top:-4px;right:-4px;min-width:16px;height:16px;background:linear-gradient(135deg,#8b5cf6,#ec4899);border-radius:999px;font-size:9px;font-weight:700;color:white;align-items:center;justify-content:center;padding:0 3px;">0</span>
                 </button>
               </div>
 
               <!-- Язык -->
               <button onclick="typeof toggleLang==='function'&&toggleLang()" id="langBtn"
-                class="flex items-center gap-1 px-1.5 py-1 sm:gap-2 sm:px-3 sm:py-2 rounded-lg border transition-all">
-                <span class="lang-flag text-sm"></span>
-                <span class="lang-text text-[10px] sm:text-xs">ENG</span>
+                class="flex items-center gap-2 px-3 py-2 rounded-lg border transition-all">
+                <span class="lang-flag"></span>
+                <span class="lang-text">ENG</span>
               </button>
 
-              <!-- Панель администратора -->
-              <div id="adminPanel" class="flex gap-1 sm:gap-2 items-center border-l border-slate-700/50 pl-1.5 sm:pl-3 ml-0.5 sm:ml-1" style="display:none;">
+              <!-- Админ -->
+              <div id="adminPanel" style="display:none;align-items:center;gap:4px;border-left:1px solid rgba(71,85,105,0.5);padding-left:8px;margin-left:2px;">
                 <button onclick="typeof openAddModal==='function'&&openAddModal()"
-                  class="flex items-center gap-1 px-2 py-1.5 sm:px-3 sm:py-2 bg-gradient-to-r from-cyan-600 to-blue-600 hover:from-cyan-500 hover:to-blue-500 rounded-lg text-xs font-bold transition-all hover:scale-105 shadow-lg shadow-cyan-500/30">
-                  <i class="fas fa-flask text-xs sm:text-sm"></i>
+                  style="display:flex;align-items:center;gap:4px;padding:5px 8px;background:linear-gradient(135deg,#0891b2,#2563eb);border:none;border-radius:8px;color:white;font-size:11px;font-weight:700;cursor:pointer;">
+                  <i class="fas fa-flask"></i>
                   <span class="hidden lg:inline" data-translate="new_test">Новый тест</span>
                 </button>
-                <button onclick="typeof openStats==='function'&&openStats()" class="admin-action-btn admin-btn-orange !p-1.5 sm:!p-2" data-translate-title="view_stats"><i class="fas fa-chart-pie text-xs sm:text-sm"></i></button>
-                <button onclick="typeof migrateToFirestore==='function'&&migrateToFirestore()" class="admin-action-btn admin-btn-purple !p-1.5 sm:!p-2 hidden sm:flex" data-translate-title="upload_firebase"><i class="fas fa-cloud-upload-alt text-xs sm:text-sm"></i></button>
-                <button onclick="typeof exportAllData==='function'&&exportAllData()" class="admin-action-btn admin-btn-emerald !p-1.5 sm:!p-2" data-translate-title="export_json"><i class="fas fa-file-export text-xs sm:text-sm"></i></button>
-                <button onclick="typeof openDeletedProjects==='function'&&openDeletedProjects()" class="admin-action-btn admin-btn-red !p-1.5 sm:!p-2 hidden sm:flex" data-translate-title="view_deleted"><i class="fas fa-trash-restore text-xs sm:text-sm"></i></button>
-                <span class="hidden lg:inline px-2 py-1 bg-gradient-to-r from-cyan-600 to-cyan-500 rounded-md text-[10px] font-black text-white uppercase">
-                  <i class="fas fa-user-shield mr-1"></i>Admin
-                </span>
+                <button onclick="typeof openStats==='function'&&openStats()" class="admin-action-btn admin-btn-orange" style="padding:5px 8px;"><i class="fas fa-chart-pie"></i></button>
+                <button onclick="typeof exportAllData==='function'&&exportAllData()" class="admin-action-btn admin-btn-emerald" style="padding:5px 8px;"><i class="fas fa-file-export"></i></button>
+                <button onclick="typeof migrateToFirestore==='function'&&migrateToFirestore()" class="admin-action-btn admin-btn-purple hidden sm:flex" style="padding:5px 8px;"><i class="fas fa-cloud-upload-alt"></i></button>
+                <button onclick="typeof openDeletedProjects==='function'&&openDeletedProjects()" class="admin-action-btn admin-btn-red hidden sm:flex" style="padding:5px 8px;"><i class="fas fa-trash-restore"></i></button>
               </div>
 
               <!-- Аутентификация -->
-              <div id="authPanel" class="flex items-center gap-1 sm:gap-3 border-l border-slate-700/50 pl-1.5 sm:pl-3 ml-0.5 sm:ml-1">
+              <div id="authPanel" style="display:flex;align-items:center;gap:4px;border-left:1px solid rgba(71,85,105,0.5);padding-left:8px;margin-left:2px;">
                 <div id="loggedOutView">
                   <button onclick="typeof openLoginModal==='function'&&openLoginModal()"
-                    class="flex items-center gap-1 px-2 py-1.5 sm:px-4 sm:py-2 bg-gradient-to-r from-cyan-600 to-blue-600 hover:from-cyan-500 hover:to-blue-500 rounded-xl text-xs sm:text-sm font-bold">
+                    style="display:flex;align-items:center;gap:5px;padding:6px 10px;background:linear-gradient(135deg,#0891b2,#2563eb);border:none;border-radius:10px;color:white;font-size:12px;font-weight:700;cursor:pointer;">
                     <i class="fas fa-sign-in-alt"></i>
                     <span class="hidden sm:inline" data-translate="login">Вход</span>
                   </button>
                 </div>
-                <div id="loggedInView" class="hidden flex items-center gap-1 sm:gap-3">
-                  <div class="text-right hidden md:block cursor-pointer" id="userNameWrapper">
-                    <div id="userName" class="text-xs font-bold text-white hover:text-cyan-400 transition-colors">Researcher</div>
-                    <div class="text-[10px] text-emerald-400 flex items-center justify-end gap-1.5">
-                      <span class="relative flex h-1.5 w-1.5">
-                        <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
-                        <span class="relative inline-flex rounded-full h-1.5 w-1.5 bg-emerald-400"></span>
-                      </span>
+                <div id="loggedInView" style="display:none;align-items:center;gap:6px;">
+                  <div class="hidden md:block text-right cursor-pointer" id="userNameWrapper" style="line-height:1.2;">
+                    <div id="userName" style="font-size:11px;font-weight:700;color:white;">Researcher</div>
+                    <div style="font-size:9px;color:#34d399;display:flex;align-items:center;justify-content:flex-end;gap:3px;">
+                      <span style="width:5px;height:5px;background:#34d399;border-radius:50%;display:inline-block;"></span>
                       <span data-translate="in_system">В системе</span>
                     </div>
                   </div>
-                  <div class="relative group cursor-pointer flex-shrink-0" id="userAvatarWrapper">
-                    <div class="absolute -inset-1 bg-gradient-to-r from-cyan-500 to-blue-500 rounded-full blur opacity-50 group-hover:opacity-75 transition-opacity"></div>
-                    <img id="userAvatar" src="" class="relative w-8 h-8 sm:w-10 sm:h-10 rounded-full object-cover border-2 border-cyan-500/50 group-hover:border-cyan-400 transition-all">
+                  <div style="position:relative;flex-shrink:0;" id="userAvatarWrapper">
+                    <div style="position:absolute;inset:-2px;background:linear-gradient(135deg,#22d3ee,#3b82f6);border-radius:50%;filter:blur(4px);opacity:0.5;"></div>
+                    <img id="userAvatar" src="" style="position:relative;width:30px;height:30px;border-radius:50%;object-fit:cover;border:2px solid rgba(34,211,238,0.5);">
                   </div>
                   <button onclick="typeof logout==='function'&&logout()"
-                    class="p-1.5 sm:p-2 text-slate-400 hover:text-red-400 rounded-lg hover:bg-red-500/10 transition-all">
-                    <i class="fas fa-sign-out-alt text-sm sm:text-base"></i>
+                    style="padding:6px;color:#64748b;background:transparent;border:none;border-radius:8px;cursor:pointer;font-size:13px;transition:all 0.2s;"
+                    onmouseover="this.style.color='#ef4444';this.style.background='rgba(239,68,68,0.1)'"
+                    onmouseout="this.style.color='#64748b';this.style.background='transparent'">
+                    <i class="fas fa-sign-out-alt"></i>
                   </button>
                 </div>
               </div>
@@ -180,37 +158,31 @@
             </div>
           </div>
 
-          <!-- ── Мобильная статистика (второй ряд, только < md) ── -->
-          <div class="header-mob-stats flex md:hidden -mx-3 sm:-mx-4 mt-1.5 border-t border-white/5 overflow-x-auto">
-            <div class="flex items-center gap-1.5 px-4 py-1.5 cursor-pointer flex-shrink-0 border-r border-slate-700/30 hover:bg-white/5 transition-colors"
-                 onclick="typeof filterProjects==='function'&&filterProjects('active')">
-              <span class="text-sm font-black text-emerald-400" id="mStatActive">0</span>
-              <span class="text-[9px] text-slate-500 uppercase font-semibold tracking-wide" data-translate="active">Акт.</span>
+          <!-- ── Строка 2: Мобильная статистика (только < md) ── -->
+          <div class="al-mob-stats">
+            <div class="al-mob-stat" onclick="typeof filterProjects==='function'&&filterProjects('active')">
+              <span class="al-mob-stat__num" style="color:#34d399;" id="mStatActive">0</span>
+              <span class="al-mob-stat__lbl" data-translate="active">Акт.</span>
             </div>
-            <div class="flex items-center gap-1.5 px-4 py-1.5 cursor-pointer flex-shrink-0 border-r border-slate-700/30 hover:bg-white/5 transition-colors"
-                 onclick="typeof filterProjects==='function'&&filterProjects('today')">
-              <span class="text-sm font-black text-cyan-400" id="mStatToday">0</span>
-              <span class="text-[9px] text-slate-500 uppercase font-semibold tracking-wide" data-translate="new">Нов.</span>
+            <div class="al-mob-stat" onclick="typeof filterProjects==='function'&&filterProjects('today')">
+              <span class="al-mob-stat__num" style="color:#22d3ee;" id="mStatToday">0</span>
+              <span class="al-mob-stat__lbl" data-translate="new">Нов.</span>
             </div>
-            <div class="flex items-center gap-1.5 px-4 py-1.5 cursor-pointer flex-shrink-0 border-r border-slate-700/30 hover:bg-white/5 transition-colors"
-                 onclick="typeof filterProjects==='function'&&filterProjects('favorites')">
-              <span class="text-sm font-black text-orange-400" id="mStatFavorites">0</span>
-              <span class="text-[9px] text-slate-500 uppercase font-semibold tracking-wide" data-translate="in_work">Раб.</span>
+            <div class="al-mob-stat" onclick="typeof filterProjects==='function'&&filterProjects('favorites')">
+              <span class="al-mob-stat__num" style="color:#fb923c;" id="mStatFavorites">0</span>
+              <span class="al-mob-stat__lbl" data-translate="in_work">Раб.</span>
             </div>
-            <div class="flex items-center gap-1.5 px-4 py-1.5 cursor-pointer flex-shrink-0 hover:bg-white/5 transition-colors"
-                 onclick="typeof filterProjects==='function'&&filterProjects('completed')">
-              <span class="text-sm font-black text-blue-400" id="mStatCompleted">0</span>
-              <span class="text-[9px] text-slate-500 uppercase font-semibold tracking-wide" data-translate="done">Гот.</span>
+            <div class="al-mob-stat" onclick="typeof filterProjects==='function'&&filterProjects('completed')">
+              <span class="al-mob-stat__num" style="color:#60a5fa;" id="mStatCompleted">0</span>
+              <span class="al-mob-stat__lbl" data-translate="done">Гот.</span>
             </div>
           </div>
-
         </div>
       </header>
 
-      <!-- ===== CRYPTORANK TICKER ===== -->
-      <!-- ВАЖНО: жестко ограничиваем ширину, чтобы тикер не распирал страницу -->
-      <div style="max-width: 100vw; overflow: hidden; background: rgba(11,15,25,0.95); border-bottom: 1px solid rgba(51,65,85,0.5);">
-        <div style="max-width: 1600px; margin: 0 auto; padding: 4px 12px; overflow: hidden; box-sizing: border-box;">
+      <!-- CryptoRank Ticker -->
+      <div style="background:rgba(11,15,25,0.95);border-bottom:1px solid rgba(51,65,85,0.5);backdrop-filter:blur(12px);max-width:100vw;overflow:hidden;">
+        <div style="max-width:min(1600px,100%);margin:0 auto;padding:4px 12px;overflow:hidden;box-sizing:border-box;">
           <div id="cr-widget-marquee"
                data-coins="bitcoin,ethereum,tether,ripple,cardano"
                data-theme="dark"
@@ -218,14 +190,15 @@
                data-show-icon="true"
                data-show-period-change="true"
                data-period-change="24H"
-               data-api-url="https://api.cryptorank.io/v0">
+               data-api-url="https://api.cryptorank.io/v0"
+               style="max-width:100%;overflow:hidden;box-sizing:border-box;">
             <a href="https://cryptorank.io" target="_blank">Coins by Cryptorank</a>
           </div>
         </div>
       </div>
     `;
 
-    // CryptoRank скрипт
+    // CryptoRank script
     const crScript = document.createElement('script');
     crScript.src = 'https://cryptorank.io/widget/marquee.js';
     document.body.appendChild(crScript);
@@ -237,15 +210,14 @@
 
     // Синхронизация мобильных статов
     function syncMobileStats() {
-      const pairs = [
+      [
         ['statActive',    'mStatActive'],
         ['statToday',     'mStatToday'],
         ['statFavorites', 'mStatFavorites'],
-        ['statCompleted', 'mStatCompleted'],
-      ];
-      pairs.forEach(function([fromId, toId]) {
-        const from = document.getElementById(fromId);
-        const to   = document.getElementById(toId);
+        ['statCompleted', 'mStatCompleted']
+      ].forEach(function(pair) {
+        const from = document.getElementById(pair[0]);
+        const to   = document.getElementById(pair[1]);
         if (!from || !to) return;
         to.textContent = from.textContent;
         new MutationObserver(function() {
@@ -255,20 +227,23 @@
     }
     setTimeout(syncMobileStats, 400);
 
-    // Высота хедера -> CSS переменная
+    // CSS-переменная высоты хедера
     function syncHeaderHeight() {
-      const h = document.getElementById('site-header');
+      var h = document.getElementById('site-header');
       if (h) document.documentElement.style.setProperty('--header-h', h.offsetHeight + 'px');
     }
-    const headerEl = document.getElementById('site-header');
+    var headerEl = document.getElementById('site-header');
     if (headerEl) {
       if (window.ResizeObserver) {
         new ResizeObserver(syncHeaderHeight).observe(headerEl);
       } else {
-        [100, 500, 1500].forEach(function(t) { setTimeout(syncHeaderHeight, t); });
+        setTimeout(syncHeaderHeight, 100);
+        setTimeout(syncHeaderHeight, 500);
+        setTimeout(syncHeaderHeight, 1500);
       }
     }
     window.addEventListener('resize', syncHeaderHeight);
+    setTimeout(syncHeaderHeight, 0);
   }
 
   if (document.readyState === 'loading') {
@@ -276,5 +251,4 @@
   } else {
     injectHeader();
   }
-
 })();
