@@ -2179,7 +2179,7 @@ function getFilteredProjects(search) {
           const allActivitiesCompleted = hasActivities && p.activities.every(a => userCompleted.includes(p.id + '_' + a.id));
           if (!(projectCompleted || allActivitiesCompleted)) matchesAllFilters = false;
         } else if (status === 'unvisited') { if (!isProjectUnvisited(p)) matchesAllFilters = false; }
-        else if (status === 'today') { if (!isToday(p.createdAt)) matchesAllFilters = false; }
+        else if (status === 'today') { if (!isProjectOrActivityToday(p)) matchesAllFilters = false; }
       }
       if (!matchesAllFilters) return false;
     }
@@ -2187,12 +2187,8 @@ function getFilteredProjects(search) {
     if (search) { if (!p.name.toLowerCase().includes(search.toLowerCase()) && !(p.description && p.description.toLowerCase().includes(search.toLowerCase()))) return false; }
           // ===== ФИЛЬТР ПО ДАТЕ ДОБАВЛЕНИЯ =====
     if (dateFilter.day || dateFilter.month || dateFilter.year) {
-      const created = p.createdAt ? new Date(p.createdAt) : null;
-      if (!created) return false;
-      if (dateFilter.year  && created.getFullYear()    !== parseInt(dateFilter.year))  return false;
-      if (dateFilter.month && (created.getMonth() + 1) !== parseInt(dateFilter.month)) return false;
-      if (dateFilter.day   && created.getDate()        !== parseInt(dateFilter.day))   return false;
-    }
+  if (!matchesDateFilter(p)) return false;
+}
     return true;
   });
 }
@@ -2964,7 +2960,7 @@ function updateSidebarActive() {
 
 function updateCounts(filtered) {
   document.getElementById('countAll').textContent = filtered.length;
-  document.getElementById('countToday').textContent = filtered.filter(function(p) { return isToday(p.createdAt); }).length;
+  document.getElementById('countToday').textContent = filtered.filter(function(p) { return isProjectOrActivityToday(p); }).length;
   document.getElementById('countActive').textContent = filtered.filter(function(p) { const projectCompleted = userCompleted.includes(p.id + '_project'); const hasActivities = p.activities && p.activities.length > 0; const allActivitiesCompleted = hasActivities && p.activities.every(a => userCompleted.includes(p.id + '_' + a.id)); return !(projectCompleted || allActivitiesCompleted); }).length;
   document.getElementById('countDaily').textContent = filtered.filter(function(p) { return p.hasDaily && p.status === 'active'; }).length;
   document.getElementById('countFavoritesSidebar').textContent = filtered.filter(function(p) { return userFavorites.includes(p.id); }).length;
@@ -2974,12 +2970,49 @@ function updateCounts(filtered) {
 
 function updateStats(filtered) {
   document.getElementById('statActive').textContent = filtered.filter(function(p) { const projectCompleted = userCompleted.includes(p.id + '_project'); const hasActivities = p.activities && p.activities.length > 0; const allActivitiesCompleted = hasActivities && p.activities.every(a => userCompleted.includes(p.id + '_' + a.id)); return !(projectCompleted || allActivitiesCompleted); }).length;
-  document.getElementById('statToday').textContent = filtered.filter(function(p) { return isToday(p.createdAt); }).length;
+  document.getElementById('statToday').textContent = filtered.filter(function(p) { return isProjectOrActivityToday(p); }).length;
   document.getElementById('statFavorites').textContent = filtered.filter(function(p) { return userFavorites.includes(p.id); }).length;
   document.getElementById('statCompleted').textContent = filtered.filter(function(p) { const projectCompleted = userCompleted.includes(p.id + '_project'); const hasActivities = p.activities && p.activities.length > 0; const allActivitiesCompleted = hasActivities && p.activities.every(a => userCompleted.includes(p.id + '_' + a.id)); return projectCompleted || allActivitiesCompleted; }).length;
 }
 
 function isToday(dateString) { if (!dateString) return false; return new Date(dateString).toDateString() === new Date().toDateString(); }
+    function matchesDateFilter(project) {
+  const day   = dateFilter.day   ? parseInt(dateFilter.day)   : null;
+  const month = dateFilter.month ? parseInt(dateFilter.month) : null;
+  const year  = dateFilter.year  ? parseInt(dateFilter.year)  : null;
+
+  function dateMatches(str) {
+    if (!str) return false;
+    const d = new Date(str);
+    if (isNaN(d.getTime())) return false;
+    if (year  && d.getFullYear()    !== year)  return false;
+    if (month && (d.getMonth() + 1) !== month) return false;
+    if (day   && d.getDate()        !== day)   return false;
+    return true;
+  }
+
+  // Сам проект
+  if (dateMatches(project.createdAt)) return true;
+
+  // Активности: createdAt (когда добавлена в систему) или date (дата начала)
+  if (project.activities) {
+    for (const act of project.activities) {
+      if (dateMatches(act.createdAt) || dateMatches(act.date)) return true;
+    }
+  }
+  return false;
+}
+
+// Проверяет: проект ИЛИ его активности созданы сегодня
+function isProjectOrActivityToday(project) {
+  if (isToday(project.createdAt)) return true;
+  if (project.activities) {
+    return project.activities.some(act =>
+      isToday(act.createdAt) || isToday(act.date)
+    );
+  }
+  return false;
+}
 function formatDate(str) { if (!str) return '—'; return new Date(str).toLocaleDateString('ru-RU'); }
 window.showToast = function(msg) { 
   const translatedMsg = t(msg) || msg;
