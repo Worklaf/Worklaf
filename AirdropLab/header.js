@@ -205,9 +205,9 @@
       </header>
 
       <!-- ===== CRYPTORANK TICKER ===== -->
-      <div class="bg-[#0b0f19]/95 backdrop-blur-md border-b border-slate-700/50 overflow-hidden w-full">
-        <div class="max-w-[1600px] mx-auto px-2 sm:px-4 py-1 overflow-hidden">
-          <div id="cr-widget-marquee"
+      <div style="max-width:100vw;overflow:hidden;background:rgba(11,15,25,0.95);border-bottom:1px solid rgba(51,65,85,0.5);backdrop-filter:blur(12px);">
+  <div style="max-width:min(1600px,100%);margin:0 auto;padding:4px 12px;overflow:hidden;">
+    <div id="cr-widget-marquee"
                data-coins="bitcoin,ethereum,tether,ripple,cardano"
                data-theme="dark"
                data-show-symbol="true"
