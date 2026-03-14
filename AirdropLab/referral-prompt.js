@@ -1,410 +1,287 @@
-// ============================================================
-// referral-prompt.js — Модальное окно реферального кода
-// Подключение: <script src="referral-prompt.js"></script> (после footer.js)
-// ============================================================
-
+/**
+ * ============================================
+ * AirdropLab — Referral Modal v2.5 (Fixed)
+ * referral-modal.js
+ * ============================================
+ */
 (function () {
-  'use strict';
+    'use strict';
 
-  const AUTHOR_REF_CODE = 'AL-SAKZ4M';
-  const REF_PROMPTED_KEY = 'airdroplab_ref_prompted';
+    const AUTHOR_CODE   = 'AL-SAKZ4M';
+    const MODAL_ID      = 'alRefModal';
+    let shown = false;
 
-  // Ждём Firebase auth
-  function waitForAuth(cb) {
-    const check = setInterval(function () {
-      if (window.__authExports && window.auth) {
-        clearInterval(check);
-        const { onAuthStateChanged } = window.__authExports;
-        onAuthStateChanged(window.auth, cb);
-      }
-    }, 300);
-  }
-
-  waitForAuth(async function (user) {
-    if (!user) return;
-
-    // Проверяем — уже вводил код?
-    const prompted = localStorage.getItem(REF_PROMPTED_KEY + '_' + user.uid);
-    if (prompted) return;
-
-    // Проверяем в Firestore
-    try {
-      const { doc, getDoc } = window.__firestoreExports;
-      const userRef = doc(window.db, 'users', user.uid);
-      const snap = await getDoc(userRef);
-
-      if (snap.exists()) {
-        const data = snap.data();
-        // Уже ввёл код или уже показывали
-        if (data.referredBy || data.refPromptDismissed) {
-          localStorage.setItem(REF_PROMPTED_KEY + '_' + user.uid, '1');
-          return;
-        }
-      }
-    } catch (e) {
-      console.error('Referral check error:', e);
+    // Ожидание готовности Firebase и функций футера
+    function waitForDependencies(cb, limit = 15000) {
+        const t0 = Date.now();
+        const id = setInterval(() => {
+            const hasFirebase = window.auth && window.db && window.__firestoreExports;
+            const hasFooterFn = typeof window.applyReferralCodeFooter === 'function';
+            
+            if (hasFirebase && hasFooterFn) {
+                clearInterval(id); cb();
+            } else if (Date.now() - t0 > limit) {
+                clearInterval(id);
+            }
+        }, 300);
     }
 
-    // Показываем окно с небольшой задержкой
-    setTimeout(function () {
-      showReferralModal(user.uid);
-    }, 2000);
-  });
+    function bootstrap() {
+        const { onAuthStateChanged } = window.__authExports || {};
+        if (!onAuthStateChanged) return;
+        
+        onAuthStateChanged(window.auth, user => {
+            if (user && !shown) {
+                // Проверка через 2.2 секунды после входа
+                setTimeout(() => checkUser(user), 2200);
+            }
+        });
+    }
 
-  // ─── Показать модалку ───
-  function showReferralModal(uid) {
-    if (document.getElementById('referralPromptModal')) return;
+    async function checkUser(user) {
+        if (shown) return;
+        if (localStorage.getItem('rl_ref_done_' + user.uid)) return;
 
-    const overlay = document.createElement('div');
-    overlay.id = 'referralPromptModal';
-    overlay.style.cssText = `
-      position:fixed; inset:0; z-index:10001;
-      background:rgba(0,0,0,0.85); backdrop-filter:blur(8px);
-      display:flex; align-items:center; justify-content:center;
-      padding:16px; opacity:0; transition:opacity 0.4s ease;
-    `;
+        const { doc, getDoc } = window.__firestoreExports;
+        try {
+            const snap = await getDoc(doc(window.db, 'users', user.uid));
+            if (!snap.exists()) return;
+            const d = snap.data();
+            
+            // Проверяем именно твою переменную invitedBy
+            if (d.invitedBy || d.refModalDismissed || d.referralCodeUsed) {
+                localStorage.setItem('rl_ref_done_' + user.uid, '1');
+                return;
+            }
+        } catch (e) { return; }
 
-    overlay.innerHTML = `
-      <div id="refModalBox" style="
-        background:linear-gradient(145deg,#1e2538,#151b2b);
-        border:1px solid rgba(34,211,238,0.25);
-        border-radius:24px; width:100%; max-width:480px;
-        box-shadow:0 25px 80px rgba(0,0,0,0.6), 0 0 60px rgba(34,211,238,0.08);
-        transform:scale(0.9) translateY(20px);
-        transition:transform 0.4s cubic-bezier(0.4,0,0.2,1);
-        overflow:hidden;
-      ">
+        shown = true;
+        injectStyles();
+        renderModal();
+    }
 
-        <!-- Шапка -->
-        <div style="
-          position:relative; padding:32px 28px 24px;
-          background:linear-gradient(135deg,rgba(34,211,238,0.08),rgba(59,130,246,0.06));
-          border-bottom:1px solid rgba(34,211,238,0.15);
-          text-align:center;
-        ">
-          <!-- Иконка -->
-          <div style="
-            width:72px; height:72px; margin:0 auto 16px;
-            background:linear-gradient(135deg,rgba(34,211,238,0.15),rgba(59,130,246,0.15));
-            border:2px solid rgba(34,211,238,0.3);
-            border-radius:20px; display:flex; align-items:center; justify-content:center;
-            box-shadow:0 0 30px rgba(34,211,238,0.15);
-          ">
-            <i class="fas fa-user-plus" style="font-size:28px; color:#22d3ee;"></i>
-          </div>
+    // ВЫЗОВ ОРИГИНАЛЬНОЙ ФУНКЦИИ ИЗ ФУТЕРА
+    async function triggerFooterApply(code) {
+        // Создаем временный скрытый элемент, который ожидает функция футера
+        let hiddenInput = document.getElementById('profileInviteCode');
+        let createdTmp = false;
 
-          <h2 style="
-            font-size:1.35rem; font-weight:800; color:#f1f5f9;
-            margin:0 0 6px;
-          ">🎉 Добро пожаловать в AirdropLab!</h2>
+        if (!hiddenInput) {
+            hiddenInput = document.createElement('input');
+            hiddenInput.id = 'profileInviteCode';
+            hiddenInput.style.display = 'none';
+            document.body.appendChild(hiddenInput);
+            createdTmp = true;
+        }
 
-          <p style="
-            font-size:0.85rem; color:#94a3b8; margin:0;
-            line-height:1.5;
-          ">
-            Если вас пригласил друг — введите его реферальный код
-          </p>
-        </div>
+        hiddenInput.value = code;
 
-        <!-- Тело -->
-        <div style="padding:24px 28px;">
+        try {
+            // Вызываем твою функцию из footer.js
+            await window.applyReferralCodeFooter();
+            
+            // Если всё ок, показываем успех в нашей модалке
+            showSuccess(code);
+        } catch (e) {
+            throw e;
+        } finally {
+            if (createdTmp) hiddenInput.remove();
+        }
+    }
 
-          <!-- Поле ввода -->
-          <div style="margin-bottom:16px;">
-            <label style="
-              display:block; font-size:0.8rem; font-weight:600;
-              color:#94a3b8; margin-bottom:8px;
-            ">Реферальный код</label>
-            <div style="position:relative;">
-              <i class="fas fa-ticket-alt" style="
-                position:absolute; left:14px; top:50%; transform:translateY(-50%);
-                color:#475569; font-size:14px;
-              "></i>
-              <input type="text" id="refCodeInput"
-                placeholder="Например: AL-XXXXX"
-                autocomplete="off"
-                style="
-                  width:100%; box-sizing:border-box;
-                  background:rgba(15,23,42,0.8);
-                  border:1px solid rgba(71,85,105,0.5);
-                  border-radius:14px;
-                  padding:14px 16px 14px 42px;
-                  font-size:1rem; font-weight:600; font-family:'Courier New',monospace;
-                  color:#f1f5f9; letter-spacing:2px; text-transform:uppercase;
-                  outline:none; transition:border-color 0.3s;
-                "
-                onfocus="this.style.borderColor='rgba(34,211,238,0.5)'"
-                onblur="this.style.borderColor='rgba(71,85,105,0.5)'"
-              >
-            </div>
-            <p id="refCodeError" style="
-              font-size:0.75rem; color:#ef4444; margin:6px 0 0; display:none;
-            "></p>
-          </div>
-
-          <!-- Блок «Код автора» -->
-          <div style="
-            background:linear-gradient(135deg,rgba(34,211,238,0.06),rgba(59,130,246,0.04));
-            border:1px solid rgba(34,211,238,0.2);
-            border-radius:14px; padding:14px 16px;
-            margin-bottom:20px;
-          ">
-            <div style="display:flex; align-items:center; justify-content:space-between; gap:12px; flex-wrap:wrap;">
-              <div>
-                <div style="font-size:0.7rem; color:#64748b; text-transform:uppercase; letter-spacing:1px; margin-bottom:4px;">
-                  Код автора AirdropLab
-                </div>
-                <code style="
-                  font-size:1.1rem; font-weight:700; color:#22d3ee;
-                  letter-spacing:2px; font-family:'Courier New',monospace;
-                ">${AUTHOR_REF_CODE}</code>
+    /* ── Рендер модалки ─────────────────────────── */
+    function renderModal() {
+        const el = document.createElement('div');
+        el.id = MODAL_ID;
+        el.className = 'alr-overlay';
+        el.innerHTML = `
+        <canvas class="alr-canvas" id="${MODAL_ID}_cv"></canvas>
+        <div class="alr-card" id="${MODAL_ID}_card">
+          <div class="alr-glow-border"></div>
+          <div class="alr-inner">
+            <div class="alr-header">
+              <div class="alr-icon-wrap">
+                <div class="alr-ring alr-ring--1"></div>
+                <div class="alr-ring alr-ring--2"></div>
+                <div class="alr-icon-core"><i class="fas fa-user-plus"></i></div>
               </div>
-              <button type="button" id="useAuthorCodeBtn" style="
-                background:linear-gradient(135deg,#0891b2,#0e7490);
-                border:1px solid rgba(34,211,238,0.4);
-                border-radius:10px; padding:8px 16px;
-                font-size:0.8rem; font-weight:700; color:#fff;
-                cursor:pointer; transition:all 0.3s; white-space:nowrap;
-                box-shadow:0 4px 15px rgba(8,145,178,0.3);
-              "
-              onmouseover="this.style.transform='translateY(-1px)';this.style.boxShadow='0 6px 20px rgba(8,145,178,0.4)'"
-              onmouseout="this.style.transform='';this.style.boxShadow='0 4px 15px rgba(8,145,178,0.3)'"
-              >
-                <i class="fas fa-magic" style="margin-right:6px;"></i>Использовать
+              <h2 class="alr-title">Активация <span class="alr-brand">Бонуса</span></h2>
+              <p class="alr-desc">Введите код приглашения для получения стартовых реагентов</p>
+            </div>
+
+            <div class="alr-bonus-grid">
+              <div class="alr-bonus-card">
+                 <div class="abc-val">+50</div>
+                 <div class="abc-lbl">вам</div>
+              </div>
+              <div class="abc-sep"><i class="fas fa-plus"></i></div>
+              <div class="alr-bonus-card">
+                 <div class="abc-val">+25</div>
+                 <div class="abc-lbl">другу</div>
+              </div>
+            </div>
+
+            <div class="alr-author-box" onclick="window.__alrAuthor()">
+              <div class="alr-author-info">
+                <div class="alr-author-ava"><i class="fas fa-crown"></i></div>
+                <div>
+                  <div class="alr-author-title">Код автора (рекомендовано)</div>
+                  <div class="alr-author-code">${AUTHOR_CODE}</div>
+                </div>
+              </div>
+              <div class="alr-author-check"><i class="fas fa-magic"></i></div>
+            </div>
+
+            <div class="alr-inp-field">
+              <input id="${MODAL_ID}_inp" type="text" class="alr-input-main" placeholder="Введите код (AL-XXXXX)" maxlength="20" oninput="this.value = this.value.toUpperCase()">
+              <button class="alr-submit-btn" id="${MODAL_ID}_apply" onclick="window.__alrSubmit()">
+                <i class="fas fa-check"></i>
               </button>
             </div>
+
+            <div class="alr-err" id="${MODAL_ID}_err"></div>
+
+            <div class="alr-footer-btns">
+              <button class="alr-btn-skip" onclick="window.__alrSkip()">Мне не нужен бонус</button>
+            </div>
           </div>
+        </div>`;
 
-          <!-- Кнопки -->
-          <div style="display:flex; gap:10px;">
-            <button type="button" id="refSkipBtn" style="
-              flex:1; background:rgba(30,41,59,0.8);
-              border:1px solid rgba(71,85,105,0.5);
-              border-radius:12px; padding:12px;
-              font-size:0.85rem; font-weight:600; color:#94a3b8;
-              cursor:pointer; transition:all 0.3s;
-            "
-            onmouseover="this.style.background='rgba(51,65,85,0.8)';this.style.color='#f1f5f9'"
-            onmouseout="this.style.background='rgba(30,41,59,0.8)';this.style.color='#94a3b8'"
-            >Пропустить</button>
+        document.body.appendChild(el);
+        initParticles();
+        requestAnimationFrame(() => el.classList.add('alr-overlay--on'));
+    }
 
-            <button type="button" id="refSubmitBtn" style="
-              flex:1;
-              background:linear-gradient(135deg,#3b82f6,#2563eb);
-              border:1px solid rgba(59,130,246,0.5);
-              border-radius:12px; padding:12px;
-              font-size:0.85rem; font-weight:700; color:#fff;
-              cursor:pointer; transition:all 0.3s;
-              box-shadow:0 4px 15px rgba(59,130,246,0.3);
-            "
-            onmouseover="this.style.transform='translateY(-1px)';this.style.boxShadow='0 6px 20px rgba(59,130,246,0.4)'"
-            onmouseout="this.style.transform='';this.style.boxShadow='0 4px 15px rgba(59,130,246,0.3)'"
-            >
-              <i class="fas fa-check" style="margin-right:6px;"></i>Применить код
-            </button>
-          </div>
-        </div>
-      </div>
-    `;
-
-    document.body.appendChild(overlay);
-
-    // Анимация появления
-    requestAnimationFrame(function () {
-      requestAnimationFrame(function () {
-        overlay.style.opacity = '1';
-        document.getElementById('refModalBox').style.transform = 'scale(1) translateY(0)';
-      });
-    });
-
-    // ─── Обработчики ───
-    document.getElementById('useAuthorCodeBtn').onclick = function () {
-      document.getElementById('refCodeInput').value = AUTHOR_REF_CODE;
-      document.getElementById('refCodeInput').style.borderColor = 'rgba(34,211,238,0.5)';
-      hideError();
+    window.__alrAuthor = () => {
+        const inp = document.getElementById(MODAL_ID + '_inp');
+        if (inp) {
+            inp.value = AUTHOR_CODE;
+            inp.focus();
+            // Подсвечиваем инпут
+            inp.style.borderColor = '#10b981';
+            setTimeout(() => inp.style.borderColor = '', 1000);
+        }
     };
 
-    document.getElementById('refSkipBtn').onclick = function () {
-      dismissModal(uid);
+    window.__alrSubmit = async () => {
+        const inp = document.getElementById(MODAL_ID + '_inp');
+        const code = inp?.value.trim().toUpperCase() || '';
+        const btn = document.getElementById(MODAL_ID + '_apply');
+        const err = document.getElementById(MODAL_ID + '_err');
+
+        if (!code.startsWith('AL-')) {
+            err.textContent = 'Код должен начинаться с AL-';
+            err.style.display = 'block';
+            return;
+        }
+
+        btn.disabled = true;
+        btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
+
+        try {
+            await triggerFooterApply(code);
+        } catch (e) {
+            btn.disabled = false;
+            btn.innerHTML = '<i class="fas fa-check"></i>';
+            err.textContent = e.message || 'Ошибка активации';
+            err.style.display = 'block';
+        }
     };
 
-    document.getElementById('refSubmitBtn').onclick = function () {
-      submitCode(uid);
+    window.__alrSkip = async () => {
+        const user = window.auth?.currentUser;
+        if (user) {
+            localStorage.setItem('rl_ref_done_' + user.uid, '1');
+            try {
+                const { doc, setDoc } = window.__firestoreExports;
+                await setDoc(doc(window.db, 'users', user.uid), { refModalDismissed: true }, { merge: true });
+            } catch (_) {}
+        }
+        closeModal();
     };
 
-    document.getElementById('refCodeInput').addEventListener('keydown', function (e) {
-      if (e.key === 'Enter') {
-        e.preventDefault();
-        submitCode(uid);
-      }
-    });
-  }
-
-  // ─── Применить код ───
-  async function submitCode(uid) {
-    const input = document.getElementById('refCodeInput');
-    const code = input.value.trim().toUpperCase();
-    const errorEl = document.getElementById('refCodeError');
-    const btn = document.getElementById('refSubmitBtn');
-
-    if (!code) {
-      showError('Введите реферальный код');
-      return;
+    function showSuccess(code) {
+        const card = document.getElementById(MODAL_ID + '_card');
+        card.innerHTML = `
+            <div class="alr-success-screen">
+                <div class="alr-success-icon"><i class="fas fa-check"></i></div>
+                <h2 class="alr-title">Успешно!</h2>
+                <p class="alr-desc">Код <b>${code}</b> активирован.<br>Реагенты начислены.</p>
+                <button class="alr-apply-full" onclick="window.__alrClose()">Начать работу</button>
+            </div>
+        `;
+        // Вызываем конфетти если есть
+        setTimeout(closeModal, 4000);
     }
 
-    if (code.length < 4) {
-      showError('Код слишком короткий');
-      return;
+    window.__alrClose = closeModal;
+    function closeModal() {
+        const el = document.getElementById(MODAL_ID);
+        if (el) {
+            el.classList.remove('alr-overlay--on');
+            setTimeout(() => el.remove(), 400);
+        }
     }
 
-    // Блокируем кнопку
-    btn.disabled = true;
-    btn.innerHTML = '<i class="fas fa-spinner fa-spin" style="margin-right:6px;"></i>Проверяем...';
-
-    try {
-      const { doc, getDoc, setDoc, updateDoc, collection, query, where, getDocs, increment } = window.__firestoreExports;
-
-      // Ищем владельца кода
-      const q = query(collection(window.db, 'users'), where('referralCode', '==', code));
-      const snap = await getDocs(q);
-
-      if (snap.empty) {
-        showError('Код не найден. Проверьте и попробуйте ещё раз');
-        resetBtn();
-        return;
-      }
-
-      let referrerUid = null;
-      snap.forEach(function (d) { referrerUid = d.id; });
-
-      // Нельзя ввести свой код
-      if (referrerUid === uid) {
-        showError('Нельзя использовать свой собственный код');
-        resetBtn();
-        return;
-      }
-
-      // Сохраняем в профиль
-      const userRef = doc(window.db, 'users', uid);
-      await setDoc(userRef, {
-        referredBy: code,
-        referredByUid: referrerUid,
-        referredAt: new Date()
-      }, { merge: true });
-
-      // Увеличиваем счётчик у реферера
-      const referrerRef = doc(window.db, 'users', referrerUid);
-      await updateDoc(referrerRef, {
-        invitedCount: increment(1)
-      });
-
-      // Закрываем
-      localStorage.setItem(REF_PROMPTED_KEY + '_' + uid, '1');
-      showSuccess();
-
-    } catch (e) {
-      console.error('Referral submit error:', e);
-      showError('Произошла ошибка. Попробуйте позже');
-      resetBtn();
-    }
-  }
-
-  function resetBtn() {
-    const btn = document.getElementById('refSubmitBtn');
-    if (btn) {
-      btn.disabled = false;
-      btn.innerHTML = '<i class="fas fa-check" style="margin-right:6px;"></i>Применить код';
-    }
-  }
-
-  function showError(msg) {
-    const el = document.getElementById('refCodeError');
-    if (el) {
-      el.textContent = msg;
-      el.style.display = 'block';
-    }
-    const input = document.getElementById('refCodeInput');
-    if (input) input.style.borderColor = 'rgba(239,68,68,0.5)';
-  }
-
-  function hideError() {
-    const el = document.getElementById('refCodeError');
-    if (el) el.style.display = 'none';
-  }
-
-  // ─── Успех ───
-  function showSuccess() {
-    const box = document.getElementById('refModalBox');
-    if (!box) return;
-
-    box.innerHTML = `
-      <div style="padding:48px 28px; text-align:center;">
-        <div style="
-          width:80px; height:80px; margin:0 auto 20px;
-          background:linear-gradient(135deg,rgba(16,185,129,0.2),rgba(5,150,105,0.15));
-          border:2px solid rgba(16,185,129,0.4);
-          border-radius:50%; display:flex; align-items:center; justify-content:center;
-          animation:refSuccessPop 0.5s ease;
-        ">
-          <i class="fas fa-check" style="font-size:32px; color:#10b981;"></i>
-        </div>
-        <h3 style="font-size:1.3rem; font-weight:800; color:#f1f5f9; margin:0 0 8px;">
-          Код принят! 🎉
-        </h3>
-        <p style="font-size:0.9rem; color:#94a3b8; margin:0 0 24px; line-height:1.5;">
-          Реферальный код успешно привязан к вашему аккаунту
-        </p>
-        <button type="button" onclick="document.getElementById('referralPromptModal').remove()" style="
-          background:linear-gradient(135deg,#10b981,#059669);
-          border:none; border-radius:12px; padding:12px 32px;
-          font-size:0.9rem; font-weight:700; color:#fff;
-          cursor:pointer; transition:all 0.3s;
-          box-shadow:0 4px 15px rgba(16,185,129,0.3);
-        ">
-          Отлично, начнём!
-        </button>
-      </div>
-    `;
-
-    if (typeof window.showToast === 'function') {
-      window.showToast('Реферальный код привязан!');
-    }
-  }
-
-  // ─── Пропустить ───
-  async function dismissModal(uid) {
-    localStorage.setItem(REF_PROMPTED_KEY + '_' + uid, '1');
-
-    try {
-      const { doc, setDoc } = window.__firestoreExports;
-      await setDoc(doc(window.db, 'users', uid), {
-        refPromptDismissed: true
-      }, { merge: true });
-    } catch (e) {
-      console.error('Dismiss error:', e);
+    function initParticles() {
+        const cv = document.getElementById(MODAL_ID + '_cv');
+        const ctx = cv.getContext('2d');
+        let w, h, dots = [];
+        const resize = () => { w = cv.width = window.innerWidth; h = cv.height = window.innerHeight; };
+        window.addEventListener('resize', resize); resize();
+        for(let i=0; i<25; i++) dots.push({x:Math.random()*w, y:Math.random()*h, r:Math.random()*2+1, s:Math.random()*0.5+0.2});
+        function draw() {
+            ctx.clearRect(0,0,w,h);
+            ctx.fillStyle = 'rgba(34,211,238,0.3)';
+            dots.forEach(d => {
+                d.y -= d.s; if(d.y < -10) d.y = h+10;
+                ctx.beginPath(); ctx.arc(d.x, d.y, d.r, 0, Math.PI*2); ctx.fill();
+            });
+            requestAnimationFrame(draw);
+        }
+        draw();
     }
 
-    closeModal();
-  }
-
-  function closeModal() {
-    const overlay = document.getElementById('referralPromptModal');
-    if (!overlay) return;
-    overlay.style.opacity = '0';
-    const box = document.getElementById('refModalBox');
-    if (box) box.style.transform = 'scale(0.9) translateY(20px)';
-    setTimeout(function () { overlay.remove(); }, 400);
-  }
-
-  // ─── CSS анимация ───
-  const style = document.createElement('style');
-  style.textContent = `
-    @keyframes refSuccessPop {
-      0%   { transform: scale(0.5); opacity: 0; }
-      60%  { transform: scale(1.15); }
-      100% { transform: scale(1); opacity: 1; }
+    function injectStyles() {
+        const s = document.createElement('style');
+        s.textContent = `
+        .alr-overlay { position:fixed; inset:0; z-index:99999; display:flex; align-items:center; justify-content:center; background:rgba(2,6,18,0); backdrop-filter:blur(0px); transition: 0.4s; }
+        .alr-overlay--on { background:rgba(2,6,18,0.9); backdrop-filter:blur(12px); }
+        .alr-canvas { position:absolute; inset:0; pointer-events:none; }
+        .alr-card { position:relative; width:100%; max-width:420px; background:#0f172a; border-radius:24px; border:1px solid rgba(255,255,255,0.1); overflow:hidden; box-shadow:0 25px 50px -12px rgba(0,0,0,0.5); transform:scale(0.9); opacity:0; transition:0.4s cubic-bezier(0.34,1.56,0.64,1); }
+        .alr-overlay--on .alr-card { transform:scale(1); opacity:1; }
+        .alr-inner { padding:32px; text-align:center; }
+        .alr-icon-wrap { position:relative; width:64px; height:64px; margin:0 auto 20px; background:linear-gradient(135deg,#22d3ee,#3b82f6); border-radius:18px; display:flex; align-items:center; justify-content:center; color:#0f172a; font-size:24px; }
+        .alr-ring { position:absolute; inset:-8px; border:2px solid rgba(34,211,238,0.2); border-radius:24px; animation: alrPulse 2s infinite; }
+        @keyframes alrPulse { 0% { transform:scale(1); opacity:1; } 100% { transform:scale(1.2); opacity:0; } }
+        .alr-title { font-size:24px; font-weight:800; color:#fff; margin-bottom:8px; }
+        .alr-brand { color:#22d3ee; }
+        .alr-desc { font-size:14px; color:#94a3b8; margin-bottom:24px; }
+        .alr-bonus-grid { display:flex; align-items:center; justify-content:center; gap:16px; margin-bottom:24px; }
+        .alr-bonus-card { background:rgba(16,185,129,0.1); border:1px solid rgba(16,185,129,0.2); padding:12px; border-radius:16px; min-width:80px; }
+        .abc-val { font-size:20px; font-weight:800; color:#10b981; }
+        .abc-lbl { font-size:11px; color:#6ee7b7; text-transform:uppercase; }
+        .abc-sep { color:#334155; }
+        .alr-author-box { display:flex; align-items:center; justify-content:space-between; background:rgba(30,41,59,0.5); border:1px solid rgba(255,255,255,0.05); padding:16px; border-radius:20px; cursor:pointer; margin-bottom:20px; transition:0.2s; }
+        .alr-author-box:hover { background:rgba(30,41,59,0.8); border-color:#22d3ee; }
+        .alr-author-info { display:flex; align-items:center; gap:12px; text-align:left; }
+        .alr-author-ava { width:40px; height:40px; background:#1e293b; border-radius:12px; display:flex; align-items:center; justify-content:center; color:#f59e0b; }
+        .alr-author-title { font-size:11px; color:#64748b; }
+        .alr-author-code { font-size:16px; font-weight:700; color:#fff; font-family:monospace; }
+        .alr-author-check { color:#22d3ee; font-size:18px; }
+        .alr-inp-field { position:relative; display:flex; gap:8px; }
+        .alr-input-main { flex:1; background:#020617; border:1px solid #1e293b; border-radius:14px; padding:14px 18px; color:#fff; font-family:monospace; font-size:16px; outline:none; }
+        .alr-input-main:focus { border-color:#22d3ee; }
+        .alr-submit-btn { width:52px; background:#22d3ee; color:#0f172a; border-radius:14px; border:none; font-size:18px; cursor:pointer; }
+        .alr-err { display:none; color:#ef4444; font-size:12px; margin-top:8px; }
+        .alr-footer-btns { margin-top:20px; }
+        .alr-btn-skip { background:none; border:none; color:#475569; font-size:13px; cursor:pointer; text-decoration:underline; }
+        .alr-success-screen { padding:40px 20px; }
+        .alr-success-icon { width:80px; height:80px; background:#10b981; color:#fff; border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:40px; margin:0 auto 20px; }
+        .alr-apply-full { width:100%; background:#10b981; color:#fff; padding:16px; border-radius:16px; border:none; font-weight:700; cursor:pointer; margin-top:20px; }
+        `;
+        document.head.appendChild(s);
     }
-  `;
-  document.head.appendChild(style);
 
+    waitForDependencies(bootstrap);
 })();
