@@ -249,4 +249,56 @@
     // ── MutationObserver: показываем adminActionsRow когда admin активен ──
     // activateAdminMode() делает adminPanel.style.display = 'flex' — ловим это
     const adminPanel = document.getElementById('adminPanel');
-    const adminActionsRow =
+    const adminActionsRow = document.getElementById('adminActionsRow');
+    if (adminPanel && adminActionsRow) {
+      new MutationObserver(function () {
+        var shown = adminPanel.style.display !== 'none' && adminPanel.style.display !== '';
+        adminActionsRow.style.display = shown ? 'flex' : 'none';
+      }).observe(adminPanel, { attributes: true, attributeFilter: ['style'] });
+    }
+
+    // ── Синхронизируем мобильные статы с десктопными ──
+    function syncMobileStats() {
+      [
+        ['statActive',    'mStatActive'],
+        ['statToday',     'mStatToday'],
+        ['statFavorites', 'mStatFavorites'],
+        ['statCompleted', 'mStatCompleted']
+      ].forEach(function (pair) {
+        var from = document.getElementById(pair[0]);
+        var to   = document.getElementById(pair[1]);
+        if (!from || !to) return;
+        to.textContent = from.textContent;
+        new MutationObserver(function () {
+          to.textContent = from.textContent;
+        }).observe(from, { childList: true, characterData: true, subtree: true });
+      });
+    }
+    setTimeout(syncMobileStats, 400);
+
+    // ── CSS-переменная высоты хедера ──
+    function syncHeaderHeight() {
+      var h = document.getElementById('site-header');
+      if (h) document.documentElement.style.setProperty('--header-h', h.offsetHeight + 'px');
+    }
+    var headerEl = document.getElementById('site-header');
+    if (headerEl) {
+      if (window.ResizeObserver) {
+        new ResizeObserver(syncHeaderHeight).observe(headerEl);
+      } else {
+        setTimeout(syncHeaderHeight, 100);
+        setTimeout(syncHeaderHeight, 500);
+        setTimeout(syncHeaderHeight, 1500);
+      }
+    }
+    window.addEventListener('resize', syncHeaderHeight);
+    setTimeout(syncHeaderHeight, 0);
+  }
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', injectHeader);
+  } else {
+    injectHeader();
+  }
+
+})();
