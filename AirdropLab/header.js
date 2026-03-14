@@ -200,10 +200,20 @@
                 </button>
               </div>
               <div id="mobLoggedInView" style="display:none;align-items:center;gap:6px;" class="flex">
-                <div style="position:relative;flex-shrink:0;">
-                  <div style="position:absolute;inset:-2px;background:linear-gradient(135deg,#22d3ee,#3b82f6);border-radius:50%;filter:blur(4px);opacity:0.5;"></div>
-                  <img id="mobUserAvatar" src="" style="position:relative;width:30px;height:30px;border-radius:50%;object-fit:cover;border:1.5px solid rgba(34,211,238,0.5);">
-                </div>
+  <div 
+    style="position:relative;flex-shrink:0;cursor:pointer;"
+    onclick="var d=document.getElementById('userAvatarWrapper');if(d)d.click();"
+    title="Профиль">
+    <div style="position:absolute;inset:-2px;background:linear-gradient(135deg,#22d3ee,#3b82f6);border-radius:50%;filter:blur(4px);opacity:0.5;transition:opacity 0.2s;"
+         onmouseover="this.style.opacity='0.8'" onmouseout="this.style.opacity='0.5'"></div>
+    <img id="mobUserAvatar" src="" style="position:relative;width:30px;height:30px;border-radius:50%;object-fit:cover;border:1.5px solid rgba(34,211,238,0.5);">
+    <!-- Иконка-подсказка что можно кликнуть -->
+    <div style="position:absolute;bottom:-2px;right:-2px;width:12px;height:12px;
+                background:linear-gradient(135deg,#22d3ee,#3b82f6);border-radius:50%;
+                border:1.5px solid #0b0f19;display:flex;align-items:center;justify-content:center;">
+      <i class="fas fa-pen" style="font-size:5px;color:white;"></i>
+    </div>
+  </div>
                 <button onclick="typeof logout==='function'&&logout()"
                   style="padding:6px 7px;color:#64748b;background:transparent;border:1px solid rgba(71,85,105,0.3);border-radius:8px;cursor:pointer;font-size:13px;">
                   <i class="fas fa-sign-out-alt"></i>
@@ -236,12 +246,12 @@
           <div class="flex md:hidden flex-wrap gap-1.5 mob-actions-row items-center">
 
             <!-- Клейм -->
-            <button onclick="window.openClaimModal&&window.openClaimModal()"
-              style="position:relative;display:flex;align-items:center;gap:4px;padding:5px 10px;
-                     background:rgba(8,145,178,0.2);border:1px solid rgba(34,211,238,0.3);
-                     border-radius:10px;color:#22d3ee;cursor:pointer;font-size:13px;font-weight:600;white-space:nowrap;">
-              🧪 <span style="font-size:11px;" data-translate="claim_btn_label">Клейм</span>
-            </button>
+            <button id="mobClaimBtn" onclick="window.openClaimModal&&window.openClaimModal()"
+  style="position:relative;display:flex;align-items:center;gap:4px;padding:5px 10px;
+         background:rgba(8,145,178,0.2);border:1px solid rgba(34,211,238,0.3);
+         border-radius:10px;color:#22d3ee;cursor:pointer;font-size:13px;font-weight:600;white-space:nowrap;">
+  🧪 <span id="mobClaimSpan" style="font-size:11px;" data-translate="claim_btn_label">Клейм</span>
+</button>
 
             <!-- Уведомления -->
             <button onclick="typeof showNotifications==='function'&&showNotifications()"
@@ -434,6 +444,64 @@
       if (deskLang) new MutationObserver(syncLang).observe(deskLang, { attributes: true, subtree: true, childList: true, characterData: true });
       setTimeout(syncLang, 200);
       setTimeout(syncLang, 600);
+      // ── 7. Claim button countdown sync ──
+var deskClaim = document.getElementById('headerClaimBtn');
+var mobClaim  = document.getElementById('mobClaimBtn');
+var mobClaimSpan = document.getElementById('mobClaimSpan');
+
+function syncClaimBtn() {
+    if (!deskClaim || !mobClaim) return;
+
+    // Берём текст десктопной кнопки (без эмодзи)
+    var deskText = (deskClaim.innerText || '').replace('🧪','').trim();
+    
+    // Определяем: идёт ли отсчёт (есть цифры с двоеточием или слово "сброс")
+    var isCounting = deskClaim.disabled
+        || /\d+:\d+/.test(deskText)
+        || deskText.toLowerCase().includes('сброс')
+        || deskText.toLowerCase().includes('reset through')
+        || deskText.toLowerCase().includes('reset in');
+
+    if (isCounting) {
+        // Показываем обратный отсчёт
+        mobClaim.disabled = true;
+        mobClaim.style.opacity  = '0.6';
+        mobClaim.style.cursor   = 'not-allowed';
+        mobClaim.style.pointerEvents = 'none';
+        // Меняем эмодзи на песочные часы
+        var emoji = mobClaim.childNodes[0];
+        if (emoji && emoji.nodeType === 3) emoji.textContent = '⏳ ';
+        // Показываем тот же текст что и на десктопе
+        if (mobClaimSpan) {
+            mobClaimSpan.removeAttribute('data-translate');
+            mobClaimSpan.textContent = deskText;
+        }
+    } else {
+        // Клейм доступен — восстанавливаем кнопку
+        mobClaim.disabled = false;
+        mobClaim.style.opacity  = '';
+        mobClaim.style.cursor   = '';
+        mobClaim.style.pointerEvents = '';
+        var emoji = mobClaim.childNodes[0];
+        if (emoji && emoji.nodeType === 3) emoji.textContent = '🧪 ';
+        if (mobClaimSpan) {
+            mobClaimSpan.setAttribute('data-translate', 'claim_btn_label');
+            mobClaimSpan.textContent = (window.currentLang === 'en') ? 'Claim' : 'Клейм';
+        }
+    }
+}
+
+// MutationObserver ловит изменения текста кнопки
+if (deskClaim) {
+    new MutationObserver(syncClaimBtn).observe(deskClaim, {
+        childList: true, subtree: true,
+        attributes: true, characterData: true
+    });
+}
+
+// setInterval — обновляет каждую секунду (для живого отсчёта)
+setInterval(syncClaimBtn, 1000);
+syncClaimBtn();
     }
 
     setTimeout(setupObservers, 200);
