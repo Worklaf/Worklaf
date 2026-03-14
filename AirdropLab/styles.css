@@ -49,59 +49,128 @@
             box-shadow: 0 10px 30px -10px rgba(0, 0, 0, 0.5);
         }
 
-       .feedback-trigger-btn {
+       /* ══ GLOBAL OVERFLOW FIX — добавь в самое начало после :root ══ */
+html {
+    max-width: 100vw;
+    overflow-x: hidden;
+}
+body {
+    max-width: 100vw;
+    overflow-x: hidden;
+    position: relative;
+}
+main.flex-1 {
+    min-width: 0; /* без этого flex не сжимается */
+}
+#site-header {
+    max-width: 100vw;
+    overflow: hidden;
+}
+
+/* ══ FEEDBACK BUTTON — заменить старый блок полностью ══ */
+.feedback-trigger-btn {
     position: absolute;
-    right: -90px;
-    top: 0px;
-    padding: 10px 16px;
-    font-size: 14px;
+    right: 8px;          /* ← БЫЛО -90px — ЭТО ЛОМАЛО ШИРИНУ */
+    top: 8px;
+    padding: 6px 12px;
+    font-size: 12px;
     font-weight: 600;
     display: flex;
     align-items: center;
-    gap: 6px;
-    border-radius: 12px;
+    gap: 5px;
+    border-radius: 10px;
     background: rgba(30, 30, 50, 0.9);
     border: 1px solid rgba(120, 80, 255, 0.4);
     color: #cbd5e1;
-    box-shadow: 0 0 12px rgba(120, 80, 255, 0.4),
-                0 0 24px rgba(80, 120, 255, 0.3);
+    box-shadow: 0 0 12px rgba(120, 80, 255, 0.4), 0 0 24px rgba(80, 120, 255, 0.3);
     backdrop-filter: blur(6px);
     opacity: 0;
-    transform: translateX(10px);
-    transition: all 0.25s ease;
+    transform: translateY(-4px);
+    transition: all 0.22s ease;
     z-index: 20;
+    pointer-events: none;
+    white-space: nowrap;
 }
-
-.project-card-wrapper:hover .feedback-trigger-btn {
+.project-card-wrapper:hover .feedback-trigger-btn,
+.glass-card:hover .feedback-trigger-btn {
     opacity: 1;
-    transform: translateX(0);
+    transform: translateY(0);
+    pointer-events: auto;
 }
-
 .feedback-trigger-btn:hover {
     background: rgba(50, 40, 90, 1);
     border-color: rgba(150, 120, 255, 0.6);
     color: #8ab4ff;
-    transform: scale(1.07);
+    transform: scale(1.04);
 }
 
-        .glass-card:hover .feedback-trigger-btn {
-            opacity: 1;
-            transform: translateX(0);
-        }
+/* ══ MOBILE: кнопка в левом углу, всегда видна, над названием ══ */
+@media (max-width: 768px) {
+    /* Добавляем отступ сверху чтобы кнопка не перекрывала контент */
+    .project-card-wrapper.glass-card {
+        padding-top: 46px !important;
+    }
+    .feedback-trigger-btn {
+        left: 12px !important;
+        right: auto !important;
+        top: 10px !important;
+        opacity: 1 !important;
+        transform: none !important;
+        pointer-events: auto !important;
+        padding: 6px 12px !important;
+        font-size: 12px !important;
+        gap: 5px !important;
+    }
+    /* На мобильном hover не нужен — сбрасываем transform */
+    .feedback-trigger-btn:hover {
+        transform: none !important;
+    }
+}
 
-        .admin-feedback-btn { position: relative; }
-        .admin-feedback-badge {
-            position: absolute;
-            top: -2px;
-            right: -2px;
-            background: #ef4444;
-            color: white;
-            font-size: 0.65rem;
-            padding: 1px 4px;
-            border-radius: 999px;
-            font-weight: bold;
-            border: 1px solid #1e2538;
-        }
+/* ══ Мобильная строка статистики в хедере ══ */
+.al-mob-stats {
+    display: none;
+    overflow-x: auto;
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+    border-top: 1px solid rgba(255,255,255,0.06);
+    margin: 0 -12px;
+}
+.al-mob-stats::-webkit-scrollbar { display: none; }
+
+@media (max-width: 767px) {
+    .al-mob-stats {
+        display: flex;
+    }
+    .al-desk-stats {
+        display: none !important;
+    }
+}
+
+.al-mob-stat {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    padding: 6px 14px;
+    cursor: pointer;
+    flex-shrink: 0;
+    border-right: 1px solid rgba(255,255,255,0.05);
+    transition: background 0.2s;
+}
+.al-mob-stat:hover { background: rgba(255,255,255,0.04); }
+.al-mob-stat:last-child { border-right: none; }
+.al-mob-stat__num {
+    font-size: 14px;
+    font-weight: 900;
+    line-height: 1;
+}
+.al-mob-stat__lbl {
+    font-size: 9px;
+    color: #64748b;
+    text-transform: uppercase;
+    font-weight: 600;
+    letter-spacing: 0.05em;
+}
 
         /* ============ ЧАТ (Telegram-style) ============ */
 .chat-history {
@@ -553,17 +622,14 @@
     background: rgba(0,0,0,0.4); font-size: 16px;
     backdrop-filter: blur(5px); border-top: 1px solid rgba(255,255,255,0.1);
 }
-:root {
-    --header-h: 112px; /* fallback */
-}
+
 /* Right sidebar — ОБЪЕДИНЁН */
 .right-sidebar {
     width: 23rem;
     flex-shrink: 0;
     margin-left: 1rem;
     position: sticky;
-    top: calc(var(--header-h) + 16px);
-    align-self: flex-start;
+    top: 130px;
     max-height: none;        /* ← было none, стало calc() — верни none */
     overflow: visible;       /* ← было visible, стало auto — верни visible */
     scroll-behavior: smooth;
@@ -1016,128 +1082,7 @@ select option { background-color: #1e293b; color: #f1f5f9; }
     .admin-action-btn span { display: none !important; }
 }
 
-/* ==================================================
-   ИСПРАВЛЕНИЯ ДЛЯ МОБИЛЬНЫХ УСТРОЙСТВ (OVERFLOW + FEEDBACK)
-   ================================================== */
-
-/* 1. Запрещаем горизонтальный скролл на всей странице */
-html, body {
-    max-width: 100vw;
-    overflow-x: hidden;
-    position: relative;
-    margin: 0;
-    padding: 0;
-}
-
-/* Хедер тоже не должен вылезать */
-#site-header {
-    max-width: 100vw;
-    overflow-x: hidden;
-    width: 100%;
-}
-
-/* 2. Контентная часть ровно по ширине экрана */
-.max-w-\[1600px\] {
-    max-width: 100vw !important;
-    overflow-x: hidden;
-    box-sizing: border-box;
-}
-
-@media (max-width: 640px) {
-    .max-w-\[1600px\] {
-        padding-left: 12px !important;
-        padding-right: 12px !important;
-    }
-}
-
-/* 3. Ограничиваем виджет CryptoRank */
-#cr-widget-marquee,
-.cr-ticker-wrap,
-[class*="marquee"] {
-    max-width: 100vw !important;
-    width: 100% !important;
-    overflow: hidden !important;
-    box-sizing: border-box !important;
-}
-
-/* 4. Строка поиска и фильтров */
-.filters-sticky-bar {
-    max-width: 100vw !important;
-    width: 100%;
-    box-sizing: border-box;
-    padding: 10px 12px;
-}
-.filters-sticky-bar .flex {
-    flex-wrap: wrap; /* Позволяет элементам переноситься на новую строку */
-    min-width: 0;
-}
-#searchInput {
-    max-width: 100%;
-}
-
-/* 5. Карточки проектов: сжимаются и текст переносится */
-#projectsGrid {
-    max-width: 100%;
-    width: 100%;
-    min-width: 0;
-    display: grid;
-    grid-template-columns: minmax(0, 1fr); /* Не дает сетке разорвать экран */
-}
-
-.project-card-wrapper {
-    max-width: 100%;
-    min-width: 0;
-    width: 100%;
-    box-sizing: border-box;
-    overflow: visible !important; /* ВАЖНО: чтобы кнопка Feedback вылезала за края */
-}
-
-.project-card-wrapper h3,
-.project-card-wrapper p,
-.project-card-wrapper span {
-    word-wrap: break-word;
-    overflow-wrap: anywhere;
-    white-space: normal;
-}
-
-/* Кнопки Website/Twitter/CR сжимаются */
-.project-card-wrapper .mt-4.flex {
-    flex-wrap: wrap;
-    min-width: 0;
-}
-
-@media (max-width: 480px) {
-    .project-card-wrapper .mt-4.flex button {
-        flex: 1 1 40%;
-        padding: 8px 4px;
-        font-size: 0.75rem;
-    }
-}
-
-/* 6. КНОПКА ФИДБЕКА: На мобильном в левом верхнем углу */
-@media (max-width: 1024px) {
-    #projectsGrid {
-        gap: 28px; /* Увеличиваем отступ между карточками, чтобы кнопке было место */
-    }
-    
-    .project-card-wrapper {
-        margin-top: 16px; /* Место сверху для кнопки */
-    }
-
-    .feedback-trigger-btn {
-        right: auto !important;
-        left: 0px !important;       /* В левом углу */
-        top: -20px !important;      /* Выше названия (вылезает наверх) */
-        opacity: 1 !important;      /* Всегда видна (на телефонах нет наведения) */
-        transform: translateX(0) !important;
-        padding: 6px 14px !important;
-        font-size: 12px !important;
-        box-shadow: 0 4px 15px rgba(120, 80, 255, 0.6) !important;
-    }
-    
-    /* Сдвигаем бейдж "Completed", чтобы он не накладывался на кнопку отзывов */
-    .project-card-wrapper .completed-badge {
-        left: auto !important;
-        right: -8px !important;
-    }
+@media (max-width: 1023px) {
+    .lab-container { margin-top: 16px; }
+    .lab-specimens { flex-direction: column; }
 }
