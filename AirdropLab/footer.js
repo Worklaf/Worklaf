@@ -1737,10 +1737,10 @@ function initAccountPage() {
         return Math.floor(diff / 86400000) + ' ' + lang('time_day_ago');
     }
 
-    // ============ LEGAL MODALS ============
+        // ============ LEGAL MODALS (FIXED) ============
 
-    window.openLegalModal = function(type) {
-        const lang     = typeof window.t === 'function' ? window.t : (k) => k;
+    window.openLegalModal = async function(type) {
+        const lang      = typeof window.t === 'function' ? window.t : (k) => k;
         const legalData = FOOTER_CONFIG.legal[type];
         if (!legalData) return;
 
@@ -1755,6 +1755,7 @@ function initAccountPage() {
             disclaimer: 'fa-exclamation-triangle text-red-400'
         };
 
+        // 1. Сначала рисуем скелет модалки с индикатором загрузки
         content.innerHTML = `
             <div class="bg-gradient-to-r from-slate-900 to-slate-800 p-6 border-b border-slate-700">
                 <div class="flex items-center gap-3">
@@ -1767,17 +1768,55 @@ function initAccountPage() {
                     </div>
                 </div>
             </div>
-            <div class="p-6 max-h-[70vh] overflow-y-auto legal-content">
-                ${legalData.content}
+            <div id="legalBody" class="p-6 max-h-[70vh] overflow-y-auto legal-content">
+                <div class="flex flex-col items-center justify-center py-12 text-slate-500">
+                    <i class="fas fa-circle-notch fa-spin text-3xl mb-4 text-cyan-500"></i>
+                    <p>Loading document...</p>
+                </div>
             </div>
             <div class="p-4 border-t border-slate-700/50 bg-slate-900/50">
                 <button onclick="closePageModal()" class="w-full bg-slate-700 hover:bg-slate-600 py-3 rounded-lg text-sm font-medium text-white transition-colors">
-                    ${lang('legal_close_btn')}
+                    ${lang('legal_close_btn') || 'Close'}
                 </button>
             </div>
         `;
 
         modal.classList.add('active');
+
+        // 2. Загружаем содержимое файла
+        try {
+            const response = await fetch(legalData.url);
+            if (!response.ok) throw new Error('File not found');
+            
+            const htmlText = await response.text();
+            
+            // Парсим полученный HTML, чтобы вытащить только нужную языковую секцию
+            const parser = new DOMParser();
+            const doc = parser.parseFromString(htmlText, 'text/html');
+            
+            // Определяем текущий язык (ru или en)
+            const currentLang = (typeof window.currentLang !== 'undefined') ? window.currentLang : 'ru';
+            
+            // Ищем секцию с id="ru" или id="en" внутри скачанного файла
+            const section = doc.getElementById(currentLang);
+            const bodyContainer = document.getElementById('legalBody');
+            
+            if (section && bodyContainer) {
+                bodyContainer.innerHTML = section.innerHTML;
+            } else {
+                // Если секция не найдена, вставляем весь текст (fallback)
+                bodyContainer.innerHTML = htmlText; 
+            }
+        } catch (err) {
+            console.error('Legal load error:', err);
+            document.getElementById('legalBody').innerHTML = `
+                <div class="text-center py-8">
+                    <i class="fas fa-exclamation-circle text-red-500 text-3xl mb-2"></i>
+                    <p class="text-white">Failed to load document.</p>
+                    <p class="text-sm text-slate-500 mt-2">Please try again later or contact support.</p>
+                    <a href="${legalData.url}" target="_blank" class="text-cyan-400 underline mt-4 inline-block text-sm">Open direct link</a>
+                </div>`;
+        }
     };
 
     // ============ TUTORIALS ============
