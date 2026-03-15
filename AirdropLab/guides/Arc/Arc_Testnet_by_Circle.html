@@ -1957,13 +1957,19 @@ window.addEventListener('resize',()=>{ if(activeTooltipTarget) positionTooltip(a
 // ===========================
 let currentLightboxData=null, currentLightboxLang='en';
 
-function openLightbox(imageUrl, title, tooltip, linkUrl, images = [], startIndex = 0) {
+function openLightbox(imageUrl, title, tooltip, linkUrl, images = [], startIndex = 0, descriptions = {}) {
     const overlay = document.getElementById('arcLightboxOverlay');
     const img = document.getElementById('lightboxImage');
     const titleEl = document.getElementById('lightboxTitle');
     const captionEl = document.getElementById('lightboxCaption');
     const linkEl = document.getElementById('lightboxLink');
+    const langToggle = document.getElementById('lightboxLangToggle');
     
+    // Сохраняем данные для языкового переключения
+    currentLightboxData = { title, descriptions, tooltip, linkUrl };
+    currentLightboxLang = currentLanguage;
+    
+    // Сохраняем массив картинок
     overlay.dataset.images = JSON.stringify(images);
     overlay.dataset.currentIndex = startIndex;
     
@@ -1971,28 +1977,30 @@ function openLightbox(imageUrl, title, tooltip, linkUrl, images = [], startIndex
     
     img.src = currentImage;
     titleEl.textContent = title;
-    captionEl.textContent = tooltip || '';
     linkEl.href = linkUrl;
+    linkEl.innerHTML = `<i class="fas fa-external-link-alt"></i> ${t('go_to_mint')}`;
     
-    const oldIndicator = document.getElementById('lightboxImageIndicator');
-    if (oldIndicator) oldIndicator.remove();
-    const oldLeft = document.getElementById('lightboxLeft');
-    if (oldLeft) oldLeft.remove();
-    const oldRight = document.getElementById('lightboxRight');
-    if (oldRight) oldRight.remove();
+    // Показываем переключатель языков если есть описания
+    const hasDesc = descriptions && (descriptions.en || descriptions.ua);
+    if (hasDesc) {
+        langToggle.style.display = 'flex';
+        updateLightboxCaption(currentLightboxLang);
+        updateLightboxLangBtns();
+    } else {
+        langToggle.style.display = 'none';
+        captionEl.textContent = tooltip || '';
+    }
     
+    // Удаляем старые стрелки и индикаторы если есть
+    document.getElementById('lightboxLeft')?.remove();
+    document.getElementById('lightboxRight')?.remove();
+    document.getElementById('lightboxImageIndicator')?.remove();
+    
+    // Добавляем навигацию по картинкам если их несколько
     if (images.length > 1) {
-        const indicator = document.createElement('div');
-        indicator.id = 'lightboxImageIndicator';
-        indicator.style.cssText = 'position:absolute;bottom:20px;left:50%;transform:translateX(-50%);display:flex;gap:8px;z-index:10;';
+        const content = document.querySelector('.lightbox-content');
         
-        indicator.innerHTML = images.map((_, i) => `
-            <button class="lightbox-dot ${i === startIndex ? 'active' : ''}" 
-                    data-index="${i}"
-                    style="width:10px;height:10px;border-radius:50%;border:none;cursor:pointer;background:${i === startIndex ? 'var(--accent)' : 'rgba(255,255,255,0.3)'};transition:all 0.2s;">
-            </button>
-        `).join('');
-        
+        // Стрелки
         const leftArrow = document.createElement('button');
         leftArrow.id = 'lightboxLeft';
         leftArrow.innerHTML = '←';
@@ -2003,7 +2011,17 @@ function openLightbox(imageUrl, title, tooltip, linkUrl, images = [], startIndex
         rightArrow.innerHTML = '→';
         rightArrow.style.cssText = 'position:absolute;right:20px;top:50%;transform:translateY(-50%);background:rgba(0,0,0,0.5);color:#fff;border:none;width:40px;height:40px;border-radius:50%;cursor:pointer;font-size:1.2rem;z-index:10;transition:all 0.2s;';
         
-        const content = document.querySelector('.lightbox-content');
+        // Индикаторы точки
+        const indicator = document.createElement('div');
+        indicator.id = 'lightboxImageIndicator';
+        indicator.style.cssText = 'position:absolute;bottom:20px;left:50%;transform:translateX(-50%);display:flex;gap:8px;z-index:10;';
+        indicator.innerHTML = images.map((_, i) => `
+            <button class="lightbox-dot ${i === startIndex ? 'active' : ''}" 
+                    data-index="${i}"
+                    style="width:10px;height:10px;border-radius:50%;border:none;cursor:pointer;background:${i === startIndex ? 'var(--accent)' : 'rgba(255,255,255,0.3)'};transition:all 0.2s;">
+            </button>
+        `).join('');
+        
         content.appendChild(leftArrow);
         content.appendChild(rightArrow);
         content.appendChild(indicator);
@@ -2024,6 +2042,7 @@ function openLightbox(imageUrl, title, tooltip, linkUrl, images = [], startIndex
     overlay.classList.add('open');
     document.body.style.overflow = 'hidden';
     
+    // Колесико мыши для переключения картинок
     overlay.onwheel = (e) => {
         if (images.length > 1) {
             e.preventDefault();
@@ -2057,8 +2076,25 @@ function updateLightboxImage() {
         img.classList.remove('changing');
     }, 150);
     
+    // Обновляем точки
     document.querySelectorAll('.lightbox-dot').forEach((dot, i) => {
         dot.style.background = i === current ? 'var(--accent)' : 'rgba(255,255,255,0.3)';
+    });
+}
+
+function updateLightboxCaption(lang) {
+    const captionEl = document.getElementById('lightboxCaption');
+    if (currentLightboxData?.descriptions) {
+        const txt = currentLightboxData.descriptions[lang] || currentLightboxData.descriptions.en || currentLightboxData.tooltip || '';
+        captionEl.textContent = txt;
+    } else {
+        captionEl.textContent = currentLightboxData?.tooltip || '';
+    }
+}
+
+function updateLightboxLangBtns() {
+    document.querySelectorAll('.lightbox-lang-btn').forEach(b => {
+        b.classList.toggle('active', b.dataset.lang === currentLightboxLang);
     });
 }
 
@@ -2071,6 +2107,7 @@ function closeLightbox() {
     document.getElementById('lightboxRight')?.remove();
     document.getElementById('lightboxImageIndicator')?.remove();
     overlay.onwheel = null;
+    currentLightboxData = null;
 }
 
 function initLightbox() {
@@ -2079,10 +2116,13 @@ function initLightbox() {
         if (e.target === document.getElementById('arcLightboxOverlay')) closeLightbox();
     });
     
+    // Клавиши
     document.addEventListener('keydown', (e) => {
         const overlay = document.getElementById('arcLightboxOverlay');
         if (!overlay.classList.contains('open')) return;
+        
         if (e.key === 'Escape') closeLightbox();
+        
         const images = JSON.parse(overlay.dataset.images || '[]');
         if (images.length > 1) {
             if (e.key === 'ArrowLeft') { e.preventDefault(); navigateLightbox(-1); }
@@ -2090,6 +2130,17 @@ function initLightbox() {
         }
     });
     
+    // Переключение языка в лайтбоксе
+    document.querySelectorAll('.lightbox-lang-btn').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            currentLightboxLang = btn.dataset.lang;
+            updateLightboxCaption(currentLightboxLang);
+            updateLightboxLangBtns();
+        });
+    });
+    
+    // Правый клик по ссылке
     document.querySelectorAll('.link-inline').forEach(link => {
         if (link.dataset.lightboxBound) return;
         
@@ -2102,18 +2153,25 @@ function initLightbox() {
             
             const currentIdx = parseInt(link.getAttribute('data-image-index') || '0');
             const singleImage = link.getAttribute('data-image');
-            
             const allImages = images.length > 0 ? images : (singleImage ? [singleImage] : []);
             
             if (allImages.length > 0) {
                 e.preventDefault();
+                
+                // Собираем описания для языкового переключателя
+                const descriptions = {
+                    en: link.getAttribute('data-desc-en') || '',
+                    ua: link.getAttribute('data-desc-ua') || ''
+                };
+                
                 openLightbox(
                     allImages[currentIdx],
                     getLinkTitle(link),
                     link.getAttribute('data-tooltip') || '',
                     link.href,
                     allImages,
-                    currentIdx
+                    currentIdx,
+                    descriptions
                 );
             }
         });
