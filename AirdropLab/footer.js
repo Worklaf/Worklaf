@@ -21,10 +21,10 @@
             email: 'airdroplab.support@gmail.com'
         },
         legal: {
-        terms: { title: 'Terms of Use', url: '/legal/terms.html', lastUpdated: 'July 07, 2026' },
-        privacy: { title: 'Privacy Policy', url: '/legal/privacy.html', lastUpdated: 'July 07, 2026' },
-        cookie: { title: 'Cookie Policy', url: '/legal/cookies.html', lastUpdated: 'July 07, 2026' },
-        disclaimer: { title: 'Disclaimer', url: '/legal/disclaimer.html', lastUpdated: 'July 07, 2026' }
+        terms: { title: 'Terms of Use', url: './legal/terms.html', lastUpdated: 'July 07, 2026' },
+        privacy: { title: 'Privacy Policy', url: './legal/privacy.html', lastUpdated: 'July 07, 2026' },
+        cookie: { title: 'Cookie Policy', url: './legal/cookies.html', lastUpdated: 'July 07, 2026' },
+        disclaimer: { title: 'Disclaimer', url: './legal/disclaimer.html', lastUpdated: 'July 07, 2026' }
     },
         guides: [
             {
